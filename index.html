@@ -36,10 +36,28 @@
       color: #fff;
       display: flex;
       align-items: center;
+      justify-content: space-between;
       padding: 0 24px;
       flex-shrink: 0;
     }
     .logo { font-size: 20px; font-weight: 600; letter-spacing: 0.2px; }
+    .header-role {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.85);
+    }
+    .header-role select {
+      height: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border-radius: 2px;
+      padding: 0 8px;
+      outline: none;
+    }
+    .header-role select option { color: var(--text); }
 
     .body { display: flex; flex: 1; min-height: 0; }
 
@@ -891,7 +909,15 @@
 </head>
 <body>
   <div class="app">
-    <header class="header"><span class="logo">UrMart</span></header>
+    <header class="header">
+      <span class="logo">UrMart</span>
+      <label class="header-role">操作人身分
+        <select id="operatorRole">
+          <option value="建檔人">建檔人</option>
+          <option value="主管">主管</option>
+        </select>
+      </label>
+    </header>
     <div class="body">
       <aside class="sider">
         <div class="menu-item" data-toggle="platform">
@@ -1564,7 +1590,7 @@
             <button type="button" class="btn btn-primary" id="editCreateShip">新增出貨單</button>
             <button type="button" class="btn" id="editSaveDraft">儲存為草稿</button>
             <button type="button" class="btn btn-primary" id="editSubmit">送出申請</button>
-            <button type="button" class="btn" id="editReject">審核退回</button>
+            <button type="button" class="btn" id="editReject">審核不通過</button>
             <button type="button" class="btn btn-primary" id="editApprove">審核通過</button>
             <button type="button" class="btn btn-primary" id="editSave">儲存</button>
           </div>
@@ -1917,7 +1943,7 @@
     }
 
     function canEditPo(order) {
-      return ["草稿", "未開立出貨單"].includes(order.status);
+      return order.status === "草稿";
     }
 
     function canSubmitPo(order) {
@@ -1927,6 +1953,8 @@
     function canApprovePo(order) {
       return order.status === "待審核";
     }
+
+    let currentRole = "建檔人";
 
     function canShipFromPo(order) {
       return !!order && (order.status === "未開立出貨單" || order.status === "已開立出貨單");
@@ -2432,19 +2460,19 @@
       const view = mode === "view";
       const draftLike = canSubmitPo(order);
       const pending = canApprovePo(order);
-      const approvedOps = order.status === "未開立出貨單";
-      document.getElementById("editCreateShip").classList.toggle("hidden", !canShipFromPo(order) || (view && order.status !== "已開立出貨單"));
+      const approvedOps = false;
+      document.getElementById("editCreateShip").classList.toggle("hidden", !canShipFromPo(order));
       document.getElementById("editCreateShip").disabled = !canShipFromPo(order);
       document.getElementById("editSaveDraft").classList.toggle("hidden", view || !draftLike);
       document.getElementById("editSubmit").classList.toggle("hidden", view || !draftLike);
-      document.getElementById("editApprove").classList.toggle("hidden", !pending);
-      document.getElementById("editReject").classList.toggle("hidden", !pending);
+      document.getElementById("editApprove").classList.toggle("hidden", !(pending && currentRole === "主管"));
+      document.getElementById("editReject").classList.toggle("hidden", !(pending && currentRole === "主管"));
       document.getElementById("editSave").classList.toggle("hidden", view || draftLike || pending || !approvedOps);
     }
 
     function fillOrderEdit(order, mode) {
       currentEditOrderNo = order.orderNo;
-      const forceView = mode === "view" || canApprovePo(order) || order.status === "已取消" || order.status === "已開立出貨單";
+      const forceView = mode === "view" || canApprovePo(order) || order.status === "已取消" || order.status === "未開立出貨單" || order.status === "已開立出貨單";
       orderFormMode = forceView ? "view" : "edit";
       const profile = channelProfiles[order.channelName] || {};
       if (!order.address) order.address = profile.address || "";
@@ -2464,6 +2492,15 @@
       syncEditFooter(order, orderFormMode);
       showPage("order-edit");
     }
+
+    document.getElementById("operatorRole").addEventListener("change", (e) => {
+      currentRole = e.target.value;
+      renderSalesTable(getSalesFiltered());
+      const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+      if (order && document.getElementById("page-order-edit").classList.contains("active")) {
+        fillOrderEdit(order, orderFormMode);
+      }
+    });
 
     function setOrderFormReadonly(readonly) {
       const page = document.getElementById("page-order-edit");
