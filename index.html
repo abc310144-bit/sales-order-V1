@@ -1422,7 +1422,6 @@
                   <option value="">請選擇</option>
                   <option>草稿</option>
                   <option>待審核</option>
-                  <option>審核退回</option>
                   <option>未開立出貨單</option>
                   <option>待出貨</option>
                   <option>部分送達</option>
@@ -1901,7 +1900,7 @@
       },
       {
         orderNo: "SO20260824006", poDocNo: "POYA-0824-006", shipNo: "", channelType: "台灣本地通路", channelName: "實體-寶雅",
-        status: "審核退回", operator: "misha.huang", createdAt: "2026-08-24 09:41:11",
+        status: "草稿", operator: "misha.huang", createdAt: "2026-08-24 09:41:11",
         fileName: "", fileUrl: "", fileType: "",
         address: "新北市樹林區佳園路二段70號 寶雅倉儲",
         arriveDate: "2026-08-26", shipByTime: "2026-08-25 11:30",
@@ -1922,11 +1921,11 @@
     }
 
     function canEditPo(order) {
-      return ["草稿", "審核退回", "未開立出貨單", "待出貨", "部分送達"].includes(order.status);
+      return ["草稿", "未開立出貨單", "待出貨", "部分送達"].includes(order.status);
     }
 
     function canSubmitPo(order) {
-      return order.status === "草稿" || order.status === "審核退回";
+      return order.status === "草稿";
     }
 
     function canApprovePo(order) {
@@ -2429,7 +2428,7 @@
 
     function rejectPo(order) {
       if (!canApprovePo(order)) return;
-      order.status = "審核退回";
+      order.status = "草稿";
       renderSalesTable(getSalesFiltered());
       if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "edit");
     }
