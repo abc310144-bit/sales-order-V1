@@ -865,6 +865,9 @@
     .status-tag[data-status="審核通過"] { color: #389e0d; background: #f6ffed; border-color: #b7eb8f; }
     .status-tag[data-status="未開立出貨單"] { color: #096dd9; background: #e6f7ff; border-color: #91d5ff; }
     .status-tag[data-status="已開立出貨單"] { color: #389e0d; background: #f6ffed; border-color: #b7eb8f; }
+    .status-tag[data-status="待出貨"] { color: #08979c; background: #e6fffb; border-color: #87e8de; }
+    .status-tag[data-status="部分送達"] { color: #531dab; background: #f9f0ff; border-color: #d3adf7; }
+    .status-tag[data-status="已完成"],
     .status-tag[data-status="已配達"] { color: #389e0d; background: #f6ffed; border-color: #b7eb8f; }
     .status-tag[data-status="已取消"],
     .status-tag[data-status="訂單取消"] { color: #8c8c8c; background: #f5f5f5; border-color: #d9d9d9; }
@@ -1447,7 +1450,9 @@
                   <option>草稿</option>
                   <option>待審核</option>
                   <option>未開立出貨單</option>
-                  <option>已開立出貨單</option>
+                  <option>待出貨</option>
+                  <option>部分送達</option>
+                  <option>已完成</option>
                   <option>已取消</option>
                 </select>
               </div>
@@ -1757,12 +1762,13 @@
     let rows = [
       { id: "10473", orderId: "VN00010473", salesOrderNo: "", audit: "待審核", channel: "實體-PW健身工廠", status: "訂單處理中(已拋單)", applicant: "", created: "2026-08-26 14:18:05", warehouse: "2026-08-26 14:18:05", shipped: "" },
       { id: "10472", orderId: "VN00010472", salesOrderNo: "", audit: "待審核", channel: "實體-PW健身工廠", status: "揀貨中", applicant: "", created: "2026-08-26 14:12:31", warehouse: "2026-08-26 14:12:31", shipped: "" },
-      { id: "10471", orderId: "VN00010471", salesOrderNo: "", audit: "待審核", channel: "實體-寶雅", status: "待拋單", applicant: "misha.huang", created: "2026-08-26 13:51:08", warehouse: "", shipped: "" },
+      { id: "10471", orderId: "VN00010471", salesOrderNo: "SO20260824006", audit: "待審核", channel: "實體-寶雅", status: "待拋單", applicant: "misha.huang", created: "2026-08-26 13:51:08", warehouse: "", shipped: "" },
       { id: "10470", orderId: "VN00010470", salesOrderNo: "SO20260826002", audit: "待審核", channel: "實體-全聯", status: "已出貨", applicant: "misha.huang", created: "2026-08-26 13:44:22", warehouse: "", shipped: "" },
       { id: "10469", orderId: "VN00010469", salesOrderNo: "", audit: "審核通過", channel: "實體-迪卡儂", status: "缺貨", applicant: "vita.du", created: "2026-08-26 11:20:15", warehouse: "2026-08-26 11:25:40", shipped: "" },
       { id: "10468", orderId: "VN00010468", salesOrderNo: "", audit: "待審核", channel: "經銷商-絢綻國際企業社", status: "配送異常", applicant: "john.pan", created: "2026-08-26 10:08:19", warehouse: "", shipped: "" },
       { id: "10467", orderId: "VN00010467", salesOrderNo: "SO20260824006", audit: "待審核", channel: "實體-寶雅", status: "已配達", applicant: "misha.huang", created: "2026-08-25 18:33:02", warehouse: "", shipped: "" },
-      { id: "10466", orderId: "VN00010466", salesOrderNo: "SO20260824005", audit: "待審核", channel: "跨境- Cool Cool Trading", status: "訂單取消", applicant: "vita.du", created: "2026-08-25 16:12:47", warehouse: "", shipped: "" }
+      { id: "10466", orderId: "VN00010466", salesOrderNo: "SO20260824005", audit: "待審核", channel: "跨境- Cool Cool Trading", status: "訂單取消", applicant: "vita.du", created: "2026-08-25 16:12:47", warehouse: "", shipped: "" },
+      { id: "10465", orderId: "VN00010465", salesOrderNo: "SO20260823007", audit: "待審核", channel: "實體-全聯", status: "已配達", applicant: "vita.du", created: "2026-08-23 17:02:11", warehouse: "", shipped: "2026-08-25 09:10:00" }
     ];
 
     function getShippingFiltered() {
@@ -1878,7 +1884,7 @@
       },
       {
         orderNo: "SO20260826002", poDocNo: "PX-20260826-A12", shipNo: "", channelType: "台灣本地通路", channelName: "實體-全聯",
-        status: "已開立出貨單", operator: "vita.du", createdAt: "2026-08-26 11:20:15",
+        status: "待出貨", operator: "vita.du", createdAt: "2026-08-26 11:20:15",
         fileName: "", fileUrl: "", fileType: "",
         address: "桃園市大園區航勤北路8號 全聯物流中心",
         arriveDate: "2026-08-29", shipByTime: "2026-08-27 16:00",
@@ -1923,13 +1929,24 @@
       },
       {
         orderNo: "SO20260824006", poDocNo: "POYA-0824-006", shipNo: "", channelType: "台灣本地通路", channelName: "實體-寶雅",
-        status: "已開立出貨單", operator: "misha.huang", createdAt: "2026-08-24 09:41:11",
+        status: "部分送達", operator: "misha.huang", createdAt: "2026-08-24 09:41:11",
         fileName: "", fileUrl: "", fileType: "",
         address: "新北市樹林區佳園路二段70號 寶雅倉儲",
         arriveDate: "2026-08-26", shipByTime: "2026-08-25 11:30",
         items: [
           { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 30 },
           { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 18 }
+        ]
+      },
+      {
+        orderNo: "SO20260823007", poDocNo: "PX-DONE-0823", shipNo: "", channelType: "台灣本地通路", channelName: "實體-全聯",
+        status: "已完成", operator: "vita.du", createdAt: "2026-08-23 17:02:11",
+        fileName: "", fileUrl: "", fileType: "",
+        address: "桃園市大園區航勤北路8號 全聯物流中心",
+        arriveDate: "2026-08-25", shipByTime: "2026-08-24 10:00",
+        items: [
+          { sku: "PX-8801", name: "優質高蛋白棒", expiryAccept: "2026-11-30", unit: "盒", qty: 24 },
+          { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 12 }
         ]
       }
     ];
@@ -1958,7 +1975,29 @@
     let currentRole = "建檔人";
 
     function canShipFromPo(order) {
-      return !!order && (order.status === "未開立出貨單" || order.status === "已開立出貨單");
+      return !!order && ["未開立出貨單", "待出貨", "部分送達"].includes(order.status);
+    }
+
+    function shipsOfPo(orderNo) {
+      return rows.filter((row) => row.salesOrderNo === orderNo);
+    }
+
+    function deriveApprovedPoStatus(order) {
+      const valid = shipsOfPo(order.orderNo).filter((row) => row.status !== "訂單取消");
+      if (!valid.length) return "未開立出貨單";
+      const delivered = valid.filter((row) => row.status === "已配達");
+      if (delivered.length === valid.length) return "已完成";
+      if (delivered.length > 0) return "部分送達";
+      return "待出貨";
+    }
+
+    function syncPoStatusFromShips(order) {
+      if (!order || ["草稿", "待審核", "已取消"].includes(order.status)) return;
+      order.status = deriveApprovedPoStatus(order);
+    }
+
+    function refreshAllPoStatusesFromShips() {
+      salesOrders.forEach(syncPoStatusFromShips);
     }
 
     function salesRowActions(item) {
@@ -2026,6 +2065,7 @@
       `).join("");
     }
 
+    refreshAllPoStatusesFromShips();
     renderSalesTable(salesOrders);
 
     document.getElementById("salesAccordionBtn").addEventListener("click", () => {
@@ -2446,6 +2486,7 @@
     function approvePo(order) {
       if (!canApprovePo(order)) return;
       order.status = "未開立出貨單";
+      syncPoStatusFromShips(order);
       renderSalesTable(getSalesFiltered());
       if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "edit");
     }
@@ -2473,7 +2514,7 @@
 
     function fillOrderEdit(order, mode) {
       currentEditOrderNo = order.orderNo;
-      const forceView = mode === "view" || canApprovePo(order) || order.status === "已取消" || order.status === "未開立出貨單" || order.status === "已開立出貨單";
+      const forceView = mode === "view" || !canEditPo(order);
       orderFormMode = forceView ? "view" : "edit";
       const profile = channelProfiles[order.channelName] || {};
       if (!order.address) order.address = profile.address || "";
@@ -2739,7 +2780,7 @@
         return false;
       }
       if (!canShipFromPo(po)) {
-        alert("此採購單尚未審核通過，無法建立出貨單");
+        alert(po.status === "已完成" || po.status === "已取消" ? "此採購單目前無法再建立出貨單" : "此採購單尚未審核通過，無法建立出貨單");
         document.getElementById("shipPoNo").focus();
         renderShipPoList(document.getElementById("shipPoNo").value);
         return false;
@@ -2774,7 +2815,6 @@
       const channelName = document.getElementById("shipChannelName").value;
       const poNo = document.getElementById("shipPoNo").value.trim();
       const po = salesOrders.find((item) => item.orderNo === poNo);
-      if (po) po.status = "已開立出貨單";
       rows.unshift({
         id: ids.id,
         orderId: ids.orderId,
@@ -2788,6 +2828,7 @@
         shipped: "",
         items: shipLineItems.map((row) => ({ ...row })),
       });
+      if (po) syncPoStatusFromShips(po);
       renderShippingTable();
       renderSalesTable(getSalesFiltered());
       showPage("shipping");
