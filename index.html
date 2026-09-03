@@ -1933,6 +1933,9 @@
     }
 
     function salesRowActions(item) {
+      if (item.status === "待審核") {
+        return `<a data-action="view" data-no="${item.orderNo}">檢視</a>`;
+      }
       const links = [];
       if (canEditPo(item)) {
         links.push(`<a data-action="edit" data-no="${item.orderNo}">編輯</a>`);
@@ -1940,10 +1943,6 @@
       links.push(`<a data-action="view" data-no="${item.orderNo}">檢視</a>`);
       if (canSubmitPo(item)) {
         links.push(`<a data-action="submit" data-no="${item.orderNo}">送出申請</a>`);
-      }
-      if (canApprovePo(item)) {
-        links.push(`<a data-action="approve" data-no="${item.orderNo}">審核通過</a>`);
-        links.push(`<a data-action="reject" data-no="${item.orderNo}">審核退回</a>`);
       }
       if (canVoidOrder(item)) {
         links.push(`<a data-action="void" data-no="${item.orderNo}">取消採購單</a>`);
@@ -2828,7 +2827,7 @@
     }
 
     function canVoidOrder(order) {
-      if (!order || order.status === "已取消") return false;
+      if (!order || order.status === "已取消" || order.status === "待審核") return false;
       return getLantianStatus(order) === "WAITING";
     }
 
