@@ -1730,6 +1730,7 @@
       </div>
       <div class="modal-foot">
         <button type="button" class="btn" id="createCancel">取消</button>
+        <button type="button" class="btn hidden" id="createExport">匯出</button>
         <button type="button" class="btn" id="createSaveDraft">儲存為草稿</button>
         <button type="button" class="btn btn-primary" id="createSubmit">送出申請</button>
       </div>
@@ -2563,6 +2564,45 @@
       if (profile.address) document.getElementById("editAddress").value = profile.address;
     });
 
+    function canExportCreatePo(channelType) {
+      return channelType === "台灣本地經銷" || channelType === "境外通路";
+    }
+
+    function syncCreateExportBtn() {
+      const type = document.getElementById("createChannelType").value;
+      document.getElementById("createExport").classList.toggle("hidden", !canExportCreatePo(type));
+    }
+
+    function csvCell(value) {
+      const text = String(value ?? "");
+      if (/[",\n\r]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+      return text;
+    }
+
+    function exportCreatePo() {
+      const channelType = document.getElementById("createChannelType").value;
+      if (!canExportCreatePo(channelType)) return;
+      const poDocNo = document.getElementById("createPoDocNo").value.trim();
+      const channelName = document.getElementById("createChannelName").value;
+      const address = document.getElementById("createAddress").value;
+      const arriveDate = document.getElementById("createArriveDate").value;
+      const shipByTime = document.getElementById("createShipByTime").value.replace("T", " ");
+      const items = collectGoodsTable("createGoodsBody");
+      const lines = [
+        ["採購單單號", "合作通路類型", "通路名稱", "到貨地址", "到貨日期", "應出貨時間"].map(csvCell).join(","),
+        [poDocNo, channelType, channelName, address, arriveDate, shipByTime].map(csvCell).join(","),
+        "",
+        ["SKU", "商品名稱", "允收效期", "單位", "訂貨數量"].map(csvCell).join(","),
+        ...items.map((item) => [item.sku, item.name, item.expiryAccept, item.unit, item.qty].map(csvCell).join(",")),
+      ];
+      const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${poDocNo || "採購單"}_匯出.csv`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
     function openCreateModal() {
       const createdAt = nowStamp();
       document.getElementById("createPoDocNo").value = "";
@@ -2572,6 +2612,7 @@
       document.getElementById("createArriveDate").value = addDaysToStamp(createdAt, 2);
       document.getElementById("createShipByTime").value = toDateTimeInput(addDaysToStamp(createdAt, 1, true));
       renderGoodsTable("createGoodsBody", mockItemsFor(""));
+      syncCreateExportBtn();
       document.getElementById("createModal").classList.remove("hidden");
     }
 
@@ -2615,6 +2656,8 @@
     document.getElementById("createCancel").addEventListener("click", closeCreateModal);
     document.getElementById("createSaveDraft").addEventListener("click", () => confirmCreateOrder("草稿"));
     document.getElementById("createSubmit").addEventListener("click", () => confirmCreateOrder("待審核"));
+    document.getElementById("createExport").addEventListener("click", exportCreatePo);
+    document.getElementById("createChannelType").addEventListener("change", syncCreateExportBtn);
     document.getElementById("createModal").addEventListener("click", (e) => {
       if (e.target.id === "createModal") closeCreateModal();
     });
