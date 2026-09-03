@@ -987,10 +987,14 @@
               <label>訂單狀態</label>
               <select>
                 <option value="">請選擇</option>
+                <option>訂單取消</option>
                 <option>待拋單</option>
-                <option>訂單處理中(已開單)</option>
-                <option>已完成</option>
-                <option>已取消</option>
+                <option>訂單處理中(已拋單)</option>
+                <option>缺貨</option>
+                <option>揀貨中</option>
+                <option>已出貨</option>
+                <option>配送異常</option>
+                <option>已配達</option>
               </select>
             </div>
             <div class="field">
@@ -1387,11 +1391,14 @@
                 <label>狀態</label>
                 <select id="salesStatus">
                   <option value="">請選擇</option>
+                  <option>草稿</option>
+                  <option>待審核</option>
+                  <option>審核退回</option>
                   <option>未開立出貨單</option>
                   <option>待出貨</option>
                   <option>部分送達</option>
-                  <option>已取消</option>
                   <option>已完成</option>
+                  <option>已取消</option>
                 </select>
               </div>
               <div class="field">
@@ -1531,6 +1538,10 @@
 
           <div class="edit-footer">
             <button type="button" class="btn btn-primary" id="editCreateShip">新增出貨單</button>
+            <button type="button" class="btn" id="editSaveDraft">儲存為草稿</button>
+            <button type="button" class="btn btn-primary" id="editSubmit">送出申請</button>
+            <button type="button" class="btn" id="editReject">審核退回</button>
+            <button type="button" class="btn btn-primary" id="editApprove">審核通過</button>
             <button type="button" class="btn btn-primary" id="editSave">儲存</button>
           </div>
         </div>
@@ -1589,7 +1600,8 @@
       </div>
       <div class="modal-foot">
         <button type="button" class="btn" id="importCancel">取消</button>
-        <button type="button" class="btn btn-primary" id="importConfirm">確定</button>
+        <button type="button" class="btn" id="importSaveDraft">儲存為草稿</button>
+        <button type="button" class="btn btn-primary" id="importSubmit">送出申請</button>
       </div>
     </div>
   </div>
@@ -1668,7 +1680,8 @@
       </div>
       <div class="modal-foot">
         <button type="button" class="btn" id="createCancel">取消</button>
-        <button type="button" class="btn btn-primary" id="createConfirm">確定</button>
+        <button type="button" class="btn" id="createSaveDraft">儲存為草稿</button>
+        <button type="button" class="btn btn-primary" id="createSubmit">送出申請</button>
       </div>
     </div>
   </div>
@@ -1691,14 +1704,14 @@
 
   <script>
     let rows = [
-      { id: "10473", orderId: "VN00010473", salesOrderNo: "", audit: "待審核", channel: "實體-PW健身工廠", status: "訂單處理中(已開單)RVN00010473", applicant: "", created: "2026-08-26 14:18:05", warehouse: "2026-08-26 14:18:05", shipped: "" },
-      { id: "10472", orderId: "VN00010472", salesOrderNo: "", audit: "待審核", channel: "實體-PW健身工廠", status: "訂單處理中(已開單)RVN00010472", applicant: "", created: "2026-08-26 14:12:31", warehouse: "2026-08-26 14:12:31", shipped: "" },
+      { id: "10473", orderId: "VN00010473", salesOrderNo: "", audit: "待審核", channel: "實體-PW健身工廠", status: "訂單處理中(已拋單)", applicant: "", created: "2026-08-26 14:18:05", warehouse: "2026-08-26 14:18:05", shipped: "" },
+      { id: "10472", orderId: "VN00010472", salesOrderNo: "", audit: "待審核", channel: "實體-PW健身工廠", status: "揀貨中", applicant: "", created: "2026-08-26 14:12:31", warehouse: "2026-08-26 14:12:31", shipped: "" },
       { id: "10471", orderId: "VN00010471", salesOrderNo: "", audit: "待審核", channel: "實體-寶雅", status: "待拋單", applicant: "misha.huang", created: "2026-08-26 13:51:08", warehouse: "", shipped: "" },
-      { id: "10470", orderId: "VN00010470", salesOrderNo: "SO20260826002", audit: "待審核", channel: "實體-全聯", status: "待拋單", applicant: "misha.huang", created: "2026-08-26 13:44:22", warehouse: "", shipped: "" },
-      { id: "10469", orderId: "VN00010469", salesOrderNo: "", audit: "審核通過", channel: "實體-迪卡儂", status: "訂單處理中(已開單)RVN00010469", applicant: "vita.du", created: "2026-08-26 11:20:15", warehouse: "2026-08-26 11:25:40", shipped: "" },
-      { id: "10468", orderId: "VN00010468", salesOrderNo: "", audit: "待審核", channel: "經銷商-絢綻國際企業社", status: "待拋單", applicant: "john.pan", created: "2026-08-26 10:08:19", warehouse: "", shipped: "" },
-      { id: "10467", orderId: "VN00010467", salesOrderNo: "SO20260824006", audit: "待審核", channel: "實體-寶雅", status: "待拋單", applicant: "misha.huang", created: "2026-08-25 18:33:02", warehouse: "", shipped: "" },
-      { id: "10466", orderId: "VN00010466", salesOrderNo: "SO20260824005", audit: "待審核", channel: "跨境- Cool Cool Trading", status: "待拋單", applicant: "vita.du", created: "2026-08-25 16:12:47", warehouse: "", shipped: "" }
+      { id: "10470", orderId: "VN00010470", salesOrderNo: "SO20260826002", audit: "待審核", channel: "實體-全聯", status: "已出貨", applicant: "misha.huang", created: "2026-08-26 13:44:22", warehouse: "", shipped: "" },
+      { id: "10469", orderId: "VN00010469", salesOrderNo: "", audit: "審核通過", channel: "實體-迪卡儂", status: "缺貨", applicant: "vita.du", created: "2026-08-26 11:20:15", warehouse: "2026-08-26 11:25:40", shipped: "" },
+      { id: "10468", orderId: "VN00010468", salesOrderNo: "", audit: "待審核", channel: "經銷商-絢綻國際企業社", status: "配送異常", applicant: "john.pan", created: "2026-08-26 10:08:19", warehouse: "", shipped: "" },
+      { id: "10467", orderId: "VN00010467", salesOrderNo: "SO20260824006", audit: "待審核", channel: "實體-寶雅", status: "已配達", applicant: "misha.huang", created: "2026-08-25 18:33:02", warehouse: "", shipped: "" },
+      { id: "10466", orderId: "VN00010466", salesOrderNo: "SO20260824005", audit: "待審核", channel: "跨境- Cool Cool Trading", status: "訂單取消", applicant: "vita.du", created: "2026-08-25 16:12:47", warehouse: "", shipped: "" }
     ];
 
     function getShippingFiltered() {
@@ -1803,7 +1816,7 @@
     let salesOrders = [
       {
         orderNo: "SO20260826001", poDocNo: "PW-PO-20260826-01", shipNo: "", channelType: "台灣實體百貨", channelName: "實體-PW健身工廠",
-        status: "未開立出貨單", operator: "misha.huang", createdAt: "2026-08-26 14:18:05",
+        status: "待審核", operator: "misha.huang", createdAt: "2026-08-26 14:18:05",
         fileName: "PW健身工廠_訂單.csv", fileUrl: URL.createObjectURL(sampleFile), fileType: "text/csv",
         address: "台北市內湖區瑞光路358號1樓（PW健身工廠內湖店）",
         arriveDate: "2026-08-28", shipByTime: "2026-08-27 10:00",
@@ -1826,7 +1839,7 @@
       },
       {
         orderNo: "SO20260825003", poDocNo: "XZ-PO-0825-003", shipNo: "", channelType: "台灣本地經銷", channelName: "經銷商-絢綻國際企業社",
-        status: "未開立出貨單", operator: "john.pan", createdAt: "2026-08-25 16:12:47",
+        status: "草稿", operator: "john.pan", createdAt: "2026-08-25 16:12:47",
         fileName: "", fileUrl: "", fileType: "",
         address: "新北市新莊區中正路567號3樓",
         arriveDate: "2026-08-28", shipByTime: "2026-08-26 14:00",
@@ -1837,7 +1850,7 @@
       },
       {
         orderNo: "SO20260825004", poDocNo: "OL-TRANSFER-0825", shipNo: "", channelType: "台灣線上通路", channelName: "線上-轉單",
-        status: "已完成", operator: "sarah.lin", createdAt: "2026-08-25 10:08:19",
+        status: "未開立出貨單", operator: "sarah.lin", createdAt: "2026-08-25 10:08:19",
         fileName: "", fileUrl: "", fileType: "",
         address: "新北市五股區成泰路一段100號 藍田倉",
         arriveDate: "2026-08-27", shipByTime: "2026-08-26 09:00",
@@ -1859,7 +1872,7 @@
       },
       {
         orderNo: "SO20260824006", poDocNo: "POYA-0824-006", shipNo: "", channelType: "台灣本地通路", channelName: "實體-寶雅",
-        status: "部分送達", operator: "misha.huang", createdAt: "2026-08-24 09:41:11",
+        status: "審核退回", operator: "misha.huang", createdAt: "2026-08-24 09:41:11",
         fileName: "", fileUrl: "", fileType: "",
         address: "新北市樹林區佳園路二段70號 寶雅倉儲",
         arriveDate: "2026-08-26", shipByTime: "2026-08-25 11:30",
@@ -1872,6 +1885,41 @@
 
     function salesDateOnly(value) {
       return (value || "").slice(0, 10);
+    }
+
+    function canEditPo(order) {
+      return ["草稿", "審核退回", "未開立出貨單", "待出貨", "部分送達"].includes(order.status);
+    }
+
+    function canSubmitPo(order) {
+      return order.status === "草稿" || order.status === "審核退回";
+    }
+
+    function canApprovePo(order) {
+      return order.status === "待審核";
+    }
+
+    function canShipFromPo(order) {
+      return !!order && ["未開立出貨單", "待出貨", "部分送達"].includes(order.status);
+    }
+
+    function salesRowActions(item) {
+      const links = [];
+      if (canEditPo(item)) {
+        links.push(`<a data-action="edit" data-no="${item.orderNo}">編輯</a>`);
+      }
+      links.push(`<a data-action="view" data-no="${item.orderNo}">檢視</a>`);
+      if (canSubmitPo(item)) {
+        links.push(`<a data-action="submit" data-no="${item.orderNo}">送出申請</a>`);
+      }
+      if (canApprovePo(item)) {
+        links.push(`<a data-action="approve" data-no="${item.orderNo}">審核通過</a>`);
+        links.push(`<a data-action="reject" data-no="${item.orderNo}">審核退回</a>`);
+      }
+      if (canVoidOrder(item)) {
+        links.push(`<a data-action="void" data-no="${item.orderNo}">取消採購單</a>`);
+      }
+      return links.join("");
     }
 
     function getSalesFiltered() {
@@ -1915,9 +1963,7 @@
           <td>${item.operator}</td>
           <td>${item.createdAt}</td>
           <td class="ops">
-              <a data-action="edit" data-no="${item.orderNo}">編輯</a>
-              <a data-action="view" data-no="${item.orderNo}">檢視</a>
-              <a data-action="void" data-no="${item.orderNo}">取消採購單</a>
+              ${salesRowActions(item)}
           </td>
         </tr>
       `).join("");
@@ -1994,13 +2040,13 @@
       return `SO${d.getFullYear()}${pad(d.getMonth() + 1, 2)}${pad(d.getDate(), 2)}${pad(seq, 3)}`;
     }
 
-    function confirmImport() {
-      const order = createPoFromImport();
+    function confirmImport(status) {
+      const order = createPoFromImport(status);
       if (!order) return;
       closeImportModal();
     }
 
-    function createPoFromImport() {
+    function createPoFromImport(status) {
       const fileInput = document.getElementById("importFile");
       const file = fileInput.files && fileInput.files[0];
       if (!file) {
@@ -2018,7 +2064,7 @@
         channelType: channelType || "—",
         channelName: channelName || "—",
         region: profile.region || "台灣",
-        status: "未開立出貨單",
+        status,
         operator: "demo.user",
         createdAt,
         fileName: file.name,
@@ -2046,7 +2092,8 @@
     document.getElementById("salesImportBtn").addEventListener("click", openImportModal);
     document.getElementById("importClose").addEventListener("click", closeImportModal);
     document.getElementById("importCancel").addEventListener("click", closeImportModal);
-    document.getElementById("importConfirm").addEventListener("click", confirmImport);
+    document.getElementById("importSaveDraft").addEventListener("click", () => confirmImport("草稿"));
+    document.getElementById("importSubmit").addEventListener("click", () => confirmImport("待審核"));
     document.getElementById("importFileBtn").addEventListener("click", () => {
       document.getElementById("importFile").click();
     });
@@ -2072,11 +2119,29 @@
     });
     document.getElementById("salesTableBody").addEventListener("click", (e) => {
       const action = e.target.dataset.action;
-      if (action !== "edit" && action !== "view" && action !== "void") return;
+      if (!action) return;
       const order = salesOrders.find((item) => item.orderNo === e.target.dataset.no);
       if (!order) return;
       if (action === "void") {
         openVoidModal(order);
+        return;
+      }
+      if (action === "submit") {
+        if (!canSubmitPo(order)) return;
+        order.status = "待審核";
+        renderSalesTable(getSalesFiltered());
+        return;
+      }
+      if (action === "approve") {
+        approvePo(order);
+        return;
+      }
+      if (action === "reject") {
+        rejectPo(order);
+        return;
+      }
+      if (action === "edit" && !canEditPo(order)) {
+        fillOrderEdit(order, "view");
         return;
       }
       fillOrderEdit(order, action);
@@ -2285,9 +2350,7 @@
 
     function renderRelatedShips(order) {
       const body = document.getElementById("relatedShipBody");
-      const list = !order || order.status === "未開立出貨單"
-        ? []
-        : rows.filter((r) => r.salesOrderNo === order.orderNo);
+      const list = !order ? [] : rows.filter((r) => r.salesOrderNo === order.orderNo);
       if (!list.length) {
         body.innerHTML = `<tr class="empty-row"><td class="related-empty" colspan="4">尚未開立出貨單</td></tr>`;
         return;
@@ -2313,9 +2376,48 @@
       }
     }
 
+    function applyEditFormToOrder(order) {
+      order.poDocNo = document.getElementById("editPoDocNo").value.trim().slice(0, 30);
+      order.channelType = document.getElementById("editChannelType").value || order.channelType;
+      order.channelName = document.getElementById("editChannelName").value || order.channelName;
+      order.address = document.getElementById("editAddress").value;
+      order.arriveDate = document.getElementById("editArriveDate").value;
+      order.shipByTime = document.getElementById("editShipByTime").value.replace("T", " ");
+      order.items = collectEditGoods();
+    }
+
+    function approvePo(order) {
+      if (!canApprovePo(order)) return;
+      order.status = "未開立出貨單";
+      renderSalesTable(getSalesFiltered());
+      if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "edit");
+    }
+
+    function rejectPo(order) {
+      if (!canApprovePo(order)) return;
+      order.status = "審核退回";
+      renderSalesTable(getSalesFiltered());
+      if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "edit");
+    }
+
+    function syncEditFooter(order, mode) {
+      const view = mode === "view";
+      const draftLike = canSubmitPo(order);
+      const pending = canApprovePo(order);
+      const approvedOps = ["未開立出貨單", "待出貨", "部分送達"].includes(order.status);
+      document.getElementById("editCreateShip").classList.toggle("hidden", !canShipFromPo(order) || view);
+      document.getElementById("editCreateShip").disabled = !canShipFromPo(order);
+      document.getElementById("editSaveDraft").classList.toggle("hidden", view || !draftLike);
+      document.getElementById("editSubmit").classList.toggle("hidden", view || !draftLike);
+      document.getElementById("editApprove").classList.toggle("hidden", !pending);
+      document.getElementById("editReject").classList.toggle("hidden", !pending);
+      document.getElementById("editSave").classList.toggle("hidden", view || draftLike || pending || !approvedOps);
+    }
+
     function fillOrderEdit(order, mode) {
       currentEditOrderNo = order.orderNo;
-      orderFormMode = mode === "view" ? "view" : "edit";
+      const forceView = mode === "view" || canApprovePo(order) || order.status === "已完成" || order.status === "已取消";
+      orderFormMode = forceView ? "view" : "edit";
       const profile = channelProfiles[order.channelName] || {};
       if (!order.address) order.address = profile.address || "";
       if (!order.arriveDate) order.arriveDate = addDaysToStamp(order.createdAt, 2);
@@ -2331,8 +2433,7 @@
       renderEditGoods(order.items);
       renderRelatedShips(order);
       setOrderFormReadonly(orderFormMode === "view");
-      const canAddShip = order.status === "未開立出貨單" || order.status === "部分送達";
-      document.getElementById("editCreateShip").disabled = !canAddShip;
+      syncEditFooter(order, orderFormMode);
       showPage("order-edit");
     }
 
@@ -2342,27 +2443,48 @@
       page.querySelectorAll("input, select, textarea").forEach((el) => {
         el.disabled = readonly;
       });
-      document.getElementById("editSave").classList.toggle("hidden", readonly);
     }
 
     document.getElementById("editSave").addEventListener("click", () => {
       if (orderFormMode === "view") return;
       const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
       if (!order) return;
-      order.poDocNo = document.getElementById("editPoDocNo").value.trim().slice(0, 30);
-      order.channelType = document.getElementById("editChannelType").value || order.channelType;
-      order.channelName = document.getElementById("editChannelName").value || order.channelName;
-      order.address = document.getElementById("editAddress").value;
-      order.arriveDate = document.getElementById("editArriveDate").value;
-      order.shipByTime = document.getElementById("editShipByTime").value.replace("T", " ");
-      order.items = collectEditGoods();
+      applyEditFormToOrder(order);
       renderSalesTable(getSalesFiltered());
       alert("已儲存");
+    });
+    document.getElementById("editSaveDraft").addEventListener("click", () => {
+      if (orderFormMode === "view") return;
+      const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+      if (!order || !canSubmitPo(order)) return;
+      applyEditFormToOrder(order);
+      order.status = "草稿";
+      renderSalesTable(getSalesFiltered());
+      fillOrderEdit(order, "edit");
+      alert("已儲存為草稿");
+    });
+    document.getElementById("editSubmit").addEventListener("click", () => {
+      if (orderFormMode === "view") return;
+      const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+      if (!order || !canSubmitPo(order)) return;
+      applyEditFormToOrder(order);
+      order.status = "待審核";
+      renderSalesTable(getSalesFiltered());
+      fillOrderEdit(order, "view");
+      alert("已送出申請");
+    });
+    document.getElementById("editApprove").addEventListener("click", () => {
+      const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+      if (order) approvePo(order);
+    });
+    document.getElementById("editReject").addEventListener("click", () => {
+      const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+      if (order) rejectPo(order);
     });
     document.getElementById("editCreateShip").addEventListener("click", () => {
       const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
       if (!order) return;
-      if (order.status !== "未開立出貨單" && order.status !== "部分送達") return;
+      if (!canShipFromPo(order)) return;
       goToShipCreateFromPo({
         ...order,
         channelType: document.getElementById("editChannelType").value || order.channelType,
@@ -2392,12 +2514,12 @@
       document.getElementById("createModal").classList.add("hidden");
     }
 
-    function confirmCreateOrder() {
-      const order = createPoFromForm();
+    function confirmCreateOrder(status) {
+      createPoFromForm(status);
       closeCreateModal();
     }
 
-    function createPoFromForm() {
+    function createPoFromForm(status) {
       const channelType = document.getElementById("createChannelType").value;
       const channelName = document.getElementById("createChannelName").value;
       const order = {
@@ -2407,7 +2529,7 @@
         channelType: channelType || "—",
         channelName: channelName || "—",
         region: (channelProfiles[channelName] || {}).region || "台灣",
-        status: "未開立出貨單",
+        status,
         operator: "demo.user",
         createdAt: nowStamp(),
         fileName: "",
@@ -2426,7 +2548,8 @@
     document.getElementById("salesCreateBtn").addEventListener("click", openCreateModal);
     document.getElementById("createClose").addEventListener("click", closeCreateModal);
     document.getElementById("createCancel").addEventListener("click", closeCreateModal);
-    document.getElementById("createConfirm").addEventListener("click", confirmCreateOrder);
+    document.getElementById("createSaveDraft").addEventListener("click", () => confirmCreateOrder("草稿"));
+    document.getElementById("createSubmit").addEventListener("click", () => confirmCreateOrder("待審核"));
     document.getElementById("createModal").addEventListener("click", (e) => {
       if (e.target.id === "createModal") closeCreateModal();
     });
@@ -2500,11 +2623,20 @@
     }
 
     function requireShipPo() {
-      if (getSelectedShipPo()) return true;
-      alert("請選擇採購單編號");
-      document.getElementById("shipPoNo").focus();
-      renderShipPoList(document.getElementById("shipPoNo").value);
-      return false;
+      const po = getSelectedShipPo();
+      if (!po) {
+        alert("請選擇採購單編號");
+        document.getElementById("shipPoNo").focus();
+        renderShipPoList(document.getElementById("shipPoNo").value);
+        return false;
+      }
+      if (!canShipFromPo(po)) {
+        alert("此採購單尚未審核通過，無法建立出貨單");
+        document.getElementById("shipPoNo").focus();
+        renderShipPoList(document.getElementById("shipPoNo").value);
+        return false;
+      }
+      return true;
     }
 
     function setShipCreateStep(n) {
@@ -2534,7 +2666,11 @@
       const channelName = document.getElementById("shipChannelName").value;
       const poNo = document.getElementById("shipPoNo").value.trim();
       const po = salesOrders.find((item) => item.orderNo === poNo);
-      if (po && po.status === "未開立出貨單") po.status = "待出貨";
+      if (po && !canShipFromPo(po)) {
+        alert("此採購單尚未審核通過，無法建立出貨單");
+        setShipCreateStep(1);
+        return;
+      }
       rows.unshift({
         id: ids.id,
         orderId: ids.orderId,
@@ -2616,6 +2752,7 @@
       const list = document.getElementById("shipPoList");
       const q = (keyword || "").trim().toLowerCase();
       const options = salesOrders
+        .filter((item) => canShipFromPo(item))
         .map((item) => item.orderNo)
         .filter((no) => !q || no.toLowerCase().includes(q));
       if (!options.length) {
@@ -2694,7 +2831,7 @@
       }
       order.status = "已取消";
       rows.forEach((row) => {
-        if (row.salesOrderNo === order.orderNo) row.status = "已取消";
+        if (row.salesOrderNo === order.orderNo) row.status = "訂單取消";
       });
       renderSalesTable(getSalesFiltered());
       renderShippingTable(getShippingFiltered());
