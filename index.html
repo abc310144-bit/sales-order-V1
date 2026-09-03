@@ -1353,6 +1353,10 @@
                 <input id="salesOrderNo" type="text" placeholder="支援模糊查詢" />
               </div>
               <div class="field">
+                <label>採購單單號</label>
+                <input id="salesPoDocNo" type="text" placeholder="支援模糊查詢" maxlength="30" />
+              </div>
+              <div class="field">
                 <label>合作通路類型</label>
                 <select id="salesChannelType">
                   <option value="">請選擇</option>
@@ -1426,6 +1430,7 @@
               <thead>
                 <tr>
                   <th>採購單編號</th>
+                  <th>採購單單號</th>
                   <th>合作通路類型</th>
                   <th>通路名稱</th>
                   <th>狀態</th>
@@ -1441,6 +1446,10 @@
 
         <div class="page" id="page-order-edit">
           <h2 class="form-title" id="editPageTitle">採購單資料</h2>
+          <div class="form-row">
+            <label>採購單單號</label>
+            <div class="form-ctrl"><input type="text" id="editPoDocNo" maxlength="30" placeholder="請輸入採購單單號" /></div>
+          </div>
           <div class="form-row">
             <label>合作通路類型</label>
             <div class="form-ctrl">
@@ -1592,6 +1601,10 @@
         <button type="button" class="modal-close" id="createClose" aria-label="關閉">×</button>
       </div>
       <div class="modal-body">
+        <div class="form-row">
+          <label>採購單單號</label>
+          <div class="form-ctrl"><input type="text" id="createPoDocNo" maxlength="30" placeholder="請輸入採購單單號" /></div>
+        </div>
         <div class="form-row">
           <label>合作通路類型</label>
           <div class="form-ctrl">
@@ -1789,7 +1802,7 @@
 
     let salesOrders = [
       {
-        orderNo: "SO20260826001", shipNo: "", channelType: "台灣實體百貨", channelName: "實體-PW健身工廠",
+        orderNo: "SO20260826001", poDocNo: "PW-PO-20260826-01", shipNo: "", channelType: "台灣實體百貨", channelName: "實體-PW健身工廠",
         status: "未開立出貨單", operator: "misha.huang", createdAt: "2026-08-26 14:18:05",
         fileName: "PW健身工廠_訂單.csv", fileUrl: URL.createObjectURL(sampleFile), fileType: "text/csv",
         address: "台北市內湖區瑞光路358號1樓（PW健身工廠內湖店）",
@@ -1800,7 +1813,7 @@
         ]
       },
       {
-        orderNo: "SO20260826002", shipNo: "", channelType: "台灣本地通路", channelName: "實體-全聯",
+        orderNo: "SO20260826002", poDocNo: "PX-20260826-A12", shipNo: "", channelType: "台灣本地通路", channelName: "實體-全聯",
         status: "部分送達", operator: "vita.du", createdAt: "2026-08-26 11:20:15",
         fileName: "", fileUrl: "", fileType: "",
         address: "桃園市大園區航勤北路8號 全聯物流中心",
@@ -1812,7 +1825,7 @@
         ]
       },
       {
-        orderNo: "SO20260825003", shipNo: "", channelType: "台灣本地經銷", channelName: "經銷商-絢綻國際企業社",
+        orderNo: "SO20260825003", poDocNo: "XZ-PO-0825-003", shipNo: "", channelType: "台灣本地經銷", channelName: "經銷商-絢綻國際企業社",
         status: "未開立出貨單", operator: "john.pan", createdAt: "2026-08-25 16:12:47",
         fileName: "", fileUrl: "", fileType: "",
         address: "新北市新莊區中正路567號3樓",
@@ -1823,7 +1836,7 @@
         ]
       },
       {
-        orderNo: "SO20260825004", shipNo: "", channelType: "台灣線上通路", channelName: "線上-轉單",
+        orderNo: "SO20260825004", poDocNo: "OL-TRANSFER-0825", shipNo: "", channelType: "台灣線上通路", channelName: "線上-轉單",
         status: "已完成", operator: "sarah.lin", createdAt: "2026-08-25 10:08:19",
         fileName: "", fileUrl: "", fileType: "",
         address: "新北市五股區成泰路一段100號 藍田倉",
@@ -1834,7 +1847,7 @@
         ]
       },
       {
-        orderNo: "SO20260824005", shipNo: "", channelType: "境外通路", channelName: "跨境- Cool Cool Trading",
+        orderNo: "SO20260824005", poDocNo: "CCT-HK-20260824", shipNo: "", channelType: "境外通路", channelName: "跨境- Cool Cool Trading",
         status: "已取消", operator: "henry.huang", createdAt: "2026-08-24 18:33:02",
         fileName: "", fileUrl: "", fileType: "",
         address: "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong",
@@ -1845,7 +1858,7 @@
         ]
       },
       {
-        orderNo: "SO20260824006", shipNo: "", channelType: "台灣本地通路", channelName: "實體-寶雅",
+        orderNo: "SO20260824006", poDocNo: "POYA-0824-006", shipNo: "", channelType: "台灣本地通路", channelName: "實體-寶雅",
         status: "部分送達", operator: "misha.huang", createdAt: "2026-08-24 09:41:11",
         fileName: "", fileUrl: "", fileType: "",
         address: "新北市樹林區佳園路二段70號 寶雅倉儲",
@@ -1863,6 +1876,7 @@
 
     function getSalesFiltered() {
       const orderNo = document.getElementById("salesOrderNo").value.trim().toLowerCase();
+      const poDocNo = document.getElementById("salesPoDocNo").value.trim().toLowerCase();
       const channelType = document.getElementById("salesChannelType").value;
       const channelName = document.getElementById("salesChannelName").value;
       const status = document.getElementById("salesStatus").value;
@@ -1872,6 +1886,7 @@
 
       return salesOrders.filter((item) => {
         if (orderNo && !item.orderNo.toLowerCase().includes(orderNo)) return false;
+        if (poDocNo && !(item.poDocNo || "").toLowerCase().includes(poDocNo)) return false;
         if (channelType && item.channelType !== channelType) return false;
         if (channelName && item.channelName !== channelName) return false;
         if (status && item.status !== status) return false;
@@ -1887,13 +1902,14 @@
       const body = document.getElementById("salesTableBody");
       document.getElementById("salesTotal").textContent = String(list.length);
       if (!list.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="7">查無資料</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="8">查無資料</td></tr>`;
         return;
       }
       body.innerHTML = list.map((item) => `
         <tr>
-          <td>${item.orderNo}</td>
-          <td>${item.channelType}</td>
+          <td>${escapeHtml(item.orderNo)}</td>
+          <td>${escapeHtml(item.poDocNo || "—")}</td>
+          <td>${escapeHtml(item.channelType)}</td>
           <td>${item.channelName}</td>
           <td>${item.status}</td>
           <td>${item.operator}</td>
@@ -1923,6 +1939,7 @@
 
     document.getElementById("salesClear").addEventListener("click", () => {
       document.getElementById("salesOrderNo").value = "";
+      document.getElementById("salesPoDocNo").value = "";
       document.getElementById("salesChannelType").value = "";
       document.getElementById("salesChannelName").value = "";
       document.getElementById("salesStatus").value = "";
@@ -1996,6 +2013,7 @@
       const profile = channelProfiles[channelName] || {};
       const order = {
         orderNo: nextSalesOrderNo(),
+        poDocNo: "",
         shipNo: "",
         channelType: channelType || "—",
         channelName: channelName || "—",
@@ -2304,6 +2322,7 @@
       if (!order.shipByTime) order.shipByTime = addDaysToStamp(order.createdAt, 1, true);
       if (!order.items || !order.items.length) order.items = mockItemsFor(order.channelName);
       document.getElementById("editPageTitle").textContent = orderFormMode === "view" ? "檢視採購單" : "編輯採購單";
+      document.getElementById("editPoDocNo").value = order.poDocNo || "";
       document.getElementById("editChannelType").value = !order.channelType || order.channelType === "—" ? "" : order.channelType;
       document.getElementById("editChannelName").value = !order.channelName || order.channelName === "—" ? "" : order.channelName;
       document.getElementById("editAddress").value = order.address || "";
@@ -2330,6 +2349,7 @@
       if (orderFormMode === "view") return;
       const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
       if (!order) return;
+      order.poDocNo = document.getElementById("editPoDocNo").value.trim().slice(0, 30);
       order.channelType = document.getElementById("editChannelType").value || order.channelType;
       order.channelName = document.getElementById("editChannelName").value || order.channelName;
       order.address = document.getElementById("editAddress").value;
@@ -2358,6 +2378,7 @@
 
     function openCreateModal() {
       const createdAt = nowStamp();
+      document.getElementById("createPoDocNo").value = "";
       document.getElementById("createChannelType").value = "";
       document.getElementById("createChannelName").value = "";
       document.getElementById("createAddress").value = "";
@@ -2381,6 +2402,7 @@
       const channelName = document.getElementById("createChannelName").value;
       const order = {
         orderNo: nextSalesOrderNo(),
+        poDocNo: document.getElementById("createPoDocNo").value.trim().slice(0, 30),
         shipNo: "",
         channelType: channelType || "—",
         channelName: channelName || "—",
