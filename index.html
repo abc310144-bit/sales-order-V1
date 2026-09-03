@@ -1917,7 +1917,7 @@
     }
 
     function canEditPo(order) {
-      return ["草稿", "未開立出貨單", "已開立出貨單"].includes(order.status);
+      return ["草稿", "未開立出貨單"].includes(order.status);
     }
 
     function canSubmitPo(order) {
@@ -2432,8 +2432,8 @@
       const view = mode === "view";
       const draftLike = canSubmitPo(order);
       const pending = canApprovePo(order);
-      const approvedOps = order.status === "未開立出貨單" || order.status === "已開立出貨單";
-      document.getElementById("editCreateShip").classList.toggle("hidden", !canShipFromPo(order) || view);
+      const approvedOps = order.status === "未開立出貨單";
+      document.getElementById("editCreateShip").classList.toggle("hidden", !canShipFromPo(order) || (view && order.status !== "已開立出貨單"));
       document.getElementById("editCreateShip").disabled = !canShipFromPo(order);
       document.getElementById("editSaveDraft").classList.toggle("hidden", view || !draftLike);
       document.getElementById("editSubmit").classList.toggle("hidden", view || !draftLike);
@@ -2444,7 +2444,7 @@
 
     function fillOrderEdit(order, mode) {
       currentEditOrderNo = order.orderNo;
-      const forceView = mode === "view" || canApprovePo(order) || order.status === "已取消";
+      const forceView = mode === "view" || canApprovePo(order) || order.status === "已取消" || order.status === "已開立出貨單";
       orderFormMode = forceView ? "view" : "edit";
       const profile = channelProfiles[order.channelName] || {};
       if (!order.address) order.address = profile.address || "";
