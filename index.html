@@ -846,7 +846,7 @@
     .status-tag[data-status="審核退回"] { color: #cf1322; background: #fff1f0; border-color: #ffa39e; }
     .status-tag[data-status="審核通過"] { color: #389e0d; background: #f6ffed; border-color: #b7eb8f; }
     .status-tag[data-status="未開立出貨單"] { color: #096dd9; background: #e6f7ff; border-color: #91d5ff; }
-    .status-tag[data-status="已完成"],
+    .status-tag[data-status="已開立出貨單"] { color: #389e0d; background: #f6ffed; border-color: #b7eb8f; }
     .status-tag[data-status="已配達"] { color: #389e0d; background: #f6ffed; border-color: #b7eb8f; }
     .status-tag[data-status="已取消"],
     .status-tag[data-status="訂單取消"] { color: #8c8c8c; background: #f5f5f5; border-color: #d9d9d9; }
@@ -1421,7 +1421,7 @@
                   <option>草稿</option>
                   <option>待審核</option>
                   <option>未開立出貨單</option>
-                  <option>已完成</option>
+                  <option>已開立出貨單</option>
                   <option>已取消</option>
                 </select>
               </div>
@@ -1851,7 +1851,7 @@
       },
       {
         orderNo: "SO20260826002", poDocNo: "PX-20260826-A12", shipNo: "", channelType: "台灣本地通路", channelName: "實體-全聯",
-        status: "未開立出貨單", operator: "vita.du", createdAt: "2026-08-26 11:20:15",
+        status: "已開立出貨單", operator: "vita.du", createdAt: "2026-08-26 11:20:15",
         fileName: "", fileUrl: "", fileType: "",
         address: "桃園市大園區航勤北路8號 全聯物流中心",
         arriveDate: "2026-08-29", shipByTime: "2026-08-27 16:00",
@@ -1896,7 +1896,7 @@
       },
       {
         orderNo: "SO20260824006", poDocNo: "POYA-0824-006", shipNo: "", channelType: "台灣本地通路", channelName: "實體-寶雅",
-        status: "草稿", operator: "misha.huang", createdAt: "2026-08-24 09:41:11",
+        status: "已開立出貨單", operator: "misha.huang", createdAt: "2026-08-24 09:41:11",
         fileName: "", fileUrl: "", fileType: "",
         address: "新北市樹林區佳園路二段70號 寶雅倉儲",
         arriveDate: "2026-08-26", shipByTime: "2026-08-25 11:30",
@@ -1917,7 +1917,7 @@
     }
 
     function canEditPo(order) {
-      return ["草稿", "未開立出貨單"].includes(order.status);
+      return ["草稿", "未開立出貨單", "已開立出貨單"].includes(order.status);
     }
 
     function canSubmitPo(order) {
@@ -1929,7 +1929,7 @@
     }
 
     function canShipFromPo(order) {
-      return !!order && order.status === "未開立出貨單";
+      return !!order && (order.status === "未開立出貨單" || order.status === "已開立出貨單");
     }
 
     function salesRowActions(item) {
@@ -2433,7 +2433,7 @@
       const view = mode === "view";
       const draftLike = canSubmitPo(order);
       const pending = canApprovePo(order);
-      const approvedOps = order.status === "未開立出貨單";
+      const approvedOps = order.status === "未開立出貨單" || order.status === "已開立出貨單";
       document.getElementById("editCreateShip").classList.toggle("hidden", !canShipFromPo(order) || view);
       document.getElementById("editCreateShip").disabled = !canShipFromPo(order);
       document.getElementById("editSaveDraft").classList.toggle("hidden", view || !draftLike);
@@ -2445,7 +2445,7 @@
 
     function fillOrderEdit(order, mode) {
       currentEditOrderNo = order.orderNo;
-      const forceView = mode === "view" || canApprovePo(order) || order.status === "已完成" || order.status === "已取消";
+      const forceView = mode === "view" || canApprovePo(order) || order.status === "已取消";
       orderFormMode = forceView ? "view" : "edit";
       const profile = channelProfiles[order.channelName] || {};
       if (!order.address) order.address = profile.address || "";
@@ -2695,11 +2695,7 @@
       const channelName = document.getElementById("shipChannelName").value;
       const poNo = document.getElementById("shipPoNo").value.trim();
       const po = salesOrders.find((item) => item.orderNo === poNo);
-      if (po && !canShipFromPo(po)) {
-        alert("此採購單尚未審核通過，無法建立出貨單");
-        setShipCreateStep(1);
-        return;
-      }
+      if (po) po.status = "已開立出貨單";
       rows.unshift({
         id: ids.id,
         orderId: ids.orderId,
@@ -2827,7 +2823,6 @@
 
     function getLantianStatus(order) {
       if (order.lantianStatus) return order.lantianStatus;
-      if (order.status === "已完成") return "DONE";
       if (order.status === "已取消") return "DONE";
       return "WAITING";
     }
