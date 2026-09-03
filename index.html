@@ -1,0 +1,2690 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>採購單管理 - UrMart</title>
+  <style>
+    :root {
+      --header: #001529;
+      --primary: #1890ff;
+      --primary-hover: #40a9ff;
+      --selected-bg: #e6f7ff;
+      --border: #d9d9d9;
+      --border-light: #f0f0f0;
+      --text: rgba(0, 0, 0, 0.85);
+      --text-2: rgba(0, 0, 0, 0.65);
+      --text-3: rgba(0, 0, 0, 0.45);
+      --bg: #fff;
+      --table-head: #fafafa;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      color: var(--text);
+      background: #fff;
+      font-size: 14px;
+    }
+
+    .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+    .header {
+      height: 48px;
+      background: var(--header);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      flex-shrink: 0;
+    }
+    .logo { font-size: 20px; font-weight: 600; letter-spacing: 0.2px; }
+
+    .body { display: flex; flex: 1; min-height: 0; }
+
+    .sider {
+      width: 220px;
+      background: #fff;
+      border-right: 1px solid var(--border-light);
+      overflow-y: auto;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .menu-item, .menu-sub, .menu-leaf {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      color: var(--text-2);
+      line-height: 1.4;
+    }
+    .menu-item {
+      padding: 12px 16px;
+      font-weight: 500;
+    }
+    .menu-item:hover, .menu-sub:hover, .menu-leaf:hover { color: var(--primary); }
+    .menu-sub {
+      padding: 10px 16px 10px 32px;
+      font-size: 14px;
+    }
+    .menu-leaf {
+      padding: 10px 16px 10px 48px;
+      font-size: 13px;
+      justify-content: flex-start;
+    }
+    .menu-sub.active,
+    .menu-leaf.active {
+      background: var(--selected-bg);
+      color: var(--primary);
+      font-weight: 500;
+      border-left: 3px solid var(--primary);
+    }
+    .menu-sub.active { padding-left: 29px; }
+    .menu-leaf.active { padding-left: 45px; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .placeholder {
+      padding: 48px 16px;
+      color: var(--text-3);
+      font-size: 14px;
+    }
+    .placeholder h1 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .sales-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .accordion-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 32px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 2px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .accordion-btn:hover { color: var(--primary); border-color: var(--primary); }
+    .accordion-btn .acc-arrow {
+      width: 12px;
+      height: 12px;
+      transition: transform 0.2s ease;
+    }
+    .accordion-btn.collapsed .acc-arrow { transform: rotate(-90deg); }
+    .sales-toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .demo-hint {
+      margin: 0 0 12px;
+      padding: 10px 14px;
+      background: #fffbe6;
+      border: 1px solid #ffe58f;
+      color: rgba(0, 0, 0, 0.85);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .demo-hint strong { color: #ad6800; }
+    .empty-row td {
+      text-align: center;
+      color: var(--text-3);
+      padding: 32px 12px;
+    }
+
+    .modal-mask {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 48px 16px;
+      overflow: auto;
+    }
+    .modal-mask.hidden { display: none; }
+    .modal-card {
+      width: min(1080px, 100%);
+      background: #fff;
+      border-radius: 2px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    }
+    .modal-card.void-card { width: min(480px, 100%); }
+    .void-msg {
+      margin: 8px 0 12px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .modal-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+    .modal-close {
+      border: 0;
+      background: transparent;
+      font-size: 20px;
+      color: var(--text-3);
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-body { padding: 20px 24px 8px; }
+    .modal-row {
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr);
+      gap: 8px 16px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .modal-row > span { color: var(--text); text-align: right; }
+    .modal-field { min-width: 0; }
+    .modal-field input,
+    .modal-field select {
+      width: 100%;
+      max-width: 280px;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 0 11px;
+      font-size: 14px;
+      outline: none;
+      background: #fff;
+    }
+    .modal-field input:focus,
+    .modal-field select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+    }
+    .modal-field select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23bfbfbf' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+    .check-line {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .check-line input { accent-color: var(--primary); }
+    .inline-pair {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .inline-pair .wh-select { max-width: 220px; flex: 0 0 220px; }
+    .inline-pair .ccy-select { max-width: 120px; flex: 0 0 120px; }
+    .inline-pair .amount-input { max-width: 180px; flex: 0 0 180px; }
+    .radio-group {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px 20px;
+    }
+    .radio-line {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      color: var(--text);
+    }
+    .radio-line input { accent-color: var(--primary); }
+    .file-pick {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .file-name {
+      color: var(--text-2);
+      font-size: 13px;
+    }
+    .file-name.empty { color: var(--text-3); }
+    a.link {
+      color: var(--primary);
+      text-decoration: none;
+      cursor: pointer;
+    }
+    a.link:hover { text-decoration: underline; }
+    .modal-body .form-row {
+      grid-template-columns: 120px minmax(0, 1fr);
+    }
+    .modal-body .form-row > label { text-align: right; }
+    .modal-body .form-ctrl input,
+    .modal-body .form-ctrl select,
+    .modal-body .form-ctrl textarea {
+      max-width: 100%;
+    }
+    .modal-body .goods-block { margin-top: 8px; }
+    .modal-body .goods-table { min-width: 720px; }
+    .modal-foot {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 10px 24px 16px;
+      border-top: 1px solid var(--border-light);
+    }
+    .steps {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 0;
+      margin: 8px 0 28px;
+      padding-bottom: 20px;
+    }
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      min-width: 120px;
+      color: var(--text-3);
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .step .num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #f0f0f0;
+      color: var(--text-3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+    .step.active, .step.done { color: var(--primary); }
+    .step.active .num, .step.done .num { background: var(--primary); color: #fff; }
+    .step-line {
+      width: 72px;
+      height: 1px;
+      background: #d9d9d9;
+      margin-top: 14px;
+    }
+    .wizard-steps {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 8px;
+      margin: 4px 0 28px;
+      padding-bottom: 4px;
+    }
+    .wizard-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 140px;
+      padding: 0 12px 10px;
+      border-bottom: 2px solid transparent;
+      color: var(--text-3);
+      cursor: pointer;
+    }
+    .wizard-step .head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .wizard-step .num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #f0f0f0;
+      color: var(--text-3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .wizard-step.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .wizard-step.active .num {
+      background: var(--primary);
+      color: #fff;
+    }
+    .wizard-chevron {
+      color: #d9d9d9;
+      font-size: 16px;
+      line-height: 24px;
+      margin: 0 4px 12px;
+      user-select: none;
+    }
+    #page-ship-create.page.active {
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - 48px);
+      margin: -16px -24px -24px;
+      padding: 20px 24px 0;
+    }
+    #page-ship-create .form-row {
+      grid-template-columns: 160px minmax(0, 1fr);
+    }
+    .ship-wizard-footer {
+      display: flex;
+      justify-content: flex-end;
+      margin: 24px -24px 0;
+      padding: 12px 24px;
+      background: #f5f5f5;
+    }
+    .form-ctrl.wide-ctrl {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      max-width: none;
+    }
+    .form-ctrl.wide-ctrl select { max-width: 220px; flex: 0 0 220px; }
+    .combo {
+      position: relative;
+      max-width: 320px;
+    }
+    .combo input {
+      width: 100%;
+      max-width: 320px;
+      padding-right: 28px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23bfbfbf' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+    .combo-list {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 34px;
+      max-height: 240px;
+      overflow: auto;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+      z-index: 20;
+    }
+    .combo-item {
+      padding: 6px 11px;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .combo-item:hover { background: var(--selected-bg); color: var(--primary); }
+    .combo-empty {
+      padding: 8px 11px;
+      color: var(--text-3);
+    }
+    .form-title { font-size: 16px; font-weight: 600; margin: 0 0 20px; }
+    .form-row {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 560px);
+      gap: 8px 16px;
+      margin-bottom: 16px;
+      align-items: start;
+    }
+    .form-row > label {
+      text-align: right;
+      padding-top: 5px;
+      color: var(--text);
+    }
+    .form-row > label.required::before {
+      content: "*";
+      color: #ff4d4f;
+      margin-right: 4px;
+    }
+    .form-ctrl input,
+    .form-ctrl select,
+    .form-ctrl textarea {
+      width: 100%;
+      max-width: 320px;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 0 11px;
+      font-size: 14px;
+      outline: none;
+      background: #fff;
+    }
+    .form-ctrl textarea {
+      max-width: 560px;
+      height: auto;
+      min-height: 64px;
+      padding: 8px 11px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+    .form-ctrl input:focus,
+    .form-ctrl select:focus,
+    .form-ctrl textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+    }
+    .goods-block { margin: 24px 0 0; }
+    .goods-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 12px;
+    }
+    .related-table { min-width: 0; width: 100%; }
+    .related-empty {
+      color: var(--text-3);
+      padding: 20px 12px;
+      text-align: center;
+    }
+    #tableBody tr.row-hl td { background: var(--selected-bg); }
+    .goods-table input {
+      width: 100%;
+      min-width: 80px;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 0 8px;
+      font-size: 13px;
+      outline: none;
+    }
+    .goods-table input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+    }
+    .is-readonly .goods-table input,
+    .is-readonly .form-ctrl textarea {
+      background: #f5f5f5;
+      color: rgba(0, 0, 0, 0.85);
+      cursor: not-allowed;
+    }
+    .readonly-text { padding-top: 5px; color: var(--text); }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 24px;
+      padding: 0 8px;
+      background: #fafafa;
+      border: 1px solid #d9d9d9;
+      border-radius: 2px;
+      font-size: 13px;
+    }
+    .tag button {
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      color: var(--text-3);
+      padding: 0;
+      line-height: 1;
+    }
+    .edit-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 28px;
+      padding: 16px 0 8px;
+    }
+    .edit-pane { min-height: 240px; }
+    .placeholder-pane {
+      color: var(--text-3);
+      padding: 48px 0;
+      text-align: center;
+    }
+    .ship-wizard-body { flex: 1; min-height: 0; }
+    #shipPane2 {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .ship-items-toolbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    .ship-items-actions { display: flex; align-items: center; gap: 8px; }
+    .ship-qty-box {
+      min-width: 148px;
+      padding: 8px 16px 10px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      text-align: center;
+      background: #fff;
+    }
+    .ship-qty-box .label { font-size: 13px; color: var(--text); }
+    .ship-qty-box .value {
+      margin-top: 4px;
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    .ship-items-table-wrap {
+      overflow: auto;
+      max-height: calc(100vh - 280px);
+      border: 1px solid var(--border-light);
+    }
+    .ship-items-table { min-width: 1760px; }
+    .ship-items-table th { vertical-align: middle; }
+    .ship-items-table td { vertical-align: top; }
+    .th-inner {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .th-search {
+      width: 12px;
+      height: 12px;
+      color: var(--text-3);
+      flex-shrink: 0;
+    }
+    .th-sort {
+      display: inline-flex;
+      flex-direction: column;
+      color: #bfbfbf;
+      line-height: 0.7;
+      font-size: 9px;
+      margin-left: 2px;
+    }
+    .ship-items-table select,
+    .ship-items-table input {
+      width: 100%;
+      min-width: 0;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 0 8px;
+      font-size: 13px;
+      outline: none;
+      background: #fff;
+    }
+    .ship-items-table select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23bfbfbf' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 24px;
+    }
+    .ship-items-table select:focus,
+    .ship-items-table input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+    }
+    .ship-items-table .input-readonly {
+      background: #f5f5f5;
+      color: rgba(0, 0, 0, 0.85);
+      cursor: not-allowed;
+    }
+    .ship-items-table .input-warn {
+      background: #fffbe6;
+      border-color: #ffe58f;
+    }
+    .ship-items-table .col-id { min-width: 72px; }
+    .ship-items-table .col-code { min-width: 180px; }
+    .ship-items-table .col-sku { min-width: 130px; }
+    .ship-items-table .col-name { min-width: 240px; white-space: normal; }
+    .ship-items-table .col-wh { min-width: 120px; }
+    .ship-items-table .col-expiry { min-width: 220px; white-space: normal; }
+    .ship-items-table .col-days { min-width: 88px; }
+    .ship-items-table .col-cost,
+    .ship-items-table .col-quote,
+    .ship-items-table .col-order-quote { min-width: 120px; }
+    .ship-items-table .col-qty { min-width: 100px; }
+    .expiry-radios {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      margin-bottom: 8px;
+    }
+    .expiry-radios .radio-line { font-size: 13px; }
+    .file-preview { margin-top: 8px; }
+    .file-preview pre {
+      margin: 12px 0 0;
+      max-height: 240px;
+      overflow: auto;
+      background: #fafafa;
+      padding: 12px;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+    .file-preview img, .file-preview iframe {
+      display: block;
+      margin-top: 12px;
+      max-width: 100%;
+      max-height: 360px;
+      border: 1px solid var(--border-light);
+    }
+    .is-readonly .form-ctrl input,
+    .is-readonly .form-ctrl select {
+      background: #f5f5f5;
+      color: rgba(0, 0, 0, 0.85);
+      cursor: not-allowed;
+    }
+    .is-readonly .radio-line,
+    .is-readonly .tag button {
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    .chevron {
+      width: 12px;
+      height: 12px;
+      color: var(--text-3);
+      flex-shrink: 0;
+    }
+    .hidden { display: none !important; }
+
+    .content {
+      flex: 1;
+      padding: 16px 24px 24px;
+      overflow: auto;
+      background: #fff;
+      min-width: 0;
+    }
+
+    .actions { display: flex; gap: 8px; margin-bottom: 16px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 32px;
+      padding: 0 15px;
+      border-radius: 2px;
+      font-size: 14px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+    }
+    .btn:hover { color: var(--primary); border-color: var(--primary); }
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); color: #fff; }
+    .btn:disabled,
+    .btn-primary:disabled {
+      background: #f5f5f5;
+      border-color: #d9d9d9;
+      color: rgba(0, 0, 0, 0.25);
+      cursor: not-allowed;
+    }
+    .btn:disabled:hover,
+    .btn-primary:disabled:hover {
+      background: #f5f5f5;
+      border-color: #d9d9d9;
+      color: rgba(0, 0, 0, 0.25);
+    }
+    .btn svg { width: 14px; height: 14px; }
+
+    .filter {
+      border: 1px solid var(--border);
+      padding: 16px 16px 12px;
+      margin-bottom: 16px;
+    }
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px 24px;
+    }
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .field input, .field select {
+      width: 100%;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 0 11px;
+      font-size: 14px;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+    }
+    .field input::placeholder, .field select:invalid, .placeholder {
+      color: var(--text-3);
+    }
+    .field input:focus, .field select:focus, .range:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+    }
+    .field select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23bfbfbf' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+
+    .range {
+      display: flex;
+      align-items: center;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 0 8px 0 11px;
+      background: #fff;
+    }
+    .range input {
+      border: 0 !important;
+      box-shadow: none !important;
+      height: 30px;
+      padding: 0;
+      min-width: 0;
+      flex: 1;
+    }
+    .range .sep { color: var(--text-3); padding: 0 6px; flex-shrink: 0; }
+    .range .cal { color: var(--text-3); width: 14px; height: 14px; flex-shrink: 0; }
+
+    .filter-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .table-meta {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      color: var(--text-2);
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .table-meta select {
+      height: 24px;
+      margin: 0 4px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 0 4px;
+    }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 1280px; font-size: 13px; }
+    thead th {
+      background: var(--table-head);
+      border-bottom: 1px solid var(--border-light);
+      text-align: left;
+      padding: 12px 12px;
+      color: var(--text);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border-light);
+      color: var(--text);
+      white-space: nowrap;
+    }
+    tbody tr:hover { background: #fafafa; }
+    .ops { white-space: nowrap; }
+    .ops a {
+      color: var(--primary);
+      text-decoration: none;
+      margin-right: 12px;
+      cursor: pointer;
+    }
+    .ops a:hover { text-decoration: underline; }
+
+    .pager {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      color: var(--text-2);
+    }
+    .pager button {
+      min-width: 32px;
+      height: 32px;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 2px;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .pager button.active {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .pager button:disabled { color: #d9d9d9; cursor: default; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header"><span class="logo">UrMart</span></header>
+    <div class="body">
+      <aside class="sider">
+        <div class="menu-item" data-toggle="platform">
+          <span>平台</span>
+          <svg class="chevron" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+        </div>
+        <div id="platform" class="hidden"></div>
+
+        <div class="menu-item" data-toggle="common">
+          <span>共用功能</span>
+          <svg class="chevron" viewBox="0 0 12 12"><path fill="currentColor" d="M9.5 7.5 6 4 2.5 7.5"/></svg>
+        </div>
+        <div id="common">
+          <div class="menu-sub">報關</div>
+          <div class="menu-sub">特例出貨</div>
+          <div class="menu-sub">成本回壓</div>
+          <div class="menu-sub">退貨管理</div>
+          <div class="menu-sub">調撥出貨</div>
+          <div class="menu-sub">月結帳單</div>
+          <div class="menu-sub">倉庫帳差調整</div>
+        </div>
+
+        <div class="menu-item" data-toggle="distribution">
+          <span>配貨管理</span>
+          <svg class="chevron" viewBox="0 0 12 12"><path fill="currentColor" d="M9.5 7.5 6 4 2.5 7.5"/></svg>
+        </div>
+        <div id="distribution">
+          <div class="menu-sub">虛擬倉</div>
+          <div class="menu-sub">配貨記錄</div>
+        </div>
+
+        <div class="menu-item" data-toggle="sales">
+          <span>採購單管理</span>
+          <svg class="chevron" viewBox="0 0 12 12"><path fill="currentColor" d="M9.5 7.5 6 4 2.5 7.5"/></svg>
+        </div>
+        <div id="sales">
+          <div class="menu-sub active" data-page="sales">採購單管理</div>
+        </div>
+
+        <div class="menu-item" data-toggle="brand">
+          <span>品牌</span>
+          <svg class="chevron" viewBox="0 0 12 12"><path fill="currentColor" d="M9.5 7.5 6 4 2.5 7.5"/></svg>
+        </div>
+        <div id="brand">
+          <div class="menu-sub">商品</div>
+          <div class="menu-sub">庫存效期</div>
+          <div class="menu-sub">進倉</div>
+          <div class="menu-sub" data-toggle="channelShip">
+            <span>通路出貨</span>
+            <svg class="chevron" viewBox="0 0 12 12"><path fill="currentColor" d="M9.5 7.5 6 4 2.5 7.5"/></svg>
+          </div>
+          <div id="channelShip">
+            <div class="menu-leaf">通路/經銷商</div>
+            <div class="menu-leaf">通路商品列表</div>
+            <div class="menu-leaf" data-page="shipping">出貨訂單管理</div>
+            <div class="menu-leaf">線上出貨訂單</div>
+          </div>
+        </div>
+
+        <div class="menu-item">製造商</div>
+        <div class="menu-item">商品加工</div>
+        <div class="menu-item">採購單</div>
+        <div class="menu-item" data-toggle="finance">
+          <span>財務</span>
+          <svg class="chevron" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div class="page" id="page-shipping">
+        <div class="actions">
+          <button class="btn btn-primary" type="button" id="shipCreateBtn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
+            建立出貨訂單
+          </button>
+          <button class="btn" type="button" id="toggleFilter">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M2 3h12l-4.5 5.2V13l-3-1.5V8.2L2 3z"/>
+            </svg>
+            篩選
+          </button>
+          <button class="btn" type="button">匯出</button>
+        </div>
+
+        <section class="filter" id="filterPanel">
+          <div class="filter-grid">
+            <div class="field">
+              <label>訂單編號</label>
+              <input type="text" />
+            </div>
+            <div class="field">
+              <label>採購單編號</label>
+              <input id="shipFilterPoNo" type="text" placeholder="支援模糊查詢" />
+            </div>
+            <div class="field">
+              <label>合作通路</label>
+              <select>
+                <option value="">請選擇</option>
+                <option>實體-PW健身工廠</option>
+                <option>實體-寶雅</option>
+                <option>實體-全聯</option>
+                <option>實體-迪卡儂</option>
+                <option>經銷商-絢綻國際企業社</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>SKU(品號)</label>
+              <input type="text" />
+            </div>
+            <div class="field">
+              <label>訂單申請人</label>
+              <select>
+                <option value="">請選擇</option>
+                <option>misha.huang</option>
+                <option>vita.du</option>
+                <option>henry.huang</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>訂單狀態</label>
+              <select>
+                <option value="">請選擇</option>
+                <option>待拋單</option>
+                <option>訂單處理中(已開單)</option>
+                <option>已完成</option>
+                <option>已取消</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>審核狀態</label>
+              <select>
+                <option value="">請選擇</option>
+                <option>待審核</option>
+                <option>審核通過</option>
+                <option>審核退回</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>發票號碼</label>
+              <input type="text" />
+            </div>
+            <div class="field">
+              <label>發票狀態</label>
+              <select>
+                <option value="">請選擇</option>
+                <option>未開立</option>
+                <option>已開立</option>
+              </select>
+            </div>
+            <div></div>
+            <div class="field">
+              <label>訂單建立時間</label>
+              <div class="range">
+                <input placeholder="開始日期" />
+                <span class="sep">→</span>
+                <input placeholder="結束日期" />
+                <svg class="cal" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                  <rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 7h12M5 2v2M11 2v2"/>
+                </svg>
+              </div>
+            </div>
+            <div class="field">
+              <label>倉庫建立時間</label>
+              <div class="range">
+                <input placeholder="開始日期" />
+                <span class="sep">→</span>
+                <input placeholder="結束日期" />
+                <svg class="cal" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                  <rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 7h12M5 2v2M11 2v2"/>
+                </svg>
+              </div>
+            </div>
+            <div class="field">
+              <label>實際出貨時間</label>
+              <div class="range">
+                <input placeholder="開始日期" />
+                <span class="sep">→</span>
+                <input placeholder="結束日期" />
+                <svg class="cal" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                  <rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 7h12M5 2v2M11 2v2"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="filter-actions">
+            <button class="btn" type="button" id="shipFilterClear">清除篩選條件</button>
+            <button class="btn btn-primary" type="button" id="shipFilterApply">套用</button>
+          </div>
+        </section>
+
+        <div class="table-meta">
+          總共 <span id="shippingTotal">0</span> 筆，每頁顯示
+          <select>
+            <option>20</option>
+            <option>50</option>
+            <option>100</option>
+          </select>
+          筆
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>編號</th>
+                <th>訂單編號</th>
+                <th>採購單編號</th>
+                <th>審核狀態</th>
+                <th>合作通路</th>
+                <th>訂單狀態</th>
+                <th>訂單申請人</th>
+                <th>訂單建立時間</th>
+                <th>倉庫建立時間</th>
+                <th>實際出貨時間</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="pager">
+          <button type="button" disabled>‹</button>
+          <button type="button" class="active">1</button>
+          <button type="button">2</button>
+          <button type="button">3</button>
+          <button type="button">4</button>
+          <button type="button">5</button>
+          <span>…</span>
+          <button type="button">302</button>
+          <button type="button">›</button>
+        </div>
+        </div>
+
+        <div class="page" id="page-ship-create">
+          <div class="wizard-steps" id="shipWizardSteps">
+            <div class="wizard-step active" data-ship-step="1">
+              <div class="head"><span class="num">1</span>建立訂單基本資料</div>
+            </div>
+            <span class="wizard-chevron">›</span>
+            <div class="wizard-step" data-ship-step="2">
+              <div class="head"><span class="num">2</span>選擇訂單商品</div>
+            </div>
+            <span class="wizard-chevron">›</span>
+            <div class="wizard-step" data-ship-step="3">
+              <div class="head"><span class="num">3</span>費用填寫</div>
+            </div>
+            <span class="wizard-chevron">›</span>
+            <div class="wizard-step" data-ship-step="4">
+              <div class="head"><span class="num">4</span>訂單預覽</div>
+            </div>
+          </div>
+
+          <div class="ship-wizard-body">
+            <div class="ship-pane" id="shipPane1">
+              <div class="form-row">
+                <label class="required">出庫倉庫</label>
+                <div class="form-ctrl">
+                  <select id="shipOutWarehouse">
+                    <option>藍田</option>
+                    <option>正光廊</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <label class="required">採購單編號</label>
+                <div class="form-ctrl">
+                  <div class="combo" id="shipPoCombo">
+                    <input type="text" id="shipPoNo" placeholder="請選擇或搜尋採購單編號" autocomplete="off" />
+                    <div class="combo-list hidden" id="shipPoList"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-row">
+                <label class="required">預計拋單時間</label>
+                <div class="form-ctrl"><input type="date" id="shipExpectDate" /></div>
+              </div>
+              <div class="form-row">
+                <label class="required">指定送達日</label>
+                <div class="form-ctrl"><input type="date" id="shipArriveDate" /></div>
+              </div>
+              <div class="form-row">
+                <label class="required">合作通路類型</label>
+                <div class="form-ctrl">
+                  <select id="shipChannelType">
+                    <option value="">請選擇</option>
+                    <option>台灣本地通路</option>
+                    <option>台灣本地經銷</option>
+                    <option>台灣線上通路</option>
+                    <option>台灣實體百貨</option>
+                    <option>境外通路</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <label class="required">地區</label>
+                <div class="form-ctrl">
+                  <select id="shipRegion">
+                    <option value="">請選擇</option>
+                    <option>台灣</option>
+                    <option>台灣(通路)</option>
+                    <option>台灣(經銷)</option>
+                    <option>境外</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <label class="required">通路名稱</label>
+                <div class="form-ctrl">
+                  <select id="shipChannelName">
+                    <option value="">請選擇</option>
+                    <option>實體-全聯</option>
+                    <option>實體-寶雅</option>
+                    <option>實體-迪卡儂</option>
+                    <option>實體-PW健身工廠</option>
+                    <option>經銷商-絢綻國際企業社</option>
+                    <option>經銷商-學生營養股份有限公司</option>
+                    <option>線上-轉單</option>
+                    <option>線上-蝦皮商城</option>
+                    <option>跨境- Cool Cool Trading</option>
+                    <option>百貨-新光三越</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <label>合作模式</label>
+                <div class="readonly-text" id="shipMode">N/A(系統自動帶入)</div>
+              </div>
+              <div class="form-row">
+                <label class="required">通路線別</label>
+                <div class="form-ctrl">
+                  <select id="shipLine">
+                    <option value="">請選擇</option>
+                    <option>乳清</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <label>通路電話</label>
+                <div class="readonly-text" id="shipPhone">N/A(系統自動帶入)</div>
+              </div>
+              <div class="form-row">
+                <label>通路窗口</label>
+                <div class="readonly-text" id="shipContact">N/A(系統自動帶入)</div>
+              </div>
+              <div class="form-row">
+                <label>通路電子郵件</label>
+                <div class="readonly-text" id="shipEmail">N/A(系統自動帶入)</div>
+              </div>
+              <div class="form-row">
+                <label class="required">通路進貨倉點</label>
+                <div class="form-ctrl wide-ctrl">
+                  <select id="shipInWarehouse">
+                    <option value="">請選擇</option>
+                    <option>藍田倉</option>
+                    <option>全聯物流中心</option>
+                    <option>正光廊-營運部主管</option>
+                    <option>寶雅倉儲</option>
+                  </select>
+                  <div class="radio-group">
+                    <label class="radio-line"><input type="radio" name="shipPickup" value="self" /> 訂單自取</label>
+                    <label class="radio-line"><input type="radio" name="shipPickup" value="charter" /> 訂單非自取 (專車)</label>
+                    <label class="radio-line"><input type="radio" name="shipPickup" value="hsinchu" /> 訂單非自取 (新竹)</label>
+                    <label class="radio-line"><input type="radio" name="shipPickup" value="blackcat" /> 訂單非自取 (黑貓)</label>
+                  </div>
+                </div>
+              </div>
+              <div class="form-row">
+                <label class="required">交易幣別</label>
+                <div class="form-ctrl wide-ctrl">
+                  <select id="shipCurrency">
+                    <option value="">請選擇</option>
+                    <option>TWD</option>
+                    <option>USD</option>
+                    <option>EUR</option>
+                    <option>JPY</option>
+                    <option>CNY</option>
+                    <option>HKD</option>
+                  </select>
+                  <input type="text" class="rate-input" id="shipRate" placeholder="填寫當前匯率" />
+                </div>
+              </div>
+              <div class="form-row">
+                <label>貿易條件</label>
+                <div class="form-ctrl">
+                  <select id="shipIncoterm">
+                    <option value="">請選擇</option>
+                    <option>FOB</option>
+                    <option>CIF</option>
+                    <option>EXW</option>
+                    <option>CFR</option>
+                    <option>DAP</option>
+                    <option>DDP</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="ship-pane hidden" id="shipPane2">
+              <div class="ship-items-toolbar">
+                <div class="ship-items-actions">
+                  <button type="button" class="btn" id="shipAddItemBtn">新增商品</button>
+                  <button type="button" class="btn btn-primary" id="shipImportItemsBtn">匯入商品</button>
+                  <input type="file" id="shipImportItemsFile" class="hidden" accept=".csv,.xlsx,.xls,.txt" />
+                </div>
+                <div class="ship-qty-box">
+                  <div class="label">出貨總數量(pcs)</div>
+                  <div class="value" id="shipItemsQtyTotal">0</div>
+                </div>
+              </div>
+              <div class="table-wrap ship-items-table-wrap">
+                <table class="ship-items-table">
+                  <thead>
+                    <tr>
+                      <th>編號</th>
+                      <th>
+                        <span class="th-inner">商品貨號
+                          <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                        </span>
+                      </th>
+                      <th>
+                        <span class="th-inner">SKU
+                          <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                        </span>
+                      </th>
+                      <th>
+                        <span class="th-inner">品名
+                          <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                        </span>
+                      </th>
+                      <th>
+                        <span class="th-inner">倉別
+                          <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                        </span>
+                      </th>
+                      <th>
+                        <span class="th-inner">效期_批號
+                          <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                        </span>
+                      </th>
+                      <th>允收天數</th>
+                      <th><span class="th-inner">商品成本(TWD)<span class="th-sort">▲<br />▼</span></span></th>
+                      <th><span class="th-inner">商品報價(TWD)<span class="th-sort">▲<br />▼</span></span></th>
+                      <th><span class="th-inner">訂單商品報價<span class="th-sort">▲<br />▼</span></span></th>
+                      <th>總數量(pcs)</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="shipItemsBody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="ship-pane hidden" id="shipPane3">
+              <div class="placeholder-pane">費用填寫（此步驟 DEMO 畫面待補）</div>
+            </div>
+            <div class="ship-pane hidden" id="shipPane4">
+              <div class="placeholder-pane">訂單預覽（此步驟 DEMO 畫面待補）</div>
+            </div>
+          </div>
+
+          <div class="ship-wizard-footer">
+            <button type="button" class="btn btn-primary" id="shipCreateAction">建立資料</button>
+          </div>
+        </div>
+
+        <div class="page active" id="page-sales">
+          <div class="sales-toolbar">
+            <button type="button" class="accordion-btn" id="salesAccordionBtn" aria-expanded="true">
+              <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+              篩選條件
+            </button>
+            <div class="sales-toolbar-actions">
+              <button type="button" class="btn btn-primary" id="salesImportBtn">匯入採購單</button>
+              <button type="button" class="btn btn-primary" id="salesCreateBtn">建立採購單</button>
+            </div>
+          </div>
+          <div class="demo-hint">
+            <strong>DEMO 提示｜取消規則（未接藍田 API）</strong><br />
+            藍田訂單狀態為 <strong>WAITING</strong> → 可直接取消。<br />
+            藍田狀態為 <strong>VERIFIED / PROCESSING / DONE</strong> → 不可取消。
+          </div>
+
+          <section class="filter" id="salesFilterPanel">
+            <div class="filter-grid">
+              <div class="field">
+                <label>採購單編號</label>
+                <input id="salesOrderNo" type="text" placeholder="支援模糊查詢" />
+              </div>
+              <div class="field">
+                <label>合作通路類型</label>
+                <select id="salesChannelType">
+                  <option value="">請選擇</option>
+                  <option>台灣本地通路</option>
+                  <option>台灣本地經銷</option>
+                  <option>台灣線上通路</option>
+                  <option>台灣實體百貨</option>
+                  <option>境外通路</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>通路名稱</label>
+                <select id="salesChannelName">
+                  <option value="">請選擇</option>
+                  <option>實體-全聯</option>
+                  <option>實體-寶雅</option>
+                  <option>實體-迪卡儂</option>
+                  <option>實體-PW健身工廠</option>
+                  <option>經銷商-絢綻國際企業社</option>
+                  <option>經銷商-學生營養股份有限公司</option>
+                  <option>線上-轉單</option>
+                  <option>線上-蝦皮商城</option>
+                  <option>跨境- Cool Cool Trading</option>
+                  <option>百貨-新光三越</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>狀態</label>
+                <select id="salesStatus">
+                  <option value="">請選擇</option>
+                  <option>未開立出貨單</option>
+                  <option>待出貨</option>
+                  <option>部分送達</option>
+                  <option>已取消</option>
+                  <option>已完成</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>操作人</label>
+                <input id="salesOperator" type="text" placeholder="支援模糊查詢" />
+              </div>
+              <div class="field">
+                <label>建立時間</label>
+                <div class="range">
+                  <input id="salesCreatedFrom" type="date" />
+                  <span class="sep">→</span>
+                  <input id="salesCreatedTo" type="date" />
+                  <svg class="cal" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 7h12M5 2v2M11 2v2"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div class="filter-actions">
+              <button class="btn" type="button" id="salesClear">清除篩選條件</button>
+              <button class="btn btn-primary" type="button" id="salesApply">套用</button>
+            </div>
+          </section>
+
+          <div class="table-meta">
+            總共 <span id="salesTotal">0</span> 筆，每頁顯示
+            <select id="salesPageSize">
+              <option>20</option>
+              <option>50</option>
+              <option>100</option>
+            </select>
+            筆
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>採購單編號</th>
+                  <th>合作通路類型</th>
+                  <th>通路名稱</th>
+                  <th>狀態</th>
+                  <th>操作人</th>
+                  <th>建立時間</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="salesTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="page" id="page-order-edit">
+          <h2 class="form-title" id="editPageTitle">採購單資料</h2>
+          <div class="form-row">
+            <label>合作通路類型</label>
+            <div class="form-ctrl">
+              <select id="editChannelType">
+                <option value="">請選擇</option>
+                <option>台灣本地通路</option>
+                <option>台灣本地經銷</option>
+                <option>台灣線上通路</option>
+                <option>台灣實體百貨</option>
+                <option>境外通路</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>通路名稱</label>
+            <div class="form-ctrl">
+              <select id="editChannelName">
+                <option value="">請選擇</option>
+                <option>實體-全聯</option>
+                <option>實體-寶雅</option>
+                <option>實體-迪卡儂</option>
+                <option>實體-PW健身工廠</option>
+                <option>經銷商-絢綻國際企業社</option>
+                <option>經銷商-學生營養股份有限公司</option>
+                <option>線上-轉單</option>
+                <option>線上-蝦皮商城</option>
+                <option>跨境- Cool Cool Trading</option>
+                <option>百貨-新光三越</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>到貨地址</label>
+            <div class="form-ctrl"><textarea id="editAddress" rows="2"></textarea></div>
+          </div>
+          <div class="form-row">
+            <label>到貨日期</label>
+            <div class="form-ctrl"><input type="date" id="editArriveDate" /></div>
+          </div>
+          <div class="form-row">
+            <label>應出貨時間</label>
+            <div class="form-ctrl"><input type="datetime-local" id="editShipByTime" /></div>
+          </div>
+
+          <div class="goods-block">
+            <h3 class="goods-title">商品相關基本資料</h3>
+            <div class="table-wrap">
+              <table class="goods-table">
+                <thead>
+                  <tr>
+                    <th>SKU</th>
+                    <th>商品名稱</th>
+                    <th>允收效期</th>
+                    <th>單位</th>
+                    <th>訂貨數量</th>
+                  </tr>
+                </thead>
+                <tbody id="editGoodsBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="goods-block">
+            <h3 class="goods-title">相關出貨單</h3>
+            <div class="table-wrap">
+              <table class="related-table">
+                <thead>
+                  <tr>
+                    <th>出貨單編號</th>
+                    <th>審核狀態</th>
+                    <th>訂單狀態</th>
+                    <th>建立時間</th>
+                  </tr>
+                </thead>
+                <tbody id="relatedShipBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="edit-footer">
+            <button type="button" class="btn btn-primary" id="editCreateShip">新增出貨單</button>
+            <button type="button" class="btn btn-primary" id="editSave">儲存</button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-mask hidden" id="importModal">
+    <div class="modal-card" role="dialog" aria-labelledby="importTitle">
+      <div class="modal-head">
+        <h2 id="importTitle">匯入採購單</h2>
+        <button type="button" class="modal-close" id="importClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-row">
+          <span>合作通路類型</span>
+          <div class="modal-field">
+            <select id="importChannelType">
+              <option value="">請選擇</option>
+              <option>台灣本地通路</option>
+              <option>台灣本地經銷</option>
+              <option>台灣線上通路</option>
+              <option>台灣實體百貨</option>
+              <option>境外通路</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-row">
+          <span>通路名稱</span>
+          <div class="modal-field">
+            <select id="importChannelName">
+              <option value="">請選擇</option>
+              <option>實體-全聯</option>
+              <option>實體-寶雅</option>
+              <option>實體-迪卡儂</option>
+              <option>實體-PW健身工廠</option>
+              <option>經銷商-絢綻國際企業社</option>
+              <option>經銷商-學生營養股份有限公司</option>
+              <option>線上-轉單</option>
+              <option>線上-蝦皮商城</option>
+              <option>跨境- Cool Cool Trading</option>
+              <option>百貨-新光三越</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-row">
+          <span>選擇檔案</span>
+          <div class="modal-field">
+            <div class="file-pick">
+              <button type="button" class="btn" id="importFileBtn">選擇檔案</button>
+              <input type="file" id="importFile" class="hidden" accept=".csv,.xlsx,.xls,.txt,.pdf" />
+              <span class="file-name empty" id="importFileName">尚未選擇檔案</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="importCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="importConfirm">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask hidden" id="createModal">
+    <div class="modal-card" role="dialog" aria-labelledby="createTitle">
+      <div class="modal-head">
+        <h2 id="createTitle">建立採購單</h2>
+        <button type="button" class="modal-close" id="createClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label>合作通路類型</label>
+          <div class="form-ctrl">
+            <select id="createChannelType">
+              <option value="">請選擇</option>
+              <option>台灣本地通路</option>
+              <option>台灣本地經銷</option>
+              <option>台灣線上通路</option>
+              <option>台灣實體百貨</option>
+              <option>境外通路</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>通路名稱</label>
+          <div class="form-ctrl">
+            <select id="createChannelName">
+              <option value="">請選擇</option>
+              <option>實體-全聯</option>
+              <option>實體-寶雅</option>
+              <option>實體-迪卡儂</option>
+              <option>實體-PW健身工廠</option>
+              <option>經銷商-絢綻國際企業社</option>
+              <option>經銷商-學生營養股份有限公司</option>
+              <option>線上-轉單</option>
+              <option>線上-蝦皮商城</option>
+              <option>跨境- Cool Cool Trading</option>
+              <option>百貨-新光三越</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>到貨地址</label>
+          <div class="form-ctrl"><textarea id="createAddress" rows="2"></textarea></div>
+        </div>
+        <div class="form-row">
+          <label>到貨日期</label>
+          <div class="form-ctrl"><input type="date" id="createArriveDate" /></div>
+        </div>
+        <div class="form-row">
+          <label>應出貨時間</label>
+          <div class="form-ctrl"><input type="datetime-local" id="createShipByTime" /></div>
+        </div>
+        <div class="goods-block">
+          <h3 class="goods-title">商品相關基本資料</h3>
+          <div class="table-wrap">
+            <table class="goods-table">
+              <thead>
+                <tr>
+                  <th>SKU</th>
+                  <th>商品名稱</th>
+                  <th>允收效期</th>
+                  <th>單位</th>
+                  <th>訂貨數量</th>
+                </tr>
+              </thead>
+              <tbody id="createGoodsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="createCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="createConfirm">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask hidden" id="voidModal">
+    <div class="modal-card void-card" role="dialog" aria-labelledby="voidTitle">
+      <div class="modal-head">
+        <h2 id="voidTitle">取消採購單</h2>
+        <button type="button" class="modal-close" id="voidClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="void-msg">取消採購單將一併取消所有相應出貨單</p>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="voidCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="voidConfirm">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let rows = [
+      { id: "10473", orderId: "VN00010473", salesOrderNo: "", audit: "待審核", channel: "實體-PW健身工廠", status: "訂單處理中(已開單)RVN00010473", applicant: "", created: "2026-08-26 14:18:05", warehouse: "2026-08-26 14:18:05", shipped: "" },
+      { id: "10472", orderId: "VN00010472", salesOrderNo: "", audit: "待審核", channel: "實體-PW健身工廠", status: "訂單處理中(已開單)RVN00010472", applicant: "", created: "2026-08-26 14:12:31", warehouse: "2026-08-26 14:12:31", shipped: "" },
+      { id: "10471", orderId: "VN00010471", salesOrderNo: "", audit: "待審核", channel: "實體-寶雅", status: "待拋單", applicant: "misha.huang", created: "2026-08-26 13:51:08", warehouse: "", shipped: "" },
+      { id: "10470", orderId: "VN00010470", salesOrderNo: "SO20260826002", audit: "待審核", channel: "實體-全聯", status: "待拋單", applicant: "misha.huang", created: "2026-08-26 13:44:22", warehouse: "", shipped: "" },
+      { id: "10469", orderId: "VN00010469", salesOrderNo: "", audit: "審核通過", channel: "實體-迪卡儂", status: "訂單處理中(已開單)RVN00010469", applicant: "vita.du", created: "2026-08-26 11:20:15", warehouse: "2026-08-26 11:25:40", shipped: "" },
+      { id: "10468", orderId: "VN00010468", salesOrderNo: "", audit: "待審核", channel: "經銷商-絢綻國際企業社", status: "待拋單", applicant: "john.pan", created: "2026-08-26 10:08:19", warehouse: "", shipped: "" },
+      { id: "10467", orderId: "VN00010467", salesOrderNo: "SO20260824006", audit: "待審核", channel: "實體-寶雅", status: "待拋單", applicant: "misha.huang", created: "2026-08-25 18:33:02", warehouse: "", shipped: "" },
+      { id: "10466", orderId: "VN00010466", salesOrderNo: "SO20260824005", audit: "待審核", channel: "跨境- Cool Cool Trading", status: "待拋單", applicant: "vita.du", created: "2026-08-25 16:12:47", warehouse: "", shipped: "" }
+    ];
+
+    function getShippingFiltered() {
+      const po = document.getElementById("shipFilterPoNo").value.trim().toLowerCase();
+      return rows.filter((r) => {
+        if (po && !(r.salesOrderNo || "").toLowerCase().includes(po)) return false;
+        return true;
+      });
+    }
+
+    function renderShippingTable(list) {
+      const data = list || rows;
+      document.getElementById("shippingTotal").textContent = String(data.length);
+      document.getElementById("tableBody").innerHTML = data.map((r) => `
+        <tr data-order-id="${r.orderId}">
+          <td>${r.id}</td>
+          <td>${r.orderId}</td>
+          <td>${r.salesOrderNo ? `<a class="link" data-go="po-view" data-no="${r.salesOrderNo}">${r.salesOrderNo}</a>` : ""}</td>
+          <td>${r.audit}</td>
+          <td>${r.channel}</td>
+          <td>${r.status}</td>
+          <td>${r.applicant}</td>
+          <td>${r.created}</td>
+          <td>${r.warehouse}</td>
+          <td>${r.shipped}</td>
+          <td class="ops"><a>檢視</a><a>編輯</a></td>
+        </tr>
+      `).join("");
+    }
+
+    renderShippingTable();
+
+    document.getElementById("toggleFilter").addEventListener("click", () => {
+      document.getElementById("filterPanel").classList.toggle("hidden");
+    });
+    document.getElementById("shipFilterApply").addEventListener("click", () => {
+      renderShippingTable(getShippingFiltered());
+    });
+    document.getElementById("shipFilterClear").addEventListener("click", () => {
+      document.getElementById("shipFilterPoNo").value = "";
+      renderShippingTable(rows);
+    });
+
+    document.querySelectorAll("[data-toggle]").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const target = document.getElementById(el.dataset.toggle);
+        if (!target) return;
+        target.classList.toggle("hidden");
+        const icon = el.querySelector(".chevron path");
+        if (icon) {
+          icon.setAttribute(
+            "d",
+            target.classList.contains("hidden")
+              ? "M2.5 4.5 6 8l3.5-3.5"
+              : "M9.5 7.5 6 4 2.5 7.5"
+          );
+        }
+      });
+    });
+
+    function showPage(page) {
+      const menuPage = page === "order-edit" ? "sales" : page === "ship-create" ? "shipping" : page;
+      document.querySelectorAll("[data-page]").forEach((item) => {
+        item.classList.toggle("active", item.dataset.page === menuPage);
+      });
+      document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
+      document.getElementById("page-" + page)?.classList.add("active");
+      document.title = page === "shipping" || page === "ship-create" ? "出貨訂單管理 - UrMart" : "採購單管理 - UrMart";
+    }
+
+    document.querySelectorAll("[data-page]").forEach((el) => {
+      el.addEventListener("click", () => showPage(el.dataset.page));
+    });
+
+    const pickupLabels = {
+      self: "訂單自取",
+      charter: "訂單非自取 (專車)",
+      hsinchu: "訂單非自取 (新竹)",
+      blackcat: "訂單非自取 (黑貓)",
+    };
+
+    function dash(value) {
+      return value ? String(value) : "—";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[c]));
+    }
+
+    const sampleFile = new Blob(
+      ["訂單編號,SKU,數量,金額\nSO-DEMO,UM-1001,12,3600\nSO-DEMO,UM-1002,6,1800\n"],
+      { type: "text/csv;charset=utf-8" }
+    );
+
+    let salesOrders = [
+      {
+        orderNo: "SO20260826001", shipNo: "", channelType: "台灣實體百貨", channelName: "實體-PW健身工廠",
+        status: "未開立出貨單", operator: "misha.huang", createdAt: "2026-08-26 14:18:05",
+        fileName: "PW健身工廠_訂單.csv", fileUrl: URL.createObjectURL(sampleFile), fileType: "text/csv",
+        address: "台北市內湖區瑞光路358號1樓（PW健身工廠內湖店）",
+        arriveDate: "2026-08-28", shipByTime: "2026-08-27 10:00",
+        items: [
+          { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12 },
+          { sku: "UM-4412", name: "電解質補給粉", expiryAccept: "2026-09-30", unit: "盒", qty: 24 }
+        ]
+      },
+      {
+        orderNo: "SO20260826002", shipNo: "", channelType: "台灣本地通路", channelName: "實體-全聯",
+        status: "部分送達", operator: "vita.du", createdAt: "2026-08-26 11:20:15",
+        fileName: "", fileUrl: "", fileType: "",
+        address: "桃園市大園區航勤北路8號 全聯物流中心",
+        arriveDate: "2026-08-29", shipByTime: "2026-08-27 16:00",
+        items: [
+          { sku: "PX-8801", name: "優質高蛋白棒", expiryAccept: "2026-11-30", unit: "盒", qty: 48 },
+          { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 36 },
+          { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 20 }
+        ]
+      },
+      {
+        orderNo: "SO20260825003", shipNo: "", channelType: "台灣本地經銷", channelName: "經銷商-絢綻國際企業社",
+        status: "未開立出貨單", operator: "john.pan", createdAt: "2026-08-25 16:12:47",
+        fileName: "", fileUrl: "", fileType: "",
+        address: "新北市新莊區中正路567號3樓",
+        arriveDate: "2026-08-28", shipByTime: "2026-08-26 14:00",
+        items: [
+          { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 60 },
+          { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 80 }
+        ]
+      },
+      {
+        orderNo: "SO20260825004", shipNo: "", channelType: "台灣線上通路", channelName: "線上-轉單",
+        status: "已完成", operator: "sarah.lin", createdAt: "2026-08-25 10:08:19",
+        fileName: "", fileUrl: "", fileType: "",
+        address: "新北市五股區成泰路一段100號 藍田倉",
+        arriveDate: "2026-08-27", shipByTime: "2026-08-26 09:00",
+        items: [
+          { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 8 },
+          { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 15 }
+        ]
+      },
+      {
+        orderNo: "SO20260824005", shipNo: "", channelType: "境外通路", channelName: "跨境- Cool Cool Trading",
+        status: "已取消", operator: "henry.huang", createdAt: "2026-08-24 18:33:02",
+        fileName: "", fileUrl: "", fileType: "",
+        address: "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong",
+        arriveDate: "2026-09-02", shipByTime: "2026-08-28 18:00",
+        items: [
+          { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 100 },
+          { sku: "UM-4412", name: "電解質補給粉", expiryAccept: "2026-09-30", unit: "盒", qty: 40 }
+        ]
+      },
+      {
+        orderNo: "SO20260824006", shipNo: "", channelType: "台灣本地通路", channelName: "實體-寶雅",
+        status: "部分送達", operator: "misha.huang", createdAt: "2026-08-24 09:41:11",
+        fileName: "", fileUrl: "", fileType: "",
+        address: "新北市樹林區佳園路二段70號 寶雅倉儲",
+        arriveDate: "2026-08-26", shipByTime: "2026-08-25 11:30",
+        items: [
+          { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 30 },
+          { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 18 }
+        ]
+      }
+    ];
+
+    function salesDateOnly(value) {
+      return (value || "").slice(0, 10);
+    }
+
+    function getSalesFiltered() {
+      const orderNo = document.getElementById("salesOrderNo").value.trim().toLowerCase();
+      const channelType = document.getElementById("salesChannelType").value;
+      const channelName = document.getElementById("salesChannelName").value;
+      const status = document.getElementById("salesStatus").value;
+      const operator = document.getElementById("salesOperator").value.trim().toLowerCase();
+      const from = document.getElementById("salesCreatedFrom").value.trim();
+      const to = document.getElementById("salesCreatedTo").value.trim();
+
+      return salesOrders.filter((item) => {
+        if (orderNo && !item.orderNo.toLowerCase().includes(orderNo)) return false;
+        if (channelType && item.channelType !== channelType) return false;
+        if (channelName && item.channelName !== channelName) return false;
+        if (status && item.status !== status) return false;
+        if (operator && !item.operator.toLowerCase().includes(operator)) return false;
+        const created = salesDateOnly(item.createdAt);
+        if (from && created < from) return false;
+        if (to && created > to) return false;
+        return true;
+      });
+    }
+
+    function renderSalesTable(list) {
+      const body = document.getElementById("salesTableBody");
+      document.getElementById("salesTotal").textContent = String(list.length);
+      if (!list.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="7">查無資料</td></tr>`;
+        return;
+      }
+      body.innerHTML = list.map((item) => `
+        <tr>
+          <td>${item.orderNo}</td>
+          <td>${item.channelType}</td>
+          <td>${item.channelName}</td>
+          <td>${item.status}</td>
+          <td>${item.operator}</td>
+          <td>${item.createdAt}</td>
+          <td class="ops">
+              <a data-action="edit" data-no="${item.orderNo}">編輯</a>
+              <a data-action="view" data-no="${item.orderNo}">檢視</a>
+              <a data-action="void" data-no="${item.orderNo}">取消採購單</a>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    renderSalesTable(salesOrders);
+
+    document.getElementById("salesAccordionBtn").addEventListener("click", () => {
+      const btn = document.getElementById("salesAccordionBtn");
+      const panel = document.getElementById("salesFilterPanel");
+      const collapsed = panel.classList.toggle("hidden");
+      btn.classList.toggle("collapsed", collapsed);
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    });
+
+    document.getElementById("salesApply").addEventListener("click", () => {
+      renderSalesTable(getSalesFiltered());
+    });
+
+    document.getElementById("salesClear").addEventListener("click", () => {
+      document.getElementById("salesOrderNo").value = "";
+      document.getElementById("salesChannelType").value = "";
+      document.getElementById("salesChannelName").value = "";
+      document.getElementById("salesStatus").value = "";
+      document.getElementById("salesOperator").value = "";
+      document.getElementById("salesCreatedFrom").value = "";
+      document.getElementById("salesCreatedTo").value = "";
+      renderSalesTable(salesOrders);
+    });
+
+    function resetImportModal() {
+      document.getElementById("importChannelType").value = "";
+      document.getElementById("importChannelName").value = "";
+      document.getElementById("importFile").value = "";
+      const fileName = document.getElementById("importFileName");
+      fileName.textContent = "尚未選擇檔案";
+      fileName.classList.add("empty");
+    }
+
+    function pad(n, width) {
+      return String(n).padStart(width, "0");
+    }
+
+    function nowStamp() {
+      const d = new Date();
+      const p = (n) => pad(n, 2);
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    }
+
+    function addDaysToStamp(stamp, days, withTime) {
+      const raw = String(stamp || nowStamp()).replace(" ", "T");
+      const d = new Date(raw);
+      if (Number.isNaN(d.getTime())) return "";
+      d.setDate(d.getDate() + days);
+      const p = (n) => pad(n, 2);
+      const date = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+      if (!withTime) return date;
+      return `${date} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+
+    function toDateInput(value) {
+      return String(value || "").slice(0, 10);
+    }
+
+    function toDateTimeInput(value) {
+      if (!value) return "";
+      return String(value).replace(" ", "T").slice(0, 16);
+    }
+
+    function nextSalesOrderNo() {
+      const seq = salesOrders.length + 1;
+      const d = new Date();
+      return `SO${d.getFullYear()}${pad(d.getMonth() + 1, 2)}${pad(d.getDate(), 2)}${pad(seq, 3)}`;
+    }
+
+    function confirmImport() {
+      const order = createPoFromImport();
+      if (!order) return;
+      closeImportModal();
+    }
+
+    function createPoFromImport() {
+      const fileInput = document.getElementById("importFile");
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        alert("請選擇要匯入的檔案");
+        return null;
+      }
+      const channelType = document.getElementById("importChannelType").value;
+      const channelName = document.getElementById("importChannelName").value;
+      const createdAt = nowStamp();
+      const profile = channelProfiles[channelName] || {};
+      const order = {
+        orderNo: nextSalesOrderNo(),
+        shipNo: "",
+        channelType: channelType || "—",
+        channelName: channelName || "—",
+        region: profile.region || "台灣",
+        status: "未開立出貨單",
+        operator: "demo.user",
+        createdAt,
+        fileName: file.name,
+        fileUrl: URL.createObjectURL(file),
+        fileType: file.type,
+        address: profile.address || "",
+        arriveDate: addDaysToStamp(createdAt, 2),
+        shipByTime: addDaysToStamp(createdAt, 1, true),
+        items: mockItemsFor(channelName),
+      };
+      salesOrders.unshift(order);
+      renderSalesTable(getSalesFiltered());
+      return order;
+    }
+
+    function openImportModal() {
+      resetImportModal();
+      document.getElementById("importModal").classList.remove("hidden");
+    }
+
+    function closeImportModal() {
+      document.getElementById("importModal").classList.add("hidden");
+    }
+
+    document.getElementById("salesImportBtn").addEventListener("click", openImportModal);
+    document.getElementById("importClose").addEventListener("click", closeImportModal);
+    document.getElementById("importCancel").addEventListener("click", closeImportModal);
+    document.getElementById("importConfirm").addEventListener("click", confirmImport);
+    document.getElementById("importFileBtn").addEventListener("click", () => {
+      document.getElementById("importFile").click();
+    });
+    document.getElementById("importFile").addEventListener("change", () => {
+      const file = document.getElementById("importFile").files[0];
+      const label = document.getElementById("importFileName");
+      if (file) {
+        label.textContent = file.name;
+        label.classList.remove("empty");
+      } else {
+        label.textContent = "尚未選擇檔案";
+        label.classList.add("empty");
+      }
+    });
+    document.getElementById("importModal").addEventListener("click", (e) => {
+      if (e.target.id === "importModal") closeImportModal();
+    });
+    document.getElementById("tableBody").addEventListener("click", (e) => {
+      if (e.target.dataset.go !== "po-view") return;
+      const order = salesOrders.find((item) => item.orderNo === e.target.dataset.no);
+      if (order) fillOrderEdit(order, "view");
+      else showPage("sales");
+    });
+    document.getElementById("salesTableBody").addEventListener("click", (e) => {
+      const action = e.target.dataset.action;
+      if (action !== "edit" && action !== "view" && action !== "void") return;
+      const order = salesOrders.find((item) => item.orderNo === e.target.dataset.no);
+      if (!order) return;
+      if (action === "void") {
+        openVoidModal(order);
+        return;
+      }
+      fillOrderEdit(order, action);
+    });
+    document.getElementById("relatedShipBody").addEventListener("click", (e) => {
+      const shipId = e.target.dataset.goShip;
+      if (shipId) goToShippingOrder(shipId);
+    });
+
+    let currentEditOrderNo = "";
+    let orderFormMode = "edit";
+    const channelProfiles = {
+      "實體-PW健身工廠": { region: "台灣(通路)", mode: "寄倉", phone: "0912000000", contact: "正光廊-營運部主管", email: "XXX@urmart.com", address: "台北市內湖區瑞光路358號1樓（PW健身工廠內湖店）", inWarehouse: "正光廊-營運部主管" },
+      "實體-全聯": { region: "台灣(通路)", mode: "寄倉", phone: "02-2531-2345", contact: "全聯採購窗口", email: "pxmart@example.com", address: "桃園市大園區航勤北路8號 全聯物流中心", inWarehouse: "全聯物流中心" },
+      "實體-寶雅": { region: "台灣(通路)", mode: "寄倉", phone: "02-2765-8899", contact: "寶雅商品部", email: "poya@example.com", address: "新北市樹林區佳園路二段70號 寶雅倉儲", inWarehouse: "寶雅倉儲" },
+      "實體-迪卡儂": { region: "台灣(通路)", mode: "寄倉", phone: "04-2258-0000", contact: "迪卡儂倉儲", email: "decathlon@example.com", address: "台中市西屯區台灣大道四段1018號", inWarehouse: "藍田倉" },
+      "經銷商-絢綻國際企業社": { region: "台灣(經銷)", mode: "經銷", phone: "03-392-1177", contact: "絢綻業務", email: "dealer1@example.com", address: "新北市新莊區中正路567號3樓", inWarehouse: "正光廊-營運部主管" },
+      "經銷商-學生營養股份有限公司": { region: "台灣(經銷)", mode: "經銷", phone: "07-333-2211", contact: "學生營養窗口", email: "dealer2@example.com", address: "高雄市前鎮區成功二路88號", inWarehouse: "藍田倉" },
+      "線上-轉單": { region: "台灣(通路)", mode: "轉單", phone: "02-1111-2222", contact: "線上客服", email: "online@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉" },
+      "線上-蝦皮商城": { region: "台灣(通路)", mode: "轉單", phone: "02-3333-4444", contact: "蝦皮窗口", email: "shopee@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉" },
+      "跨境- Cool Cool Trading": { region: "境外", mode: "跨境", phone: "+852-1234-5678", contact: "Cool Cool Ops", email: "coolcool@example.com", address: "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong", inWarehouse: "藍田倉" },
+      "百貨-新光三越": { region: "台灣(通路)", mode: "寄倉", phone: "02-2388-5555", contact: "新光三越專櫃", email: "skm@example.com", address: "台北市信義區松高路19號 新光三越A11專櫃", inWarehouse: "正光廊-營運部主管" },
+    };
+
+    const mockItemPool = [
+      { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 24 },
+      { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12 },
+      { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18 },
+      { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 36 },
+      { sku: "UM-4412", name: "電解質補給粉", expiryAccept: "2026-09-30", unit: "盒", qty: 20 },
+    ];
+
+    function mockItemsFor(channelName) {
+      const byChannel = {
+        "實體-全聯": [0, 2, 4],
+        "實體-寶雅": [0, 3],
+        "實體-迪卡儂": [1, 4],
+        "實體-PW健身工廠": [1, 4],
+        "經銷商-絢綻國際企業社": [0, 3],
+        "經銷商-學生營養股份有限公司": [0, 2],
+        "線上-轉單": [1, 2],
+        "線上-蝦皮商城": [0, 1, 2],
+        "跨境- Cool Cool Trading": [3, 4],
+        "百貨-新光三越": [0, 3],
+      };
+      const indexes = byChannel[channelName] || [0, 1];
+      return indexes.map((i) => ({ ...mockItemPool[i] }));
+    }
+
+    const productMeta = {
+      "UM-1001": { productCode: "SET10-4713025601001", cost: "86.50", quote: "120" },
+      "UM-1002": { productCode: "SET10-4713025602642", cost: "201.15", quote: "280" },
+      "UM-2108": { productCode: "SET10-4713025602108", cost: "42.00", quote: "68" },
+      "UM-3305": { productCode: "SET10-4713025603305", cost: "155.80", quote: "220" },
+      "UM-4412": { productCode: "SET10-4713025604412", cost: "98.00", quote: "145" },
+      "PX-8801": { productCode: "SET10-4713025608801", cost: "63.20", quote: "99" },
+    };
+    const shipWarehouses = ["良品倉", "不良品倉", "待驗倉"];
+    const shipBatches = {
+      regular: ["2027-07-12_健工", "2027-11-20_藍田", "2028-01-05_全聯"],
+      near: ["2026-08-30_健工", "2026-09-15_藍田", "2026-10-01_全聯"],
+    };
+    let shipLineItems = [];
+    let shipItemsLoadedPo = "";
+    let nextShipItemId = 73672;
+
+    function metaForSku(sku) {
+      return productMeta[sku] || {
+        productCode: sku ? `SET10-${sku}` : "",
+        cost: "0",
+        quote: "0",
+      };
+    }
+
+    function batchesFor(type) {
+      return type === "near" ? shipBatches.near : shipBatches.regular;
+    }
+
+    function poItemToShipLine(item) {
+      const meta = metaForSku(item.sku);
+      return {
+        id: String(nextShipItemId++),
+        productCode: meta.productCode,
+        sku: item.sku || "",
+        name: item.name || "",
+        warehouse: "良品倉",
+        expiryType: "regular",
+        batch: shipBatches.regular[0],
+        acceptDays: "",
+        cost: meta.cost,
+        quote: meta.quote,
+        orderQuote: "0",
+        qty: Number(item.qty) || 0,
+      };
+    }
+
+    function optionsHtml(list, selected) {
+      return list.map((v) => `<option value="${escapeHtml(v)}"${v === selected ? " selected" : ""}>${escapeHtml(v)}</option>`).join("");
+    }
+
+    function updateShipQtyTotal() {
+      const total = shipLineItems.reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
+      document.getElementById("shipItemsQtyTotal").textContent = String(total);
+    }
+
+    function renderShipItemsTable() {
+      const body = document.getElementById("shipItemsBody");
+      if (!shipLineItems.length) {
+        const po = getSelectedShipPo();
+        const msg = po ? "此採購單尚無商品" : "請先選擇採購單編號";
+        body.innerHTML = `<tr class="empty-row"><td colspan="12">${msg}</td></tr>`;
+        updateShipQtyTotal();
+        return;
+      }
+      body.innerHTML = shipLineItems.map((row) => {
+        const batches = batchesFor(row.expiryType);
+        const batchValue = batches.includes(row.batch) ? row.batch : batches[0];
+        return `
+        <tr data-id="${escapeHtml(row.id)}">
+          <td class="col-id">${escapeHtml(row.id)}</td>
+          <td class="col-code">${escapeHtml(row.productCode)}</td>
+          <td class="col-sku">${escapeHtml(row.sku)}</td>
+          <td class="col-name">${escapeHtml(row.name)}</td>
+          <td class="col-wh">
+            <select data-field="warehouse">${optionsHtml(shipWarehouses, row.warehouse || "良品倉")}</select>
+          </td>
+          <td class="col-expiry">
+            <div class="expiry-radios">
+              <label class="radio-line"><input type="radio" name="expiry-${escapeHtml(row.id)}" data-field="expiryType" value="regular"${row.expiryType !== "near" ? " checked" : ""} /> 非即期品</label>
+              <label class="radio-line"><input type="radio" name="expiry-${escapeHtml(row.id)}" data-field="expiryType" value="near"${row.expiryType === "near" ? " checked" : ""} /> 即期品</label>
+            </div>
+            <select data-field="batch">${optionsHtml(batches, batchValue)}</select>
+          </td>
+          <td class="col-days"><input type="number" min="0" data-field="acceptDays" value="${escapeHtml(row.acceptDays)}" /></td>
+          <td class="col-cost"><input class="input-readonly" data-field="cost" value="${escapeHtml(row.cost)}" readonly tabindex="-1" /></td>
+          <td class="col-quote">${escapeHtml(row.quote)}</td>
+          <td class="col-order-quote"><input class="input-warn" type="number" min="0" step="0.01" data-field="orderQuote" value="${escapeHtml(row.orderQuote)}" /></td>
+          <td class="col-qty"><input type="number" min="0" data-field="qty" value="${escapeHtml(row.qty)}" /></td>
+          <td class="ops"><a data-del="1">刪除</a></td>
+        </tr>`;
+      }).join("");
+      updateShipQtyTotal();
+    }
+
+    function loadShipItemsFromPo() {
+      const po = getSelectedShipPo();
+      shipItemsLoadedPo = po ? po.orderNo : "";
+      const items = po && po.items && po.items.length ? po.items : [];
+      shipLineItems = items.map((item) => poItemToShipLine(item));
+      renderShipItemsTable();
+    }
+
+    function ensureShipItemsFromPo() {
+      const po = getSelectedShipPo();
+      const no = po ? po.orderNo : "";
+      if (no !== shipItemsLoadedPo) loadShipItemsFromPo();
+      else renderShipItemsTable();
+    }
+
+    function addShipCatalogItem() {
+      const used = new Set(shipLineItems.map((row) => row.sku));
+      const src = mockItemPool.find((item) => !used.has(item.sku)) || mockItemPool[0];
+      shipLineItems.push(poItemToShipLine(src));
+      renderShipItemsTable();
+    }
+
+    function importShipCatalogItems() {
+      const used = new Set(shipLineItems.map((row) => row.sku));
+      const extras = mockItemPool.filter((item) => !used.has(item.sku));
+      (extras.length ? extras : mockItemPool.slice(0, 1)).forEach((item) => {
+        shipLineItems.push(poItemToShipLine(item));
+      });
+      renderShipItemsTable();
+    }
+
+    function renderGoodsTable(tbodyId, items) {
+      const list = items && items.length ? items : [{ sku: "", name: "", expiryAccept: "", unit: "", qty: "" }];
+      document.getElementById(tbodyId).innerHTML = list.map((row) => `
+        <tr>
+          <td><input data-field="sku" value="${escapeHtml(row.sku || "")}" /></td>
+          <td><input data-field="name" value="${escapeHtml(row.name || "")}" /></td>
+          <td><input type="date" data-field="expiryAccept" value="${escapeHtml(row.expiryAccept || "")}" /></td>
+          <td><input data-field="unit" value="${escapeHtml(row.unit || "")}" /></td>
+          <td><input type="number" min="0" data-field="qty" value="${escapeHtml(row.qty ?? "")}" /></td>
+        </tr>
+      `).join("");
+    }
+
+    function collectGoodsTable(tbodyId) {
+      return [...document.querySelectorAll(`#${tbodyId} tr`)].map((tr) => ({
+        sku: tr.querySelector('[data-field="sku"]').value.trim(),
+        name: tr.querySelector('[data-field="name"]').value.trim(),
+        expiryAccept: tr.querySelector('[data-field="expiryAccept"]').value,
+        unit: tr.querySelector('[data-field="unit"]').value.trim(),
+        qty: Number(tr.querySelector('[data-field="qty"]').value) || 0,
+      }));
+    }
+
+    function renderEditGoods(items) {
+      renderGoodsTable("editGoodsBody", items);
+    }
+
+    function collectEditGoods() {
+      return collectGoodsTable("editGoodsBody");
+    }
+
+    function renderRelatedShips(order) {
+      const body = document.getElementById("relatedShipBody");
+      const list = !order || order.status === "未開立出貨單"
+        ? []
+        : rows.filter((r) => r.salesOrderNo === order.orderNo);
+      if (!list.length) {
+        body.innerHTML = `<tr class="empty-row"><td class="related-empty" colspan="4">尚未開立出貨單</td></tr>`;
+        return;
+      }
+      body.innerHTML = list.map((r) => `
+        <tr>
+          <td><a class="link" data-go-ship="${escapeHtml(r.orderId)}">${escapeHtml(r.orderId)}</a></td>
+          <td>${escapeHtml(r.audit)}</td>
+          <td>${escapeHtml(r.status)}</td>
+          <td>${escapeHtml(r.created)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function goToShippingOrder(orderId) {
+      document.getElementById("shipFilterPoNo").value = "";
+      renderShippingTable(rows);
+      showPage("shipping");
+      const tr = document.querySelector(`#tableBody tr[data-order-id="${orderId}"]`);
+      if (tr) {
+        tr.classList.add("row-hl");
+        tr.scrollIntoView({ block: "center" });
+      }
+    }
+
+    function fillOrderEdit(order, mode) {
+      currentEditOrderNo = order.orderNo;
+      orderFormMode = mode === "view" ? "view" : "edit";
+      const profile = channelProfiles[order.channelName] || {};
+      if (!order.address) order.address = profile.address || "";
+      if (!order.arriveDate) order.arriveDate = addDaysToStamp(order.createdAt, 2);
+      if (!order.shipByTime) order.shipByTime = addDaysToStamp(order.createdAt, 1, true);
+      if (!order.items || !order.items.length) order.items = mockItemsFor(order.channelName);
+      document.getElementById("editPageTitle").textContent = orderFormMode === "view" ? "檢視採購單" : "編輯採購單";
+      document.getElementById("editChannelType").value = !order.channelType || order.channelType === "—" ? "" : order.channelType;
+      document.getElementById("editChannelName").value = !order.channelName || order.channelName === "—" ? "" : order.channelName;
+      document.getElementById("editAddress").value = order.address || "";
+      document.getElementById("editArriveDate").value = toDateInput(order.arriveDate);
+      document.getElementById("editShipByTime").value = toDateTimeInput(order.shipByTime);
+      renderEditGoods(order.items);
+      renderRelatedShips(order);
+      setOrderFormReadonly(orderFormMode === "view");
+      const canAddShip = order.status === "未開立出貨單" || order.status === "部分送達";
+      document.getElementById("editCreateShip").disabled = !canAddShip;
+      showPage("order-edit");
+    }
+
+    function setOrderFormReadonly(readonly) {
+      const page = document.getElementById("page-order-edit");
+      page.classList.toggle("is-readonly", readonly);
+      page.querySelectorAll("input, select, textarea").forEach((el) => {
+        el.disabled = readonly;
+      });
+      document.getElementById("editSave").classList.toggle("hidden", readonly);
+    }
+
+    document.getElementById("editSave").addEventListener("click", () => {
+      if (orderFormMode === "view") return;
+      const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+      if (!order) return;
+      order.channelType = document.getElementById("editChannelType").value || order.channelType;
+      order.channelName = document.getElementById("editChannelName").value || order.channelName;
+      order.address = document.getElementById("editAddress").value;
+      order.arriveDate = document.getElementById("editArriveDate").value;
+      order.shipByTime = document.getElementById("editShipByTime").value.replace("T", " ");
+      order.items = collectEditGoods();
+      renderSalesTable(getSalesFiltered());
+      alert("已儲存");
+    });
+    document.getElementById("editCreateShip").addEventListener("click", () => {
+      const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+      if (!order) return;
+      if (order.status !== "未開立出貨單" && order.status !== "部分送達") return;
+      goToShipCreateFromPo({
+        ...order,
+        channelType: document.getElementById("editChannelType").value || order.channelType,
+        channelName: document.getElementById("editChannelName").value || order.channelName,
+        arriveDate: document.getElementById("editArriveDate").value || order.arriveDate,
+        shipByTime: (document.getElementById("editShipByTime").value || "").replace("T", " ") || order.shipByTime,
+      });
+    });
+    document.getElementById("editChannelName").addEventListener("change", () => {
+      const profile = channelProfiles[document.getElementById("editChannelName").value] || {};
+      if (profile.address) document.getElementById("editAddress").value = profile.address;
+    });
+
+    function openCreateModal() {
+      const createdAt = nowStamp();
+      document.getElementById("createChannelType").value = "";
+      document.getElementById("createChannelName").value = "";
+      document.getElementById("createAddress").value = "";
+      document.getElementById("createArriveDate").value = addDaysToStamp(createdAt, 2);
+      document.getElementById("createShipByTime").value = toDateTimeInput(addDaysToStamp(createdAt, 1, true));
+      renderGoodsTable("createGoodsBody", mockItemsFor(""));
+      document.getElementById("createModal").classList.remove("hidden");
+    }
+
+    function closeCreateModal() {
+      document.getElementById("createModal").classList.add("hidden");
+    }
+
+    function confirmCreateOrder() {
+      const order = createPoFromForm();
+      closeCreateModal();
+    }
+
+    function createPoFromForm() {
+      const channelType = document.getElementById("createChannelType").value;
+      const channelName = document.getElementById("createChannelName").value;
+      const order = {
+        orderNo: nextSalesOrderNo(),
+        shipNo: "",
+        channelType: channelType || "—",
+        channelName: channelName || "—",
+        region: (channelProfiles[channelName] || {}).region || "台灣",
+        status: "未開立出貨單",
+        operator: "demo.user",
+        createdAt: nowStamp(),
+        fileName: "",
+        fileUrl: "",
+        fileType: "",
+        address: document.getElementById("createAddress").value,
+        arriveDate: document.getElementById("createArriveDate").value,
+        shipByTime: document.getElementById("createShipByTime").value.replace("T", " "),
+        items: collectGoodsTable("createGoodsBody"),
+      };
+      salesOrders.unshift(order);
+      renderSalesTable(getSalesFiltered());
+      return order;
+    }
+
+    document.getElementById("salesCreateBtn").addEventListener("click", openCreateModal);
+    document.getElementById("createClose").addEventListener("click", closeCreateModal);
+    document.getElementById("createCancel").addEventListener("click", closeCreateModal);
+    document.getElementById("createConfirm").addEventListener("click", confirmCreateOrder);
+    document.getElementById("createModal").addEventListener("click", (e) => {
+      if (e.target.id === "createModal") closeCreateModal();
+    });
+    document.getElementById("createChannelName").addEventListener("change", () => {
+      const name = document.getElementById("createChannelName").value;
+      const profile = channelProfiles[name] || {};
+      if (profile.address) document.getElementById("createAddress").value = profile.address;
+      renderGoodsTable("createGoodsBody", mockItemsFor(name));
+    });
+
+    let currentShipStep = 1;
+
+    function naText(value) {
+      return value || "N/A(系統自動帶入)";
+    }
+
+    function fillShipProfile() {
+      const profile = channelProfiles[document.getElementById("shipChannelName").value] || {};
+      document.getElementById("shipMode").textContent = naText(profile.mode);
+      document.getElementById("shipPhone").textContent = naText(profile.phone);
+      document.getElementById("shipContact").textContent = naText(profile.contact);
+      document.getElementById("shipEmail").textContent = naText(profile.email);
+      if (profile.region) document.getElementById("shipRegion").value = profile.region;
+      if (profile.inWarehouse) document.getElementById("shipInWarehouse").value = profile.inWarehouse;
+    }
+
+    function resetShipCreateForm() {
+      document.getElementById("shipOutWarehouse").value = "藍田";
+      document.getElementById("shipPoNo").value = "";
+      document.getElementById("shipPoList").classList.add("hidden");
+      document.getElementById("shipExpectDate").value = "";
+      document.getElementById("shipArriveDate").value = "";
+      document.getElementById("shipChannelType").value = "";
+      document.getElementById("shipRegion").value = "";
+      document.getElementById("shipChannelName").value = "";
+      document.getElementById("shipLine").value = "";
+      document.getElementById("shipInWarehouse").value = "";
+      document.getElementById("shipCurrency").value = "";
+      document.getElementById("shipRate").value = "";
+      document.getElementById("shipIncoterm").value = "";
+      document.querySelectorAll('input[name="shipPickup"]').forEach((el) => { el.checked = false; });
+      fillShipProfile();
+      shipLineItems = [];
+      shipItemsLoadedPo = "";
+      if (document.getElementById("shipItemsBody")) renderShipItemsTable();
+    }
+
+    function goToShipCreateFromPo(order) {
+      resetShipCreateForm();
+      setShipCreateStep(1);
+      const createdAt = order.createdAt || nowStamp();
+      document.getElementById("shipOutWarehouse").value = "藍田";
+      document.getElementById("shipPoNo").value = order.orderNo || "";
+      document.getElementById("shipChannelType").value = !order.channelType || order.channelType === "—" ? "" : order.channelType;
+      document.getElementById("shipChannelName").value = !order.channelName || order.channelName === "—" ? "" : order.channelName;
+      fillShipProfile();
+      document.getElementById("shipExpectDate").value = toDateInput(order.shipByTime) || addDaysToStamp(createdAt, 1);
+      document.getElementById("shipArriveDate").value = toDateInput(order.arriveDate) || addDaysToStamp(createdAt, 2);
+      if (!document.getElementById("shipLine").value) document.getElementById("shipLine").value = "乳清";
+      if (!document.getElementById("shipCurrency").value) document.getElementById("shipCurrency").value = "TWD";
+      document.getElementById("shipRate").value = "1";
+      document.getElementById("shipIncoterm").value = "FOB";
+      const pickup = document.querySelector('input[name="shipPickup"][value="blackcat"]');
+      if (pickup) pickup.checked = true;
+      showPage("ship-create");
+    }
+
+    function getSelectedShipPo() {
+      const po = document.getElementById("shipPoNo").value.trim();
+      return salesOrders.find((item) => item.orderNo === po) || null;
+    }
+
+    function requireShipPo() {
+      if (getSelectedShipPo()) return true;
+      alert("請選擇採購單編號");
+      document.getElementById("shipPoNo").focus();
+      renderShipPoList(document.getElementById("shipPoNo").value);
+      return false;
+    }
+
+    function setShipCreateStep(n) {
+      currentShipStep = n;
+      document.querySelectorAll("#shipWizardSteps .wizard-step").forEach((el) => {
+        el.classList.toggle("active", Number(el.dataset.shipStep) === n);
+      });
+      [1, 2, 3, 4].forEach((i) => {
+        document.getElementById("shipPane" + i).classList.toggle("hidden", i !== n);
+      });
+      document.getElementById("shipCreateAction").textContent = n === 1 ? "建立資料" : n === 4 ? "完成" : "下一步";
+      if (n >= 2) ensureShipItemsFromPo();
+    }
+
+    function nextShippingIds() {
+      const maxId = rows.reduce((m, r) => Math.max(m, Number(r.id) || 0), 0);
+      const id = String(maxId + 1);
+      return { id, orderId: `VN${pad(maxId + 1, 8)}` };
+    }
+
+    function finishShipCreate() {
+      if (!requireShipPo()) {
+        setShipCreateStep(1);
+        return;
+      }
+      const ids = nextShippingIds();
+      const channelName = document.getElementById("shipChannelName").value;
+      const poNo = document.getElementById("shipPoNo").value.trim();
+      const po = salesOrders.find((item) => item.orderNo === poNo);
+      if (po && po.status === "未開立出貨單") po.status = "待出貨";
+      rows.unshift({
+        id: ids.id,
+        orderId: ids.orderId,
+        salesOrderNo: poNo,
+        audit: "待審核",
+        channel: channelName || document.getElementById("shipChannelType").value || "—",
+        status: "待拋單",
+        applicant: "demo.user",
+        created: nowStamp(),
+        warehouse: "",
+        shipped: "",
+        items: shipLineItems.map((row) => ({ ...row })),
+      });
+      renderShippingTable();
+      renderSalesTable(getSalesFiltered());
+      showPage("shipping");
+    }
+
+    document.getElementById("shipCreateBtn").addEventListener("click", () => {
+      resetShipCreateForm();
+      setShipCreateStep(1);
+      showPage("ship-create");
+    });
+    document.querySelectorAll("#shipWizardSteps .wizard-step").forEach((el) => {
+      el.addEventListener("click", () => {
+        const n = Number(el.dataset.shipStep);
+        if (n > 1 && !requireShipPo()) return;
+        setShipCreateStep(n);
+      });
+    });
+    document.getElementById("shipCreateAction").addEventListener("click", () => {
+      if (currentShipStep === 1 && !requireShipPo()) return;
+      if (currentShipStep === 2 && !shipLineItems.length) {
+        alert("請至少保留一項出貨商品");
+        return;
+      }
+      if (currentShipStep < 4) setShipCreateStep(currentShipStep + 1);
+      else finishShipCreate();
+    });
+    document.getElementById("shipAddItemBtn").addEventListener("click", addShipCatalogItem);
+    document.getElementById("shipImportItemsBtn").addEventListener("click", () => {
+      document.getElementById("shipImportItemsFile").click();
+    });
+    document.getElementById("shipImportItemsFile").addEventListener("change", () => {
+      const file = document.getElementById("shipImportItemsFile").files[0];
+      document.getElementById("shipImportItemsFile").value = "";
+      if (!file) return;
+      importShipCatalogItems();
+    });
+    document.getElementById("shipItemsBody").addEventListener("input", onShipItemField);
+    document.getElementById("shipItemsBody").addEventListener("change", onShipItemField);
+    document.getElementById("shipItemsBody").addEventListener("click", (e) => {
+      const del = e.target.closest("[data-del]");
+      if (!del) return;
+      const tr = e.target.closest("tr");
+      if (!tr) return;
+      shipLineItems = shipLineItems.filter((row) => row.id !== tr.dataset.id);
+      renderShipItemsTable();
+    });
+
+    function onShipItemField(e) {
+      const field = e.target.dataset.field;
+      if (!field) return;
+      const tr = e.target.closest("tr");
+      if (!tr) return;
+      const item = shipLineItems.find((row) => row.id === tr.dataset.id);
+      if (!item) return;
+      item[field] = e.target.value;
+      if (field === "expiryType") {
+        item.batch = batchesFor(item.expiryType)[0];
+        renderShipItemsTable();
+        return;
+      }
+      if (field === "qty") updateShipQtyTotal();
+    }
+    document.getElementById("shipChannelName").addEventListener("change", fillShipProfile);
+
+    function renderShipPoList(keyword) {
+      const list = document.getElementById("shipPoList");
+      const q = (keyword || "").trim().toLowerCase();
+      const options = salesOrders
+        .map((item) => item.orderNo)
+        .filter((no) => !q || no.toLowerCase().includes(q));
+      if (!options.length) {
+        list.innerHTML = `<div class="combo-empty">查無採購單編號</div>`;
+      } else {
+        list.innerHTML = options.map((no) => `<div class="combo-item" data-no="${escapeHtml(no)}">${escapeHtml(no)}</div>`).join("");
+      }
+      list.classList.remove("hidden");
+    }
+
+    function applyShipPo(orderNo) {
+      document.getElementById("shipPoNo").value = orderNo;
+      document.getElementById("shipPoList").classList.add("hidden");
+      const order = salesOrders.find((item) => item.orderNo === orderNo);
+      if (!order) return;
+      if (order.channelType && order.channelType !== "—") {
+        document.getElementById("shipChannelType").value = order.channelType;
+      }
+      if (order.channelName && order.channelName !== "—") {
+        document.getElementById("shipChannelName").value = order.channelName;
+        fillShipProfile();
+      }
+      if (orderNo !== shipItemsLoadedPo) shipItemsLoadedPo = "";
+    }
+
+    const shipPoInput = document.getElementById("shipPoNo");
+    shipPoInput.addEventListener("focus", () => renderShipPoList(shipPoInput.value));
+    shipPoInput.addEventListener("input", () => {
+      renderShipPoList(shipPoInput.value);
+      if (shipPoInput.value.trim() !== shipItemsLoadedPo) shipItemsLoadedPo = "";
+    });
+    document.getElementById("shipPoList").addEventListener("mousedown", (e) => {
+      const item = e.target.closest(".combo-item");
+      if (item) applyShipPo(item.dataset.no);
+    });
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest("#shipPoCombo")) {
+        document.getElementById("shipPoList").classList.add("hidden");
+      }
+    });
+
+    let pendingVoidOrderNo = "";
+
+    function getLantianStatus(order) {
+      if (order.lantianStatus) return order.lantianStatus;
+      if (order.status === "已完成") return "DONE";
+      if (order.status === "部分送達") return "PROCESSING";
+      if (order.status === "已取消") return "DONE";
+      return "WAITING";
+    }
+
+    function canVoidOrder(order) {
+      if (!order || order.status === "已取消") return false;
+      return getLantianStatus(order) === "WAITING";
+    }
+
+    function openVoidModal(order) {
+      if (!canVoidOrder(order)) {
+        alert(`此採購單不可取消（藍田狀態為 ${getLantianStatus(order)}）`);
+        return;
+      }
+      pendingVoidOrderNo = order.orderNo;
+      document.getElementById("voidModal").classList.remove("hidden");
+    }
+
+    function closeVoidModal() {
+      pendingVoidOrderNo = "";
+      document.getElementById("voidModal").classList.add("hidden");
+    }
+
+    function confirmVoidOrder() {
+      const order = salesOrders.find((item) => item.orderNo === pendingVoidOrderNo);
+      if (!order || !canVoidOrder(order)) {
+        closeVoidModal();
+        return;
+      }
+      order.status = "已取消";
+      rows.forEach((row) => {
+        if (row.salesOrderNo === order.orderNo) row.status = "已取消";
+      });
+      renderSalesTable(getSalesFiltered());
+      renderShippingTable(getShippingFiltered());
+      closeVoidModal();
+    }
+
+    document.getElementById("voidClose").addEventListener("click", closeVoidModal);
+    document.getElementById("voidCancel").addEventListener("click", closeVoidModal);
+    document.getElementById("voidConfirm").addEventListener("click", confirmVoidOrder);
+    document.getElementById("voidModal").addEventListener("click", (e) => {
+      if (e.target.id === "voidModal") closeVoidModal();
+    });
+  </script>
+</body>
+</html>
