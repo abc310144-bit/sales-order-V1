@@ -846,8 +846,6 @@
     .status-tag[data-status="審核退回"] { color: #cf1322; background: #fff1f0; border-color: #ffa39e; }
     .status-tag[data-status="審核通過"] { color: #389e0d; background: #f6ffed; border-color: #b7eb8f; }
     .status-tag[data-status="未開立出貨單"] { color: #096dd9; background: #e6f7ff; border-color: #91d5ff; }
-    .status-tag[data-status="待出貨"] { color: #08979c; background: #e6fffb; border-color: #87e8de; }
-    .status-tag[data-status="部分送達"] { color: #531dab; background: #f9f0ff; border-color: #d3adf7; }
     .status-tag[data-status="已完成"],
     .status-tag[data-status="已配達"] { color: #389e0d; background: #f6ffed; border-color: #b7eb8f; }
     .status-tag[data-status="已取消"],
@@ -1423,8 +1421,6 @@
                   <option>草稿</option>
                   <option>待審核</option>
                   <option>未開立出貨單</option>
-                  <option>待出貨</option>
-                  <option>部分送達</option>
                   <option>已完成</option>
                   <option>已取消</option>
                 </select>
@@ -1855,7 +1851,7 @@
       },
       {
         orderNo: "SO20260826002", poDocNo: "PX-20260826-A12", shipNo: "", channelType: "台灣本地通路", channelName: "實體-全聯",
-        status: "部分送達", operator: "vita.du", createdAt: "2026-08-26 11:20:15",
+        status: "未開立出貨單", operator: "vita.du", createdAt: "2026-08-26 11:20:15",
         fileName: "", fileUrl: "", fileType: "",
         address: "桃園市大園區航勤北路8號 全聯物流中心",
         arriveDate: "2026-08-29", shipByTime: "2026-08-27 16:00",
@@ -1921,7 +1917,7 @@
     }
 
     function canEditPo(order) {
-      return ["草稿", "未開立出貨單", "待出貨", "部分送達"].includes(order.status);
+      return ["草稿", "未開立出貨單"].includes(order.status);
     }
 
     function canSubmitPo(order) {
@@ -1933,7 +1929,7 @@
     }
 
     function canShipFromPo(order) {
-      return !!order && ["未開立出貨單", "待出貨", "部分送達"].includes(order.status);
+      return !!order && order.status === "未開立出貨單";
     }
 
     function salesRowActions(item) {
@@ -2437,7 +2433,7 @@
       const view = mode === "view";
       const draftLike = canSubmitPo(order);
       const pending = canApprovePo(order);
-      const approvedOps = ["未開立出貨單", "待出貨", "部分送達"].includes(order.status);
+      const approvedOps = order.status === "未開立出貨單";
       document.getElementById("editCreateShip").classList.toggle("hidden", !canShipFromPo(order) || view);
       document.getElementById("editCreateShip").disabled = !canShipFromPo(order);
       document.getElementById("editSaveDraft").classList.toggle("hidden", view || !draftLike);
@@ -2832,7 +2828,6 @@
     function getLantianStatus(order) {
       if (order.lantianStatus) return order.lantianStatus;
       if (order.status === "已完成") return "DONE";
-      if (order.status === "部分送達") return "PROCESSING";
       if (order.status === "已取消") return "DONE";
       return "WAITING";
     }
