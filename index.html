@@ -1432,6 +1432,7 @@
                   <option>台灣本地通路</option>
                   <option>台灣本地經銷</option>
                   <option>台灣線上通路</option>
+                  <option>台灣線下通路</option>
                   <option>台灣實體百貨</option>
                   <option>境外通路</option>
                 </select>
@@ -1529,6 +1530,7 @@
                 <option>台灣本地通路</option>
                 <option>台灣本地經銷</option>
                 <option>台灣線上通路</option>
+                <option>台灣線下通路</option>
                 <option>台灣實體百貨</option>
                 <option>境外通路</option>
               </select>
@@ -1682,38 +1684,35 @@
           <div class="form-ctrl"><input type="text" id="createPoDocNo" maxlength="30" placeholder="請輸入採購單單號" /></div>
         </div>
         <div class="form-row">
+          <label>採購單類型</label>
+          <div class="form-ctrl">
+            <div class="radio-group">
+              <label class="radio-line"><input type="radio" name="createPoKind" value="一般通路" /> 一般通路</label>
+              <label class="radio-line"><input type="radio" name="createPoKind" value="經銷" /> 經銷</label>
+              <label class="radio-line"><input type="radio" name="createPoKind" value="境外通路" /> 境外通路</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-row hidden" id="createGeneralTypeRow">
           <label>合作通路類型</label>
           <div class="form-ctrl">
             <select id="createChannelType">
               <option value="">請選擇</option>
-              <option>台灣本地通路</option>
-              <option>台灣本地經銷</option>
               <option>台灣線上通路</option>
-              <option>台灣實體百貨</option>
-              <option>境外通路</option>
+              <option>台灣線下通路</option>
             </select>
           </div>
         </div>
-        <div id="createChannelPlanning" class="create-planning hidden">台灣本地經銷、境外通路相關設定目前規劃中</div>
-        <div id="createChannelDetails" class="hidden">
-        <div class="form-row">
+        <div class="form-row hidden" id="createChannelNameRow">
           <label>通路名稱</label>
           <div class="form-ctrl">
             <select id="createChannelName">
               <option value="">請選擇</option>
-              <option>實體-全聯</option>
-              <option>實體-寶雅</option>
-              <option>實體-迪卡儂</option>
-              <option>實體-PW健身工廠</option>
-              <option>經銷商-絢綻國際企業社</option>
-              <option>經銷商-學生營養股份有限公司</option>
-              <option>線上-轉單</option>
-              <option>線上-蝦皮商城</option>
-              <option>跨境- Cool Cool Trading</option>
-              <option>百貨-新光三越</option>
             </select>
           </div>
         </div>
+        <div id="createChannelPlanning" class="create-planning hidden">相關設定目前規劃中</div>
+        <div id="createChannelDetails" class="hidden">
         <div class="form-row">
           <label>到貨地址</label>
           <div class="form-ctrl"><textarea id="createAddress" rows="2"></textarea></div>
@@ -2727,21 +2726,60 @@
       if (profile.address) document.getElementById("editAddress").value = profile.address;
     });
 
-    function canExportCreatePo(channelType) {
-      return channelType === "台灣本地經銷" || channelType === "境外通路";
+    function getCreatePoKind() {
+      return document.querySelector('input[name="createPoKind"]:checked')?.value || "";
     }
 
-    function canShowCreateChannelDetails(channelType) {
-      return channelType === "台灣本地通路" || channelType === "台灣線上通路" || channelType === "台灣實體百貨";
+    function fillCreateChannelNameOptions(group) {
+      const namesByGroup = {
+        "台灣線上通路": ["線上-轉單", "線上-蝦皮商城"],
+        "台灣線下通路": ["實體-全聯", "實體-寶雅", "實體-迪卡儂", "實體-PW健身工廠", "百貨-新光三越"],
+        "台灣本地經銷": ["經銷商-絢綻國際企業社", "經銷商-學生營養股份有限公司"],
+        "境外通路": ["跨境- Cool Cool Trading"],
+      };
+      const names = namesByGroup[group] || [];
+      document.getElementById("createChannelName").innerHTML =
+        `<option value="">請選擇</option>` + names.map((name) => `<option>${name}</option>`).join("");
+    }
+
+    function resetCreateChannelFields() {
+      document.getElementById("createChannelName").value = "";
+      document.getElementById("createAddress").value = "";
+      renderGoodsTable("createGoodsBody", mockItemsFor(""));
     }
 
     function syncCreateModalByChannelType() {
-      const type = document.getElementById("createChannelType").value;
-      const showDetails = canShowCreateChannelDetails(type);
-      const showPlanning = canExportCreatePo(type);
-      document.getElementById("createExport").classList.toggle("hidden", !showPlanning);
-      document.getElementById("createChannelDetails").classList.toggle("hidden", !showDetails);
-      document.getElementById("createChannelPlanning").classList.toggle("hidden", !showPlanning);
+      const kind = getCreatePoKind();
+      const subType = document.getElementById("createChannelType").value;
+      const isGeneral = kind === "一般通路";
+      const isDealer = kind === "經銷";
+      const isOverseas = kind === "境外通路";
+      document.getElementById("createGeneralTypeRow").classList.toggle("hidden", !isGeneral);
+      document.getElementById("createExport").classList.toggle("hidden", !isDealer && !isOverseas);
+      if (isGeneral) {
+        fillCreateChannelNameOptions(subType);
+        document.getElementById("createChannelNameRow").classList.toggle("hidden", !subType);
+        document.getElementById("createChannelDetails").classList.toggle("hidden", !subType);
+        document.getElementById("createChannelPlanning").classList.add("hidden");
+        return;
+      }
+      document.getElementById("createChannelDetails").classList.add("hidden");
+      if (isDealer) {
+        fillCreateChannelNameOptions("台灣本地經銷");
+        document.getElementById("createChannelNameRow").classList.remove("hidden");
+        document.getElementById("createChannelPlanning").classList.remove("hidden");
+        document.getElementById("createChannelPlanning").textContent = "經銷相關設定目前規劃中";
+        return;
+      }
+      if (isOverseas) {
+        fillCreateChannelNameOptions("境外通路");
+        document.getElementById("createChannelNameRow").classList.remove("hidden");
+        document.getElementById("createChannelPlanning").classList.remove("hidden");
+        document.getElementById("createChannelPlanning").textContent = "境外通路相關設定目前規劃中";
+        return;
+      }
+      document.getElementById("createChannelNameRow").classList.add("hidden");
+      document.getElementById("createChannelPlanning").classList.add("hidden");
     }
 
     function csvCell(value) {
@@ -2751,20 +2789,14 @@
     }
 
     function exportCreatePo() {
-      const channelType = document.getElementById("createChannelType").value;
-      if (!canExportCreatePo(channelType)) return;
+      const kind = getCreatePoKind();
+      if (kind !== "經銷" && kind !== "境外通路") return;
       const poDocNo = document.getElementById("createPoDocNo").value.trim();
+      const channelType = kind === "經銷" ? "台灣本地經銷" : "境外通路";
       const channelName = document.getElementById("createChannelName").value;
-      const address = document.getElementById("createAddress").value;
-      const arriveDate = document.getElementById("createArriveDate").value;
-      const shipByTime = document.getElementById("createShipByTime").value.replace("T", " ");
-      const items = collectGoodsTable("createGoodsBody");
       const lines = [
-        ["採購單單號", "合作通路類型", "通路名稱", "到貨地址", "到貨日期", "應出貨時間"].map(csvCell).join(","),
-        [poDocNo, channelType, channelName, address, arriveDate, shipByTime].map(csvCell).join(","),
-        "",
-        ["SKU", "商品名稱", "允收效期", "單位", "訂貨數量"].map(csvCell).join(","),
-        ...items.map((item) => [item.sku, item.name, item.expiryAccept, item.unit, item.qty].map(csvCell).join(",")),
+        ["採購單單號", "採購單類型", "合作通路類型", "通路名稱"].map(csvCell).join(","),
+        [poDocNo, kind, channelType, channelName].map(csvCell).join(","),
       ];
       const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
       const link = document.createElement("a");
@@ -2777,8 +2809,9 @@
     function openCreateModal() {
       const createdAt = nowStamp();
       document.getElementById("createPoDocNo").value = "";
+      document.querySelectorAll('input[name="createPoKind"]').forEach((el) => { el.checked = false; });
       document.getElementById("createChannelType").value = "";
-      document.getElementById("createChannelName").value = "";
+      fillCreateChannelNameOptions("");
       document.getElementById("createAddress").value = "";
       document.getElementById("createArriveDate").value = addDaysToStamp(createdAt, 2);
       document.getElementById("createShipByTime").value = toDateTimeInput(addDaysToStamp(createdAt, 1, true));
@@ -2792,17 +2825,39 @@
     }
 
     function confirmCreateOrder(status) {
+      const kind = getCreatePoKind();
+      if (!kind) {
+        alert("請先選擇採購單類型");
+        return;
+      }
+      if (kind === "一般通路" && !document.getElementById("createChannelType").value) {
+        alert("請選擇合作通路類型");
+        return;
+      }
+      if (!document.getElementById("createChannelName").value) {
+        alert("請選擇通路名稱");
+        return;
+      }
       createPoFromForm(status);
       closeCreateModal();
     }
 
     function createPoFromForm(status) {
-      const channelType = document.getElementById("createChannelType").value;
+      const kind = getCreatePoKind();
       const channelName = document.getElementById("createChannelName").value;
+      const channelType = kind === "一般通路"
+        ? document.getElementById("createChannelType").value
+        : kind === "經銷"
+          ? "台灣本地經銷"
+          : kind === "境外通路"
+            ? "境外通路"
+            : "";
+      const isGeneral = kind === "一般通路";
       const order = {
         orderNo: nextSalesOrderNo(),
         poDocNo: document.getElementById("createPoDocNo").value.trim().slice(0, 30),
         shipNo: "",
+        poKind: kind || "—",
         channelType: channelType || "—",
         channelName: channelName || "—",
         region: (channelProfiles[channelName] || {}).region || "台灣",
@@ -2812,10 +2867,10 @@
         fileName: "",
         fileUrl: "",
         fileType: "",
-        address: document.getElementById("createAddress").value,
-        arriveDate: document.getElementById("createArriveDate").value,
-        shipByTime: document.getElementById("createShipByTime").value.replace("T", " "),
-        items: collectGoodsTable("createGoodsBody"),
+        address: isGeneral ? document.getElementById("createAddress").value : "",
+        arriveDate: isGeneral ? document.getElementById("createArriveDate").value : "",
+        shipByTime: isGeneral ? document.getElementById("createShipByTime").value.replace("T", " ") : "",
+        items: isGeneral ? collectGoodsTable("createGoodsBody") : [],
       };
       salesOrders.unshift(order);
       renderSalesTable(getSalesFiltered());
@@ -2828,16 +2883,22 @@
     document.getElementById("createSaveDraft").addEventListener("click", () => confirmCreateOrder("草稿"));
     document.getElementById("createSubmit").addEventListener("click", () => confirmCreateOrder("待審核"));
     document.getElementById("createExport").addEventListener("click", exportCreatePo);
+    document.querySelectorAll('input[name="createPoKind"]').forEach((el) => {
+      el.addEventListener("change", () => {
+        document.getElementById("createChannelType").value = "";
+        resetCreateChannelFields();
+        syncCreateModalByChannelType();
+      });
+    });
     document.getElementById("createChannelType").addEventListener("change", () => {
-      document.getElementById("createChannelName").value = "";
-      document.getElementById("createAddress").value = "";
-      renderGoodsTable("createGoodsBody", mockItemsFor(""));
+      resetCreateChannelFields();
       syncCreateModalByChannelType();
     });
     document.getElementById("createModal").addEventListener("click", (e) => {
       if (e.target.id === "createModal") closeCreateModal();
     });
     document.getElementById("createChannelName").addEventListener("change", () => {
+      if (getCreatePoKind() !== "一般通路") return;
       const name = document.getElementById("createChannelName").value;
       const profile = channelProfiles[name] || {};
       if (profile.address) document.getElementById("createAddress").value = profile.address;
