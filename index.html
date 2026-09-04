@@ -2288,6 +2288,116 @@
       return indexes.map((i) => ({ ...mockItemPool[i] }));
     }
 
+    function extraPo(cfg) {
+      const profile = channelProfiles[cfg.channelName] || {};
+      return {
+        orderNo: cfg.orderNo,
+        poDocNo: cfg.poDocNo,
+        shipNo: "",
+        channelType: cfg.channelType,
+        channelName: cfg.channelName,
+        region: profile.region || "台灣",
+        status: cfg.status,
+        operator: cfg.operator,
+        createdAt: cfg.createdAt,
+        fileName: "",
+        fileUrl: "",
+        fileType: "",
+        address: profile.address || "",
+        arriveDate: cfg.arriveDate || addDaysToStamp(cfg.createdAt, 2),
+        shipByTime: cfg.shipByTime || addDaysToStamp(cfg.createdAt, 1, true),
+        items: mockItemsFor(cfg.channelName),
+      };
+    }
+
+    function extraShip(id, po, channel, status, applicant, created, extra) {
+      const more = extra || {};
+      const inProgress = ["訂單處理中(已拋單)", "缺貨", "揀貨中", "已出貨", "配送異常", "已配達"].includes(status);
+      return {
+        id: String(id),
+        orderId: `VN${pad(id, 8)}`,
+        salesOrderNo: po,
+        audit: more.audit || (status === "已配達" ? "審核通過" : "待審核"),
+        channel,
+        status,
+        applicant,
+        created,
+        warehouse: more.warehouse ?? (inProgress ? created : ""),
+        shipped: more.shipped ?? (status === "已配達" ? addDaysToStamp(created, 2, true) : ""),
+      };
+    }
+
+    function seedExtraDemoData() {
+      const byId = Object.fromEntries(rows.map((row) => [row.id, row]));
+      const link = (id, po) => {
+        if (byId[id]) byId[id].salesOrderNo = po;
+      };
+
+      salesOrders.push(
+        extraPo({ orderNo: "SO20260826008", poDocNo: "PW-PO-20260826-08", channelType: "台灣實體百貨", channelName: "實體-PW健身工廠", status: "待出貨", operator: "misha.huang", createdAt: "2026-08-26 09:05:22" }),
+        extraPo({ orderNo: "SO20260826009", poDocNo: "DEC-0826-09", channelType: "台灣本地通路", channelName: "實體-迪卡儂", status: "待出貨", operator: "vita.du", createdAt: "2026-08-26 10:02:40" }),
+        extraPo({ orderNo: "SO20260826010", poDocNo: "XZ-PO-0826-010", channelType: "台灣本地經銷", channelName: "經銷商-絢綻國際企業社", status: "待出貨", operator: "john.pan", createdAt: "2026-08-26 09:30:18" }),
+        extraPo({ orderNo: "SO20260822011", poDocNo: "SN-DRAFT-0822", channelType: "台灣本地經銷", channelName: "經銷商-學生營養股份有限公司", status: "草稿", operator: "sarah.lin", createdAt: "2026-08-22 16:41:09" }),
+        extraPo({ orderNo: "SO20260822012", poDocNo: "SHP-DRAFT-0822", channelType: "台灣線上通路", channelName: "線上-蝦皮商城", status: "草稿", operator: "demo.user", createdAt: "2026-08-22 11:18:33" }),
+        extraPo({ orderNo: "SO20260821013", poDocNo: "SKM-A11-0821", channelType: "台灣實體百貨", channelName: "百貨-新光三越", status: "待審核", operator: "misha.huang", createdAt: "2026-08-21 15:27:04" }),
+        extraPo({ orderNo: "SO20260821014", poDocNo: "DEC-0821-14", channelType: "台灣本地通路", channelName: "實體-迪卡儂", status: "待審核", operator: "henry.huang", createdAt: "2026-08-21 09:44:51" }),
+        extraPo({ orderNo: "SO20260820015", poDocNo: "SN-PO-0820-015", channelType: "台灣本地經銷", channelName: "經銷商-學生營養股份有限公司", status: "未開立出貨單", operator: "john.pan", createdAt: "2026-08-20 14:12:08" }),
+        extraPo({ orderNo: "SO20260820016", poDocNo: "SKM-A11-0820", channelType: "台灣實體百貨", channelName: "百貨-新光三越", status: "未開立出貨單", operator: "vita.du", createdAt: "2026-08-20 10:05:19" }),
+        extraPo({ orderNo: "SO20260819017", poDocNo: "SHP-0820-017", channelType: "台灣線上通路", channelName: "線上-蝦皮商城", status: "待出貨", operator: "sarah.lin", createdAt: "2026-08-19 17:33:42" }),
+        extraPo({ orderNo: "SO20260818018", poDocNo: "SN-PO-0818-018", channelType: "台灣本地經銷", channelName: "經銷商-學生營養股份有限公司", status: "待出貨", operator: "john.pan", createdAt: "2026-08-18 13:08:27" }),
+        extraPo({ orderNo: "SO20260817019", poDocNo: "DEC-0817-19", channelType: "台灣本地通路", channelName: "實體-迪卡儂", status: "部分送達", operator: "vita.du", createdAt: "2026-08-17 11:21:06" }),
+        extraPo({ orderNo: "SO20260817020", poDocNo: "SHP-0817-020", channelType: "台灣線上通路", channelName: "線上-蝦皮商城", status: "部分送達", operator: "misha.huang", createdAt: "2026-08-17 09:16:55" }),
+        extraPo({ orderNo: "SO20260816021", poDocNo: "CCT-HK-20260816", channelType: "境外通路", channelName: "跨境- Cool Cool Trading", status: "部分送達", operator: "henry.huang", createdAt: "2026-08-16 18:02:31" }),
+        extraPo({ orderNo: "SO20260815022", poDocNo: "SKM-A11-0815", channelType: "台灣實體百貨", channelName: "百貨-新光三越", status: "已完成", operator: "misha.huang", createdAt: "2026-08-15 14:48:12" }),
+        extraPo({ orderNo: "SO20260814023", poDocNo: "SN-DONE-0814", channelType: "台灣本地經銷", channelName: "經銷商-學生營養股份有限公司", status: "已完成", operator: "sarah.lin", createdAt: "2026-08-14 10:22:40" }),
+        extraPo({ orderNo: "SO20260813024", poDocNo: "XZ-PO-0813-024", channelType: "台灣本地經銷", channelName: "經銷商-絢綻國際企業社", status: "已完成", operator: "john.pan", createdAt: "2026-08-13 16:09:18" }),
+        extraPo({ orderNo: "SO20260812025", poDocNo: "DEC-0812-25", channelType: "台灣本地通路", channelName: "實體-迪卡儂", status: "已取消", operator: "vita.du", createdAt: "2026-08-12 11:37:05" }),
+        extraPo({ orderNo: "SO20260811026", poDocNo: "SHP-VOID-0811", channelType: "台灣線上通路", channelName: "線上-蝦皮商城", status: "已取消", operator: "demo.user", createdAt: "2026-08-11 15:54:29" }),
+        extraPo({ orderNo: "SO20260810027", poDocNo: "PX-0810-027", channelType: "台灣本地通路", channelName: "實體-全聯", status: "待出貨", operator: "vita.du", createdAt: "2026-08-10 09:11:44" }),
+        extraPo({ orderNo: "SO20260809028", poDocNo: "POYA-0809-028", channelType: "台灣本地通路", channelName: "實體-寶雅", status: "部分送達", operator: "misha.huang", createdAt: "2026-08-09 13:26:17" }),
+        extraPo({ orderNo: "SO20260808029", poDocNo: "OL-TRANSFER-0808", channelType: "台灣線上通路", channelName: "線上-轉單", status: "已完成", operator: "sarah.lin", createdAt: "2026-08-08 08:40:03" })
+      );
+
+      link("10473", "SO20260826008");
+      link("10472", "SO20260826008");
+      link("10469", "SO20260826009");
+      link("10468", "SO20260826010");
+
+      rows.push(
+        extraShip(10474, "SO20260819017", "線上-蝦皮商城", "待拋單", "sarah.lin", "2026-08-19 18:02:11"),
+        extraShip(10475, "SO20260819017", "線上-蝦皮商城", "揀貨中", "sarah.lin", "2026-08-19 18:40:26"),
+        extraShip(10476, "SO20260818018", "經銷商-學生營養股份有限公司", "已出貨", "john.pan", "2026-08-18 14:22:08", { shipped: "2026-08-19 09:15:00" }),
+        extraShip(10477, "SO20260817019", "實體-迪卡儂", "已配達", "vita.du", "2026-08-17 12:05:33"),
+        extraShip(10478, "SO20260817019", "實體-迪卡儂", "缺貨", "vita.du", "2026-08-17 12:18:47"),
+        extraShip(10479, "SO20260817020", "線上-蝦皮商城", "已配達", "misha.huang", "2026-08-17 10:01:22"),
+        extraShip(10480, "SO20260817020", "線上-蝦皮商城", "揀貨中", "misha.huang", "2026-08-17 10:16:09"),
+        extraShip(10481, "SO20260817020", "線上-蝦皮商城", "待拋單", "misha.huang", "2026-08-17 10:31:44"),
+        extraShip(10482, "SO20260816021", "跨境- Cool Cool Trading", "已配達", "henry.huang", "2026-08-16 18:40:12"),
+        extraShip(10483, "SO20260816021", "跨境- Cool Cool Trading", "配送異常", "henry.huang", "2026-08-16 19:05:58"),
+        extraShip(10484, "SO20260815022", "百貨-新光三越", "已配達", "misha.huang", "2026-08-15 15:12:40"),
+        extraShip(10485, "SO20260815022", "百貨-新光三越", "已配達", "misha.huang", "2026-08-15 16:03:18"),
+        extraShip(10486, "SO20260814023", "經銷商-學生營養股份有限公司", "已配達", "sarah.lin", "2026-08-14 11:08:27"),
+        extraShip(10487, "SO20260813024", "經銷商-絢綻國際企業社", "已配達", "john.pan", "2026-08-13 16:44:02"),
+        extraShip(10488, "SO20260813024", "經銷商-絢綻國際企業社", "已配達", "john.pan", "2026-08-13 17:21:55"),
+        extraShip(10489, "SO20260812025", "實體-迪卡儂", "訂單取消", "vita.du", "2026-08-12 12:10:33"),
+        extraShip(10490, "SO20260812025", "實體-迪卡儂", "訂單取消", "vita.du", "2026-08-12 12:28:19"),
+        extraShip(10491, "SO20260811026", "線上-蝦皮商城", "訂單取消", "demo.user", "2026-08-11 16:20:07"),
+        extraShip(10492, "SO20260810027", "實體-全聯", "待拋單", "vita.du", "2026-08-10 10:02:16"),
+        extraShip(10493, "SO20260810027", "實體-全聯", "訂單處理中(已拋單)", "vita.du", "2026-08-10 10:45:51"),
+        extraShip(10494, "SO20260809028", "實體-寶雅", "已配達", "misha.huang", "2026-08-09 14:11:08"),
+        extraShip(10495, "SO20260809028", "實體-寶雅", "已出貨", "misha.huang", "2026-08-09 14:38:42", { shipped: "2026-08-10 08:20:00" }),
+        extraShip(10496, "SO20260808029", "線上-轉單", "已配達", "sarah.lin", "2026-08-08 09:15:36")
+      );
+
+      salesOrders.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+      rows.sort((a, b) => String(b.created).localeCompare(String(a.created)) || Number(b.id) - Number(a.id));
+      refreshAllPoStatusesFromShips();
+      renderSalesTable(getSalesFiltered());
+      renderShippingTable();
+    }
+
+    seedExtraDemoData();
+
     const productMeta = {
       "UM-1001": { productCode: "SET10-4713025601001", cost: "86.50", quote: "120" },
       "UM-1002": { productCode: "SET10-4713025602642", cost: "201.15", quote: "280" },
