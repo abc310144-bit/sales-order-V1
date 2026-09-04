@@ -2342,9 +2342,6 @@
         links.push(`<a data-action="edit" data-no="${item.orderNo}">編輯</a>`);
       }
       links.push(`<a data-action="view" data-no="${item.orderNo}">檢視</a>`);
-      if (canSubmitPo(item)) {
-        links.push(`<a data-action="submit" data-no="${item.orderNo}">送出申請</a>`);
-      }
       if (canVoidOrder(item)) {
         links.push(`<a data-action="void" data-no="${item.orderNo}">取消採購單</a>`);
       }
@@ -2630,13 +2627,6 @@
       if (!order) return;
       if (action === "void") {
         openVoidModal(order);
-        return;
-      }
-      if (action === "submit") {
-        if (!canSubmitPo(order)) return;
-        order.status = "待審核";
-        persistDemoData();
-        renderSalesTable(getSalesFiltered());
         return;
       }
       if (action === "approve") {
