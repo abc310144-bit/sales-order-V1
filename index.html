@@ -660,6 +660,71 @@
     .ship-tab-hint { color: var(--text-3); font-size: 13px; }
     .type-pick-card { width: 480px; max-width: calc(100vw - 32px); }
     .type-pick-card .modal-body { padding-bottom: 12px; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .item-dialog-card { width: 520px; max-width: calc(100vw - 32px); }
+    .item-dialog-card .modal-head,
+    .upload-dialog-card .modal-head {
+      border-bottom: 0;
+      padding: 12px 16px 0;
+      justify-content: flex-end;
+      min-height: 40px;
+    }
+    .item-dialog-card .modal-body { padding: 8px 32px 24px; }
+    .item-dialog-card .form-row {
+      grid-template-columns: 96px minmax(0, 1fr);
+      margin-bottom: 0;
+      align-items: center;
+    }
+    .item-dialog-card .form-row > label { padding-top: 0; }
+    .item-dialog-card .form-ctrl input { max-width: 100%; }
+    .item-dialog-card .modal-foot { padding: 10px 16px 16px; }
+    .upload-dialog-card { width: 480px; max-width: calc(100vw - 32px); }
+    .upload-dialog-card .modal-body { padding: 0 24px 8px; }
+    .upload-dialog-card .modal-foot {
+      border-top: 0;
+      padding: 8px 16px 16px;
+    }
+    .upload-panel { text-align: center; padding: 12px 0 40px; }
+    .upload-icon {
+      width: 72px;
+      height: 72px;
+      color: rgba(0, 0, 0, 0.25);
+    }
+    .upload-links {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .upload-link {
+      display: inline;
+      color: var(--primary);
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: 14px;
+      background: none;
+      border: 0;
+      padding: 0;
+      font-family: inherit;
+    }
+    .upload-link:hover { color: var(--primary-hover); }
+    .upload-file-name {
+      margin-top: 12px;
+      color: var(--text-3);
+      font-size: 13px;
+    }
+    .upload-file-name.has-file { color: var(--text-2); }
     .edit-pane { min-height: 240px; }
     .placeholder-pane {
       color: var(--text-3);
@@ -1877,7 +1942,6 @@
                 <div class="ship-items-actions">
                   <button type="button" class="btn" id="poAddItemBtn">新增商品</button>
                   <button type="button" class="btn btn-primary" id="poImportItemsBtn">匯入商品</button>
-                  <input type="file" id="poImportItemsFile" class="hidden" accept=".csv,.xlsx,.xls,.txt" />
                 </div>
                 <div class="ship-qty-box">
                   <div class="label">出貨總數量(pcs)</div>
@@ -2087,6 +2151,52 @@
       <div class="modal-foot">
         <button type="button" class="btn" id="voidCancel">取消</button>
         <button type="button" class="btn btn-primary" id="voidConfirm">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask hidden" id="addPoItemModal">
+    <div class="modal-card item-dialog-card" role="dialog" aria-labelledby="addPoItemTitle">
+      <div class="modal-head">
+        <h2 id="addPoItemTitle" class="visually-hidden">新增商品</h2>
+        <button type="button" class="modal-close" id="addPoItemClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label class="required" for="addPoItemCode">商品品號</label>
+          <div class="form-ctrl">
+            <input type="text" id="addPoItemCode" autocomplete="off" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="addPoItemCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="addPoItemConfirm">確認</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask hidden" id="importPoItemsModal">
+    <div class="modal-card upload-dialog-card" role="dialog" aria-labelledby="importPoItemsTitle">
+      <div class="modal-head">
+        <h2 id="importPoItemsTitle" class="visually-hidden">匯入商品</h2>
+        <button type="button" class="modal-close" id="importPoItemsClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-panel">
+          <svg class="upload-icon" viewBox="0 0 64 64" aria-hidden="true">
+            <path fill="currentColor" d="M32 6.5 19.8 18.7l2.8 2.8 7.4-7.4V38h4V14.1l7.4 7.4 2.8-2.8L32 6.5ZM16 42.2c-1.1 0-2 .9-2 2v10.6c0 1.1.9 2 2 2h32c1.1 0 2-.9 2-2V44.2c0-1.1-.9-2-2-2h-8.2a2 2 0 1 0 0 4H46v6.6H18V46.2h6.2a2 2 0 1 0 0-4H16Z"/>
+          </svg>
+          <div class="upload-links">
+            <button type="button" class="upload-link" id="importPoItemsPick">選擇檔案</button>
+            <a class="upload-link" id="importPoItemsTemplate" href="external_orderlines_template.xlsx" download="external_orderlines_template.xlsx">下載範例檔案</a>
+          </div>
+          <div class="upload-file-name" id="importPoItemsFileName"></div>
+          <input type="file" id="importPoItemsFile" class="hidden" accept=".csv,.xlsx,.xls,.txt" />
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-primary" id="importPoItemsConfirm" disabled>匯入</button>
       </div>
     </div>
   </div>
@@ -3361,22 +3471,360 @@
       updatePoQtyTotal();
     }
 
-    function addPoCatalogItem() {
-      if (document.getElementById("page-order-edit").classList.contains("is-readonly")) return;
-      const used = new Set(poLineItems.map((row) => row.sku));
-      const src = mockItemPool.find((item) => !used.has(item.sku)) || mockItemPool[0];
-      poLineItems.push(toPoLineItem(src));
+    function poGoodsEditable() {
+      return !document.getElementById("page-order-edit").classList.contains("is-readonly");
+    }
+
+    function allCatalogItems() {
+      const fromPool = mockItemPool.map((item) => {
+        const meta = metaForSku(item.sku);
+        return {
+          ...item,
+          productCode: meta.productCode,
+          cost: meta.cost,
+          quote: meta.quote,
+          stock: item.stock ?? 0,
+        };
+      });
+      const fromOverseas = mockOverseasLines().map((line) => ({
+        sku: String(line.barcode || ""),
+        name: line.name || "",
+        productCode: line.barcode ? `SET10-${line.barcode}` : "",
+        cost: String(line.priceNoLabel ?? "0"),
+        quote: String(line.priceLabel || line.priceNoLabel || "0"),
+        qty: 0,
+        stock: 0,
+      }));
+      return fromPool.concat(fromOverseas);
+    }
+
+    function catalogCodesOf(item) {
+      const code = String(item.productCode || "");
+      const sku = String(item.sku || "");
+      const barcode = code.replace(/^SET10-/i, "");
+      return [sku, code, barcode].filter(Boolean);
+    }
+
+    function normalizeSku(value) {
+      let s = String(value == null ? "" : value).trim();
+      if (!s) return "";
+      if (/[eE][+-]?\d+$/.test(s) || (/^\d+\.\d+$/.test(s) && Number(s) >= 1e11)) {
+        const n = Number(s);
+        if (Number.isFinite(n) && n >= 1e11) return String(Math.round(n));
+      }
+      if (/^\d+\.0+$/.test(s)) s = s.replace(/\.0+$/, "");
+      return s;
+    }
+
+    function findCatalogItem(input) {
+      const q = normalizeSku(input).toLowerCase();
+      if (!q) return null;
+      return allCatalogItems().find((item) => (
+        catalogCodesOf(item).some((code) => normalizeSku(code).toLowerCase() === q)
+      )) || null;
+    }
+
+    function openAddPoItemModal() {
+      if (!poGoodsEditable()) return;
+      document.getElementById("addPoItemCode").value = "";
+      document.getElementById("addPoItemModal").classList.remove("hidden");
+      setTimeout(() => document.getElementById("addPoItemCode").focus(), 0);
+    }
+
+    function closeAddPoItemModal() {
+      document.getElementById("addPoItemModal").classList.add("hidden");
+    }
+
+    function confirmAddPoItem() {
+      if (!poGoodsEditable()) return;
+      const code = document.getElementById("addPoItemCode").value.trim();
+      if (!code) {
+        alert("請輸入商品品號");
+        document.getElementById("addPoItemCode").focus();
+        return;
+      }
+      const src = findCatalogItem(code);
+      if (!src) {
+        alert("找不到此商品品號");
+        document.getElementById("addPoItemCode").focus();
+        return;
+      }
+      poLineItems.push(toPoLineItem({ ...src, qty: 0 }));
+      closeAddPoItemModal();
       renderPoGoodsTable();
     }
 
-    function importPoCatalogItems() {
-      if (document.getElementById("page-order-edit").classList.contains("is-readonly")) return;
-      const used = new Set(poLineItems.map((row) => row.sku));
-      const extras = mockItemPool.filter((item) => !used.has(item.sku));
-      (extras.length ? extras : mockItemPool.slice(0, 1)).forEach((item) => {
-        poLineItems.push(toPoLineItem(item));
+    let pendingPoImportFile = null;
+
+    function resetImportPoItemsModal() {
+      pendingPoImportFile = null;
+      const fileInput = document.getElementById("importPoItemsFile");
+      fileInput.value = "";
+      const name = document.getElementById("importPoItemsFileName");
+      name.textContent = "";
+      name.classList.remove("has-file");
+      document.getElementById("importPoItemsConfirm").disabled = true;
+    }
+
+    function openImportPoItemsModal() {
+      if (!poGoodsEditable()) return;
+      resetImportPoItemsModal();
+      document.getElementById("importPoItemsModal").classList.remove("hidden");
+    }
+
+    function closeImportPoItemsModal() {
+      document.getElementById("importPoItemsModal").classList.add("hidden");
+      resetImportPoItemsModal();
+    }
+
+    function setPendingPoImportFile(file) {
+      pendingPoImportFile = file || null;
+      const name = document.getElementById("importPoItemsFileName");
+      const btn = document.getElementById("importPoItemsConfirm");
+      if (!pendingPoImportFile) {
+        name.textContent = "";
+        name.classList.remove("has-file");
+        btn.disabled = true;
+        return;
+      }
+      name.textContent = pendingPoImportFile.name;
+      name.classList.add("has-file");
+      btn.disabled = false;
+    }
+
+    async function inflateRawBytes(bytes) {
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    async function unzipArrayBuffer(arrayBuffer) {
+      const u8 = new Uint8Array(arrayBuffer);
+      const view = new DataView(arrayBuffer);
+      let eocd = -1;
+      for (let i = u8.length - 22; i >= Math.max(0, u8.length - 0x10015); i--) {
+        if (u8[i] === 0x50 && u8[i + 1] === 0x4b && u8[i + 2] === 0x05 && u8[i + 3] === 0x06) {
+          eocd = i;
+          break;
+        }
+      }
+      if (eocd < 0) throw new Error("不是有效的 Excel 檔");
+      const cdOff = view.getUint32(eocd + 16, true);
+      const cdSize = view.getUint32(eocd + 12, true);
+      const files = {};
+      let p = cdOff;
+      const cdEnd = cdOff + cdSize;
+      while (p + 46 <= cdEnd) {
+        if (view.getUint32(p, true) !== 0x02014b50) break;
+        const method = view.getUint16(p + 10, true);
+        const compSize = view.getUint32(p + 20, true);
+        const nameLen = view.getUint16(p + 28, true);
+        const extraLen = view.getUint16(p + 30, true);
+        const commentLen = view.getUint16(p + 32, true);
+        const localOff = view.getUint32(p + 42, true);
+        const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nameLen));
+        const localNameLen = view.getUint16(localOff + 26, true);
+        const localExtraLen = view.getUint16(localOff + 28, true);
+        const dataStart = localOff + 30 + localNameLen + localExtraLen;
+        const data = u8.subarray(dataStart, dataStart + compSize);
+        if (method === 0) files[name] = data.slice();
+        else if (method === 8) files[name] = await inflateRawBytes(data);
+        else throw new Error("不支援的壓縮格式");
+        p += 46 + nameLen + extraLen + commentLen;
+      }
+      return files;
+    }
+
+    function xmlByLocalName(root, name) {
+      return [...root.getElementsByTagName("*")].filter((el) => el.localName === name);
+    }
+
+    function decodeZipText(bytes) {
+      return new TextDecoder().decode(bytes || new Uint8Array());
+    }
+
+    function worksheetPathFromWorkbook(files) {
+      const wbDoc = new DOMParser().parseFromString(decodeZipText(files["xl/workbook.xml"]), "application/xml");
+      const sheets = xmlByLocalName(wbDoc, "sheet");
+      const preferred = sheets.find((s) => (s.getAttribute("name") || "").includes("供應商")) || sheets[0];
+      if (!preferred) return "xl/worksheets/sheet1.xml";
+      const rid = preferred.getAttribute("r:id")
+        || preferred.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+      const relDoc = new DOMParser().parseFromString(decodeZipText(files["xl/_rels/workbook.xml.rels"]), "application/xml");
+      const rel = xmlByLocalName(relDoc, "Relationship").find((item) => item.getAttribute("Id") === rid);
+      const target = rel ? rel.getAttribute("Target") : "worksheets/sheet1.xml";
+      const cleaned = String(target || "").replace(/^\//, "");
+      return cleaned.startsWith("xl/") ? cleaned : `xl/${cleaned}`;
+    }
+
+    function sharedStringsFromXml(xml) {
+      const doc = new DOMParser().parseFromString(xml, "application/xml");
+      return xmlByLocalName(doc, "si").map((si) => xmlByLocalName(si, "t").map((t) => t.textContent || "").join(""));
+    }
+
+    function colLetters(ref) {
+      return String(ref || "").replace(/\d+/g, "");
+    }
+
+    function sheetMatrixFromXml(xml, shared) {
+      const doc = new DOMParser().parseFromString(xml, "application/xml");
+      return xmlByLocalName(doc, "row").map((rowEl) => {
+        const rec = {};
+        [...rowEl.children].filter((el) => el.localName === "c").forEach((cell) => {
+          const col = colLetters(cell.getAttribute("r"));
+          const type = cell.getAttribute("t");
+          let val = "";
+          if (type === "inlineStr") {
+            val = xmlByLocalName(cell, "t").map((n) => n.textContent || "").join("");
+          } else {
+            const v = [...cell.children].find((n) => n.localName === "v");
+            const raw = v ? v.textContent : "";
+            val = type === "s" ? (shared[Number(raw)] || "") : raw;
+          }
+          rec[col] = val;
+        });
+        return rec;
+      });
+    }
+
+    function colNameFromIndex(index) {
+      let n = index;
+      let s = "";
+      do {
+        s = String.fromCharCode(65 + (n % 26)) + s;
+        n = Math.floor(n / 26) - 1;
+      } while (n >= 0);
+      return s;
+    }
+
+    function splitCsvLine(line, delim) {
+      const out = [];
+      let cur = "";
+      let quoted = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (quoted && line[i + 1] === '"') {
+            cur += '"';
+            i += 1;
+          } else {
+            quoted = !quoted;
+          }
+        } else if (ch === delim && !quoted) {
+          out.push(cur);
+          cur = "";
+        } else {
+          cur += ch;
+        }
+      }
+      out.push(cur);
+      return out;
+    }
+
+    function recordsFromSheetMatrix(matrix) {
+      if (!matrix.length) return [];
+      const header = matrix[0];
+      const map = {};
+      Object.keys(header).forEach((col) => {
+        const key = String(header[col] || "").replace(/\*/g, "").replace(/\s+/g, "");
+        if (/^SKU/i.test(key) || key.includes("品號")) map[col] = "sku";
+        else if (key.includes("商品售價")) map[col] = "sellPrice";
+        else if (key.includes("商品報價")) map[col] = "quote";
+        else if (key.includes("後扣")) map[col] = "rebate";
+        else if (key.includes("允收")) map[col] = "acceptDays";
+      });
+      return matrix.slice(1).map((row) => {
+        const rec = { sku: "", sellPrice: "", quote: "", rebate: "", acceptDays: "" };
+        Object.keys(map).forEach((col) => {
+          rec[map[col]] = row[col] || "";
+        });
+        rec.sku = normalizeSku(rec.sku);
+        return rec;
+      }).filter((rec) => rec.sku && rec.sku !== "說明");
+    }
+
+    function parseCsvItemRecords(text) {
+      const raw = String(text || "").replace(/^\uFEFF/, "");
+      const lines = raw.split(/\r?\n/).filter((line) => line.trim());
+      if (!lines.length) return [];
+      const delim = lines[0].includes("\t") && !lines[0].includes(",") ? "\t" : ",";
+      const matrix = lines.map((line) => {
+        const rec = {};
+        splitCsvLine(line, delim).forEach((val, i) => {
+          rec[colNameFromIndex(i)] = val.trim();
+        });
+        return rec;
+      });
+      return recordsFromSheetMatrix(matrix);
+    }
+
+    async function parseXlsxItemRecords(arrayBuffer) {
+      const files = await unzipArrayBuffer(arrayBuffer);
+      const shared = files["xl/sharedStrings.xml"]
+        ? sharedStringsFromXml(decodeZipText(files["xl/sharedStrings.xml"]))
+        : [];
+      const path = worksheetPathFromWorkbook(files);
+      const sheet = files[path] || files["xl/worksheets/sheet1.xml"];
+      if (!sheet) throw new Error("找不到工作表");
+      return recordsFromSheetMatrix(sheetMatrixFromXml(decodeZipText(sheet), shared));
+    }
+
+    async function parsePoItemImportFile(file) {
+      const name = (file.name || "").toLowerCase();
+      if (name.endsWith(".csv") || name.endsWith(".txt")) {
+        return parseCsvItemRecords(await file.text());
+      }
+      if (name.endsWith(".xlsx")) {
+        return parseXlsxItemRecords(await file.arrayBuffer());
+      }
+      if (name.endsWith(".xls")) {
+        throw new Error("請使用範例檔 xlsx 或 csv");
+      }
+      return parseXlsxItemRecords(await file.arrayBuffer());
+    }
+
+    function poItemFromImportRow(rec) {
+      const found = findCatalogItem(rec.sku);
+      const src = found
+        ? { ...found, qty: 0 }
+        : {
+          sku: rec.sku,
+          name: "",
+          productCode: /^SET10-/i.test(rec.sku) ? rec.sku : `SET10-${rec.sku}`,
+          qty: 0,
+        };
+      const item = toPoLineItem(src);
+      if (rec.quote) item.quote = String(rec.quote);
+      if (rec.sellPrice) item.orderQuote = String(rec.sellPrice);
+      item.acceptDays = rec.acceptDays === "" || rec.acceptDays == null ? "1" : String(rec.acceptDays);
+      if (rec.rebate) {
+        item.remark = item.remark ? `${item.remark}；後扣 ${rec.rebate}` : `後扣 ${rec.rebate}`;
+      }
+      item.qty = 0;
+      return item;
+    }
+
+    async function confirmImportPoItems() {
+      if (!poGoodsEditable()) return;
+      if (!pendingPoImportFile) {
+        alert("請先選擇檔案");
+        return;
+      }
+      let records;
+      try {
+        records = await parsePoItemImportFile(pendingPoImportFile);
+      } catch (err) {
+        alert(err && err.message ? err.message : "檔案解析失敗");
+        return;
+      }
+      if (!records.length) {
+        alert("檔案沒有可匯入的商品列");
+        return;
+      }
+      records.forEach((rec) => {
+        poLineItems.push(poItemFromImportRow(rec));
       });
       renderPoGoodsTable();
+      closeImportPoItemsModal();
     }
 
     function onPoItemField(e) {
@@ -3699,15 +4147,27 @@
       const tab = e.target.closest("[data-po-tab]");
       if (tab) setPoTab(tab.dataset.poTab);
     });
-    document.getElementById("poAddItemBtn").addEventListener("click", addPoCatalogItem);
-    document.getElementById("poImportItemsBtn").addEventListener("click", () => {
-      document.getElementById("poImportItemsFile").click();
+    document.getElementById("poAddItemBtn").addEventListener("click", openAddPoItemModal);
+    document.getElementById("addPoItemClose").addEventListener("click", closeAddPoItemModal);
+    document.getElementById("addPoItemCancel").addEventListener("click", closeAddPoItemModal);
+    document.getElementById("addPoItemConfirm").addEventListener("click", confirmAddPoItem);
+    document.getElementById("addPoItemCode").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") confirmAddPoItem();
     });
-    document.getElementById("poImportItemsFile").addEventListener("change", () => {
-      const file = document.getElementById("poImportItemsFile").files[0];
-      document.getElementById("poImportItemsFile").value = "";
-      if (!file) return;
-      importPoCatalogItems();
+    document.getElementById("addPoItemModal").addEventListener("click", (e) => {
+      if (e.target.id === "addPoItemModal") closeAddPoItemModal();
+    });
+    document.getElementById("poImportItemsBtn").addEventListener("click", openImportPoItemsModal);
+    document.getElementById("importPoItemsClose").addEventListener("click", closeImportPoItemsModal);
+    document.getElementById("importPoItemsPick").addEventListener("click", () => {
+      document.getElementById("importPoItemsFile").click();
+    });
+    document.getElementById("importPoItemsFile").addEventListener("change", () => {
+      setPendingPoImportFile(document.getElementById("importPoItemsFile").files[0] || null);
+    });
+    document.getElementById("importPoItemsConfirm").addEventListener("click", confirmImportPoItems);
+    document.getElementById("importPoItemsModal").addEventListener("click", (e) => {
+      if (e.target.id === "importPoItemsModal") closeImportPoItemsModal();
     });
     document.getElementById("editGoodsBody").addEventListener("input", onPoItemField);
     document.getElementById("editGoodsBody").addEventListener("change", onPoItemField);
