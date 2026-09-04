@@ -103,6 +103,12 @@
     .menu-leaf.active { padding-left: 45px; }
     .page { display: none; }
     .page.active { display: block; }
+    #page-order-edit.page.active {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      max-width: 100%;
+    }
     .placeholder {
       padding: 48px 16px;
       color: var(--text-3);
@@ -513,7 +519,9 @@
       white-space: nowrap;
       padding-top: 0;
     }
-    .overseas-goods-table { min-width: 1080px; }
+    .overseas-goods-table { min-width: 1520px; width: max-content; }
+    .overseas-goods-table th:nth-child(3),
+    .overseas-goods-table td:nth-child(3) { min-width: 420px; }
     .form-ctrl input:focus,
     .form-ctrl select:focus,
     .form-ctrl textarea:focus {
@@ -579,6 +587,7 @@
       gap: 8px;
       margin-top: 28px;
       padding: 16px 0 8px;
+      flex-shrink: 0;
     }
     .po-kind-meta {
       margin: -8px 0 16px;
@@ -607,7 +616,7 @@
       border-bottom-color: var(--primary);
       font-weight: 600;
     }
-    .po-pane { min-height: 240px; }
+    .po-pane { min-height: 240px; min-width: 0; max-width: 100%; }
     .ship-tab-toolbar {
       display: flex;
       align-items: center;
@@ -753,6 +762,23 @@
     }
     .is-readonly .po-goods-toolbar { display: none; }
     .is-readonly #editGoodsBody .ops { visibility: hidden; }
+    #page-order-edit .form-title,
+    #page-order-edit .po-kind-meta,
+    #page-order-edit .po-tabs {
+      flex-shrink: 0;
+    }
+    #page-order-edit .goods-h-scroll {
+      overflow-x: auto;
+      overflow-y: auto;
+      width: 100%;
+      max-width: 100%;
+      border: 1px solid var(--border-light);
+      -webkit-overflow-scrolling: touch;
+    }
+    #page-order-edit .goods-h-scroll table {
+      width: max-content;
+      min-width: 100%;
+    }
     #page-order-edit .ship-items-table-wrap { max-height: calc(100vh - 300px); }
     .expiry-radios {
       display: flex;
@@ -1756,7 +1782,7 @@
                   <div class="value" id="poItemsQtyTotal">0</div>
                 </div>
               </div>
-              <div class="table-wrap ship-items-table-wrap">
+              <div class="table-wrap ship-items-table-wrap goods-h-scroll">
                 <table class="ship-items-table po-goods-table">
                   <thead>
                     <tr>
@@ -1803,7 +1829,7 @@
             <div id="editOverseasGoodsWrap" class="hidden">
               <div class="goods-block" style="margin-top:0">
                 <h3 class="goods-title">商品明細</h3>
-                <div class="table-wrap">
+                <div class="table-wrap goods-h-scroll">
                   <table class="goods-table overseas-goods-table">
                     <thead>
                       <tr>
