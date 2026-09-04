@@ -1868,6 +1868,14 @@
             </div>
           </div>
         </div>
+        <div class="form-row hidden" id="createChannelNameRow">
+          <label>通路名稱</label>
+          <div class="form-ctrl">
+            <select id="createChannelName">
+              <option value="">請選擇</option>
+            </select>
+          </div>
+        </div>
       </div>
       <div class="modal-foot">
         <button type="button" class="btn" id="createCancel">取消</button>
@@ -2513,26 +2521,33 @@
       document.querySelectorAll(".po-pane").forEach((el) => el.classList.toggle("hidden", el.dataset.poPane !== name));
     }
 
-    function startCreateWorkspace(kind) {
+    function startCreateWorkspace(kind, channelName) {
       const createdAt = nowStamp();
+      const name = channelName || "";
+      const profile = channelProfiles[name] || {};
+      const channelType = kind === "經銷"
+        ? "台灣本地經銷"
+        : kind === "境外通路"
+          ? "境外通路"
+          : (channelTypeOfName(name) || "");
       const order = {
         orderNo: "",
         poDocNo: "",
         shipNo: "",
         poKind: kind,
-        channelType: kind === "經銷" ? "台灣本地經銷" : kind === "境外通路" ? "境外通路" : "",
-        channelName: "",
-        region: kind === "境外通路" ? "境外" : "台灣",
+        channelType,
+        channelName: name,
+        region: profile.region || (kind === "境外通路" ? "境外" : "台灣"),
         status: "草稿",
         operator: "demo.user",
         createdAt,
         fileName: "",
         fileUrl: "",
         fileType: "",
-        address: "",
+        address: profile.address || "",
         arriveDate: kind === "一般通路" ? addDaysToStamp(createdAt, 2) : "",
         shipByTime: kind === "一般通路" ? addDaysToStamp(createdAt, 1, true) : "",
-        items: [],
+        items: kind === "一般通路" && name ? mockItemsFor(name) : [],
       };
       currentEditOrderNo = "__new__";
       workspaceOrder = order;
@@ -2557,7 +2572,7 @@
       const po = params.get("po");
       const mode = params.get("mode") || "view";
       if (params.get("create") === "1" && kind) {
-        startCreateWorkspace(kind);
+        startCreateWorkspace(kind, params.get("channel") || "");
         return;
       }
       if (po) {
@@ -2633,6 +2648,22 @@
       const names = channelNamesByGroup[group] || [];
       document.getElementById(selectId).innerHTML =
         `<option value="">請選擇</option>` + names.map((name) => `<option>${name}</option>`).join("");
+    }
+
+    function channelNamesForKind(kind) {
+      if (kind === "一般通路") {
+        return [...(channelNamesByGroup["台灣線上通路"] || []), ...(channelNamesByGroup["台灣線下通路"] || [])];
+      }
+      if (kind === "經銷") return channelNamesByGroup["台灣本地經銷"] || [];
+      if (kind === "境外通路") return channelNamesByGroup["境外通路"] || [];
+      return [];
+    }
+
+    function channelTypeOfName(name) {
+      for (const [group, names] of Object.entries(channelNamesByGroup)) {
+        if (names.includes(name)) return group;
+      }
+      return "";
     }
 
     const VENDOR_COMPANY = "饌元股份有限公司";
@@ -3174,7 +3205,9 @@
         if (!order.arriveDate) order.arriveDate = addDaysToStamp(order.createdAt || nowStamp(), 2);
         if (!order.shipByTime) order.shipByTime = addDaysToStamp(order.createdAt || nowStamp(), 1, true);
         if (!order.items || !order.items.length) order.items = mockItemsFor(order.channelName);
-        document.getElementById("editChannelType").value = !order.channelType || order.channelType === "—" ? "" : order.channelType;
+        const type = !order.channelType || order.channelType === "—" ? "" : order.channelType;
+        if (channelNamesByGroup[type]) fillChannelNameOptions("editChannelName", type);
+        document.getElementById("editChannelType").value = type;
         document.getElementById("editChannelName").value = !order.channelName || order.channelName === "—" ? "" : order.channelName;
         document.getElementById("editAddress").value = order.address || "";
         document.getElementById("editArriveDate").value = toDateInput(order.arriveDate);
@@ -3290,8 +3323,23 @@
       return document.querySelector('input[name="createPoKind"]:checked')?.value || "";
     }
 
+    function syncCreateChannelNameRow() {
+      const kind = getCreatePoKind();
+      const row = document.getElementById("createChannelNameRow");
+      const select = document.getElementById("createChannelName");
+      if (!kind) {
+        row.classList.add("hidden");
+        select.innerHTML = `<option value="">請選擇</option>`;
+        return;
+      }
+      const names = channelNamesForKind(kind);
+      select.innerHTML = `<option value="">請選擇</option>` + names.map((name) => `<option>${name}</option>`).join("");
+      row.classList.remove("hidden");
+    }
+
     function openCreateModal() {
       document.querySelectorAll('input[name="createPoKind"]').forEach((el) => { el.checked = false; });
+      syncCreateChannelNameRow();
       document.getElementById("createModal").classList.remove("hidden");
     }
 
@@ -3302,14 +3350,22 @@
     document.getElementById("salesCreateBtn").addEventListener("click", openCreateModal);
     document.getElementById("createClose").addEventListener("click", closeCreateModal);
     document.getElementById("createCancel").addEventListener("click", closeCreateModal);
+    document.querySelectorAll('input[name="createPoKind"]').forEach((el) => {
+      el.addEventListener("change", syncCreateChannelNameRow);
+    });
     document.getElementById("createConfirm").addEventListener("click", () => {
       const kind = getCreatePoKind();
       if (!kind) {
         alert("請先選擇採購單類型");
         return;
       }
+      const channel = document.getElementById("createChannelName").value;
+      if (!channel) {
+        alert("請選擇通路名稱");
+        return;
+      }
       closeCreateModal();
-      openPoWorkspace({ create: "1", kind });
+      openPoWorkspace({ create: "1", kind, channel });
     });
     document.getElementById("createModal").addEventListener("click", (e) => {
       if (e.target.id === "createModal") closeCreateModal();
