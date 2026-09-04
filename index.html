@@ -680,6 +680,7 @@
       margin-bottom: 12px;
     }
     .ship-items-actions { display: flex; align-items: center; gap: 8px; }
+    .po-goods-toolbar .ship-items-actions { display: none; }
     .ship-qty-box {
       min-width: 148px;
       padding: 8px 16px 10px;
@@ -2726,13 +2727,12 @@
         address: profile.address || "",
         arriveDate: kind === "一般通路" ? addDaysToStamp(createdAt, 2) : "",
         shipByTime: kind === "一般通路" ? addDaysToStamp(createdAt, 1, true) : "",
-        items: kind === "境外通路"
-          ? overseasLinesToItems(mockOverseasLines())
-          : (name ? mockItemsFor(name) : []),
+        items: channelSupplyItems(name, kind),
       };
       currentEditOrderNo = "__new__";
       workspaceOrder = order;
       fillOrderEdit(order, "edit");
+      setPoTab("goods");
     }
 
     function commitWorkspaceOrder(order, status) {
@@ -2799,23 +2799,32 @@
       { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18 },
       { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 36 },
       { sku: "UM-4412", name: "電解質補給粉", expiryAccept: "2026-09-30", unit: "盒", qty: 20 },
+      { sku: "PX-8801", name: "優質高蛋白棒", expiryAccept: "2026-11-30", unit: "盒", qty: 48 },
+      { sku: "UM-5520", name: "植物蛋白飲 原味", expiryAccept: "2027-02-28", unit: "罐", qty: 16 },
     ];
 
     function mockItemsFor(channelName) {
       const byChannel = {
-        "實體-全聯": [0, 2, 4],
-        "實體-寶雅": [0, 3],
-        "實體-迪卡儂": [1, 4],
-        "實體-PW健身工廠": [1, 4],
-        "經銷商-絢綻國際企業社": [0, 3],
-        "經銷商-學生營養股份有限公司": [0, 2],
-        "線上-轉單": [1, 2],
-        "線上-蝦皮商城": [0, 1, 2],
-        "跨境- Cool Cool Trading": [3, 4],
-        "百貨-新光三越": [0, 3],
+        "實體-全聯": [0, 2, 4, 5, 6],
+        "實體-寶雅": [0, 2, 3, 5],
+        "實體-迪卡儂": [1, 4, 5, 6],
+        "實體-PW健身工廠": [1, 3, 4, 6],
+        "經銷商-絢綻國際企業社": [0, 1, 2, 3, 4],
+        "經銷商-學生營養股份有限公司": [0, 2, 3, 5, 6],
+        "線上-轉單": [0, 1, 2, 6],
+        "線上-蝦皮商城": [0, 1, 2, 3, 5],
+        "跨境- Cool Cool Trading": [3, 4, 6],
+        "百貨-新光三越": [0, 3, 5, 6],
       };
-      const indexes = byChannel[channelName] || [0, 1];
+      const indexes = byChannel[channelName] || [0, 1, 2];
       return indexes.map((i) => ({ ...mockItemPool[i] }));
+    }
+
+    function channelSupplyItems(channelName, kind) {
+      if (kind === "境外通路" || channelName === "跨境- Cool Cool Trading") {
+        return overseasLinesToItems(mockOverseasLines());
+      }
+      return mockItemsFor(channelName);
     }
 
     const channelNamesByGroup = {
@@ -3121,6 +3130,7 @@
       "UM-3305": { productCode: "SET10-4713025603305", cost: "155.80", quote: "220" },
       "UM-4412": { productCode: "SET10-4713025604412", cost: "98.00", quote: "145" },
       "PX-8801": { productCode: "SET10-4713025608801", cost: "63.20", quote: "99" },
+      "UM-5520": { productCode: "SET10-4713025605520", cost: "118.00", quote: "168" },
     };
     const shipWarehouses = ["良品倉", "不良品倉", "待驗倉"];
     const shipBatches = {
@@ -3499,19 +3509,19 @@
         }
         fillOverseasForm(order, orderFormMode === "view");
         if (!order.items || !order.items.length) {
-          order.items = overseasLinesToItems(order.overseas.lines);
+          order.items = channelSupplyItems(order.channelName, "境外通路");
         }
         loadPoGoods(order.items);
       } else if (dealer) {
         document.getElementById("editDealerChannelName").value = !order.channelName || order.channelName === "—" ? "" : order.channelName;
-        if (!order.items || !order.items.length) order.items = mockItemsFor(order.channelName);
+        if (!order.items || !order.items.length) order.items = channelSupplyItems(order.channelName, "經銷");
         loadPoGoods(order.items);
       } else {
         const profile = channelProfiles[order.channelName] || {};
         if (!order.address) order.address = profile.address || "";
         if (!order.arriveDate) order.arriveDate = addDaysToStamp(order.createdAt || nowStamp(), 2);
         if (!order.shipByTime) order.shipByTime = addDaysToStamp(order.createdAt || nowStamp(), 1, true);
-        if (!order.items || !order.items.length) order.items = mockItemsFor(order.channelName);
+        if (!order.items || !order.items.length) order.items = channelSupplyItems(order.channelName, "一般通路");
         const type = !order.channelType || order.channelType === "—" ? "" : order.channelType;
         if (channelNamesByGroup[type]) fillChannelNameOptions("editChannelName", type);
         document.getElementById("editChannelType").value = type;
@@ -3605,7 +3615,7 @@
       document.getElementById("editAddress").value = "";
       const order = getWorkspaceOrder();
       if (order && poKindOf(order) === "一般通路") {
-        order.items = mockItemsFor("");
+        order.items = channelSupplyItems("", "一般通路");
         loadPoGoods(order.items);
       }
     });
@@ -3615,7 +3625,7 @@
       if (profile.address) document.getElementById("editAddress").value = profile.address;
       const order = getWorkspaceOrder();
       if (order && poKindOf(order) === "一般通路") {
-        order.items = mockItemsFor(name);
+        order.items = channelSupplyItems(name, "一般通路");
         loadPoGoods(order.items);
       }
     });
@@ -3623,7 +3633,7 @@
       const name = document.getElementById("editDealerChannelName").value;
       const order = getWorkspaceOrder();
       if (order && isDealerPo(order)) {
-        order.items = mockItemsFor(name);
+        order.items = channelSupplyItems(name, "經銷");
         loadPoGoods(order.items);
       }
     });
