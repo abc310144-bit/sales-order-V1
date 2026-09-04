@@ -2037,8 +2037,7 @@
       </div>
       <div class="modal-foot">
         <button type="button" class="btn" id="importCancel">取消</button>
-        <button type="button" class="btn" id="importSaveDraft">儲存為草稿</button>
-        <button type="button" class="btn btn-primary" id="importSubmit">送出申請</button>
+        <button type="button" class="btn btn-primary" id="importConfirm">匯入</button>
       </div>
     </div>
   </div>
@@ -2511,7 +2510,7 @@
       return `SO${d.getFullYear()}${pad(d.getMonth() + 1, 2)}${pad(d.getDate(), 2)}${pad(seq, 3)}`;
     }
 
-    function confirmImport(status) {
+    function confirmImport() {
       const kind = getImportPoKind();
       if (!kind) {
         alert("請先選擇採購單類型");
@@ -2529,11 +2528,10 @@
         alert("請選擇通路名稱");
         return;
       }
-      const order = createPoFromImport(status);
+      const order = createPoFromImport("草稿");
       if (!order) return;
       persistDemoData();
       closeImportModal();
-      openPoWorkspace({ po: order.orderNo, mode: status === "草稿" ? "edit" : "view" });
     }
 
     function createPoFromImport(status) {
@@ -2586,8 +2584,7 @@
     document.getElementById("salesImportBtn").addEventListener("click", openImportModal);
     document.getElementById("importClose").addEventListener("click", closeImportModal);
     document.getElementById("importCancel").addEventListener("click", closeImportModal);
-    document.getElementById("importSaveDraft").addEventListener("click", () => confirmImport("草稿"));
-    document.getElementById("importSubmit").addEventListener("click", () => confirmImport("待審核"));
+    document.getElementById("importConfirm").addEventListener("click", confirmImport);
     document.getElementById("importFileBtn").addEventListener("click", () => {
       document.getElementById("importFile").click();
     });
@@ -3479,7 +3476,7 @@
       document.getElementById("editCreateShip").disabled = !canShip;
       document.getElementById("editShipHint").classList.toggle("hidden", canShip);
       document.getElementById("editSaveDraft").classList.toggle("hidden", view || !draftLike);
-      document.getElementById("editSubmit").classList.toggle("hidden", view || !draftLike);
+      document.getElementById("editSubmit").classList.toggle("hidden", view || !draftLike || currentRole !== "建檔人");
       document.getElementById("editApprove").classList.toggle("hidden", !(pending && currentRole === "主管"));
       document.getElementById("editReject").classList.toggle("hidden", !(pending && currentRole === "主管"));
       document.getElementById("editSave").classList.toggle("hidden", view || draftLike || pending || !approvedOps);
@@ -3577,6 +3574,7 @@
     });
     document.getElementById("editSubmit").addEventListener("click", () => {
       if (orderFormMode === "view") return;
+      if (currentRole !== "建檔人") return;
       const order = getWorkspaceOrder();
       if (!order || !canSubmitPo(order)) return;
       commitWorkspaceOrder(order, "待審核");
