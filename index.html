@@ -1859,7 +1859,6 @@
                 <div class="form-ctrl">
                   <select id="editOverseasChannelName">
                     <option value="">請選擇</option>
-                    <option>跨境- Cool Cool Trading</option>
                   </select>
                 </div>
               </div>
@@ -1919,20 +1918,6 @@
                 <label>付款條件</label>
                 <div class="form-ctrl"><input type="text" id="editTermsOfPayment" /></div>
               </div>
-            </div>
-
-            <div id="editDealerBlock" class="hidden">
-              <div class="form-row">
-                <label>通路名稱</label>
-                <div class="form-ctrl">
-                  <select id="editDealerChannelName">
-                    <option value="">請選擇</option>
-                    <option>經銷商-絢綻國際企業社</option>
-                    <option>經銷商-學生營養股份有限公司</option>
-                  </select>
-                </div>
-              </div>
-              <div class="create-planning">經銷相關設定目前規劃中</div>
             </div>
           </div>
 
@@ -2564,9 +2549,8 @@
       if (isDealer) {
         fillChannelNameOptions("importChannelName", "台灣本地經銷");
         document.getElementById("importChannelNameRow").classList.remove("hidden");
-        document.getElementById("importFileRow").classList.add("hidden");
-        document.getElementById("importPlanning").classList.remove("hidden");
-        document.getElementById("importPlanning").textContent = "經銷匯入格式目前規劃中";
+        document.getElementById("importFileRow").classList.remove("hidden");
+        document.getElementById("importPlanning").classList.add("hidden");
         return;
       }
       if (isOverseas) {
@@ -2623,10 +2607,6 @@
         alert("請先選擇採購單類型");
         return;
       }
-      if (kind === "經銷") {
-        alert("經銷匯入格式目前規劃中");
-        return;
-      }
       if (kind === "一般通路" && !document.getElementById("importChannelType").value) {
         alert("請選擇合作通路類型");
         return;
@@ -2653,26 +2633,36 @@
       const createdAt = nowStamp();
       const profile = channelProfiles[channelName] || {};
       const isOverseas = kind === "境外通路";
-      const overseas = isOverseas ? buildOverseasPo(channelName, "demo.user", file.name) : null;
+      const isDealer = kind === "經銷";
+      const party = isOverseas
+        ? buildOverseasPo(channelName, "demo.user", file.name)
+        : isDealer
+          ? buildDealerPo(channelName, "demo.user", file.name)
+          : null;
       const order = {
         orderNo: nextSalesOrderNo(),
-        poDocNo: isOverseas ? (overseas.poDocNo || "").slice(0, 30) : "",
+        poDocNo: party ? (party.poDocNo || "").slice(0, 30) : "",
         shipNo: "",
         poKind: kind,
-        channelType: isOverseas ? "境外通路" : (document.getElementById("importChannelType").value || "—"),
+        channelType: isOverseas ? "境外通路" : isDealer ? "台灣本地經銷" : (document.getElementById("importChannelType").value || "—"),
         channelName: channelName || "—",
-        region: profile.region || "台灣",
+        region: profile.region || (isOverseas ? "境外" : "台灣"),
         status,
         operator: "demo.user",
         createdAt,
         fileName: file.name,
         fileUrl: URL.createObjectURL(file),
         fileType: file.type,
-        address: isOverseas ? overseas.buyerAddress : (profile.address || ""),
-        arriveDate: isOverseas ? "" : addDaysToStamp(createdAt, 2),
-        shipByTime: isOverseas ? "" : addDaysToStamp(createdAt, 1, true),
-        items: isOverseas ? overseasLinesToItems(overseas.lines) : mockItemsFor(channelName),
-        overseas,
+        address: party ? party.buyerAddress : (profile.address || ""),
+        arriveDate: party ? "" : addDaysToStamp(createdAt, 2),
+        shipByTime: party ? "" : addDaysToStamp(createdAt, 1, true),
+        items: isOverseas
+          ? overseasLinesToItems(party.lines)
+          : isDealer
+            ? dealerSupplyItems(channelName)
+            : mockItemsFor(channelName),
+        overseas: isOverseas ? party : null,
+        dealer: isDealer ? party : null,
       };
       salesOrders.unshift(order);
       renderSalesTable(getSalesFiltered());
@@ -2837,6 +2827,8 @@
         arriveDate: kind === "一般通路" ? addDaysToStamp(createdAt, 2) : "",
         shipByTime: kind === "一般通路" ? addDaysToStamp(createdAt, 1, true) : "",
         items: channelSupplyItems(name, kind),
+        overseas: kind === "境外通路" ? buildOverseasPo(name, "demo.user", "") : null,
+        dealer: kind === "經銷" ? buildDealerPo(name, "demo.user", "") : null,
       };
       currentEditOrderNo = "__new__";
       workspaceOrder = order;
@@ -2933,6 +2925,9 @@
       if (kind === "境外通路" || channelName === "跨境- Cool Cool Trading") {
         return overseasLinesToItems(mockOverseasLines());
       }
+      if (kind === "經銷" || String(channelName || "").startsWith("經銷商-")) {
+        return dealerSupplyItems(channelName);
+      }
       return mockItemsFor(channelName);
     }
 
@@ -2997,6 +2992,141 @@
       ];
     }
 
+    function mockDealerLines() {
+      return [
+        { barcode: "4713025603335", name: "Tryall | 無添加濃縮乳清蛋白- GLC (1000g)", pcsPerCarton: 10, quote: 480, cat: "無添加" },
+        { barcode: "4713025604813", name: "Tryall | 無添加分離乳清蛋白-Glanbia (500g)", pcsPerCarton: 30, quote: 460, cat: "無添加" },
+        { barcode: "4713025600990", name: "Tryall | 無添加水解乳清蛋白-MSG(500g)", pcsPerCarton: 40, quote: 375, cat: "無添加" },
+        { barcode: "4713025604592", name: "Tryall 搖搖杯-Tritan (650ml)", pcsPerCarton: 60, quote: 140, cat: "搖搖杯" },
+        { barcode: "4713025604196", name: "Tryall | 肌酸 (400g)", pcsPerCarton: 40, quote: 315, cat: "肌酸" },
+        { barcode: "4713025601416", name: "Tryall | 濃縮乳清蛋白-香醇可可(500g)", pcsPerCarton: 40, quote: 345, cat: "調味濃縮 500g" },
+        { barcode: "4713025601409", name: "Tryall | 濃縮乳清蛋白-經典奶茶(500g)", pcsPerCarton: 40, quote: 345, cat: "調味濃縮 500g" },
+        { barcode: "4713025601539", name: "Tryall | 濃縮乳清蛋白-芋頭牛奶(500g)", pcsPerCarton: 40, quote: 345, cat: "調味濃縮 500g" },
+        { barcode: "4713025601515", name: "Tryall | 濃縮乳清蛋白-泰式奶茶(500g)", pcsPerCarton: 40, quote: 345, cat: "調味濃縮 500g" },
+        { barcode: "4713025601874", name: "Tryall | 濃縮乳清蛋白-黑糖奶茶(500g)", pcsPerCarton: 40, quote: 345, cat: "調味濃縮 500g" },
+        { barcode: "4713025601867", name: "Tryall | 濃縮乳清蛋白-鐵觀音奶茶(500g)", pcsPerCarton: 40, quote: 345, cat: "調味濃縮 500g" },
+        { barcode: "4713025601850", name: "Tryall | 濃縮乳清蛋白-靜岡抹茶(500g)", pcsPerCarton: 40, quote: 345, cat: "調味濃縮 500g" },
+        { barcode: "4713025601904", name: "Tryall | 濃縮乳清蛋白-芝麻拿鐵(500g)", pcsPerCarton: 40, quote: 345, cat: "調味濃縮 500g" },
+        { barcode: "4713025601287", name: "Tryall | 分離乳清蛋白-靜岡抹茶(35g)", pcsPerCarton: 250, quote: 33, cat: "全分離隨手包" },
+        { barcode: "4713025600822", name: "Tryall | 分離乳清蛋白-經典奶茶(35g)", pcsPerCarton: 250, quote: 33, cat: "全分離隨手包" },
+        { barcode: "4713025601119", name: "Tryall | 分離乳清蛋白-香醇可可(35g)", pcsPerCarton: 250, quote: 33, cat: "全分離隨手包" },
+        { barcode: "4713025601492", name: "Tryall | 分離乳清蛋白-泰式奶茶(35g)", pcsPerCarton: 250, quote: 33, cat: "全分離隨手包" },
+        { barcode: "4713025601706", name: "Tryall | 分離乳清蛋白-黑糖奶茶(35g)", pcsPerCarton: 250, quote: 33, cat: "全分離隨手包" },
+        { barcode: "4713025601713", name: "Tryall | 分離乳清蛋白-珍珠奶茶(35g)", pcsPerCarton: 250, quote: 33, cat: "全分離隨手包" },
+        { barcode: "4713025601751", name: "Tryall | 分離乳清蛋白-鐵觀音奶茶(36g)", pcsPerCarton: 250, quote: 33, cat: "全分離隨手包" },
+        { barcode: "4713025602314", name: "Tryall | 分離乳清蛋白-light楓糖奶茶(38g)", pcsPerCarton: 250, quote: 31, cat: "light 隨手包" },
+        { barcode: "4713025602321", name: "Tryall | 分離乳清蛋白-light珍珠奶茶(35g)", pcsPerCarton: 250, quote: 31, cat: "light 隨手包" },
+        { barcode: "4713025602338", name: "Tryall | 分離乳清蛋白-light鴛鴦奶茶(35g)", pcsPerCarton: 250, quote: 31, cat: "light 隨手包" },
+        { barcode: "4713025602857", name: "Tryall | 分離乳清蛋白-light鐵觀音奶茶(36g)", pcsPerCarton: 250, quote: 31, cat: "light 隨手包" },
+        { barcode: "4713025603472", name: "Tryall | 分離蛋白乳清-light香橙巧克力(35g)", pcsPerCarton: 250, quote: 31, cat: "light 隨手包" },
+        { barcode: "4713025603175", name: "Tryall | 分離乳清蛋白-light鐵觀音奶茶(500g)", pcsPerCarton: 12, quote: 350, cat: "light 隨手包" },
+        { barcode: "4713025603182", name: "Tryall | 分離乳清蛋白-light楓糖奶茶(500g)", pcsPerCarton: 12, quote: 350, cat: "light 隨手包" },
+        { barcode: "4713025603199", name: "Tryall | 分離乳清蛋白-light珍珠奶茶(500g)", pcsPerCarton: 12, quote: 350, cat: "light 隨手包" },
+        { barcode: "4713025601799", name: "Tryall | 分離豌豆蛋白(1kg)", pcsPerCarton: 8, quote: 585, cat: "分離豌豆蛋白 1kg" },
+        { barcode: "4713025601836", name: "Tryall | 分離豌豆蛋白-烏龍奶茶(1kg)", pcsPerCarton: 20, quote: 585, cat: "分離豌豆蛋白 1kg" },
+        { barcode: "4713025601805", name: "Tryall | 分離豌豆蛋白-靜岡抹茶(1kg)", pcsPerCarton: 20, quote: 585, cat: "分離豌豆蛋白 1kg" },
+        { barcode: "4713025601829", name: "Tryall | 分離豌豆蛋白-花生可可(1kg)", pcsPerCarton: 8, quote: 585, cat: "分離豌豆蛋白 1kg" },
+        { barcode: "4713025602437", name: "Tryall | 機能豌豆蛋白-芝麻奶(30g)", pcsPerCarton: 250, quote: 30, cat: "豌豆蛋白 隨手包" },
+        { barcode: "4713025602444", name: "Tryall | 機能豌豆蛋白-芋頭奶(30g)", pcsPerCarton: 250, quote: 30, cat: "豌豆蛋白 隨手包" },
+        { barcode: "4713025602451", name: "Tryall | 機能豌豆蛋白-深可可奶(30g)", pcsPerCarton: 250, quote: 30, cat: "豌豆蛋白 隨手包" },
+        { barcode: "4713025603410", name: "Tryall | 機能豌豆蛋白-焙茶奶(30g)", pcsPerCarton: 250, quote: 30, cat: "豌豆蛋白 隨手包" },
+        { barcode: "4713025603434", name: "Tryall | 機能豌豆蛋白-鴛鴦奶(30g)", pcsPerCarton: 250, quote: 30, cat: "豌豆蛋白 隨手包" },
+        { barcode: "4713025604523", name: "Tryall | 輕孅機能豌豆蛋白-花生可可(30g)", pcsPerCarton: 250, quote: 30, cat: "豌豆蛋白 隨手包" },
+        { barcode: "4713025604547", name: "Tryall | 輕孅機能豌豆蛋白-so穀的(30g)", pcsPerCarton: 250, quote: 30, cat: "豌豆蛋白 隨手包" },
+        { barcode: "4713025604530", name: "Tryall | 輕孅機能豌豆蛋白-桂花烏龍(30g)", pcsPerCarton: 250, quote: 30, cat: "豌豆蛋白 隨手包" },
+        { barcode: "4713025603878", name: "Tryall | 機能豌豆蛋白-深可可奶(500g)", pcsPerCarton: 12, quote: 325, cat: "機能豌豆蛋白 500g" },
+        { barcode: "4713025603885", name: "Tryall | 機能豌豆蛋白-芝麻奶(500g)", pcsPerCarton: 12, quote: 325, cat: "機能豌豆蛋白 500g" },
+        { barcode: "4713025601843", name: "Tryall | 分離大豆蛋白(1kg)", pcsPerCarton: 20, quote: 470, cat: "大豆蛋白" },
+        { barcode: "4713025604608", name: "Tryall | 高鈣高纖大豆蛋白-蕎麥風味(32g)", pcsPerCarton: 300, quote: 32, cat: "大豆蛋白" },
+        { barcode: "4713025604615", name: "Tryall | 高鈣高纖大豆蛋白-燕麥風味(32g)", pcsPerCarton: 300, quote: 32, cat: "大豆蛋白" },
+        { barcode: "4713025604622", name: "Tryall | 高鈣高纖大豆蛋白-芝麻風味(32g)", pcsPerCarton: 300, quote: 32, cat: "大豆蛋白" },
+        { barcode: "4713025604639", name: "Tryall | 高鈣高纖大豆蛋白-蕎麥風味(500g)", pcsPerCarton: 30, quote: 345, cat: "大豆蛋白" },
+        { barcode: "4713025604646", name: "Tryall | 高鈣高纖大豆蛋白-燕麥風味(500g)", pcsPerCarton: 30, quote: 345, cat: "大豆蛋白" },
+        { barcode: "4713025604066", name: "Tryall | 透明分離乳清-西瓜(25g)", pcsPerCarton: 250, quote: 30, cat: "透明乳清" },
+        { barcode: "4713025604448", name: "Tryall | 透明分離乳清-鳯梨(500g)", pcsPerCarton: 55, quote: 600, cat: "透明乳清" },
+        { barcode: "4713025604455", name: "Tryall | 透明分離乳清-柳橙(500g)", pcsPerCarton: 55, quote: 600, cat: "透明乳清" },
+        { barcode: "4713025604561", name: "Tryall | 機能透明分離乳清-芭樂檸檬(25g)", pcsPerCarton: 250, quote: 33, cat: "透明乳清" },
+        { barcode: "4713025604578", name: "Tryall | 機能透明分離乳清-檸檬紅茶(25g)", pcsPerCarton: 250, quote: 33, cat: "透明乳清" },
+        { barcode: "4713025604554", name: "Tryall | 機能透明分離乳清-蔓越莓(25g)", pcsPerCarton: 250, quote: 33, cat: "透明乳清" },
+        { barcode: "4713025603250", name: "Tryall | 大豆蛋白酥脆脆-香濃起司(30g)", pcsPerCarton: 24, quote: 27, cat: "蛋白酥脆脆" },
+        { barcode: "4713025602963", name: "Tryall | 大豆蛋白酥脆脆-法式洋蔥(30g)", pcsPerCarton: 24, quote: 27, cat: "蛋白酥脆脆" },
+        { barcode: "4713025602956", name: "Tryall | 大豆蛋白酥脆脆-瑪格麗特(30g)", pcsPerCarton: 24, quote: 27, cat: "蛋白酥脆脆" },
+        { barcode: "4713025602949", name: "Tryall | 大豆蛋白酥脆脆-日式海苔(30g)", pcsPerCarton: 24, quote: 27, cat: "蛋白酥脆脆" },
+        { barcode: "4713025604509", name: "Tryall | 大豆蛋白酥脆脆-金沙鹹蛋黃(30g)", pcsPerCarton: 24, quote: 27, cat: "蛋白酥脆脆" },
+        { barcode: "4713025604943", name: "Tryall | 蛋白酥脆脆-珍珠奶茶風味(30g)", pcsPerCarton: 24, quote: 27, cat: "蛋白酥脆脆" },
+        { barcode: "4713025604929", name: "Tryall | 蛋白酥脆脆-台式雞排風味(30g)", pcsPerCarton: 24, quote: 27, cat: "蛋白酥脆脆" },
+        { barcode: "4713025604950", name: "Tryall | 蛋白酥脆脆-臭豆腐風味(30g)", pcsPerCarton: 24, quote: 27, cat: "蛋白酥脆脆" },
+        { barcode: "4713025603663", name: "Tryall | 蛋白螺旋捲-紐澳良(60g)", pcsPerCarton: 40, quote: 35, cat: "蛋白螺旋捲" },
+        { barcode: "4713025603670", name: "Tryall | 蛋白螺旋捲-杏仁楓糖(60g)", pcsPerCarton: 40, quote: 35, cat: "蛋白螺旋捲" },
+        { barcode: "4713025602659", name: "Tryall | 蛋白威化餅-香濃黑可可(8入/盒)", pcsPerCarton: 12, quote: 180, cat: "蛋白威化餅" },
+        { barcode: "4713025602673", name: "Tryall | 蛋白威化餅-鐵觀音拿鐵(8入/盒)", pcsPerCarton: 12, quote: 180, cat: "蛋白威化餅" },
+        { barcode: "4713025602642", name: "[台灣 Tryall] 蛋白威化餅-香濃黑可可 30g", pcsPerCarton: 120, quote: 23, cat: "蛋白威化餅" },
+        { barcode: "4713025602666", name: "[台灣 Tryall] 蛋白威化餅-鐵觀音拿鐵 30g", pcsPerCarton: 120, quote: 23, cat: "蛋白威化餅" },
+        { barcode: "4713025604769", name: "Tryall 高蛋白巧克派-抹茶牛奶 (8入/盒)", pcsPerCarton: 16, quote: 195, cat: "新品蛋白派" },
+        { barcode: "4713025604752", name: "Tryall 高蛋白巧克派-莓果優格 (8入/盒)", pcsPerCarton: 16, quote: 195, cat: "新品蛋白派" },
+        { barcode: "4713025604707", name: "Tryall Shake! 蛋白隨搖飲-鐵觀音奶茶", pcsPerCarton: 250, quote: 48, cat: "新品口栓袋" },
+        { barcode: "4713025604714", name: "Tryall Shake! 蛋白隨搖飲-珍珠奶茶", pcsPerCarton: 250, quote: 48, cat: "新品口栓袋" },
+        { barcode: "4713025604868", name: "Tryall手作蛋白餅乾-可可派對(16g/片)", pcsPerCarton: 250, quote: 13, cat: "蛋白餅乾" },
+        { barcode: "4713025604882", name: "Tryall手作蛋白餅乾-原味奶香(15g/片)", pcsPerCarton: 250, quote: 13, cat: "蛋白餅乾" },
+        { barcode: "4713025604875", name: "Tryall手作蛋白餅乾-花生粒醬(15g/片)", pcsPerCarton: 250, quote: 13, cat: "蛋白餅乾" },
+        { barcode: "4713025603694", name: "Daily Boost | 零卡果凍-蜂蜜檸檬 (300g)", pcsPerCarton: 30, quote: 50, cat: "Daily Boost" },
+        { barcode: "4713025603700", name: "Daily Boost | 零卡果凍-楊枝甘露 (300g)", pcsPerCarton: 30, quote: 50, cat: "Daily Boost" },
+        { barcode: "3800233070088", name: "Rice up | 南瓜籽米餅 (120g)", pcsPerCarton: 12, quote: 100, cat: "Rice up" },
+        { barcode: "3800233070064", name: "Rice up | 葵花籽米餅 (120g)", pcsPerCarton: 12, quote: 100, cat: "Rice up" },
+        { barcode: "3800233070057", name: "Rice up | 莧籽小米米餅 (120g)", pcsPerCarton: 12, quote: 100, cat: "Rice up" },
+        { barcode: "3800233070040", name: "Rice up | 莧籽蕎麥米餅 (120g)", pcsPerCarton: 12, quote: 100, cat: "Rice up" },
+        { barcode: "3800233070019", name: "Rice up | 紫米無鹽米餅 (120g)", pcsPerCarton: 12, quote: 100, cat: "Rice up" },
+        { barcode: "9319133335974", name: "Carman's | 低糖覆盆莓椰子穀脆脆 (450g)", pcsPerCarton: 6, quote: 145, cat: "Carman's" },
+        { barcode: "9319133337039", name: "Carman's | 高蛋白杏仁榛果穀脆脆 (450g)", pcsPerCarton: 6, quote: 145, cat: "Carman's" },
+        { barcode: "9319133334816", name: "Carman's | 粉紅蘋果穀脆脆 (450g)", pcsPerCarton: 6, quote: 145, cat: "Carman's" },
+        { barcode: "9319133334809", name: "Carman's | 香草風味肉桂穀脆脆(450g)", pcsPerCarton: 6, quote: 145, cat: "Carman's" },
+        { barcode: "9319133338067", name: "Carman's | 甜蜜蘋果脆穀塊 (450g/盒)", pcsPerCarton: 5, quote: 145, cat: "Carman's" },
+        { barcode: "9319133338074", name: "Carman's | 草莓莓果脆穀塊 (450g/盒)", pcsPerCarton: 5, quote: 145, cat: "Carman's" },
+        { barcode: "9319133338081", name: "Carman's | 蜂蜜脆穀塊 (450g/盒)", pcsPerCarton: 5, quote: 145, cat: "Carman's" },
+        { barcode: "9319133333451", name: "Carman's | 綜合莓果穀片 (500g)", pcsPerCarton: 5, quote: 145, cat: "Carman's" },
+        { barcode: "9319133333550", name: "澳洲 Carman’s 莓果希臘優格蛋白棒 (40g x 5條)", pcsPerCarton: 6, quote: 120, cat: "Carman's" },
+        { barcode: "9319133332737", name: "Carman's | 黑可可蔓越莓蛋白棒 (40g x 5條)", pcsPerCarton: 6, quote: 120, cat: "Carman's" },
+        { barcode: "9319133334472", name: "Carman's | 焦鹽黑可可大豆蛋白棒 (40g x 5條)", pcsPerCarton: 6, quote: 120, cat: "Carman's" },
+        { barcode: "9319133335585", name: "Carman's | 可可餅乾大豆蛋白棒 (40g x 5條)", pcsPerCarton: 6, quote: 120, cat: "Carman's" },
+        { barcode: "9319133336582", name: "Carman's | 覆盆莓開心果大豆蛋白棒 (40g x 5條)", pcsPerCarton: 6, quote: 120, cat: "Carman's" },
+        { barcode: "9319133337442", name: "Carman's | 冰拿鐵風味大豆蛋白棒 (40g x 5條)", pcsPerCarton: 6, quote: 120, cat: "Carman's" },
+        { barcode: "9319133333185", name: "Carman's | 藍莓希臘優格堅果棒 (32g x 5條)", pcsPerCarton: 6, quote: 110, cat: "Carman's" },
+        { barcode: "9319133333987", name: "Carman's | 花生腰果優格蛋白棒 (40g x 5條)", pcsPerCarton: 6, quote: 110, cat: "Carman's" },
+        { barcode: "9319133334717", name: "Carman's | 鹹味焦糖大豆蛋白棒 (40g x 5條)", pcsPerCarton: 6, quote: 110, cat: "Carman's" },
+        { barcode: "9319133333222", name: "Carman's | 黑可可咖啡堅果棒 (32g x 5條)", pcsPerCarton: 6, quote: 110, cat: "Carman's" },
+        { barcode: "9319133334366", name: "Carman's | 黑可可夏威夷豆堅果棒 (32g x 5條)", pcsPerCarton: 6, quote: 110, cat: "Carman's" },
+        { barcode: "9319133332935", name: "Carman's | 杏仁腰果蔓越莓堅果棒 (32g x 5條)", pcsPerCarton: 6, quote: 110, cat: "Carman's" },
+        { barcode: "9319133332942", name: "Carman's | 杏仁香草榛果堅果棒 (32g x 5條)", pcsPerCarton: 6, quote: 110, cat: "Carman's" },
+        { barcode: "9319133335325", name: "Carman's | 蘋果派繽紛燕麥棒 (30g x 6條)", pcsPerCarton: 6, quote: 110, cat: "Carman's" },
+        { barcode: "9319133336544", name: "Carman's | 海鹽焦糖大豆蛋白燕麥棒 (35g x 5條)", pcsPerCarton: 6, quote: 110, cat: "Carman's" },
+        { barcode: "9319133336346", name: "Carman's | 可可燕麥棒 (35g x 5條)", pcsPerCarton: 6, quote: 110, cat: "Carman's" },
+        { barcode: "9319133336353", name: "Carman's | 莓果蔓越莓燕麥棒 (35g x 5條)", pcsPerCarton: 6, quote: 110, cat: "Carman's" },
+        { barcode: "9319133334274", name: "Carman's | 黑櫻桃椰子巧克力穀物棒 (45g x 6條)", pcsPerCarton: 6, quote: 110, cat: "Carman's" },
+        { barcode: "9319133335387", name: "Carman's | 可可布朗尼繽紛燕麥棒 (35g x 5條)", pcsPerCarton: 6, quote: 110, cat: "Carman's" },
+        { barcode: "9319133335936", name: "Carman's | 生日蛋糕風味繽紛燕麥棒 (35g x 5條)", pcsPerCarton: 6, quote: 110, cat: "Carman's" },
+        { barcode: "9319133337527", name: "Carman's | 蜂蜜繽紛燕麥棒 (35g x 5條)", pcsPerCarton: 6, quote: 110, cat: "Carman's" }
+      ];
+    }
+
+    function dealerLinesToItems(source) {
+      return (source || []).map((line) => ({
+        sku: String(line.barcode || ""),
+        name: line.name || "",
+        productCode: line.barcode ? ("SET10-" + line.barcode) : "",
+        warehouse: "良品倉",
+        remark: [line.cat, line.pcsPerCarton ? ("箱入數 " + line.pcsPerCarton) : ""].filter(Boolean).join("／"),
+        cost: line.quote ?? "0",
+        quote: line.quote ?? "0",
+        orderQuote: line.quote ?? "0",
+        qty: Number(line.qty) || 0,
+      }));
+    }
+
+    function dealerSupplyItems(channelName) {
+      if (channelName === '經銷商-學生營養股份有限公司') return dealerLinesToItems(mockDealerLines());
+      return mockItemsFor(channelName);
+    }
+
     function overseasLinesToItems(lines) {
       return (lines || []).map((line) => ({
         sku: String(line.barcode || ""),
@@ -3043,6 +3173,54 @@
       if (!order.overseas.lines || !order.overseas.lines.length) order.overseas.lines = fallback.lines;
     }
 
+    function buildDealerPo(channelName, operator, fileName) {
+      const profile = channelProfiles[channelName] || {};
+      const op = operator || "demo.user";
+      const stamp = nowStamp().replace(/[-:\s]/g, "").slice(0, 8);
+      const dateMatch = String(fileName || "").match(/(\d{8})/);
+      const prefix = String(channelName || "").includes("絢綻") ? "XZ-PO" : "SN-PO";
+      return {
+        buyerName: channelName || "經銷商-學生營養股份有限公司",
+        buyerAttn: profile.contact || "學生營養窗口",
+        buyerEmail: profile.email || "dealer2@example.com",
+        buyerTel: profile.phone || "07-333-2211",
+        buyerAddress: profile.address || "高雄市前鎮區成功二路88號",
+        vendorName: VENDOR_COMPANY,
+        vendorAttn: op,
+        vendorEmail: `${op}@urmart.com`,
+        vendorTel: VENDOR_TEL,
+        vendorExt: "168",
+        vendorAddress: VENDOR_ADDRESS,
+        termsOfDelivery: "EXW",
+        termsOfPayment: "月結 30 天",
+        lines: channelName === "經銷商-學生營養股份有限公司" ? mockDealerLines() : [],
+        poDocNo: `${prefix}-${dateMatch ? dateMatch[1] : stamp}`,
+      };
+    }
+
+    function ensureDealerPo(order) {
+      if (!isDealerPo(order)) return;
+      const fallback = buildDealerPo(order.channelName, order.operator, order.fileName);
+      if (!order.dealer) order.dealer = fallback;
+      Object.keys(fallback).forEach((key) => {
+        if (order.dealer[key] === undefined || order.dealer[key] === null) order.dealer[key] = fallback[key];
+      });
+      if (!order.dealer.lines || !order.dealer.lines.length) order.dealer.lines = fallback.lines;
+    }
+
+    function partyRecord(order) {
+      if (isOverseasPo(order)) return order.overseas;
+      if (isDealerPo(order)) return order.dealer;
+      return null;
+    }
+
+    function fillPartyChannelOptions(kind, selected) {
+      const select = document.getElementById("editOverseasChannelName");
+      const names = channelNamesForKind(kind);
+      select.innerHTML = `<option value="">請選擇</option>` + names.map((name) => `<option>${name}</option>`).join("");
+      select.value = names.includes(selected) ? selected : "";
+    }
+
     function renderOverseasGoods(lines) {
       const body = document.getElementById("editOverseasGoodsBody");
       const rows = lines && lines.length ? lines : [];
@@ -3066,9 +3244,10 @@
     }
 
     function fillOverseasForm(order, readonly) {
-      ensureOverseasPo(order);
-      const ov = order.overseas;
-      document.getElementById("editOverseasChannelName").value = ov.buyerName || order.channelName || "";
+      if (isOverseasPo(order)) ensureOverseasPo(order);
+      else ensureDealerPo(order);
+      const ov = partyRecord(order) || {};
+      fillPartyChannelOptions(poKindOf(order), ov.buyerName || order.channelName || "");
       document.getElementById("editBuyerAttn").value = ov.buyerAttn || "";
       document.getElementById("editBuyerEmail").value = ov.buyerEmail || "";
       document.getElementById("editBuyerTel").value = ov.buyerTel || "";
@@ -3092,25 +3271,28 @@
     }
 
     function applyOverseasForm(order) {
-      ensureOverseasPo(order);
+      const dealer = isDealerPo(order);
+      if (dealer) ensureDealerPo(order);
+      else ensureOverseasPo(order);
+      const bag = dealer ? order.dealer : order.overseas;
       const name = document.getElementById("editOverseasChannelName").value;
-      order.poKind = "境外通路";
-      order.channelType = "境外通路";
+      order.poKind = dealer ? "經銷" : "境外通路";
+      order.channelType = dealer ? "台灣本地經銷" : "境外通路";
       order.channelName = name || order.channelName;
-      order.overseas.buyerName = name;
-      order.overseas.buyerAttn = document.getElementById("editBuyerAttn").value.trim();
-      order.overseas.buyerEmail = document.getElementById("editBuyerEmail").value.trim();
-      order.overseas.buyerTel = document.getElementById("editBuyerTel").value.trim();
-      order.overseas.buyerAddress = document.getElementById("editBuyerAddress").value.trim();
-      order.overseas.vendorName = VENDOR_COMPANY;
-      order.overseas.vendorAttn = document.getElementById("editVendorAttn").value.trim();
-      order.overseas.vendorEmail = document.getElementById("editVendorEmail").value.trim();
-      order.overseas.vendorTel = document.getElementById("editVendorTel").value.trim() || VENDOR_TEL;
-      order.overseas.vendorExt = document.getElementById("editVendorExt").value.trim();
-      order.overseas.vendorAddress = VENDOR_ADDRESS;
-      order.overseas.termsOfDelivery = document.getElementById("editTermsOfDelivery").value || "EXW";
-      order.overseas.termsOfPayment = document.getElementById("editTermsOfPayment").value.trim();
-      order.address = order.overseas.buyerAddress;
+      bag.buyerName = name;
+      bag.buyerAttn = document.getElementById("editBuyerAttn").value.trim();
+      bag.buyerEmail = document.getElementById("editBuyerEmail").value.trim();
+      bag.buyerTel = document.getElementById("editBuyerTel").value.trim();
+      bag.buyerAddress = document.getElementById("editBuyerAddress").value.trim();
+      bag.vendorName = VENDOR_COMPANY;
+      bag.vendorAttn = document.getElementById("editVendorAttn").value.trim();
+      bag.vendorEmail = document.getElementById("editVendorEmail").value.trim();
+      bag.vendorTel = document.getElementById("editVendorTel").value.trim() || VENDOR_TEL;
+      bag.vendorExt = document.getElementById("editVendorExt").value.trim();
+      bag.vendorAddress = VENDOR_ADDRESS;
+      bag.termsOfDelivery = document.getElementById("editTermsOfDelivery").value || "EXW";
+      bag.termsOfPayment = document.getElementById("editTermsOfPayment").value.trim();
+      order.address = bag.buyerAddress;
       order.items = collectEditGoods();
     }
 
@@ -3495,7 +3677,16 @@
         qty: 0,
         stock: 0,
       }));
-      return fromPool.concat(fromOverseas);
+      const fromDealer = mockDealerLines().map((line) => ({
+        sku: String(line.barcode || ""),
+        name: line.name || "",
+        productCode: line.barcode ? `SET10-${line.barcode}` : "",
+        cost: String(line.quote ?? "0"),
+        quote: String(line.quote ?? "0"),
+        qty: 0,
+        stock: 0,
+      }));
+      return fromPool.concat(fromOverseas, fromDealer);
     }
 
     function catalogCodesOf(item) {
@@ -3877,15 +4068,8 @@
     function applyEditFormToOrder(order) {
       order.poDocNo = document.getElementById("editPoDocNo").value.trim().slice(0, 30);
       order.poKind = poKindOf(order);
-      if (isOverseasPo(order)) {
+      if (isOverseasPo(order) || isDealerPo(order)) {
         applyOverseasForm(order);
-        return;
-      }
-      if (isDealerPo(order)) {
-        order.channelType = "台灣本地經銷";
-        order.channelName = document.getElementById("editDealerChannelName").value || order.channelName;
-        order.region = (channelProfiles[order.channelName] || {}).region || order.region || "台灣";
-        order.items = collectEditGoods();
         return;
       }
       order.channelType = document.getElementById("editChannelType").value || order.channelType;
@@ -3938,30 +4122,25 @@
       const overseas = kind === "境外通路";
       const dealer = kind === "經銷";
       document.getElementById("editGeneralBlock").classList.toggle("hidden", overseas || dealer);
-      document.getElementById("editOverseasBlock").classList.toggle("hidden", !overseas);
-      document.getElementById("editDealerBlock").classList.toggle("hidden", !dealer);
+      document.getElementById("editOverseasBlock").classList.toggle("hidden", !(overseas || dealer));
       document.getElementById("editGeneralGoodsWrap").classList.remove("hidden");
       document.getElementById("editOverseasGoodsWrap").classList.add("hidden");
       document.getElementById("editPoKindMeta").textContent = `採購單類型：${kind}`;
       const titles = { view: "檢視採購單", edit: "編輯採購單", create: "建立採購單" };
       document.getElementById("editPageTitle").textContent = currentEditOrderNo === "__new__" ? titles.create : (titles[orderFormMode] || titles.edit);
       document.getElementById("editPoDocNo").value = order.poDocNo || "";
-      if (overseas) {
-        if (!order.poDocNo) {
-          ensureOverseasPo(order);
-          if (order.overseas.poDocNo) {
-            order.poDocNo = order.overseas.poDocNo;
-            document.getElementById("editPoDocNo").value = order.poDocNo;
-          }
+      if (overseas || dealer) {
+        if (overseas) ensureOverseasPo(order);
+        else ensureDealerPo(order);
+        const party = partyRecord(order);
+        if (!order.poDocNo && party && party.poDocNo) {
+          order.poDocNo = party.poDocNo;
+          document.getElementById("editPoDocNo").value = order.poDocNo;
         }
         fillOverseasForm(order, orderFormMode === "view");
         if (!order.items || !order.items.length) {
-          order.items = channelSupplyItems(order.channelName, "境外通路");
+          order.items = channelSupplyItems(order.channelName, kind);
         }
-        loadPoGoods(order.items);
-      } else if (dealer) {
-        document.getElementById("editDealerChannelName").value = !order.channelName || order.channelName === "—" ? "" : order.channelName;
-        if (!order.items || !order.items.length) order.items = channelSupplyItems(order.channelName, "經銷");
         loadPoGoods(order.items);
       } else {
         const profile = channelProfiles[order.channelName] || {};
@@ -4048,11 +4227,9 @@
           : isDealerPo(order)
             ? "台灣本地經銷"
             : (document.getElementById("editChannelType").value || order.channelType),
-        channelName: isOverseasPo(order)
+        channelName: (isOverseasPo(order) || isDealerPo(order))
           ? (document.getElementById("editOverseasChannelName").value || order.channelName)
-          : isDealerPo(order)
-            ? (document.getElementById("editDealerChannelName").value || order.channelName)
-            : (document.getElementById("editChannelName").value || order.channelName),
+          : (document.getElementById("editChannelName").value || order.channelName),
         arriveDate: document.getElementById("editArriveDate").value || order.arriveDate,
         shipByTime: (document.getElementById("editShipByTime").value || "").replace("T", " ") || order.shipByTime,
       });
@@ -4076,20 +4253,19 @@
         loadPoGoods(order.items);
       }
     });
-    document.getElementById("editDealerChannelName").addEventListener("change", () => {
-      const name = document.getElementById("editDealerChannelName").value;
-      const order = getWorkspaceOrder();
-      if (order && isDealerPo(order)) {
-        order.items = channelSupplyItems(name, "經銷");
-        loadPoGoods(order.items);
-      }
-    });
     document.getElementById("editOverseasChannelName").addEventListener("change", () => {
-      const profile = channelProfiles[document.getElementById("editOverseasChannelName").value] || {};
+      const name = document.getElementById("editOverseasChannelName").value;
+      const profile = channelProfiles[name] || {};
       if (profile.contact) document.getElementById("editBuyerAttn").value = profile.contact;
       if (profile.email) document.getElementById("editBuyerEmail").value = profile.email;
       if (profile.phone) document.getElementById("editBuyerTel").value = profile.phone;
       if (profile.address) document.getElementById("editBuyerAddress").value = profile.address;
+      const order = getWorkspaceOrder();
+      if (order && (isOverseasPo(order) || isDealerPo(order))) {
+        order.channelName = name;
+        order.items = channelSupplyItems(name, poKindOf(order));
+        loadPoGoods(order.items);
+      }
     });
 
     function getCreatePoKind() {
