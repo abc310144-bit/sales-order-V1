@@ -295,6 +295,15 @@
     }
     .modal-body .goods-block { margin-top: 8px; }
     .modal-body .goods-table { min-width: 720px; }
+    .create-planning {
+      margin: 8px 0 4px;
+      padding: 12px 14px;
+      background: #fffbe6;
+      border: 1px solid #ffe58f;
+      color: rgba(0, 0, 0, 0.85);
+      font-size: 13px;
+      line-height: 1.7;
+    }
     .modal-foot {
       display: flex;
       justify-content: flex-end;
@@ -1685,6 +1694,8 @@
             </select>
           </div>
         </div>
+        <div id="createChannelPlanning" class="create-planning hidden">台灣本地經銷、境外通路相關設定目前規劃中</div>
+        <div id="createChannelDetails" class="hidden">
         <div class="form-row">
           <label>通路名稱</label>
           <div class="form-ctrl">
@@ -1731,6 +1742,7 @@
               <tbody id="createGoodsBody"></tbody>
             </table>
           </div>
+        </div>
         </div>
       </div>
       <div class="modal-foot">
@@ -2719,9 +2731,17 @@
       return channelType === "台灣本地經銷" || channelType === "境外通路";
     }
 
-    function syncCreateExportBtn() {
+    function canShowCreateChannelDetails(channelType) {
+      return channelType === "台灣本地通路" || channelType === "台灣線上通路" || channelType === "台灣實體百貨";
+    }
+
+    function syncCreateModalByChannelType() {
       const type = document.getElementById("createChannelType").value;
-      document.getElementById("createExport").classList.toggle("hidden", !canExportCreatePo(type));
+      const showDetails = canShowCreateChannelDetails(type);
+      const showPlanning = canExportCreatePo(type);
+      document.getElementById("createExport").classList.toggle("hidden", !showPlanning);
+      document.getElementById("createChannelDetails").classList.toggle("hidden", !showDetails);
+      document.getElementById("createChannelPlanning").classList.toggle("hidden", !showPlanning);
     }
 
     function csvCell(value) {
@@ -2763,7 +2783,7 @@
       document.getElementById("createArriveDate").value = addDaysToStamp(createdAt, 2);
       document.getElementById("createShipByTime").value = toDateTimeInput(addDaysToStamp(createdAt, 1, true));
       renderGoodsTable("createGoodsBody", mockItemsFor(""));
-      syncCreateExportBtn();
+      syncCreateModalByChannelType();
       document.getElementById("createModal").classList.remove("hidden");
     }
 
@@ -2808,7 +2828,12 @@
     document.getElementById("createSaveDraft").addEventListener("click", () => confirmCreateOrder("草稿"));
     document.getElementById("createSubmit").addEventListener("click", () => confirmCreateOrder("待審核"));
     document.getElementById("createExport").addEventListener("click", exportCreatePo);
-    document.getElementById("createChannelType").addEventListener("change", syncCreateExportBtn);
+    document.getElementById("createChannelType").addEventListener("change", () => {
+      document.getElementById("createChannelName").value = "";
+      document.getElementById("createAddress").value = "";
+      renderGoodsTable("createGoodsBody", mockItemsFor(""));
+      syncCreateModalByChannelType();
+    });
     document.getElementById("createModal").addEventListener("click", (e) => {
       if (e.target.id === "createModal") closeCreateModal();
     });
