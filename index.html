@@ -500,6 +500,20 @@
       resize: vertical;
       line-height: 1.5;
     }
+    .tel-ext {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tel-ext input { max-width: 180px; }
+    .tel-ext .ext-input { max-width: 96px; }
+    .tel-ext .ext-label {
+      color: var(--text-2);
+      white-space: nowrap;
+      padding-top: 0;
+    }
+    .overseas-goods-table { min-width: 1080px; }
     .form-ctrl input:focus,
     .form-ctrl select:focus,
     .form-ctrl textarea:focus {
@@ -1522,6 +1536,7 @@
             <label>採購單單號</label>
             <div class="form-ctrl"><input type="text" id="editPoDocNo" maxlength="30" placeholder="請輸入採購單單號" /></div>
           </div>
+          <div id="editGeneralBlock">
           <div class="form-row">
             <label>合作通路類型</label>
             <div class="form-ctrl">
@@ -1584,6 +1599,99 @@
               </table>
             </div>
           </div>
+          </div>
+
+          <div id="editOverseasBlock" class="hidden">
+            <h3 class="goods-title">買方 Buyer</h3>
+            <div class="form-row">
+              <label>通路名稱</label>
+              <div class="form-ctrl">
+                <select id="editOverseasChannelName">
+                  <option value="">請選擇</option>
+                  <option>跨境- Cool Cool Trading</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <label>通路負責人</label>
+              <div class="form-ctrl"><input type="text" id="editBuyerAttn" /></div>
+            </div>
+            <div class="form-row">
+              <label>通路信箱</label>
+              <div class="form-ctrl"><input type="text" id="editBuyerEmail" /></div>
+            </div>
+            <div class="form-row">
+              <label>通路電話</label>
+              <div class="form-ctrl"><input type="text" id="editBuyerTel" /></div>
+            </div>
+            <div class="form-row">
+              <label>通路地址</label>
+              <div class="form-ctrl"><textarea id="editBuyerAddress" rows="2"></textarea></div>
+            </div>
+
+            <h3 class="goods-title">賣方 Vendor</h3>
+            <div class="form-row">
+              <label>公司名稱</label>
+              <div class="form-ctrl"><input type="text" id="editVendorName" data-lock="1" /></div>
+            </div>
+            <div class="form-row">
+              <label>建檔人</label>
+              <div class="form-ctrl"><input type="text" id="editVendorAttn" /></div>
+            </div>
+            <div class="form-row">
+              <label>建檔人信箱</label>
+              <div class="form-ctrl"><input type="text" id="editVendorEmail" /></div>
+            </div>
+            <div class="form-row">
+              <label>電話</label>
+              <div class="form-ctrl tel-ext">
+                <input type="text" id="editVendorTel" />
+                <span class="ext-label" id="editVendorExtWrap">分機</span>
+                <input type="text" class="ext-input" id="editVendorExt" placeholder="分機" />
+              </div>
+            </div>
+            <div class="form-row">
+              <label>地址</label>
+              <div class="form-ctrl"><textarea id="editVendorAddress" rows="2" data-lock="1"></textarea></div>
+            </div>
+            <div class="form-row">
+              <label>貿易條件</label>
+              <div class="form-ctrl">
+                <select id="editTermsOfDelivery">
+                  <option>FOB</option>
+                  <option>CIF</option>
+                  <option>EXW</option>
+                  <option>DDU</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <label>付款條件</label>
+              <div class="form-ctrl"><input type="text" id="editTermsOfPayment" /></div>
+            </div>
+
+            <div class="goods-block">
+              <h3 class="goods-title">商品明細</h3>
+              <div class="table-wrap">
+                <table class="goods-table overseas-goods-table">
+                  <thead>
+                    <tr>
+                      <th>項次</th>
+                      <th>國際條碼</th>
+                      <th>商品名稱</th>
+                      <th>箱入數</th>
+                      <th>訂購數量(pcs)</th>
+                      <th>訂購箱數</th>
+                      <th>小計</th>
+                      <th>單價 USD（含標）</th>
+                      <th>單價 USD（不含標）</th>
+                    </tr>
+                  </thead>
+                  <tbody id="editOverseasGoodsBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
           <div class="goods-block">
             <h3 class="goods-title">相關出貨單</h3>
@@ -1622,40 +1730,38 @@
         <button type="button" class="modal-close" id="importClose" aria-label="關閉">×</button>
       </div>
       <div class="modal-body">
-        <div class="modal-row">
-          <span>合作通路類型</span>
-          <div class="modal-field">
+        <div class="form-row">
+          <label>採購單類型</label>
+          <div class="form-ctrl">
+            <div class="radio-group">
+              <label class="radio-line"><input type="radio" name="importPoKind" value="一般通路" /> 一般通路</label>
+              <label class="radio-line"><input type="radio" name="importPoKind" value="經銷" /> 經銷</label>
+              <label class="radio-line"><input type="radio" name="importPoKind" value="境外通路" /> 境外通路</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-row hidden" id="importGeneralTypeRow">
+          <label>合作通路類型</label>
+          <div class="form-ctrl">
             <select id="importChannelType">
               <option value="">請選擇</option>
-              <option>台灣本地通路</option>
-              <option>台灣本地經銷</option>
               <option>台灣線上通路</option>
-              <option>台灣實體百貨</option>
-              <option>境外通路</option>
+              <option>台灣線下通路</option>
             </select>
           </div>
         </div>
-        <div class="modal-row">
-          <span>通路名稱</span>
-          <div class="modal-field">
+        <div class="form-row hidden" id="importChannelNameRow">
+          <label>通路名稱</label>
+          <div class="form-ctrl">
             <select id="importChannelName">
               <option value="">請選擇</option>
-              <option>實體-全聯</option>
-              <option>實體-寶雅</option>
-              <option>實體-迪卡儂</option>
-              <option>實體-PW健身工廠</option>
-              <option>經銷商-絢綻國際企業社</option>
-              <option>經銷商-學生營養股份有限公司</option>
-              <option>線上-轉單</option>
-              <option>線上-蝦皮商城</option>
-              <option>跨境- Cool Cool Trading</option>
-              <option>百貨-新光三越</option>
             </select>
           </div>
         </div>
-        <div class="modal-row">
-          <span>選擇檔案</span>
-          <div class="modal-field">
+        <div id="importPlanning" class="create-planning hidden">相關設定目前規劃中</div>
+        <div class="form-row hidden" id="importFileRow">
+          <label>選擇檔案</label>
+          <div class="form-ctrl">
             <div class="file-pick">
               <button type="button" class="btn" id="importFileBtn">選擇檔案</button>
               <input type="file" id="importFile" class="hidden" accept=".csv,.xlsx,.xls,.txt,.pdf" />
@@ -2104,12 +2210,52 @@
     });
 
     function resetImportModal() {
+      document.querySelectorAll('input[name="importPoKind"]').forEach((el) => { el.checked = false; });
       document.getElementById("importChannelType").value = "";
-      document.getElementById("importChannelName").value = "";
+      fillChannelNameOptions("importChannelName", "");
       document.getElementById("importFile").value = "";
       const fileName = document.getElementById("importFileName");
       fileName.textContent = "尚未選擇檔案";
       fileName.classList.add("empty");
+      syncImportModal();
+    }
+
+    function getImportPoKind() {
+      return document.querySelector('input[name="importPoKind"]:checked')?.value || "";
+    }
+
+    function syncImportModal() {
+      const kind = getImportPoKind();
+      const subType = document.getElementById("importChannelType").value;
+      const isGeneral = kind === "一般通路";
+      const isDealer = kind === "經銷";
+      const isOverseas = kind === "境外通路";
+      document.getElementById("importGeneralTypeRow").classList.toggle("hidden", !isGeneral);
+      if (isGeneral) {
+        fillChannelNameOptions("importChannelName", subType);
+        document.getElementById("importChannelNameRow").classList.toggle("hidden", !subType);
+        document.getElementById("importFileRow").classList.toggle("hidden", !subType);
+        document.getElementById("importPlanning").classList.add("hidden");
+        return;
+      }
+      if (isDealer) {
+        fillChannelNameOptions("importChannelName", "台灣本地經銷");
+        document.getElementById("importChannelNameRow").classList.remove("hidden");
+        document.getElementById("importFileRow").classList.add("hidden");
+        document.getElementById("importPlanning").classList.remove("hidden");
+        document.getElementById("importPlanning").textContent = "經銷匯入格式目前規劃中";
+        return;
+      }
+      if (isOverseas) {
+        fillChannelNameOptions("importChannelName", "境外通路");
+        document.getElementById("importChannelNameRow").classList.remove("hidden");
+        document.getElementById("importFileRow").classList.remove("hidden");
+        document.getElementById("importPlanning").classList.add("hidden");
+        return;
+      }
+      document.getElementById("importChannelNameRow").classList.add("hidden");
+      document.getElementById("importFileRow").classList.add("hidden");
+      document.getElementById("importPlanning").classList.add("hidden");
     }
 
     function pad(n, width) {
@@ -2149,27 +2295,48 @@
     }
 
     function confirmImport(status) {
+      const kind = getImportPoKind();
+      if (!kind) {
+        alert("請先選擇採購單類型");
+        return;
+      }
+      if (kind === "經銷") {
+        alert("經銷匯入格式目前規劃中");
+        return;
+      }
+      if (kind === "一般通路" && !document.getElementById("importChannelType").value) {
+        alert("請選擇合作通路類型");
+        return;
+      }
+      if (!document.getElementById("importChannelName").value) {
+        alert("請選擇通路名稱");
+        return;
+      }
       const order = createPoFromImport(status);
       if (!order) return;
       closeImportModal();
+      fillOrderEdit(order, status === "草稿" ? "edit" : "view");
     }
 
     function createPoFromImport(status) {
+      const kind = getImportPoKind();
       const fileInput = document.getElementById("importFile");
       const file = fileInput.files && fileInput.files[0];
       if (!file) {
         alert("請選擇要匯入的檔案");
         return null;
       }
-      const channelType = document.getElementById("importChannelType").value;
       const channelName = document.getElementById("importChannelName").value;
       const createdAt = nowStamp();
       const profile = channelProfiles[channelName] || {};
+      const isOverseas = kind === "境外通路";
+      const overseas = isOverseas ? buildOverseasPo(channelName, "demo.user", file.name) : null;
       const order = {
         orderNo: nextSalesOrderNo(),
-        poDocNo: "",
+        poDocNo: isOverseas ? (overseas.poDocNo || "").slice(0, 30) : "",
         shipNo: "",
-        channelType: channelType || "—",
+        poKind: kind,
+        channelType: isOverseas ? "境外通路" : (document.getElementById("importChannelType").value || "—"),
         channelName: channelName || "—",
         region: profile.region || "台灣",
         status,
@@ -2178,10 +2345,11 @@
         fileName: file.name,
         fileUrl: URL.createObjectURL(file),
         fileType: file.type,
-        address: profile.address || "",
-        arriveDate: addDaysToStamp(createdAt, 2),
-        shipByTime: addDaysToStamp(createdAt, 1, true),
-        items: mockItemsFor(channelName),
+        address: isOverseas ? overseas.buyerAddress : (profile.address || ""),
+        arriveDate: isOverseas ? "" : addDaysToStamp(createdAt, 2),
+        shipByTime: isOverseas ? "" : addDaysToStamp(createdAt, 1, true),
+        items: isOverseas ? overseasLinesToItems(overseas.lines) : mockItemsFor(channelName),
+        overseas,
       };
       salesOrders.unshift(order);
       renderSalesTable(getSalesFiltered());
@@ -2218,6 +2386,21 @@
     });
     document.getElementById("importModal").addEventListener("click", (e) => {
       if (e.target.id === "importModal") closeImportModal();
+    });
+    document.querySelectorAll('input[name="importPoKind"]').forEach((el) => {
+      el.addEventListener("change", () => {
+        document.getElementById("importChannelType").value = "";
+        fillChannelNameOptions("importChannelName", "");
+        document.getElementById("importFile").value = "";
+        const fileName = document.getElementById("importFileName");
+        fileName.textContent = "尚未選擇檔案";
+        fileName.classList.add("empty");
+        syncImportModal();
+      });
+    });
+    document.getElementById("importChannelType").addEventListener("change", () => {
+      fillChannelNameOptions("importChannelName", document.getElementById("importChannelType").value);
+      syncImportModal();
     });
     document.getElementById("tableBody").addEventListener("click", (e) => {
       if (e.target.dataset.go !== "po-view") return;
@@ -2299,12 +2482,161 @@
       return indexes.map((i) => ({ ...mockItemPool[i] }));
     }
 
+    const channelNamesByGroup = {
+      "台灣線上通路": ["線上-轉單", "線上-蝦皮商城"],
+      "台灣線下通路": ["實體-全聯", "實體-寶雅", "實體-迪卡儂", "實體-PW健身工廠", "百貨-新光三越"],
+      "台灣本地經銷": ["經銷商-絢綻國際企業社", "經銷商-學生營養股份有限公司"],
+      "境外通路": ["跨境- Cool Cool Trading"],
+    };
+
+    function fillChannelNameOptions(selectId, group) {
+      const names = channelNamesByGroup[group] || [];
+      document.getElementById(selectId).innerHTML =
+        `<option value="">請選擇</option>` + names.map((name) => `<option>${name}</option>`).join("");
+    }
+
+    const VENDOR_COMPANY = "饌元股份有限公司";
+    const VENDOR_ADDRESS = "115臺北市南港區三重里三重路19-9號B棟6樓";
+    const VENDOR_TEL = "02-87872360";
+
+    function isOverseasPo(order) {
+      return !!order && (order.poKind === "境外通路" || order.channelType === "境外通路");
+    }
+
+    function mockOverseasLines() {
+      return [
+        { itemNo: "13", barcode: "4713025602949", name: "TRYALL Impact Protein Chips - Crispy Seaweed (30g/pack)", pcsPerCarton: 24, orderPcs: 192, orderCarton: 8, total: 153.6, priceLabel: "", priceNoLabel: 0.8 },
+        { itemNo: "14", barcode: "4713025602963", name: "TRYALL Impact Protein Chips - French Onion (30g/pack)", pcsPerCarton: 24, orderPcs: 96, orderCarton: 4, total: 76.8, priceLabel: "", priceNoLabel: 0.8 },
+        { itemNo: "15", barcode: "4713025602956", name: "TRYALL Impact Protein Chips - Margherita (30g/pack)", pcsPerCarton: 24, orderPcs: 96, orderCarton: 4, total: 76.8, priceLabel: "", priceNoLabel: 0.8 },
+        { itemNo: "16", barcode: "4713025603250", name: "TRYALL Impact Protein Chips - Cheese (30g/pack)", pcsPerCarton: 24, orderPcs: 96, orderCarton: 4, total: 76.8, priceLabel: "", priceNoLabel: 0.8 },
+        { itemNo: "14", barcode: "4713025604707", name: "TRYALL Essential Protein Shake - Oolong (45g/pack)", pcsPerCarton: 250, orderPcs: 1000, orderCarton: 4, total: 1250, priceLabel: 1.52, priceNoLabel: 1.25 },
+        { itemNo: "15", barcode: "4713025604714", name: "TRYALL Essential Protein Shake - Boba Milk Tea (45g/pack)", pcsPerCarton: 250, orderPcs: 1000, orderCarton: 4, total: 1250, priceLabel: 1.52, priceNoLabel: 1.25 },
+        { itemNo: "1", barcode: "MSGWPC1KG", name: "TRYALL Impact Whey Protein Concentrate - Unflavored (1000g/pack)", pcsPerCarton: 12, orderPcs: 0, orderCarton: 0, total: 0, priceLabel: 18, priceNoLabel: 18.16 },
+      ];
+    }
+
+    function overseasLinesToItems(lines) {
+      return (lines || []).filter((line) => Number(line.orderPcs) > 0).map((line) => ({
+        sku: String(line.barcode || ""),
+        name: line.name || "",
+        expiryAccept: "",
+        unit: "pcs",
+        qty: Number(line.orderPcs) || 0,
+      }));
+    }
+
+    function buildOverseasPo(channelName, operator, fileName) {
+      const profile = channelProfiles[channelName] || {};
+      const op = operator || "demo.user";
+      const dateMatch = String(fileName || "").match(/(\d{8})/);
+      return {
+        buyerName: channelName || "跨境- Cool Cool Trading",
+        buyerAttn: profile.contact || "Cool Cool Ops",
+        buyerEmail: profile.email || "coolcool@example.com",
+        buyerTel: profile.phone || "+852-1234-5678",
+        buyerAddress: profile.address || "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong",
+        vendorName: VENDOR_COMPANY,
+        vendorAttn: op,
+        vendorEmail: `${op}@urmart.com`,
+        vendorTel: VENDOR_TEL,
+        vendorExt: "168",
+        vendorAddress: VENDOR_ADDRESS,
+        termsOfDelivery: "EXW",
+        termsOfPayment: "TT, 100% prepaid",
+        lines: mockOverseasLines(),
+        poDocNo: dateMatch ? `CCT-PO-${dateMatch[1]}` : "",
+      };
+    }
+
+    function ensureOverseasPo(order) {
+      if (!isOverseasPo(order)) return;
+      const fallback = buildOverseasPo(order.channelName, order.operator, order.fileName);
+      if (!order.overseas) order.overseas = fallback;
+      Object.keys(fallback).forEach((key) => {
+        if (order.overseas[key] === undefined || order.overseas[key] === null) order.overseas[key] = fallback[key];
+      });
+      if (!order.overseas.lines || !order.overseas.lines.length) order.overseas.lines = fallback.lines;
+    }
+
+    function renderOverseasGoods(lines) {
+      const body = document.getElementById("editOverseasGoodsBody");
+      const rows = lines && lines.length ? lines : [];
+      if (!rows.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="9">尚無商品明細</td></tr>`;
+        return;
+      }
+      body.innerHTML = rows.map((line) => `
+        <tr>
+          <td>${escapeHtml(line.itemNo)}</td>
+          <td>${escapeHtml(line.barcode)}</td>
+          <td>${escapeHtml(line.name)}</td>
+          <td>${escapeHtml(line.pcsPerCarton)}</td>
+          <td>${escapeHtml(line.orderPcs)}</td>
+          <td>${escapeHtml(line.orderCarton)}</td>
+          <td>${escapeHtml(line.total)}</td>
+          <td>${escapeHtml(line.priceLabel)}</td>
+          <td>${escapeHtml(line.priceNoLabel)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function fillOverseasForm(order, readonly) {
+      ensureOverseasPo(order);
+      const ov = order.overseas;
+      document.getElementById("editOverseasChannelName").value = ov.buyerName || order.channelName || "";
+      document.getElementById("editBuyerAttn").value = ov.buyerAttn || "";
+      document.getElementById("editBuyerEmail").value = ov.buyerEmail || "";
+      document.getElementById("editBuyerTel").value = ov.buyerTel || "";
+      document.getElementById("editBuyerAddress").value = ov.buyerAddress || "";
+      document.getElementById("editVendorName").value = ov.vendorName || VENDOR_COMPANY;
+      document.getElementById("editVendorAttn").value = ov.vendorAttn || "";
+      document.getElementById("editVendorEmail").value = ov.vendorEmail || "";
+      document.getElementById("editVendorAddress").value = ov.vendorAddress || VENDOR_ADDRESS;
+      document.getElementById("editTermsOfDelivery").value = ov.termsOfDelivery || "EXW";
+      document.getElementById("editTermsOfPayment").value = ov.termsOfPayment || "";
+      document.getElementById("editVendorExtWrap").classList.toggle("hidden", readonly);
+      document.getElementById("editVendorExt").classList.toggle("hidden", readonly);
+      if (readonly) {
+        document.getElementById("editVendorTel").value = ov.vendorExt
+          ? `${ov.vendorTel}  分機 ${ov.vendorExt}`
+          : (ov.vendorTel || VENDOR_TEL);
+      } else {
+        document.getElementById("editVendorTel").value = ov.vendorTel || VENDOR_TEL;
+        document.getElementById("editVendorExt").value = ov.vendorExt || "";
+      }
+      renderOverseasGoods(ov.lines);
+    }
+
+    function applyOverseasForm(order) {
+      ensureOverseasPo(order);
+      const name = document.getElementById("editOverseasChannelName").value;
+      order.poKind = "境外通路";
+      order.channelType = "境外通路";
+      order.channelName = name || order.channelName;
+      order.overseas.buyerName = name;
+      order.overseas.buyerAttn = document.getElementById("editBuyerAttn").value.trim();
+      order.overseas.buyerEmail = document.getElementById("editBuyerEmail").value.trim();
+      order.overseas.buyerTel = document.getElementById("editBuyerTel").value.trim();
+      order.overseas.buyerAddress = document.getElementById("editBuyerAddress").value.trim();
+      order.overseas.vendorName = VENDOR_COMPANY;
+      order.overseas.vendorAttn = document.getElementById("editVendorAttn").value.trim();
+      order.overseas.vendorEmail = document.getElementById("editVendorEmail").value.trim();
+      order.overseas.vendorTel = document.getElementById("editVendorTel").value.trim() || VENDOR_TEL;
+      order.overseas.vendorExt = document.getElementById("editVendorExt").value.trim();
+      order.overseas.vendorAddress = VENDOR_ADDRESS;
+      order.overseas.termsOfDelivery = document.getElementById("editTermsOfDelivery").value || "EXW";
+      order.overseas.termsOfPayment = document.getElementById("editTermsOfPayment").value.trim();
+      order.address = order.overseas.buyerAddress;
+      order.items = overseasLinesToItems(order.overseas.lines);
+    }
+
     function extraPo(cfg) {
       const profile = channelProfiles[cfg.channelName] || {};
       return {
         orderNo: cfg.orderNo,
         poDocNo: cfg.poDocNo,
         shipNo: "",
+        poKind: cfg.channelType === "境外通路" ? "境外通路" : cfg.channelType === "台灣本地經銷" ? "經銷" : "一般通路",
         channelType: cfg.channelType,
         channelName: cfg.channelName,
         region: profile.region || "台灣",
@@ -2596,6 +2928,10 @@
 
     function applyEditFormToOrder(order) {
       order.poDocNo = document.getElementById("editPoDocNo").value.trim().slice(0, 30);
+      if (isOverseasPo(order)) {
+        applyOverseasForm(order);
+        return;
+      }
       order.channelType = document.getElementById("editChannelType").value || order.channelType;
       order.channelName = document.getElementById("editChannelName").value || order.channelName;
       order.address = document.getElementById("editAddress").value;
@@ -2637,19 +2973,33 @@
       currentEditOrderNo = order.orderNo;
       const forceView = mode === "view" || !canEditPo(order);
       orderFormMode = forceView ? "view" : "edit";
-      const profile = channelProfiles[order.channelName] || {};
-      if (!order.address) order.address = profile.address || "";
-      if (!order.arriveDate) order.arriveDate = addDaysToStamp(order.createdAt, 2);
-      if (!order.shipByTime) order.shipByTime = addDaysToStamp(order.createdAt, 1, true);
-      if (!order.items || !order.items.length) order.items = mockItemsFor(order.channelName);
+      const overseas = isOverseasPo(order);
+      document.getElementById("editGeneralBlock").classList.toggle("hidden", overseas);
+      document.getElementById("editOverseasBlock").classList.toggle("hidden", !overseas);
       document.getElementById("editPageTitle").textContent = orderFormMode === "view" ? "檢視採購單" : "編輯採購單";
       document.getElementById("editPoDocNo").value = order.poDocNo || "";
-      document.getElementById("editChannelType").value = !order.channelType || order.channelType === "—" ? "" : order.channelType;
-      document.getElementById("editChannelName").value = !order.channelName || order.channelName === "—" ? "" : order.channelName;
-      document.getElementById("editAddress").value = order.address || "";
-      document.getElementById("editArriveDate").value = toDateInput(order.arriveDate);
-      document.getElementById("editShipByTime").value = toDateTimeInput(order.shipByTime);
-      renderEditGoods(order.items);
+      if (overseas) {
+        if (!order.poDocNo) {
+          ensureOverseasPo(order);
+          if (order.overseas.poDocNo) {
+            order.poDocNo = order.overseas.poDocNo;
+            document.getElementById("editPoDocNo").value = order.poDocNo;
+          }
+        }
+        fillOverseasForm(order, orderFormMode === "view");
+      } else {
+        const profile = channelProfiles[order.channelName] || {};
+        if (!order.address) order.address = profile.address || "";
+        if (!order.arriveDate) order.arriveDate = addDaysToStamp(order.createdAt, 2);
+        if (!order.shipByTime) order.shipByTime = addDaysToStamp(order.createdAt, 1, true);
+        if (!order.items || !order.items.length) order.items = mockItemsFor(order.channelName);
+        document.getElementById("editChannelType").value = !order.channelType || order.channelType === "—" ? "" : order.channelType;
+        document.getElementById("editChannelName").value = !order.channelName || order.channelName === "—" ? "" : order.channelName;
+        document.getElementById("editAddress").value = order.address || "";
+        document.getElementById("editArriveDate").value = toDateInput(order.arriveDate);
+        document.getElementById("editShipByTime").value = toDateTimeInput(order.shipByTime);
+        renderEditGoods(order.items);
+      }
       renderRelatedShips(order);
       setOrderFormReadonly(orderFormMode === "view");
       syncEditFooter(order, orderFormMode);
@@ -2669,7 +3019,7 @@
       const page = document.getElementById("page-order-edit");
       page.classList.toggle("is-readonly", readonly);
       page.querySelectorAll("input, select, textarea").forEach((el) => {
-        el.disabled = readonly;
+        el.disabled = readonly || el.hasAttribute("data-lock");
       });
     }
 
@@ -2715,8 +3065,12 @@
       if (!canShipFromPo(order)) return;
       goToShipCreateFromPo({
         ...order,
-        channelType: document.getElementById("editChannelType").value || order.channelType,
-        channelName: document.getElementById("editChannelName").value || order.channelName,
+        channelType: isOverseasPo(order)
+          ? "境外通路"
+          : (document.getElementById("editChannelType").value || order.channelType),
+        channelName: isOverseasPo(order)
+          ? (document.getElementById("editOverseasChannelName").value || order.channelName)
+          : (document.getElementById("editChannelName").value || order.channelName),
         arriveDate: document.getElementById("editArriveDate").value || order.arriveDate,
         shipByTime: (document.getElementById("editShipByTime").value || "").replace("T", " ") || order.shipByTime,
       });
@@ -2725,21 +3079,20 @@
       const profile = channelProfiles[document.getElementById("editChannelName").value] || {};
       if (profile.address) document.getElementById("editAddress").value = profile.address;
     });
+    document.getElementById("editOverseasChannelName").addEventListener("change", () => {
+      const profile = channelProfiles[document.getElementById("editOverseasChannelName").value] || {};
+      if (profile.contact) document.getElementById("editBuyerAttn").value = profile.contact;
+      if (profile.email) document.getElementById("editBuyerEmail").value = profile.email;
+      if (profile.phone) document.getElementById("editBuyerTel").value = profile.phone;
+      if (profile.address) document.getElementById("editBuyerAddress").value = profile.address;
+    });
 
     function getCreatePoKind() {
       return document.querySelector('input[name="createPoKind"]:checked')?.value || "";
     }
 
     function fillCreateChannelNameOptions(group) {
-      const namesByGroup = {
-        "台灣線上通路": ["線上-轉單", "線上-蝦皮商城"],
-        "台灣線下通路": ["實體-全聯", "實體-寶雅", "實體-迪卡儂", "實體-PW健身工廠", "百貨-新光三越"],
-        "台灣本地經銷": ["經銷商-絢綻國際企業社", "經銷商-學生營養股份有限公司"],
-        "境外通路": ["跨境- Cool Cool Trading"],
-      };
-      const names = namesByGroup[group] || [];
-      document.getElementById("createChannelName").innerHTML =
-        `<option value="">請選擇</option>` + names.map((name) => `<option>${name}</option>`).join("");
+      fillChannelNameOptions("createChannelName", group);
     }
 
     function resetCreateChannelFields() {
