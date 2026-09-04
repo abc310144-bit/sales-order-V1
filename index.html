@@ -580,6 +580,44 @@
       margin-top: 28px;
       padding: 16px 0 8px;
     }
+    .po-kind-meta {
+      margin: -8px 0 16px;
+      color: var(--text-2);
+      font-size: 13px;
+    }
+    .po-tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .po-tab {
+      height: 40px;
+      padding: 0 16px;
+      border: 0;
+      background: transparent;
+      color: var(--text-2);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    .po-tab:hover { color: var(--primary); }
+    .po-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      font-weight: 600;
+    }
+    .po-pane { min-height: 240px; }
+    .ship-tab-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .ship-tab-hint { color: var(--text-3); font-size: 13px; }
+    .type-pick-card { width: 480px; max-width: calc(100vw - 32px); }
+    .type-pick-card .modal-body { padding-bottom: 12px; }
     .edit-pane { min-height: 240px; }
     .placeholder-pane {
       color: var(--text-3);
@@ -1532,186 +1570,221 @@
 
         <div class="page" id="page-order-edit">
           <h2 class="form-title" id="editPageTitle">採購單資料</h2>
-          <div class="form-row">
-            <label>採購單單號</label>
-            <div class="form-ctrl"><input type="text" id="editPoDocNo" maxlength="30" placeholder="請輸入採購單單號" /></div>
-          </div>
-          <div id="editGeneralBlock">
-          <div class="form-row">
-            <label>合作通路類型</label>
-            <div class="form-ctrl">
-              <select id="editChannelType">
-                <option value="">請選擇</option>
-                <option>台灣本地通路</option>
-                <option>台灣本地經銷</option>
-                <option>台灣線上通路</option>
-                <option>台灣線下通路</option>
-                <option>台灣實體百貨</option>
-                <option>境外通路</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-row">
-            <label>通路名稱</label>
-            <div class="form-ctrl">
-              <select id="editChannelName">
-                <option value="">請選擇</option>
-                <option>實體-全聯</option>
-                <option>實體-寶雅</option>
-                <option>實體-迪卡儂</option>
-                <option>實體-PW健身工廠</option>
-                <option>經銷商-絢綻國際企業社</option>
-                <option>經銷商-學生營養股份有限公司</option>
-                <option>線上-轉單</option>
-                <option>線上-蝦皮商城</option>
-                <option>跨境- Cool Cool Trading</option>
-                <option>百貨-新光三越</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-row">
-            <label>到貨地址</label>
-            <div class="form-ctrl"><textarea id="editAddress" rows="2"></textarea></div>
-          </div>
-          <div class="form-row">
-            <label>到貨日期</label>
-            <div class="form-ctrl"><input type="date" id="editArriveDate" /></div>
-          </div>
-          <div class="form-row">
-            <label>應出貨時間</label>
-            <div class="form-ctrl"><input type="datetime-local" id="editShipByTime" /></div>
+          <div class="po-kind-meta" id="editPoKindMeta"></div>
+          <div class="po-tabs" id="poTabs">
+            <button type="button" class="po-tab active" data-po-tab="basic">採購單基本資料</button>
+            <button type="button" class="po-tab" data-po-tab="goods">採購商品</button>
+            <button type="button" class="po-tab" data-po-tab="ships">出貨單</button>
           </div>
 
-          <div class="goods-block">
-            <h3 class="goods-title">商品相關基本資料</h3>
-            <div class="table-wrap">
-              <table class="goods-table">
-                <thead>
-                  <tr>
-                    <th>SKU</th>
-                    <th>商品名稱</th>
-                    <th>允收效期</th>
-                    <th>單位</th>
-                    <th>訂貨數量</th>
-                  </tr>
-                </thead>
-                <tbody id="editGoodsBody"></tbody>
-              </table>
-            </div>
-          </div>
-          </div>
-
-          <div id="editOverseasBlock" class="hidden">
-            <h3 class="goods-title">買方 Buyer</h3>
+          <div class="po-pane" data-po-pane="basic">
             <div class="form-row">
-              <label>通路名稱</label>
-              <div class="form-ctrl">
-                <select id="editOverseasChannelName">
-                  <option value="">請選擇</option>
-                  <option>跨境- Cool Cool Trading</option>
-                </select>
+              <label>採購單單號</label>
+              <div class="form-ctrl"><input type="text" id="editPoDocNo" maxlength="30" placeholder="請輸入採購單單號" /></div>
+            </div>
+            <div id="editGeneralBlock">
+              <div class="form-row">
+                <label>合作通路類型</label>
+                <div class="form-ctrl">
+                  <select id="editChannelType">
+                    <option value="">請選擇</option>
+                    <option>台灣本地通路</option>
+                    <option>台灣本地經銷</option>
+                    <option>台灣線上通路</option>
+                    <option>台灣線下通路</option>
+                    <option>台灣實體百貨</option>
+                    <option>境外通路</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <label>通路名稱</label>
+                <div class="form-ctrl">
+                  <select id="editChannelName">
+                    <option value="">請選擇</option>
+                    <option>實體-全聯</option>
+                    <option>實體-寶雅</option>
+                    <option>實體-迪卡儂</option>
+                    <option>實體-PW健身工廠</option>
+                    <option>經銷商-絢綻國際企業社</option>
+                    <option>經銷商-學生營養股份有限公司</option>
+                    <option>線上-轉單</option>
+                    <option>線上-蝦皮商城</option>
+                    <option>跨境- Cool Cool Trading</option>
+                    <option>百貨-新光三越</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <label>到貨地址</label>
+                <div class="form-ctrl"><textarea id="editAddress" rows="2"></textarea></div>
+              </div>
+              <div class="form-row">
+                <label>到貨日期</label>
+                <div class="form-ctrl"><input type="date" id="editArriveDate" /></div>
+              </div>
+              <div class="form-row">
+                <label>應出貨時間</label>
+                <div class="form-ctrl"><input type="datetime-local" id="editShipByTime" /></div>
               </div>
             </div>
-            <div class="form-row">
-              <label>通路負責人</label>
-              <div class="form-ctrl"><input type="text" id="editBuyerAttn" /></div>
-            </div>
-            <div class="form-row">
-              <label>通路信箱</label>
-              <div class="form-ctrl"><input type="text" id="editBuyerEmail" /></div>
-            </div>
-            <div class="form-row">
-              <label>通路電話</label>
-              <div class="form-ctrl"><input type="text" id="editBuyerTel" /></div>
-            </div>
-            <div class="form-row">
-              <label>通路地址</label>
-              <div class="form-ctrl"><textarea id="editBuyerAddress" rows="2"></textarea></div>
-            </div>
 
-            <h3 class="goods-title">賣方 Vendor</h3>
-            <div class="form-row">
-              <label>公司名稱</label>
-              <div class="form-ctrl"><input type="text" id="editVendorName" data-lock="1" /></div>
-            </div>
-            <div class="form-row">
-              <label>建檔人</label>
-              <div class="form-ctrl"><input type="text" id="editVendorAttn" /></div>
-            </div>
-            <div class="form-row">
-              <label>建檔人信箱</label>
-              <div class="form-ctrl"><input type="text" id="editVendorEmail" /></div>
-            </div>
-            <div class="form-row">
-              <label>電話</label>
-              <div class="form-ctrl tel-ext">
-                <input type="text" id="editVendorTel" />
-                <span class="ext-label" id="editVendorExtWrap">分機</span>
-                <input type="text" class="ext-input" id="editVendorExt" placeholder="分機" />
+            <div id="editOverseasBlock" class="hidden">
+              <h3 class="goods-title">買方 Buyer</h3>
+              <div class="form-row">
+                <label>通路名稱</label>
+                <div class="form-ctrl">
+                  <select id="editOverseasChannelName">
+                    <option value="">請選擇</option>
+                    <option>跨境- Cool Cool Trading</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <label>通路負責人</label>
+                <div class="form-ctrl"><input type="text" id="editBuyerAttn" /></div>
+              </div>
+              <div class="form-row">
+                <label>通路信箱</label>
+                <div class="form-ctrl"><input type="text" id="editBuyerEmail" /></div>
+              </div>
+              <div class="form-row">
+                <label>通路電話</label>
+                <div class="form-ctrl"><input type="text" id="editBuyerTel" /></div>
+              </div>
+              <div class="form-row">
+                <label>通路地址</label>
+                <div class="form-ctrl"><textarea id="editBuyerAddress" rows="2"></textarea></div>
+              </div>
+              <h3 class="goods-title">賣方 Vendor</h3>
+              <div class="form-row">
+                <label>公司名稱</label>
+                <div class="form-ctrl"><input type="text" id="editVendorName" data-lock="1" /></div>
+              </div>
+              <div class="form-row">
+                <label>建檔人</label>
+                <div class="form-ctrl"><input type="text" id="editVendorAttn" /></div>
+              </div>
+              <div class="form-row">
+                <label>建檔人信箱</label>
+                <div class="form-ctrl"><input type="text" id="editVendorEmail" /></div>
+              </div>
+              <div class="form-row">
+                <label>電話</label>
+                <div class="form-ctrl tel-ext">
+                  <input type="text" id="editVendorTel" />
+                  <span class="ext-label" id="editVendorExtWrap">分機</span>
+                  <input type="text" class="ext-input" id="editVendorExt" placeholder="分機" />
+                </div>
+              </div>
+              <div class="form-row">
+                <label>地址</label>
+                <div class="form-ctrl"><textarea id="editVendorAddress" rows="2" data-lock="1"></textarea></div>
+              </div>
+              <div class="form-row">
+                <label>貿易條件</label>
+                <div class="form-ctrl">
+                  <select id="editTermsOfDelivery">
+                    <option>FOB</option>
+                    <option>CIF</option>
+                    <option>EXW</option>
+                    <option>DDU</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <label>付款條件</label>
+                <div class="form-ctrl"><input type="text" id="editTermsOfPayment" /></div>
               </div>
             </div>
-            <div class="form-row">
-              <label>地址</label>
-              <div class="form-ctrl"><textarea id="editVendorAddress" rows="2" data-lock="1"></textarea></div>
+
+            <div id="editDealerBlock" class="hidden">
+              <div class="form-row">
+                <label>通路名稱</label>
+                <div class="form-ctrl">
+                  <select id="editDealerChannelName">
+                    <option value="">請選擇</option>
+                    <option>經銷商-絢綻國際企業社</option>
+                    <option>經銷商-學生營養股份有限公司</option>
+                  </select>
+                </div>
+              </div>
+              <div class="create-planning">經銷相關設定目前規劃中</div>
             </div>
-            <div class="form-row">
-              <label>貿易條件</label>
-              <div class="form-ctrl">
-                <select id="editTermsOfDelivery">
-                  <option>FOB</option>
-                  <option>CIF</option>
-                  <option>EXW</option>
-                  <option>DDU</option>
-                </select>
+          </div>
+
+          <div class="po-pane hidden" data-po-pane="goods">
+            <div id="editGeneralGoodsWrap">
+              <div class="goods-block" style="margin-top:0">
+                <h3 class="goods-title">商品相關基本資料</h3>
+                <div class="table-wrap">
+                  <table class="goods-table">
+                    <thead>
+                      <tr>
+                        <th>SKU</th>
+                        <th>商品名稱</th>
+                        <th>允收效期</th>
+                        <th>單位</th>
+                        <th>訂貨數量</th>
+                      </tr>
+                    </thead>
+                    <tbody id="editGoodsBody"></tbody>
+                  </table>
+                </div>
               </div>
             </div>
-            <div class="form-row">
-              <label>付款條件</label>
-              <div class="form-ctrl"><input type="text" id="editTermsOfPayment" /></div>
+            <div id="editOverseasGoodsWrap" class="hidden">
+              <div class="goods-block" style="margin-top:0">
+                <h3 class="goods-title">商品明細</h3>
+                <div class="table-wrap">
+                  <table class="goods-table overseas-goods-table">
+                    <thead>
+                      <tr>
+                        <th>項次</th>
+                        <th>國際條碼</th>
+                        <th>商品名稱</th>
+                        <th>箱入數</th>
+                        <th>訂購數量(pcs)</th>
+                        <th>訂購箱數</th>
+                        <th>小計</th>
+                        <th>單價 USD（含標）</th>
+                        <th>單價 USD（不含標）</th>
+                      </tr>
+                    </thead>
+                    <tbody id="editOverseasGoodsBody"></tbody>
+                  </table>
+                </div>
+              </div>
             </div>
+            <div id="editDealerGoodsWrap" class="hidden">
+              <div class="create-planning">經銷商品明細目前規劃中</div>
+            </div>
+          </div>
 
-            <div class="goods-block">
-              <h3 class="goods-title">商品明細</h3>
+          <div class="po-pane hidden" data-po-pane="ships">
+            <div class="ship-tab-toolbar">
+              <div class="ship-tab-hint" id="editShipHint">審核通過後才能新增出貨單</div>
+              <button type="button" class="btn btn-primary hidden" id="editCreateShip">新增出貨單</button>
+            </div>
+            <div class="goods-block" style="margin-top:0">
+              <h3 class="goods-title">相關出貨單</h3>
               <div class="table-wrap">
-                <table class="goods-table overseas-goods-table">
+                <table class="related-table">
                   <thead>
                     <tr>
-                      <th>項次</th>
-                      <th>國際條碼</th>
-                      <th>商品名稱</th>
-                      <th>箱入數</th>
-                      <th>訂購數量(pcs)</th>
-                      <th>訂購箱數</th>
-                      <th>小計</th>
-                      <th>單價 USD（含標）</th>
-                      <th>單價 USD（不含標）</th>
+                      <th>出貨單編號</th>
+                      <th>審核狀態</th>
+                      <th>訂單狀態</th>
+                      <th>建立時間</th>
                     </tr>
                   </thead>
-                  <tbody id="editOverseasGoodsBody"></tbody>
+                  <tbody id="relatedShipBody"></tbody>
                 </table>
               </div>
             </div>
           </div>
 
-          <div class="goods-block">
-            <h3 class="goods-title">相關出貨單</h3>
-            <div class="table-wrap">
-              <table class="related-table">
-                <thead>
-                  <tr>
-                    <th>出貨單編號</th>
-                    <th>審核狀態</th>
-                    <th>訂單狀態</th>
-                    <th>建立時間</th>
-                  </tr>
-                </thead>
-                <tbody id="relatedShipBody"></tbody>
-              </table>
-            </div>
-          </div>
-
           <div class="edit-footer">
-            <button type="button" class="btn btn-primary" id="editCreateShip">新增出貨單</button>
             <button type="button" class="btn" id="editSaveDraft">儲存為草稿</button>
             <button type="button" class="btn btn-primary" id="editSubmit">送出申請</button>
             <button type="button" class="btn" id="editReject">審核不通過</button>
@@ -1779,16 +1852,12 @@
   </div>
 
   <div class="modal-mask hidden" id="createModal">
-    <div class="modal-card" role="dialog" aria-labelledby="createTitle">
+    <div class="modal-card type-pick-card" role="dialog" aria-labelledby="createTitle">
       <div class="modal-head">
-        <h2 id="createTitle">建立採購單</h2>
+        <h2 id="createTitle">請選擇採購單類型</h2>
         <button type="button" class="modal-close" id="createClose" aria-label="關閉">×</button>
       </div>
       <div class="modal-body">
-        <div class="form-row">
-          <label>採購單單號</label>
-          <div class="form-ctrl"><input type="text" id="createPoDocNo" maxlength="30" placeholder="請輸入採購單單號" /></div>
-        </div>
         <div class="form-row">
           <label>採購單類型</label>
           <div class="form-ctrl">
@@ -1799,62 +1868,10 @@
             </div>
           </div>
         </div>
-        <div class="form-row hidden" id="createGeneralTypeRow">
-          <label>合作通路類型</label>
-          <div class="form-ctrl">
-            <select id="createChannelType">
-              <option value="">請選擇</option>
-              <option>台灣線上通路</option>
-              <option>台灣線下通路</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row hidden" id="createChannelNameRow">
-          <label>通路名稱</label>
-          <div class="form-ctrl">
-            <select id="createChannelName">
-              <option value="">請選擇</option>
-            </select>
-          </div>
-        </div>
-        <div id="createChannelPlanning" class="create-planning hidden">相關設定目前規劃中</div>
-        <div id="createChannelDetails" class="hidden">
-        <div class="form-row">
-          <label>到貨地址</label>
-          <div class="form-ctrl"><textarea id="createAddress" rows="2"></textarea></div>
-        </div>
-        <div class="form-row">
-          <label>到貨日期</label>
-          <div class="form-ctrl"><input type="date" id="createArriveDate" /></div>
-        </div>
-        <div class="form-row">
-          <label>應出貨時間</label>
-          <div class="form-ctrl"><input type="datetime-local" id="createShipByTime" /></div>
-        </div>
-        <div class="goods-block">
-          <h3 class="goods-title">商品相關基本資料</h3>
-          <div class="table-wrap">
-            <table class="goods-table">
-              <thead>
-                <tr>
-                  <th>SKU</th>
-                  <th>商品名稱</th>
-                  <th>允收效期</th>
-                  <th>單位</th>
-                  <th>訂貨數量</th>
-                </tr>
-              </thead>
-              <tbody id="createGoodsBody"></tbody>
-            </table>
-          </div>
-        </div>
-        </div>
       </div>
       <div class="modal-foot">
         <button type="button" class="btn" id="createCancel">取消</button>
-        <button type="button" class="btn hidden" id="createExport">匯出</button>
-        <button type="button" class="btn" id="createSaveDraft">儲存為草稿</button>
-        <button type="button" class="btn btn-primary" id="createSubmit">送出申請</button>
+        <button type="button" class="btn btn-primary" id="createConfirm">確定</button>
       </div>
     </div>
   </div>
@@ -2314,8 +2331,9 @@
       }
       const order = createPoFromImport(status);
       if (!order) return;
+      persistDemoData();
       closeImportModal();
-      fillOrderEdit(order, status === "草稿" ? "edit" : "view");
+      openPoWorkspace({ po: order.orderNo, mode: status === "草稿" ? "edit" : "view" });
     }
 
     function createPoFromImport(status) {
@@ -2405,7 +2423,7 @@
     document.getElementById("tableBody").addEventListener("click", (e) => {
       if (e.target.dataset.go !== "po-view") return;
       const order = salesOrders.find((item) => item.orderNo === e.target.dataset.no);
-      if (order) fillOrderEdit(order, "view");
+      if (order) openPoWorkspace({ po: order.orderNo, mode: "view" });
       else showPage("sales");
     });
     document.getElementById("salesTableBody").addEventListener("click", (e) => {
@@ -2420,6 +2438,7 @@
       if (action === "submit") {
         if (!canSubmitPo(order)) return;
         order.status = "待審核";
+        persistDemoData();
         renderSalesTable(getSalesFiltered());
         return;
       }
@@ -2431,11 +2450,10 @@
         rejectPo(order);
         return;
       }
-      if (action === "edit" && !canEditPo(order)) {
-        fillOrderEdit(order, "view");
-        return;
+      if (action === "edit" || action === "view") {
+        const mode = action === "edit" && canEditPo(order) ? "edit" : "view";
+        openPoWorkspace({ po: order.orderNo, mode });
       }
-      fillOrderEdit(order, action);
     });
     document.getElementById("relatedShipBody").addEventListener("click", (e) => {
       const shipId = e.target.dataset.goShip;
@@ -2444,6 +2462,128 @@
 
     let currentEditOrderNo = "";
     let orderFormMode = "edit";
+    let workspaceOrder = null;
+    const DEMO_STORE_KEY = "urmart-sales-demo-v1";
+    let demoReady = false;
+
+    function persistDemoData() {
+      if (!demoReady) return;
+      try {
+        localStorage.setItem(DEMO_STORE_KEY, JSON.stringify({
+          salesOrders: salesOrders.map((order) => ({ ...order, fileUrl: "" })),
+          rows,
+        }));
+      } catch (err) { /* ignore quota */ }
+    }
+
+    function restoreDemoData() {
+      try {
+        const raw = localStorage.getItem(DEMO_STORE_KEY);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if (!Array.isArray(data.salesOrders) || !data.salesOrders.length) return false;
+        salesOrders = data.salesOrders;
+        if (Array.isArray(data.rows)) rows = data.rows;
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function poWorkspaceUrl(params) {
+      const url = new URL(location.href);
+      url.search = new URLSearchParams(params).toString();
+      return url.toString();
+    }
+
+    function openPoWorkspace(params) {
+      persistDemoData();
+      window.open(poWorkspaceUrl(params), "_blank");
+    }
+
+    function getWorkspaceOrder() {
+      if (workspaceOrder && (currentEditOrderNo === "__new__" || currentEditOrderNo === workspaceOrder.orderNo)) {
+        return workspaceOrder;
+      }
+      return salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+    }
+
+    function setPoTab(name) {
+      document.querySelectorAll(".po-tab").forEach((el) => el.classList.toggle("active", el.dataset.poTab === name));
+      document.querySelectorAll(".po-pane").forEach((el) => el.classList.toggle("hidden", el.dataset.poPane !== name));
+    }
+
+    function startCreateWorkspace(kind) {
+      const createdAt = nowStamp();
+      const order = {
+        orderNo: "",
+        poDocNo: "",
+        shipNo: "",
+        poKind: kind,
+        channelType: kind === "經銷" ? "台灣本地經銷" : kind === "境外通路" ? "境外通路" : "",
+        channelName: "",
+        region: kind === "境外通路" ? "境外" : "台灣",
+        status: "草稿",
+        operator: "demo.user",
+        createdAt,
+        fileName: "",
+        fileUrl: "",
+        fileType: "",
+        address: "",
+        arriveDate: kind === "一般通路" ? addDaysToStamp(createdAt, 2) : "",
+        shipByTime: kind === "一般通路" ? addDaysToStamp(createdAt, 1, true) : "",
+        items: [],
+      };
+      currentEditOrderNo = "__new__";
+      workspaceOrder = order;
+      fillOrderEdit(order, "edit");
+    }
+
+    function commitWorkspaceOrder(order, status) {
+      applyEditFormToOrder(order);
+      order.status = status;
+      if (!order.orderNo) order.orderNo = nextSalesOrderNo();
+      if (!salesOrders.some((item) => item.orderNo === order.orderNo)) salesOrders.unshift(order);
+      currentEditOrderNo = order.orderNo;
+      workspaceOrder = order;
+      persistDemoData();
+      renderSalesTable(getSalesFiltered());
+      history.replaceState({}, "", poWorkspaceUrl({ po: order.orderNo, mode: status === "待審核" ? "view" : "edit" }));
+    }
+
+    function bootFromQuery() {
+      const params = new URLSearchParams(location.search);
+      const kind = params.get("kind");
+      const po = params.get("po");
+      const mode = params.get("mode") || "view";
+      if (params.get("create") === "1" && kind) {
+        startCreateWorkspace(kind);
+        return;
+      }
+      if (po) {
+        const order = salesOrders.find((item) => item.orderNo === po);
+        if (order) fillOrderEdit(order, mode);
+      }
+    }
+
+    window.addEventListener("storage", (e) => {
+      if (e.key !== DEMO_STORE_KEY || !e.newValue) return;
+      try {
+        const data = JSON.parse(e.newValue);
+        if (!Array.isArray(data.salesOrders)) return;
+        salesOrders = data.salesOrders;
+        if (Array.isArray(data.rows)) rows = data.rows;
+        renderSalesTable(getSalesFiltered());
+        renderShippingTable();
+        if (currentEditOrderNo && currentEditOrderNo !== "__new__") {
+          const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+          if (order && document.getElementById("page-order-edit").classList.contains("active")) {
+            fillOrderEdit(order, orderFormMode);
+          }
+        }
+      } catch (err) { /* ignore */ }
+    });
+
     const channelProfiles = {
       "實體-PW健身工廠": { region: "台灣(通路)", mode: "寄倉", phone: "0912000000", contact: "正光廊-營運部主管", email: "XXX@urmart.com", address: "台北市內湖區瑞光路358號1樓（PW健身工廠內湖店）", inWarehouse: "正光廊-營運部主管" },
       "實體-全聯": { region: "台灣(通路)", mode: "寄倉", phone: "02-2531-2345", contact: "全聯採購窗口", email: "pxmart@example.com", address: "桃園市大園區航勤北路8號 全聯物流中心", inWarehouse: "全聯物流中心" },
@@ -2500,7 +2640,19 @@
     const VENDOR_TEL = "02-87872360";
 
     function isOverseasPo(order) {
-      return !!order && (order.poKind === "境外通路" || order.channelType === "境外通路");
+      return !!order && (poKindOf(order) === "境外通路");
+    }
+
+    function isDealerPo(order) {
+      return !!order && (poKindOf(order) === "經銷");
+    }
+
+    function poKindOf(order) {
+      if (!order) return "一般通路";
+      if (order.poKind && order.poKind !== "—") return order.poKind;
+      if (order.channelType === "境外通路") return "境外通路";
+      if (order.channelType === "台灣本地經銷") return "經銷";
+      return "一般通路";
     }
 
     function mockOverseasLines() {
@@ -2739,7 +2891,14 @@
       renderShippingTable();
     }
 
-    seedExtraDemoData();
+    if (!restoreDemoData()) {
+      seedExtraDemoData();
+    } else {
+      renderSalesTable(getSalesFiltered());
+      renderShippingTable();
+    }
+    demoReady = true;
+    persistDemoData();
 
     const productMeta = {
       "UM-1001": { productCode: "SET10-4713025601001", cost: "86.50", quote: "120" },
@@ -2928,8 +3087,15 @@
 
     function applyEditFormToOrder(order) {
       order.poDocNo = document.getElementById("editPoDocNo").value.trim().slice(0, 30);
+      order.poKind = poKindOf(order);
       if (isOverseasPo(order)) {
         applyOverseasForm(order);
+        return;
+      }
+      if (isDealerPo(order)) {
+        order.channelType = "台灣本地經銷";
+        order.channelName = document.getElementById("editDealerChannelName").value || order.channelName;
+        order.region = (channelProfiles[order.channelName] || {}).region || order.region || "台灣";
         return;
       }
       order.channelType = document.getElementById("editChannelType").value || order.channelType;
@@ -2944,6 +3110,7 @@
       if (!canApprovePo(order)) return;
       order.status = "未開立出貨單";
       syncPoStatusFromShips(order);
+      persistDemoData();
       renderSalesTable(getSalesFiltered());
       if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "edit");
     }
@@ -2951,6 +3118,7 @@
     function rejectPo(order) {
       if (!canApprovePo(order)) return;
       order.status = "草稿";
+      persistDemoData();
       renderSalesTable(getSalesFiltered());
       if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "edit");
     }
@@ -2960,8 +3128,10 @@
       const draftLike = canSubmitPo(order);
       const pending = canApprovePo(order);
       const approvedOps = false;
-      document.getElementById("editCreateShip").classList.toggle("hidden", !canShipFromPo(order));
-      document.getElementById("editCreateShip").disabled = !canShipFromPo(order);
+      const canShip = canShipFromPo(order);
+      document.getElementById("editCreateShip").classList.toggle("hidden", !canShip);
+      document.getElementById("editCreateShip").disabled = !canShip;
+      document.getElementById("editShipHint").classList.toggle("hidden", canShip);
       document.getElementById("editSaveDraft").classList.toggle("hidden", view || !draftLike);
       document.getElementById("editSubmit").classList.toggle("hidden", view || !draftLike);
       document.getElementById("editApprove").classList.toggle("hidden", !(pending && currentRole === "主管"));
@@ -2970,13 +3140,22 @@
     }
 
     function fillOrderEdit(order, mode) {
-      currentEditOrderNo = order.orderNo;
+      workspaceOrder = order;
+      currentEditOrderNo = order.orderNo || "__new__";
       const forceView = mode === "view" || !canEditPo(order);
       orderFormMode = forceView ? "view" : "edit";
-      const overseas = isOverseasPo(order);
-      document.getElementById("editGeneralBlock").classList.toggle("hidden", overseas);
+      const kind = poKindOf(order);
+      const overseas = kind === "境外通路";
+      const dealer = kind === "經銷";
+      document.getElementById("editGeneralBlock").classList.toggle("hidden", overseas || dealer);
       document.getElementById("editOverseasBlock").classList.toggle("hidden", !overseas);
-      document.getElementById("editPageTitle").textContent = orderFormMode === "view" ? "檢視採購單" : "編輯採購單";
+      document.getElementById("editDealerBlock").classList.toggle("hidden", !dealer);
+      document.getElementById("editGeneralGoodsWrap").classList.toggle("hidden", overseas || dealer);
+      document.getElementById("editOverseasGoodsWrap").classList.toggle("hidden", !overseas);
+      document.getElementById("editDealerGoodsWrap").classList.toggle("hidden", !dealer);
+      document.getElementById("editPoKindMeta").textContent = `採購單類型：${kind}`;
+      const titles = { view: "檢視採購單", edit: "編輯採購單", create: "建立採購單" };
+      document.getElementById("editPageTitle").textContent = currentEditOrderNo === "__new__" ? titles.create : (titles[orderFormMode] || titles.edit);
       document.getElementById("editPoDocNo").value = order.poDocNo || "";
       if (overseas) {
         if (!order.poDocNo) {
@@ -2987,11 +3166,13 @@
           }
         }
         fillOverseasForm(order, orderFormMode === "view");
+      } else if (dealer) {
+        document.getElementById("editDealerChannelName").value = !order.channelName || order.channelName === "—" ? "" : order.channelName;
       } else {
         const profile = channelProfiles[order.channelName] || {};
         if (!order.address) order.address = profile.address || "";
-        if (!order.arriveDate) order.arriveDate = addDaysToStamp(order.createdAt, 2);
-        if (!order.shipByTime) order.shipByTime = addDaysToStamp(order.createdAt, 1, true);
+        if (!order.arriveDate) order.arriveDate = addDaysToStamp(order.createdAt || nowStamp(), 2);
+        if (!order.shipByTime) order.shipByTime = addDaysToStamp(order.createdAt || nowStamp(), 1, true);
         if (!order.items || !order.items.length) order.items = mockItemsFor(order.channelName);
         document.getElementById("editChannelType").value = !order.channelType || order.channelType === "—" ? "" : order.channelType;
         document.getElementById("editChannelName").value = !order.channelName || order.channelName === "—" ? "" : order.channelName;
@@ -3001,6 +3182,7 @@
         renderEditGoods(order.items);
       }
       renderRelatedShips(order);
+      setPoTab("basic");
       setOrderFormReadonly(orderFormMode === "view");
       syncEditFooter(order, orderFormMode);
       showPage("order-edit");
@@ -3009,7 +3191,7 @@
     document.getElementById("operatorRole").addEventListener("change", (e) => {
       currentRole = e.target.value;
       renderSalesTable(getSalesFiltered());
-      const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+      const order = getWorkspaceOrder();
       if (order && document.getElementById("page-order-edit").classList.contains("active")) {
         fillOrderEdit(order, orderFormMode);
       }
@@ -3025,59 +3207,76 @@
 
     document.getElementById("editSave").addEventListener("click", () => {
       if (orderFormMode === "view") return;
-      const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+      const order = getWorkspaceOrder();
       if (!order) return;
       applyEditFormToOrder(order);
+      persistDemoData();
       renderSalesTable(getSalesFiltered());
       alert("已儲存");
     });
     document.getElementById("editSaveDraft").addEventListener("click", () => {
       if (orderFormMode === "view") return;
-      const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+      const order = getWorkspaceOrder();
       if (!order || !canSubmitPo(order)) return;
-      applyEditFormToOrder(order);
-      order.status = "草稿";
-      renderSalesTable(getSalesFiltered());
+      commitWorkspaceOrder(order, "草稿");
       fillOrderEdit(order, "edit");
       alert("已儲存為草稿");
     });
     document.getElementById("editSubmit").addEventListener("click", () => {
       if (orderFormMode === "view") return;
-      const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+      const order = getWorkspaceOrder();
       if (!order || !canSubmitPo(order)) return;
-      applyEditFormToOrder(order);
-      order.status = "待審核";
-      renderSalesTable(getSalesFiltered());
+      commitWorkspaceOrder(order, "待審核");
       fillOrderEdit(order, "view");
       alert("已送出申請");
     });
     document.getElementById("editApprove").addEventListener("click", () => {
-      const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+      const order = getWorkspaceOrder();
       if (order) approvePo(order);
     });
     document.getElementById("editReject").addEventListener("click", () => {
-      const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+      const order = getWorkspaceOrder();
       if (order) rejectPo(order);
     });
     document.getElementById("editCreateShip").addEventListener("click", () => {
-      const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
+      const order = getWorkspaceOrder();
       if (!order) return;
       if (!canShipFromPo(order)) return;
+      persistDemoData();
       goToShipCreateFromPo({
         ...order,
         channelType: isOverseasPo(order)
           ? "境外通路"
-          : (document.getElementById("editChannelType").value || order.channelType),
+          : isDealerPo(order)
+            ? "台灣本地經銷"
+            : (document.getElementById("editChannelType").value || order.channelType),
         channelName: isOverseasPo(order)
           ? (document.getElementById("editOverseasChannelName").value || order.channelName)
-          : (document.getElementById("editChannelName").value || order.channelName),
+          : isDealerPo(order)
+            ? (document.getElementById("editDealerChannelName").value || order.channelName)
+            : (document.getElementById("editChannelName").value || order.channelName),
         arriveDate: document.getElementById("editArriveDate").value || order.arriveDate,
         shipByTime: (document.getElementById("editShipByTime").value || "").replace("T", " ") || order.shipByTime,
       });
     });
+    document.getElementById("editChannelType").addEventListener("change", () => {
+      fillChannelNameOptions("editChannelName", document.getElementById("editChannelType").value);
+      document.getElementById("editAddress").value = "";
+      const order = getWorkspaceOrder();
+      if (order && poKindOf(order) === "一般通路") {
+        order.items = mockItemsFor("");
+        renderEditGoods(order.items);
+      }
+    });
     document.getElementById("editChannelName").addEventListener("change", () => {
-      const profile = channelProfiles[document.getElementById("editChannelName").value] || {};
+      const name = document.getElementById("editChannelName").value;
+      const profile = channelProfiles[name] || {};
       if (profile.address) document.getElementById("editAddress").value = profile.address;
+      const order = getWorkspaceOrder();
+      if (order && poKindOf(order) === "一般通路") {
+        order.items = mockItemsFor(name);
+        renderEditGoods(order.items);
+      }
     });
     document.getElementById("editOverseasChannelName").addEventListener("change", () => {
       const profile = channelProfiles[document.getElementById("editOverseasChannelName").value] || {};
@@ -3091,85 +3290,8 @@
       return document.querySelector('input[name="createPoKind"]:checked')?.value || "";
     }
 
-    function fillCreateChannelNameOptions(group) {
-      fillChannelNameOptions("createChannelName", group);
-    }
-
-    function resetCreateChannelFields() {
-      document.getElementById("createChannelName").value = "";
-      document.getElementById("createAddress").value = "";
-      renderGoodsTable("createGoodsBody", mockItemsFor(""));
-    }
-
-    function syncCreateModalByChannelType() {
-      const kind = getCreatePoKind();
-      const subType = document.getElementById("createChannelType").value;
-      const isGeneral = kind === "一般通路";
-      const isDealer = kind === "經銷";
-      const isOverseas = kind === "境外通路";
-      document.getElementById("createGeneralTypeRow").classList.toggle("hidden", !isGeneral);
-      document.getElementById("createExport").classList.toggle("hidden", !isDealer && !isOverseas);
-      if (isGeneral) {
-        fillCreateChannelNameOptions(subType);
-        document.getElementById("createChannelNameRow").classList.toggle("hidden", !subType);
-        document.getElementById("createChannelDetails").classList.toggle("hidden", !subType);
-        document.getElementById("createChannelPlanning").classList.add("hidden");
-        return;
-      }
-      document.getElementById("createChannelDetails").classList.add("hidden");
-      if (isDealer) {
-        fillCreateChannelNameOptions("台灣本地經銷");
-        document.getElementById("createChannelNameRow").classList.remove("hidden");
-        document.getElementById("createChannelPlanning").classList.remove("hidden");
-        document.getElementById("createChannelPlanning").textContent = "經銷相關設定目前規劃中";
-        return;
-      }
-      if (isOverseas) {
-        fillCreateChannelNameOptions("境外通路");
-        document.getElementById("createChannelNameRow").classList.remove("hidden");
-        document.getElementById("createChannelPlanning").classList.remove("hidden");
-        document.getElementById("createChannelPlanning").textContent = "境外通路相關設定目前規劃中";
-        return;
-      }
-      document.getElementById("createChannelNameRow").classList.add("hidden");
-      document.getElementById("createChannelPlanning").classList.add("hidden");
-    }
-
-    function csvCell(value) {
-      const text = String(value ?? "");
-      if (/[",\n\r]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
-      return text;
-    }
-
-    function exportCreatePo() {
-      const kind = getCreatePoKind();
-      if (kind !== "經銷" && kind !== "境外通路") return;
-      const poDocNo = document.getElementById("createPoDocNo").value.trim();
-      const channelType = kind === "經銷" ? "台灣本地經銷" : "境外通路";
-      const channelName = document.getElementById("createChannelName").value;
-      const lines = [
-        ["採購單單號", "採購單類型", "合作通路類型", "通路名稱"].map(csvCell).join(","),
-        [poDocNo, kind, channelType, channelName].map(csvCell).join(","),
-      ];
-      const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `${poDocNo || "採購單"}_匯出.csv`;
-      link.click();
-      URL.revokeObjectURL(link.href);
-    }
-
     function openCreateModal() {
-      const createdAt = nowStamp();
-      document.getElementById("createPoDocNo").value = "";
       document.querySelectorAll('input[name="createPoKind"]').forEach((el) => { el.checked = false; });
-      document.getElementById("createChannelType").value = "";
-      fillCreateChannelNameOptions("");
-      document.getElementById("createAddress").value = "";
-      document.getElementById("createArriveDate").value = addDaysToStamp(createdAt, 2);
-      document.getElementById("createShipByTime").value = toDateTimeInput(addDaysToStamp(createdAt, 1, true));
-      renderGoodsTable("createGoodsBody", mockItemsFor(""));
-      syncCreateModalByChannelType();
       document.getElementById("createModal").classList.remove("hidden");
     }
 
@@ -3177,85 +3299,24 @@
       document.getElementById("createModal").classList.add("hidden");
     }
 
-    function confirmCreateOrder(status) {
+    document.getElementById("salesCreateBtn").addEventListener("click", openCreateModal);
+    document.getElementById("createClose").addEventListener("click", closeCreateModal);
+    document.getElementById("createCancel").addEventListener("click", closeCreateModal);
+    document.getElementById("createConfirm").addEventListener("click", () => {
       const kind = getCreatePoKind();
       if (!kind) {
         alert("請先選擇採購單類型");
         return;
       }
-      if (kind === "一般通路" && !document.getElementById("createChannelType").value) {
-        alert("請選擇合作通路類型");
-        return;
-      }
-      if (!document.getElementById("createChannelName").value) {
-        alert("請選擇通路名稱");
-        return;
-      }
-      createPoFromForm(status);
       closeCreateModal();
-    }
-
-    function createPoFromForm(status) {
-      const kind = getCreatePoKind();
-      const channelName = document.getElementById("createChannelName").value;
-      const channelType = kind === "一般通路"
-        ? document.getElementById("createChannelType").value
-        : kind === "經銷"
-          ? "台灣本地經銷"
-          : kind === "境外通路"
-            ? "境外通路"
-            : "";
-      const isGeneral = kind === "一般通路";
-      const order = {
-        orderNo: nextSalesOrderNo(),
-        poDocNo: document.getElementById("createPoDocNo").value.trim().slice(0, 30),
-        shipNo: "",
-        poKind: kind || "—",
-        channelType: channelType || "—",
-        channelName: channelName || "—",
-        region: (channelProfiles[channelName] || {}).region || "台灣",
-        status,
-        operator: "demo.user",
-        createdAt: nowStamp(),
-        fileName: "",
-        fileUrl: "",
-        fileType: "",
-        address: isGeneral ? document.getElementById("createAddress").value : "",
-        arriveDate: isGeneral ? document.getElementById("createArriveDate").value : "",
-        shipByTime: isGeneral ? document.getElementById("createShipByTime").value.replace("T", " ") : "",
-        items: isGeneral ? collectGoodsTable("createGoodsBody") : [],
-      };
-      salesOrders.unshift(order);
-      renderSalesTable(getSalesFiltered());
-      return order;
-    }
-
-    document.getElementById("salesCreateBtn").addEventListener("click", openCreateModal);
-    document.getElementById("createClose").addEventListener("click", closeCreateModal);
-    document.getElementById("createCancel").addEventListener("click", closeCreateModal);
-    document.getElementById("createSaveDraft").addEventListener("click", () => confirmCreateOrder("草稿"));
-    document.getElementById("createSubmit").addEventListener("click", () => confirmCreateOrder("待審核"));
-    document.getElementById("createExport").addEventListener("click", exportCreatePo);
-    document.querySelectorAll('input[name="createPoKind"]').forEach((el) => {
-      el.addEventListener("change", () => {
-        document.getElementById("createChannelType").value = "";
-        resetCreateChannelFields();
-        syncCreateModalByChannelType();
-      });
-    });
-    document.getElementById("createChannelType").addEventListener("change", () => {
-      resetCreateChannelFields();
-      syncCreateModalByChannelType();
+      openPoWorkspace({ create: "1", kind });
     });
     document.getElementById("createModal").addEventListener("click", (e) => {
       if (e.target.id === "createModal") closeCreateModal();
     });
-    document.getElementById("createChannelName").addEventListener("change", () => {
-      if (getCreatePoKind() !== "一般通路") return;
-      const name = document.getElementById("createChannelName").value;
-      const profile = channelProfiles[name] || {};
-      if (profile.address) document.getElementById("createAddress").value = profile.address;
-      renderGoodsTable("createGoodsBody", mockItemsFor(name));
+    document.getElementById("poTabs").addEventListener("click", (e) => {
+      const tab = e.target.closest("[data-po-tab]");
+      if (tab) setPoTab(tab.dataset.poTab);
     });
 
     let currentShipStep = 1;
@@ -3378,6 +3439,7 @@
         items: shipLineItems.map((row) => ({ ...row })),
       });
       if (po) syncPoStatusFromShips(po);
+      persistDemoData();
       renderShippingTable();
       renderSalesTable(getSalesFiltered());
       showPage("shipping");
@@ -3527,6 +3589,7 @@
       });
       renderSalesTable(getSalesFiltered());
       renderShippingTable(getShippingFiltered());
+      persistDemoData();
       closeVoidModal();
     }
 
@@ -3536,6 +3599,8 @@
     document.getElementById("voidModal").addEventListener("click", (e) => {
       if (e.target.id === "voidModal") closeVoidModal();
     });
+
+    bootFromQuery();
   </script>
 </body>
 </html>
