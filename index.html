@@ -722,8 +722,38 @@
     .ship-items-table .col-days { min-width: 88px; }
     .ship-items-table .col-cost,
     .ship-items-table .col-quote,
-    .ship-items-table .col-order-quote { min-width: 120px; }
+    .ship-items-table .col-order-quote { min-width: 132px; }
+    .ship-items-table .col-stock { min-width: 72px; }
+    .ship-items-table .col-remark { min-width: 160px; }
     .ship-items-table .col-qty { min-width: 100px; }
+    .po-goods-table { min-width: 2140px; }
+    .quote-input-wrap { position: relative; }
+    .quote-input-wrap .warn-icon {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #faad14;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 16px;
+      text-align: center;
+      pointer-events: none;
+      display: none;
+    }
+    .quote-input-wrap.has-warn .warn-icon { display: block; }
+    .quote-input-wrap.has-warn input {
+      padding-right: 28px;
+      background: #fffbe6;
+      border-color: #faad14;
+    }
+    .is-readonly .po-goods-toolbar { display: none; }
+    .is-readonly #editGoodsBody .ops { visibility: hidden; }
+    #page-order-edit .ship-items-table-wrap { max-height: calc(100vh - 300px); }
     .expiry-radios {
       display: flex;
       flex-wrap: wrap;
@@ -1715,22 +1745,59 @@
 
           <div class="po-pane hidden" data-po-pane="goods">
             <div id="editGeneralGoodsWrap">
-              <div class="goods-block" style="margin-top:0">
-                <h3 class="goods-title">商品相關基本資料</h3>
-                <div class="table-wrap">
-                  <table class="goods-table">
-                    <thead>
-                      <tr>
-                        <th>SKU</th>
-                        <th>商品名稱</th>
-                        <th>允收效期</th>
-                        <th>單位</th>
-                        <th>訂貨數量</th>
-                      </tr>
-                    </thead>
-                    <tbody id="editGoodsBody"></tbody>
-                  </table>
+              <div class="ship-items-toolbar po-goods-toolbar">
+                <div class="ship-items-actions">
+                  <button type="button" class="btn" id="poAddItemBtn">新增商品</button>
+                  <button type="button" class="btn btn-primary" id="poImportItemsBtn">匯入商品</button>
+                  <input type="file" id="poImportItemsFile" class="hidden" accept=".csv,.xlsx,.xls,.txt" />
                 </div>
+                <div class="ship-qty-box">
+                  <div class="label">出貨總數量(pcs)</div>
+                  <div class="value" id="poItemsQtyTotal">0</div>
+                </div>
+              </div>
+              <div class="table-wrap ship-items-table-wrap">
+                <table class="ship-items-table po-goods-table">
+                  <thead>
+                    <tr>
+                      <th>編號</th>
+                      <th>
+                        <span class="th-inner">商品品號
+                          <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                        </span>
+                      </th>
+                      <th>
+                        <span class="th-inner">SKU
+                          <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                        </span>
+                      </th>
+                      <th>
+                        <span class="th-inner">品名
+                          <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                        </span>
+                      </th>
+                      <th>
+                        <span class="th-inner">倉別
+                          <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                        </span>
+                      </th>
+                      <th>
+                        <span class="th-inner">效期_批號
+                          <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                        </span>
+                      </th>
+                      <th>允收天數</th>
+                      <th><span class="th-inner">商品成本(TWD)<span class="th-sort">▲<br />▼</span></span></th>
+                      <th><span class="th-inner">商品報價(TWD)<span class="th-sort">▲<br />▼</span></span></th>
+                      <th><span class="th-inner">訂單商品報價(TWD)<span class="th-sort">▲<br />▼</span></span></th>
+                      <th>庫存數</th>
+                      <th>備註</th>
+                      <th>總數量(pcs)</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="editGoodsBody"></tbody>
+                </table>
               </div>
             </div>
             <div id="editOverseasGoodsWrap" class="hidden">
@@ -1755,9 +1822,6 @@
                   </table>
                 </div>
               </div>
-            </div>
-            <div id="editDealerGoodsWrap" class="hidden">
-              <div class="create-planning">經銷商品明細目前規劃中</div>
             </div>
           </div>
 
@@ -2947,6 +3011,8 @@
     let shipLineItems = [];
     let shipItemsLoadedPo = "";
     let nextShipItemId = 73672;
+    let poLineItems = [];
+    let nextPoItemId = 73672;
 
     function metaForSku(sku) {
       return productMeta[sku] || {
@@ -3081,11 +3147,127 @@
     }
 
     function renderEditGoods(items) {
-      renderGoodsTable("editGoodsBody", items);
+      loadPoGoods(items);
     }
 
     function collectEditGoods() {
-      return collectGoodsTable("editGoodsBody");
+      return poLineItems.map((row) => ({ ...row }));
+    }
+
+    function toPoLineItem(item) {
+      const src = item || {};
+      const meta = metaForSku(src.sku);
+      const type = src.expiryType === "near" ? "near" : "regular";
+      const batches = batchesFor(type);
+      return {
+        id: String(src.id || nextPoItemId++),
+        productCode: src.productCode || meta.productCode,
+        sku: src.sku || "",
+        name: src.name || "",
+        warehouse: src.warehouse || "良品倉",
+        expiryType: type,
+        batch: batches.includes(src.batch) ? src.batch : batches[0],
+        acceptDays: src.acceptDays ?? "",
+        cost: src.cost || meta.cost,
+        quote: src.quote || meta.quote,
+        orderQuote: src.orderQuote ?? "0",
+        stock: src.stock ?? 0,
+        remark: src.remark || "",
+        qty: Number(src.qty) || 0,
+      };
+    }
+
+    function loadPoGoods(items) {
+      poLineItems = (items && items.length ? items : []).map(toPoLineItem);
+      renderPoGoodsTable();
+    }
+
+    function updatePoQtyTotal() {
+      const total = poLineItems.reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
+      const el = document.getElementById("poItemsQtyTotal");
+      if (el) el.textContent = String(total);
+    }
+
+    function renderPoGoodsTable() {
+      const body = document.getElementById("editGoodsBody");
+      if (!poLineItems.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="14">尚無商品明細</td></tr>`;
+        updatePoQtyTotal();
+        return;
+      }
+      body.innerHTML = poLineItems.map((row) => {
+        const batches = batchesFor(row.expiryType);
+        const batchValue = batches.includes(row.batch) ? row.batch : batches[0];
+        const warn = Number(row.orderQuote) === 0;
+        return `
+        <tr data-id="${escapeHtml(row.id)}">
+          <td class="col-id">${escapeHtml(row.id)}</td>
+          <td class="col-code">${escapeHtml(row.productCode)}</td>
+          <td class="col-sku">${escapeHtml(row.sku)}</td>
+          <td class="col-name">${escapeHtml(row.name)}</td>
+          <td class="col-wh">
+            <select data-field="warehouse">${optionsHtml(shipWarehouses, row.warehouse || "良品倉")}</select>
+          </td>
+          <td class="col-expiry">
+            <div class="expiry-radios">
+              <label class="radio-line"><input type="radio" name="po-expiry-${escapeHtml(row.id)}" data-field="expiryType" value="regular"${row.expiryType !== "near" ? " checked" : ""} /> 非即期品</label>
+              <label class="radio-line"><input type="radio" name="po-expiry-${escapeHtml(row.id)}" data-field="expiryType" value="near"${row.expiryType === "near" ? " checked" : ""} /> 即期品</label>
+            </div>
+            <select data-field="batch">${optionsHtml(batches, batchValue)}</select>
+          </td>
+          <td class="col-days"><input type="number" min="0" data-field="acceptDays" value="${escapeHtml(row.acceptDays)}" /></td>
+          <td class="col-cost"><input class="input-readonly" data-field="cost" value="${escapeHtml(row.cost)}" readonly tabindex="-1" /></td>
+          <td class="col-quote">${escapeHtml(row.quote)}</td>
+          <td class="col-order-quote">
+            <div class="quote-input-wrap${warn ? " has-warn" : ""}">
+              <input type="number" min="0" step="0.01" data-field="orderQuote" value="${escapeHtml(row.orderQuote)}" />
+              <span class="warn-icon">!</span>
+            </div>
+          </td>
+          <td class="col-stock">${escapeHtml(row.stock)}</td>
+          <td class="col-remark"><input data-field="remark" value="${escapeHtml(row.remark)}" /></td>
+          <td class="col-qty"><input type="number" min="0" data-field="qty" value="${escapeHtml(row.qty)}" /></td>
+          <td class="ops"><a data-del="1">刪除</a></td>
+        </tr>`;
+      }).join("");
+      updatePoQtyTotal();
+    }
+
+    function addPoCatalogItem() {
+      if (document.getElementById("page-order-edit").classList.contains("is-readonly")) return;
+      const used = new Set(poLineItems.map((row) => row.sku));
+      const src = mockItemPool.find((item) => !used.has(item.sku)) || mockItemPool[0];
+      poLineItems.push(toPoLineItem(src));
+      renderPoGoodsTable();
+    }
+
+    function importPoCatalogItems() {
+      if (document.getElementById("page-order-edit").classList.contains("is-readonly")) return;
+      const used = new Set(poLineItems.map((row) => row.sku));
+      const extras = mockItemPool.filter((item) => !used.has(item.sku));
+      (extras.length ? extras : mockItemPool.slice(0, 1)).forEach((item) => {
+        poLineItems.push(toPoLineItem(item));
+      });
+      renderPoGoodsTable();
+    }
+
+    function onPoItemField(e) {
+      const field = e.target.dataset.field;
+      if (!field) return;
+      const tr = e.target.closest("tr");
+      if (!tr) return;
+      const item = poLineItems.find((row) => row.id === tr.dataset.id);
+      if (!item) return;
+      item[field] = e.target.value;
+      if (field === "expiryType") {
+        item.batch = batchesFor(item.expiryType)[0];
+        renderPoGoodsTable();
+        return;
+      }
+      if (field === "qty") updatePoQtyTotal();
+      if (field === "orderQuote") {
+        e.target.closest(".quote-input-wrap")?.classList.toggle("has-warn", Number(item.orderQuote) === 0);
+      }
     }
 
     function renderRelatedShips(order) {
@@ -3127,6 +3309,7 @@
         order.channelType = "台灣本地經銷";
         order.channelName = document.getElementById("editDealerChannelName").value || order.channelName;
         order.region = (channelProfiles[order.channelName] || {}).region || order.region || "台灣";
+        order.items = collectEditGoods();
         return;
       }
       order.channelType = document.getElementById("editChannelType").value || order.channelType;
@@ -3181,9 +3364,8 @@
       document.getElementById("editGeneralBlock").classList.toggle("hidden", overseas || dealer);
       document.getElementById("editOverseasBlock").classList.toggle("hidden", !overseas);
       document.getElementById("editDealerBlock").classList.toggle("hidden", !dealer);
-      document.getElementById("editGeneralGoodsWrap").classList.toggle("hidden", overseas || dealer);
+      document.getElementById("editGeneralGoodsWrap").classList.toggle("hidden", overseas);
       document.getElementById("editOverseasGoodsWrap").classList.toggle("hidden", !overseas);
-      document.getElementById("editDealerGoodsWrap").classList.toggle("hidden", !dealer);
       document.getElementById("editPoKindMeta").textContent = `採購單類型：${kind}`;
       const titles = { view: "檢視採購單", edit: "編輯採購單", create: "建立採購單" };
       document.getElementById("editPageTitle").textContent = currentEditOrderNo === "__new__" ? titles.create : (titles[orderFormMode] || titles.edit);
@@ -3199,6 +3381,8 @@
         fillOverseasForm(order, orderFormMode === "view");
       } else if (dealer) {
         document.getElementById("editDealerChannelName").value = !order.channelName || order.channelName === "—" ? "" : order.channelName;
+        if (!order.items || !order.items.length) order.items = mockItemsFor(order.channelName);
+        loadPoGoods(order.items);
       } else {
         const profile = channelProfiles[order.channelName] || {};
         if (!order.address) order.address = profile.address || "";
@@ -3212,7 +3396,7 @@
         document.getElementById("editAddress").value = order.address || "";
         document.getElementById("editArriveDate").value = toDateInput(order.arriveDate);
         document.getElementById("editShipByTime").value = toDateTimeInput(order.shipByTime);
-        renderEditGoods(order.items);
+        loadPoGoods(order.items);
       }
       renderRelatedShips(order);
       setPoTab("basic");
@@ -3298,7 +3482,7 @@
       const order = getWorkspaceOrder();
       if (order && poKindOf(order) === "一般通路") {
         order.items = mockItemsFor("");
-        renderEditGoods(order.items);
+        loadPoGoods(order.items);
       }
     });
     document.getElementById("editChannelName").addEventListener("change", () => {
@@ -3308,7 +3492,15 @@
       const order = getWorkspaceOrder();
       if (order && poKindOf(order) === "一般通路") {
         order.items = mockItemsFor(name);
-        renderEditGoods(order.items);
+        loadPoGoods(order.items);
+      }
+    });
+    document.getElementById("editDealerChannelName").addEventListener("change", () => {
+      const name = document.getElementById("editDealerChannelName").value;
+      const order = getWorkspaceOrder();
+      if (order && isDealerPo(order)) {
+        order.items = mockItemsFor(name);
+        loadPoGoods(order.items);
       }
     });
     document.getElementById("editOverseasChannelName").addEventListener("change", () => {
@@ -3373,6 +3565,27 @@
     document.getElementById("poTabs").addEventListener("click", (e) => {
       const tab = e.target.closest("[data-po-tab]");
       if (tab) setPoTab(tab.dataset.poTab);
+    });
+    document.getElementById("poAddItemBtn").addEventListener("click", addPoCatalogItem);
+    document.getElementById("poImportItemsBtn").addEventListener("click", () => {
+      document.getElementById("poImportItemsFile").click();
+    });
+    document.getElementById("poImportItemsFile").addEventListener("change", () => {
+      const file = document.getElementById("poImportItemsFile").files[0];
+      document.getElementById("poImportItemsFile").value = "";
+      if (!file) return;
+      importPoCatalogItems();
+    });
+    document.getElementById("editGoodsBody").addEventListener("input", onPoItemField);
+    document.getElementById("editGoodsBody").addEventListener("change", onPoItemField);
+    document.getElementById("editGoodsBody").addEventListener("click", (e) => {
+      if (document.getElementById("page-order-edit").classList.contains("is-readonly")) return;
+      const del = e.target.closest("[data-del]");
+      if (!del) return;
+      const tr = e.target.closest("tr");
+      if (!tr) return;
+      poLineItems = poLineItems.filter((row) => row.id !== tr.dataset.id);
+      renderPoGoodsTable();
     });
 
     let currentShipStep = 1;
