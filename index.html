@@ -647,6 +647,9 @@
       max-width: 100%;
       overflow-x: hidden;
     }
+    .po-pane[data-po-pane="goods"] {
+      overflow: visible;
+    }
     .ship-tab-toolbar {
       display: flex;
       align-items: center;
@@ -765,11 +768,16 @@
     .ship-items-table .col-stock { min-width: 72px; }
     .ship-items-table .col-remark { min-width: 160px; }
     .ship-items-table .col-qty { min-width: 100px; }
-    .po-goods-table { min-width: 2140px; border-collapse: separate; border-spacing: 0; }
+    .po-goods-table {
+      min-width: 2140px;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
     .po-goods-table thead th {
       position: sticky;
       top: 0;
       z-index: 3;
+      background: var(--table-head);
     }
     .po-goods-table .col-id,
     .po-goods-table .col-code,
@@ -777,6 +785,7 @@
     .po-goods-table .ops {
       position: sticky;
       background: #fff;
+      background-clip: padding-box;
     }
     .po-goods-table thead .col-id,
     .po-goods-table thead .col-code,
@@ -793,25 +802,25 @@
     }
     .po-goods-table .col-id {
       left: 0;
-      width: 84px;
-      min-width: 84px;
+      width: 88px;
+      min-width: 88px;
     }
     .po-goods-table .col-code {
-      left: 84px;
-      width: 188px;
-      min-width: 188px;
-      box-shadow: 6px 0 8px -6px rgba(0, 0, 0, 0.18);
+      left: 88px;
+      width: 220px;
+      min-width: 220px;
+      box-shadow: 1px 0 0 var(--border), 8px 0 10px -8px rgba(0, 0, 0, 0.22);
     }
     .po-goods-table .col-qty {
-      right: 72px;
-      width: 120px;
-      min-width: 120px;
-      box-shadow: -6px 0 8px -6px rgba(0, 0, 0, 0.18);
+      right: 76px;
+      width: 128px;
+      min-width: 128px;
+      box-shadow: -1px 0 0 var(--border), -8px 0 10px -8px rgba(0, 0, 0, 0.22);
     }
     .po-goods-table .ops {
       right: 0;
-      width: 72px;
-      min-width: 72px;
+      width: 76px;
+      min-width: 76px;
     }
     .po-goods-table tbody tr:hover .col-id,
     .po-goods-table tbody tr:hover .col-code,
@@ -869,6 +878,10 @@
       min-width: 2400px;
     }
     #page-order-edit .ship-items-table-wrap { max-height: calc(100vh - 300px); }
+    #page-order-edit .po-goods-scroll {
+      overflow-x: scroll;
+      overflow-y: auto;
+    }
     .expiry-radios {
       display: flex;
       flex-wrap: wrap;
@@ -1871,7 +1884,7 @@
                   <div class="value" id="poItemsQtyTotal">0</div>
                 </div>
               </div>
-              <div class="table-wrap ship-items-table-wrap goods-h-scroll">
+              <div class="table-wrap ship-items-table-wrap goods-h-scroll po-goods-scroll">
                 <table class="ship-items-table po-goods-table">
                   <thead>
                     <tr>
