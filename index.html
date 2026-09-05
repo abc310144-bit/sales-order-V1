@@ -188,6 +188,58 @@
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
     }
     .modal-card.void-card { width: min(480px, 100%); }
+    .modal-card.adjust-card { width: min(920px, 100%); }
+    .adjust-card .modal-body { max-height: 70vh; overflow: auto; }
+    .adjust-table { min-width: 0; width: 100%; }
+    .adjust-table input[type="number"] {
+      width: 100%;
+      max-width: 120px;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 0 8px;
+      font-size: 13px;
+      outline: none;
+    }
+    .adjust-table input[type="number"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+    }
+    .adjust-hint {
+      margin: 0 0 12px;
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+    .adjust-banner {
+      margin: 0 0 16px;
+      padding: 12px 16px;
+      background: #fff7e6;
+      border: 1px solid #ffd591;
+      border-radius: 2px;
+    }
+    .adjust-banner .goods-title { margin-bottom: 8px; }
+    .adjust-meta {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.7;
+    }
+    .adjust-banner .table-wrap { max-height: 280px; overflow: auto; }
+    textarea.adjust-reason {
+      width: 100%;
+      min-height: 84px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 8px 11px;
+      font-size: 14px;
+      resize: vertical;
+      outline: none;
+    }
+    textarea.adjust-reason:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+    }
     .void-msg {
       margin: 8px 0 12px;
       font-size: 14px;
@@ -1144,7 +1196,8 @@
       vertical-align: middle;
     }
     .status-tag[data-status="草稿"] { color: #595959; background: #f5f5f5; border-color: #d9d9d9; }
-    .status-tag[data-status="待審核"] { color: #d48806; background: #fff7e6; border-color: #ffd591; }
+    .status-tag[data-status="待審核"],
+    .status-tag[data-status="調整待審核"] { color: #d48806; background: #fff7e6; border-color: #ffd591; }
     .status-tag[data-status="審核退回"] { color: #cf1322; background: #fff1f0; border-color: #ffa39e; }
     .status-tag[data-status="審核通過"] { color: #389e0d; background: #f6ffed; border-color: #b7eb8f; }
     .status-tag[data-status="未開立出貨單"] { color: #096dd9; background: #e6f7ff; border-color: #91d5ff; }
@@ -1734,6 +1787,7 @@
                   <option value="">請選擇</option>
                   <option>草稿</option>
                   <option>待審核</option>
+                  <option>調整待審核</option>
                   <option>未開立出貨單</option>
                   <option>待出貨</option>
                   <option>部分送達</option>
@@ -1794,6 +1848,24 @@
         <div class="page" id="page-order-edit">
           <h2 class="form-title" id="editPageTitle">採購單資料</h2>
           <div class="po-kind-meta" id="editPoKindMeta"></div>
+          <div id="editQtyAdjustWrap" class="adjust-banner hidden">
+            <h3 class="goods-title">數量調整申請</h3>
+            <div class="adjust-meta" id="editQtyAdjustMeta"></div>
+            <div class="table-wrap">
+              <table class="related-table adjust-table">
+                <thead>
+                  <tr>
+                    <th>品名</th>
+                    <th>SKU</th>
+                    <th>目前採購數量</th>
+                    <th>原數量</th>
+                    <th>欲改數量</th>
+                  </tr>
+                </thead>
+                <tbody id="editQtyAdjustBody"></tbody>
+              </table>
+            </div>
+          </div>
           <div class="po-tabs" id="poTabs">
             <button type="button" class="po-tab active" data-po-tab="basic">採購單基本資料</button>
             <button type="button" class="po-tab" data-po-tab="goods">採購商品</button>
@@ -2028,6 +2100,7 @@
           <div class="edit-footer">
             <button type="button" class="btn" id="editSaveDraft">儲存為草稿</button>
             <button type="button" class="btn btn-primary" id="editSubmit">送出申請</button>
+            <button type="button" class="btn btn-primary" id="editAdjustQty">申請調整數量</button>
             <button type="button" class="btn" id="editReject">審核不通過</button>
             <button type="button" class="btn btn-primary" id="editApprove">審核通過</button>
             <button type="button" class="btn btn-primary" id="editSave">儲存</button>
@@ -2136,6 +2209,42 @@
       <div class="modal-foot">
         <button type="button" class="btn" id="voidCancel">取消</button>
         <button type="button" class="btn btn-primary" id="voidConfirm">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask hidden" id="adjustQtyModal">
+    <div class="modal-card adjust-card" role="dialog" aria-labelledby="adjustQtyTitle">
+      <div class="modal-head">
+        <h2 id="adjustQtyTitle">申請調整數量</h2>
+        <button type="button" class="modal-close" id="adjustQtyClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="adjust-hint">原數量自動帶入該商品在有效出貨單的出貨數量加總（訂單取消不計）。欲改數量可加可減，送出後由主管審核。</p>
+        <div class="table-wrap">
+          <table class="related-table adjust-table">
+            <thead>
+              <tr>
+                <th>品名</th>
+                <th>SKU</th>
+                <th>目前採購數量</th>
+                <th>原數量</th>
+                <th>欲改數量</th>
+              </tr>
+            </thead>
+            <tbody id="adjustQtyBody"></tbody>
+          </table>
+        </div>
+        <div class="form-row">
+          <label class="required" for="adjustQtyReason">調整原因</label>
+          <div class="form-ctrl">
+            <textarea class="adjust-reason" id="adjustQtyReason" placeholder="請輸入調整原因"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="adjustQtyCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="adjustQtySubmit">送出申請</button>
       </div>
     </div>
   </div>
@@ -2397,7 +2506,15 @@
     }
 
     function canApprovePo(order) {
-      return order.status === "待審核";
+      return order.status === "待審核" || order.status === "調整待審核";
+    }
+
+    function canAdjustQty(order) {
+      return !!order && ["未開立出貨單", "待出貨", "部分送達"].includes(order.status);
+    }
+
+    function isQtyAdjustPending(order) {
+      return !!order && order.status === "調整待審核";
     }
 
     let currentRole = "建檔人";
@@ -2410,8 +2527,186 @@
       return rows.filter((row) => row.salesOrderNo === orderNo);
     }
 
+    function validShipsOfPo(orderNo) {
+      return shipsOfPo(orderNo).filter((row) => row.status !== "訂單取消");
+    }
+
+    function itemKey(item) {
+      const sku = normalizeSku(item && item.sku);
+      if (sku) return "sku:" + sku.toLowerCase();
+      const code = normalizeSku(item && item.productCode);
+      if (code) return "code:" + code.toLowerCase();
+      const barcode = String((item && (item.barcode || item.itemNo)) || "").trim();
+      if (barcode) return "bc:" + barcode.toLowerCase();
+      const name = String((item && item.name) || "").trim().toLowerCase();
+      return name ? "name:" + name : "";
+    }
+
+    function shippedQtyMap(order) {
+      const map = {};
+      validShipsOfPo(order.orderNo).forEach((ship) => {
+        (ship.items || []).forEach((line) => {
+          const key = itemKey(line);
+          if (!key) return;
+          map[key] = (map[key] || 0) + (Number(line.qty) || 0);
+        });
+      });
+      return map;
+    }
+
+    function qtyAdjustRowsOf(order) {
+      const shipMap = shippedQtyMap(order);
+      return (order.items || []).map((item) => {
+        const shipQty = shipMap[itemKey(item)] || 0;
+        return {
+          sku: item.sku || "",
+          name: item.name || "",
+          productCode: item.productCode || "",
+          poQty: Number(item.qty) || 0,
+          shipQty,
+          newQty: shipQty,
+        };
+      });
+    }
+
+    function renderQtyAdjustTable(tbodyId, lines, editable) {
+      const body = document.getElementById(tbodyId);
+      if (!body) return;
+      if (!lines.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="5">尚無商品明細</td></tr>`;
+        return;
+      }
+      body.innerHTML = lines.map((line) => `
+        <tr data-key="${escapeHtml(itemKey(line))}" data-sku="${escapeHtml(line.sku)}" data-name="${escapeHtml(line.name)}" data-code="${escapeHtml(line.productCode || "")}" data-po-qty="${escapeHtml(line.poQty)}" data-ship-qty="${escapeHtml(line.shipQty)}">
+          <td>${escapeHtml(line.name || "—")}</td>
+          <td>${escapeHtml(line.sku || "—")}</td>
+          <td>${escapeHtml(line.poQty)}</td>
+          <td>${escapeHtml(line.shipQty)}</td>
+          <td>${editable
+            ? `<input type="number" min="0" data-field="newQty" value="${escapeHtml(line.newQty)}" />`
+            : escapeHtml(line.newQty)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function renderQtyAdjustBanner(order) {
+      const wrap = document.getElementById("editQtyAdjustWrap");
+      const adj = order && order.qtyAdjust;
+      if (!wrap) return;
+      if (!adj || !isQtyAdjustPending(order)) {
+        wrap.classList.add("hidden");
+        return;
+      }
+      document.getElementById("editQtyAdjustMeta").innerHTML =
+        `申請人：${escapeHtml(adj.applicant || "—")}　申請時間：${escapeHtml(adj.requestedAt || "—")}<br />調整原因：${escapeHtml(adj.reason || "—")}`;
+      renderQtyAdjustTable("editQtyAdjustBody", adj.lines || [], false);
+      wrap.classList.remove("hidden");
+    }
+
+    function openAdjustQtyModal(order) {
+      if (!order || !canAdjustQty(order) || currentRole !== "建檔人") return;
+      const lines = qtyAdjustRowsOf(order);
+      if (!lines.length) {
+        alert("尚無商品明細，無法申請調整數量");
+        return;
+      }
+      renderQtyAdjustTable("adjustQtyBody", lines, true);
+      document.getElementById("adjustQtyReason").value = "";
+      document.getElementById("adjustQtyModal").classList.remove("hidden");
+    }
+
+    function closeAdjustQtyModal() {
+      document.getElementById("adjustQtyModal").classList.add("hidden");
+    }
+
+    function collectQtyAdjustForm() {
+      return [...document.querySelectorAll("#adjustQtyBody tr[data-key]")].map((tr) => ({
+        sku: tr.dataset.sku || "",
+        name: tr.dataset.name || "",
+        productCode: tr.dataset.code || "",
+        poQty: Number(tr.dataset.poQty) || 0,
+        shipQty: Number(tr.dataset.shipQty) || 0,
+        newQty: Number(tr.querySelector("[data-field=newQty]").value) || 0,
+      }));
+    }
+
+    function applyQtyToPartyLines(order) {
+      const bag = partyRecord(order);
+      if (!bag || !Array.isArray(bag.lines)) return;
+      const byKey = {};
+      (order.items || []).forEach((item) => {
+        const key = itemKey(item);
+        if (key) byKey[key] = item;
+      });
+      bag.lines.forEach((line) => {
+        const item = byKey[itemKey({ sku: line.barcode, productCode: line.itemNo || line.barcode, name: line.name })];
+        if (!item) return;
+        line.orderPcs = item.qty;
+        line.qty = item.qty;
+      });
+    }
+
+    function pushQtyAdjustHistory(order, result) {
+      if (!order.qtyAdjust) return;
+      order.qtyAdjustHistory = order.qtyAdjustHistory || [];
+      order.qtyAdjustHistory.push({
+        ...order.qtyAdjust,
+        result,
+        reviewedBy: currentRole === "主管" ? "主管" : (order.operator || "demo.user"),
+        reviewedAt: nowStamp(),
+      });
+    }
+
+    function applyQtyAdjustApproval(order) {
+      const adj = order.qtyAdjust;
+      if (!adj || !Array.isArray(adj.lines)) {
+        order.status = adj && adj.prevStatus ? adj.prevStatus : deriveApprovedPoStatus(order);
+        order.qtyAdjust = null;
+        return;
+      }
+      const byKey = Object.fromEntries(adj.lines.map((line) => [itemKey(line), line]));
+      (order.items || []).forEach((item) => {
+        const line = byKey[itemKey(item)];
+        if (line) item.qty = Number(line.newQty) || 0;
+      });
+      applyQtyToPartyLines(order);
+      pushQtyAdjustHistory(order, "通過");
+      order.qtyAdjust = null;
+      order.status = deriveApprovedPoStatus(order);
+    }
+
+    function submitQtyAdjust() {
+      const order = getWorkspaceOrder();
+      if (!order || !canAdjustQty(order) || currentRole !== "建檔人") return;
+      const lines = collectQtyAdjustForm();
+      const reason = document.getElementById("adjustQtyReason").value.trim();
+      if (!reason) {
+        alert("請輸入調整原因");
+        document.getElementById("adjustQtyReason").focus();
+        return;
+      }
+      if (!lines.some((line) => line.newQty !== line.poQty)) {
+        alert("請至少調整一項商品數量");
+        return;
+      }
+      order.qtyAdjust = {
+        prevStatus: order.status,
+        reason,
+        applicant: order.operator || "demo.user",
+        requestedAt: nowStamp(),
+        lines,
+      };
+      order.status = "調整待審核";
+      persistDemoData();
+      closeAdjustQtyModal();
+      fillOrderEdit(order, "view");
+      history.replaceState({}, "", poWorkspaceUrl({ po: order.orderNo, mode: "view" }));
+      renderSalesTable(getSalesFiltered());
+      alert("已送出數量調整申請");
+    }
+
     function deriveApprovedPoStatus(order) {
-      const valid = shipsOfPo(order.orderNo).filter((row) => row.status !== "訂單取消");
+      const valid = validShipsOfPo(order.orderNo);
       if (!valid.length) return "未開立出貨單";
       const delivered = valid.filter((row) => row.status === "已配達");
       if (delivered.length === valid.length) return "已完成";
@@ -2420,7 +2715,7 @@
     }
 
     function syncPoStatusFromShips(order) {
-      if (!order || ["草稿", "待審核", "已取消"].includes(order.status)) return;
+      if (!order || ["草稿", "待審核", "調整待審核", "已取消"].includes(order.status)) return;
       order.status = deriveApprovedPoStatus(order);
     }
 
@@ -2429,7 +2724,7 @@
     }
 
     function salesRowActions(item) {
-      if (item.status === "待審核") {
+      if (item.status === "待審核" || item.status === "調整待審核") {
         return `<a data-action="view" data-no="${item.orderNo}">檢視</a>`;
       }
       const links = [];
@@ -3407,12 +3702,31 @@
       renderShippingTable();
     }
 
+    function ensureSeedShipItems() {
+      rows.forEach((ship) => {
+        if (Array.isArray(ship.items)) return;
+        const po = salesOrders.find((order) => order.orderNo === ship.salesOrderNo);
+        if (!po || !po.items || !po.items.length) {
+          ship.items = [];
+          return;
+        }
+        const factor = ship.status === "訂單取消" ? 0 : ship.status === "已配達" ? 0.5 : 0.25;
+        ship.items = po.items.map((item) => ({
+          sku: item.sku || "",
+          name: item.name || "",
+          productCode: item.productCode || "",
+          qty: Math.max(0, Math.floor((Number(item.qty) || 0) * factor)),
+        }));
+      });
+    }
+
     if (!restoreDemoData()) {
       seedExtraDemoData();
     } else {
       renderSalesTable(getSalesFiltered());
       renderShippingTable();
     }
+    ensureSeedShipItems();
     demoReady = true;
     persistDemoData();
 
@@ -4084,6 +4398,14 @@
 
     function approvePo(order) {
       if (!canApprovePo(order)) return;
+      if (isQtyAdjustPending(order)) {
+        applyQtyAdjustApproval(order);
+        persistDemoData();
+        renderSalesTable(getSalesFiltered());
+        if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "view");
+        alert("已審核通過，採購數量已更新");
+        return;
+      }
       order.status = "未開立出貨單";
       syncPoStatusFromShips(order);
       persistDemoData();
@@ -4093,6 +4415,17 @@
 
     function rejectPo(order) {
       if (!canApprovePo(order)) return;
+      if (isQtyAdjustPending(order)) {
+        const prev = order.qtyAdjust && order.qtyAdjust.prevStatus;
+        pushQtyAdjustHistory(order, "退回");
+        order.qtyAdjust = null;
+        order.status = prev && prev !== "調整待審核" ? prev : deriveApprovedPoStatus(order);
+        persistDemoData();
+        renderSalesTable(getSalesFiltered());
+        if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "view");
+        alert("已退回數量調整申請");
+        return;
+      }
       order.status = "草稿";
       persistDemoData();
       renderSalesTable(getSalesFiltered());
@@ -4105,11 +4438,15 @@
       const pending = canApprovePo(order);
       const approvedOps = false;
       const canShip = canShipFromPo(order);
+      const canAdjust = canAdjustQty(order) && currentRole === "建檔人";
+      const hint = document.getElementById("editShipHint");
+      hint.textContent = isQtyAdjustPending(order) ? "數量調整審核中，無法新增出貨單" : "審核通過後才能新增出貨單";
       document.getElementById("editCreateShip").classList.toggle("hidden", !canShip);
       document.getElementById("editCreateShip").disabled = !canShip;
-      document.getElementById("editShipHint").classList.toggle("hidden", canShip);
+      hint.classList.toggle("hidden", canShip);
       document.getElementById("editSaveDraft").classList.toggle("hidden", view || !draftLike);
       document.getElementById("editSubmit").classList.toggle("hidden", view || !draftLike || currentRole !== "建檔人");
+      document.getElementById("editAdjustQty").classList.toggle("hidden", !canAdjust);
       document.getElementById("editApprove").classList.toggle("hidden", !(pending && currentRole === "主管"));
       document.getElementById("editReject").classList.toggle("hidden", !(pending && currentRole === "主管"));
       document.getElementById("editSave").classList.toggle("hidden", view || draftLike || pending || !approvedOps);
@@ -4160,6 +4497,7 @@
         loadPoGoods(order.items);
       }
       renderRelatedShips(order);
+      renderQtyAdjustBanner(order);
       setPoTab("basic");
       setOrderFormReadonly(orderFormMode === "view");
       syncEditFooter(order, orderFormMode);
@@ -4216,6 +4554,16 @@
     document.getElementById("editReject").addEventListener("click", () => {
       const order = getWorkspaceOrder();
       if (order) rejectPo(order);
+    });
+    document.getElementById("editAdjustQty").addEventListener("click", () => {
+      const order = getWorkspaceOrder();
+      if (order) openAdjustQtyModal(order);
+    });
+    document.getElementById("adjustQtyClose").addEventListener("click", closeAdjustQtyModal);
+    document.getElementById("adjustQtyCancel").addEventListener("click", closeAdjustQtyModal);
+    document.getElementById("adjustQtySubmit").addEventListener("click", submitQtyAdjust);
+    document.getElementById("adjustQtyModal").addEventListener("click", (e) => {
+      if (e.target.id === "adjustQtyModal") closeAdjustQtyModal();
     });
     document.getElementById("editCreateShip").addEventListener("click", () => {
       const order = getWorkspaceOrder();
@@ -4430,7 +4778,7 @@
         return false;
       }
       if (!canShipFromPo(po)) {
-        alert(po.status === "已完成" || po.status === "已取消" ? "此採購單目前無法再建立出貨單" : "此採購單尚未審核通過，無法建立出貨單");
+        alert(po.status === "已完成" || po.status === "已取消" || po.status === "調整待審核" ? "此採購單目前無法再建立出貨單" : "此採購單尚未審核通過，無法建立出貨單");
         document.getElementById("shipPoNo").focus();
         renderShipPoList(document.getElementById("shipPoNo").value);
         return false;
@@ -4599,7 +4947,7 @@
     }
 
     function canVoidOrder(order) {
-      if (!order || order.status === "已取消" || order.status === "待審核") return false;
+      if (!order || order.status === "已取消" || order.status === "待審核" || order.status === "調整待審核") return false;
       return getLantianStatus(order) === "WAITING";
     }
 
