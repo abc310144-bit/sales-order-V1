@@ -3178,17 +3178,22 @@
     });
 
     const channelProfiles = {
-      "實體-PW健身工廠": { region: "台灣(通路)", mode: "寄倉", phone: "0912000000", contact: "正光廊-營運部主管", email: "XXX@urmart.com", address: "台北市內湖區瑞光路358號1樓（PW健身工廠內湖店）", inWarehouse: "正光廊-營運部主管" },
-      "實體-全聯": { region: "台灣(通路)", mode: "寄倉", phone: "02-2531-2345", contact: "全聯採購窗口", email: "pxmart@example.com", address: "桃園市大園區航勤北路8號 全聯物流中心", inWarehouse: "全聯物流中心" },
-      "實體-寶雅": { region: "台灣(通路)", mode: "寄倉", phone: "02-2765-8899", contact: "寶雅商品部", email: "poya@example.com", address: "新北市樹林區佳園路二段70號 寶雅倉儲", inWarehouse: "寶雅倉儲" },
-      "實體-迪卡儂": { region: "台灣(通路)", mode: "寄倉", phone: "04-2258-0000", contact: "迪卡儂倉儲", email: "decathlon@example.com", address: "台中市西屯區台灣大道四段1018號", inWarehouse: "藍田倉" },
-      "經銷商-絢綻國際企業社": { region: "台灣(經銷)", mode: "經銷", phone: "03-392-1177", contact: "絢綻業務", email: "dealer1@example.com", address: "新北市新莊區中正路567號3樓", inWarehouse: "正光廊-營運部主管" },
-      "經銷商-學生營養股份有限公司": { region: "台灣(經銷)", mode: "經銷", phone: "07-333-2211", contact: "學生營養窗口", email: "dealer2@example.com", address: "高雄市前鎮區成功二路88號", inWarehouse: "藍田倉" },
-      "線上-轉單": { region: "台灣(通路)", mode: "轉單", phone: "02-1111-2222", contact: "線上客服", email: "online@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉" },
-      "線上-蝦皮商城": { region: "台灣(通路)", mode: "轉單", phone: "02-3333-4444", contact: "蝦皮窗口", email: "shopee@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉" },
-      "跨境- Cool Cool Trading": { region: "境外", mode: "跨境", phone: "+852-1234-5678", contact: "Cool Cool Ops", email: "coolcool@example.com", address: "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong", inWarehouse: "藍田倉" },
-      "百貨-新光三越": { region: "台灣(通路)", mode: "寄倉", phone: "02-2388-5555", contact: "新光三越專櫃", email: "skm@example.com", address: "台北市信義區松高路19號 新光三越A11專櫃", inWarehouse: "正光廊-營運部主管" },
+      "實體-PW健身工廠": { region: "台灣(通路)", mode: "寄倉", currency: "TWD", phone: "0912000000", contact: "正光廊-營運部主管", email: "XXX@urmart.com", address: "台北市內湖區瑞光路358號1樓（PW健身工廠內湖店）", inWarehouse: "正光廊-營運部主管" },
+      "實體-全聯": { region: "台灣(通路)", mode: "寄倉", currency: "TWD", phone: "02-2531-2345", contact: "全聯採購窗口", email: "pxmart@example.com", address: "桃園市大園區航勤北路8號 全聯物流中心", inWarehouse: "全聯物流中心" },
+      "實體-寶雅": { region: "台灣(通路)", mode: "寄倉", currency: "TWD", phone: "02-2765-8899", contact: "寶雅商品部", email: "poya@example.com", address: "新北市樹林區佳園路二段70號 寶雅倉儲", inWarehouse: "寶雅倉儲" },
+      "實體-迪卡儂": { region: "台灣(通路)", mode: "寄倉", currency: "TWD", phone: "04-2258-0000", contact: "迪卡儂倉儲", email: "decathlon@example.com", address: "台中市西屯區台灣大道四段1018號", inWarehouse: "藍田倉" },
+      "經銷商-絢綻國際企業社": { region: "台灣(經銷)", mode: "經銷", currency: "TWD", phone: "03-392-1177", contact: "絢綻業務", email: "dealer1@example.com", address: "新北市新莊區中正路567號3樓", inWarehouse: "正光廊-營運部主管" },
+      "經銷商-學生營養股份有限公司": { region: "台灣(經銷)", mode: "經銷", currency: "TWD", phone: "07-333-2211", contact: "學生營養窗口", email: "dealer2@example.com", address: "高雄市前鎮區成功二路88號", inWarehouse: "藍田倉" },
+      "線上-轉單": { region: "台灣(通路)", mode: "轉單", currency: "TWD", phone: "02-1111-2222", contact: "線上客服", email: "online@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉" },
+      "線上-蝦皮商城": { region: "台灣(通路)", mode: "轉單", currency: "TWD", phone: "02-3333-4444", contact: "蝦皮窗口", email: "shopee@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉" },
+      "跨境- Cool Cool Trading": { region: "境外", mode: "跨境", currency: "USD", phone: "+852-1234-5678", contact: "Cool Cool Ops", email: "coolcool@example.com", address: "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong", inWarehouse: "藍田倉" },
+      "百貨-新光三越": { region: "台灣(通路)", mode: "寄倉", currency: "TWD", phone: "02-2388-5555", contact: "新光三越專櫃", email: "skm@example.com", address: "台北市信義區松高路19號 新光三越A11專櫃", inWarehouse: "正光廊-營運部主管" },
     };
+
+    function channelCurrency(channelName, fallback) {
+      const profile = channelProfiles[channelName] || {};
+      return profile.currency || fallback || "TWD";
+    }
 
     const mockItemPool = [
       { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 24 },
@@ -3642,7 +3647,7 @@
       const dealer = isDealerPo(order);
       const bag = partyRecord(order) || {};
       const lines = pdfLinesFromOrder(order);
-      const currency = dealer ? "TWD" : "USD";
+      const currency = channelCurrency(order.channelName || bag.buyerName, dealer ? "TWD" : "USD");
       const total = lines.reduce((sum, row) => sum + (Number(row.total) || 0), 0);
       const poNo = order.poDocNo || order.orderNo || "";
       const dateText = salesDateOnly(order.createdAt || nowStamp());
@@ -3717,7 +3722,7 @@
               <td class="num">${escapeHtml(row.pcsPerCarton)}</td>
               <td class="num">${escapeHtml(row.orderPcs)}</td>
               <td class="num">${escapeHtml(pdfMoney(row.price, 2))}</td>
-              <td class="num">${escapeHtml(pdfMoney(row.total, 2))}</td>
+              <td class="num">${escapeHtml(pdfMoney(row.total, 2))}${dealer ? "" : " " + escapeHtml(currency)}</td>
             </tr>`).join("")
         : `<tr><td colspan="7" class="empty">${t.empty}</td></tr>`;
       return `<!DOCTYPE html>
@@ -3802,12 +3807,12 @@
           <th class="num">${escapeHtml(t.pcs)}</th>
           <th class="num">${escapeHtml(t.qty)}</th>
           <th class="num">${escapeHtml(t.price)}</th>
-          <th class="num">${escapeHtml(t.amount)}</th>
+          <th class="num">${escapeHtml(t.amount)}${dealer ? "" : " " + escapeHtml(currency)}</th>
         </tr>
       </thead>
       <tbody>${rowsHtml}</tbody>
     </table>
-    <div class="total">${escapeHtml(t.total)} (${escapeHtml(currency)})：${escapeHtml(pdfMoney(total, 2))}</div>
+    <div class="total">${escapeHtml(t.total)}${dealer ? "：" : "： "}${escapeHtml(pdfMoney(total, 2))}${dealer ? "" : " " + escapeHtml(currency)}</div>
     <div class="stamps">
       <div class="stamp">
         <h3>饌元股份有限公司</h3>

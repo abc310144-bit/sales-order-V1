@@ -1,0 +1,12 @@
+---
+description: 境外金額幣別綁通路基本資料，不要寫死
+alwaysApply: true
+---
+
+# 境外付款幣別
+
+境外採購單 PDF 的小計、總計幣別代號，一律讀通路基本資料 `channelProfiles[通路名稱].currency`。
+
+不要寫死 USD。新增境外通路時，在該通路基本資料補上 currency。
+
+經銷／一般通路預設 TWD。只有境外要在小計後方與總計標上幣別代號。
