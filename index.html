@@ -1914,7 +1914,7 @@
                   </select>
                 </div>
               </div>
-              <div class="form-row">
+              <div class="form-row" id="editTermsOfPaymentRow">
                 <label>付款條件</label>
                 <div class="form-ctrl"><input type="text" id="editTermsOfPayment" /></div>
               </div>
@@ -3192,7 +3192,7 @@
         vendorExt: "168",
         vendorAddress: VENDOR_ADDRESS,
         termsOfDelivery: "EXW",
-        termsOfPayment: "月結 30 天",
+        termsOfPayment: "",
         lines: channelName === "經銷商-學生營養股份有限公司" ? mockDealerLines() : [],
         poDocNo: `${prefix}-${dateMatch ? dateMatch[1] : stamp}`,
       };
@@ -3257,7 +3257,9 @@
       document.getElementById("editVendorEmail").value = ov.vendorEmail || "";
       document.getElementById("editVendorAddress").value = ov.vendorAddress || VENDOR_ADDRESS;
       document.getElementById("editTermsOfDelivery").value = ov.termsOfDelivery || "EXW";
-      document.getElementById("editTermsOfPayment").value = ov.termsOfPayment || "";
+      const dealer = isDealerPo(order);
+      document.getElementById("editTermsOfPaymentRow").classList.toggle("hidden", dealer);
+      document.getElementById("editTermsOfPayment").value = dealer ? "" : (ov.termsOfPayment || "");
       document.getElementById("editVendorExtWrap").classList.toggle("hidden", readonly);
       document.getElementById("editVendorExt").classList.toggle("hidden", readonly);
       if (readonly) {
@@ -3291,7 +3293,7 @@
       bag.vendorExt = document.getElementById("editVendorExt").value.trim();
       bag.vendorAddress = VENDOR_ADDRESS;
       bag.termsOfDelivery = document.getElementById("editTermsOfDelivery").value || "EXW";
-      bag.termsOfPayment = document.getElementById("editTermsOfPayment").value.trim();
+      bag.termsOfPayment = dealer ? "" : document.getElementById("editTermsOfPayment").value.trim();
       order.address = bag.buyerAddress;
       order.items = collectEditGoods();
     }
