@@ -3670,9 +3670,7 @@
         name: "商品名稱",
         pcs: "箱入數",
         qty: "訂購數量(pcs)",
-        carton: "訂購箱數",
-        price: "單價",
-        priceLabel: "單價(含標)",
+        price: "商品報價",
         amount: "小計",
         total: "合計",
         empty: "尚無商品明細",
@@ -3701,9 +3699,7 @@
         name: "Product Name",
         pcs: "Pcs/CTN",
         qty: "Qty (pcs)",
-        carton: "Cartons",
-        price: "Unit Price",
-        priceLabel: "Price w/ label",
+        price: "Product Quote",
         amount: "Amount",
         total: "Total",
         empty: "No line items",
@@ -3720,12 +3716,10 @@
               <td class="name">${escapeHtml(row.name)}</td>
               <td class="num">${escapeHtml(row.pcsPerCarton)}</td>
               <td class="num">${escapeHtml(row.orderPcs)}</td>
-              <td class="num">${escapeHtml(row.orderCarton)}</td>
               <td class="num">${escapeHtml(pdfMoney(row.price, 2))}</td>
-              <td class="num">${escapeHtml(row.priceLabel === "" ? "" : pdfMoney(row.priceLabel, 2))}</td>
               <td class="num">${escapeHtml(pdfMoney(row.total, 2))}</td>
             </tr>`).join("")
-        : `<tr><td colspan="9" class="empty">${t.empty}</td></tr>`;
+        : `<tr><td colspan="7" class="empty">${t.empty}</td></tr>`;
       return `<!DOCTYPE html>
 <html lang="${t.lang}">
 <head>
@@ -3807,9 +3801,7 @@
           <th>${escapeHtml(t.name)}</th>
           <th class="num">${escapeHtml(t.pcs)}</th>
           <th class="num">${escapeHtml(t.qty)}</th>
-          <th class="num">${escapeHtml(t.carton)}</th>
           <th class="num">${escapeHtml(t.price)}</th>
-          <th class="num">${escapeHtml(t.priceLabel)}</th>
           <th class="num">${escapeHtml(t.amount)}</th>
         </tr>
       </thead>
