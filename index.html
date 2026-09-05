@@ -3647,8 +3647,71 @@
       const poNo = order.poDocNo || order.orderNo || "";
       const dateText = salesDateOnly(order.createdAt || nowStamp());
       const buyerName = bag.buyerName || order.channelName || "";
-      const vendorTel = bag.vendorExt ? `${bag.vendorTel || VENDOR_TEL} Ext. ${bag.vendorExt}` : (bag.vendorTel || VENDOR_TEL);
-      const title = dealer ? "採購單 Purchase Order" : "Purchase Order";
+      const vendorTel = bag.vendorExt
+        ? `${bag.vendorTel || VENDOR_TEL}${dealer ? " 分機 " : " Ext. "}${bag.vendorExt}`
+        : (bag.vendorTel || VENDOR_TEL);
+      const t = dealer ? {
+        lang: "zh-Hant",
+        title: "採購單",
+        sub: "經銷採購單",
+        currencyLabel: "幣別",
+        poNo: "採購單單號",
+        date: "日期",
+        buyer: "買方",
+        vendor: "賣方",
+        attn: "負責人",
+        vendorAttn: "建檔人",
+        email: "信箱",
+        tel: "電話",
+        address: "地址",
+        delivery: "貿易條件",
+        itemNo: "商品品號",
+        barcode: "國際條碼",
+        name: "商品名稱",
+        pcs: "箱入數",
+        qty: "訂購數量(pcs)",
+        carton: "訂購箱數",
+        price: "單價",
+        priceLabel: "單價(含標)",
+        amount: "小計",
+        total: "合計",
+        empty: "尚無商品明細",
+        stampHint: "用印",
+        customer: "客戶",
+        close: "關閉",
+        print: "列印／儲存為 PDF",
+      } : {
+        lang: "en",
+        title: "Purchase Order",
+        sub: "Overseas Purchase Order",
+        currencyLabel: "Currency",
+        poNo: "PO No.",
+        date: "Date",
+        buyer: "Buyer",
+        vendor: "Vendor",
+        attn: "Attn",
+        vendorAttn: "Attn",
+        email: "Email",
+        tel: "Tel",
+        address: "Address",
+        delivery: "Terms of Delivery",
+        payment: "Terms of Payment",
+        itemNo: "Item No",
+        barcode: "Barcode",
+        name: "Product Name",
+        pcs: "Pcs/CTN",
+        qty: "Qty (pcs)",
+        carton: "Cartons",
+        price: "Unit Price",
+        priceLabel: "Price w/ label",
+        amount: "Amount",
+        total: "Total",
+        empty: "No line items",
+        stampHint: "Stamp",
+        customer: "Customer",
+        close: "Close",
+        print: "Print / Save as PDF",
+      };
       const rowsHtml = lines.length
         ? lines.map((row) => `
             <tr>
@@ -3662,12 +3725,12 @@
               <td class="num">${escapeHtml(row.priceLabel === "" ? "" : pdfMoney(row.priceLabel, 2))}</td>
               <td class="num">${escapeHtml(pdfMoney(row.total, 2))}</td>
             </tr>`).join("")
-        : `<tr><td colspan="9" class="empty">尚無商品明細</td></tr>`;
+        : `<tr><td colspan="9" class="empty">${t.empty}</td></tr>`;
       return `<!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="${t.lang}">
 <head>
   <meta charset="UTF-8" />
-  <title>${escapeHtml(title)} ${escapeHtml(poNo)}</title>
+  <title>${escapeHtml(t.title)} ${escapeHtml(poNo)}</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; background: #f5f5f5; color: #111; font-family: "Microsoft JhengHei", "Noto Sans TC", "PingFang TC", sans-serif; }
@@ -3704,64 +3767,64 @@
 </head>
 <body>
   <div class="toolbar">
-    <button type="button" onclick="window.close()">關閉</button>
-    <button type="button" class="primary" onclick="window.print()">列印／儲存為 PDF</button>
+    <button type="button" onclick="window.close()">${t.close}</button>
+    <button type="button" class="primary" onclick="window.print()">${t.print}</button>
   </div>
   <div class="sheet">
-    <h1>${escapeHtml(title)}</h1>
-    <div class="sub">${dealer ? "經銷採購單" : "Overseas Purchase Order"}　幣別 ${escapeHtml(currency)}</div>
+    <h1>${escapeHtml(t.title)}</h1>
+    <div class="sub">${escapeHtml(t.sub)}　${escapeHtml(t.currencyLabel)} ${escapeHtml(currency)}</div>
     <div class="meta">
-      <div>PO No.：${escapeHtml(poNo || "—")}</div>
-      <div>Date：${escapeHtml(dateText)}</div>
+      <div>${escapeHtml(t.poNo)}：${escapeHtml(poNo || "—")}</div>
+      <div>${escapeHtml(t.date)}：${escapeHtml(dateText)}</div>
     </div>
     <div class="parties">
       <div class="box">
-        <h2>Buyer</h2>
+        <h2>${escapeHtml(t.buyer)}</h2>
         <p><strong>${escapeHtml(buyerName)}</strong></p>
-        <p>Attn：${escapeHtml(bag.buyerAttn || "")}</p>
-        <p>Email：${escapeHtml(bag.buyerEmail || "")}</p>
-        <p>Tel：${escapeHtml(bag.buyerTel || "")}</p>
-        <p>Address：${escapeHtml(bag.buyerAddress || order.address || "")}</p>
+        <p>${escapeHtml(t.attn)}：${escapeHtml(bag.buyerAttn || "")}</p>
+        <p>${escapeHtml(t.email)}：${escapeHtml(bag.buyerEmail || "")}</p>
+        <p>${escapeHtml(t.tel)}：${escapeHtml(bag.buyerTel || "")}</p>
+        <p>${escapeHtml(t.address)}：${escapeHtml(bag.buyerAddress || order.address || "")}</p>
       </div>
       <div class="box">
-        <h2>Vendor</h2>
+        <h2>${escapeHtml(t.vendor)}</h2>
         <p><strong>${escapeHtml(bag.vendorName || VENDOR_COMPANY)}</strong></p>
-        <p>Attn：${escapeHtml(bag.vendorAttn || "")}</p>
-        <p>Email：${escapeHtml(bag.vendorEmail || "")}</p>
-        <p>Tel：${escapeHtml(vendorTel)}</p>
-        <p>Address：${escapeHtml(bag.vendorAddress || VENDOR_ADDRESS)}</p>
+        <p>${escapeHtml(t.vendorAttn)}：${escapeHtml(bag.vendorAttn || "")}</p>
+        <p>${escapeHtml(t.email)}：${escapeHtml(bag.vendorEmail || "")}</p>
+        <p>${escapeHtml(t.tel)}：${escapeHtml(vendorTel)}</p>
+        <p>${escapeHtml(t.address)}：${escapeHtml(bag.vendorAddress || VENDOR_ADDRESS)}</p>
       </div>
     </div>
     <div class="terms">
-      <div>Terms of Delivery：${escapeHtml(bag.termsOfDelivery || "EXW")}</div>
-      ${dealer ? "" : `<div>Terms of Payment：${escapeHtml(bag.termsOfPayment || "TT, 100% prepaid")}</div>`}
+      <div>${escapeHtml(t.delivery)}：${escapeHtml(bag.termsOfDelivery || "EXW")}</div>
+      ${dealer ? "" : `<div>${escapeHtml(t.payment)}：${escapeHtml(bag.termsOfPayment || "TT, 100% prepaid")}</div>`}
     </div>
     <table>
       <thead>
         <tr>
-          <th>Item No</th>
-          <th>Barcode</th>
-          <th>Product Name</th>
-          <th class="num">Pcs/CTN</th>
-          <th class="num">Qty (pcs)</th>
-          <th class="num">Cartons</th>
-          <th class="num">Unit Price</th>
-          <th class="num">Price w/ label</th>
-          <th class="num">Amount</th>
+          <th>${escapeHtml(t.itemNo)}</th>
+          <th>${escapeHtml(t.barcode)}</th>
+          <th>${escapeHtml(t.name)}</th>
+          <th class="num">${escapeHtml(t.pcs)}</th>
+          <th class="num">${escapeHtml(t.qty)}</th>
+          <th class="num">${escapeHtml(t.carton)}</th>
+          <th class="num">${escapeHtml(t.price)}</th>
+          <th class="num">${escapeHtml(t.priceLabel)}</th>
+          <th class="num">${escapeHtml(t.amount)}</th>
         </tr>
       </thead>
       <tbody>${rowsHtml}</tbody>
     </table>
-    <div class="total">Total (${escapeHtml(currency)})：${escapeHtml(pdfMoney(total, 2))}</div>
+    <div class="total">${escapeHtml(t.total)} (${escapeHtml(currency)})：${escapeHtml(pdfMoney(total, 2))}</div>
     <div class="stamps">
       <div class="stamp">
         <h3>饌元股份有限公司</h3>
-        <div class="hint">用印</div>
+        <div class="hint">${escapeHtml(t.stampHint)}</div>
         <div class="space"></div>
       </div>
       <div class="stamp">
-        <h3>客戶</h3>
-        <div class="hint">用印</div>
+        <h3>${escapeHtml(t.customer)}</h3>
+        <div class="hint">${escapeHtml(t.stampHint)}</div>
         <div class="space"></div>
       </div>
     </div>
