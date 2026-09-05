@@ -2098,6 +2098,7 @@
           </div>
 
           <div class="edit-footer">
+            <button type="button" class="btn" id="editExportPdf">匯出 PDF</button>
             <button type="button" class="btn" id="editSaveDraft">儲存為草稿</button>
             <button type="button" class="btn btn-primary" id="editSubmit">送出申請</button>
             <button type="button" class="btn btn-primary" id="editAdjustQty">申請調整數量</button>
@@ -3593,6 +3594,200 @@
       order.items = collectEditGoods();
     }
 
+    function pcsFromItemRemark(item) {
+      const m = String((item && item.remark) || "").match(/箱入數\s*(\d+)/);
+      return m ? Number(m[1]) : 0;
+    }
+
+    function pdfLinesFromOrder(order) {
+      const bag = partyRecord(order) || {};
+      const extra = {};
+      (bag.lines || []).forEach((line) => {
+        const key = String(line.barcode || line.itemNo || "");
+        if (key) extra[key] = line;
+      });
+      const rows = (order.items || []).map((item, index) => {
+        const line = extra[String(item.sku || "")] || extra[String(item.productCode || "")] || {};
+        const qty = Number(item.qty != null ? item.qty : line.orderPcs) || 0;
+        const pcs = Number(line.pcsPerCarton) || pcsFromItemRemark(item) || 0;
+        const meta = metaForSku(item.sku);
+        const price = Number(line.priceNoLabel != null ? line.priceNoLabel : (item.orderQuote || item.quote || meta.quote)) || 0;
+        const priceLabel = line.priceLabel != null && line.priceLabel !== "" ? Number(line.priceLabel) : "";
+        const cartons = pcs ? Math.round((qty / pcs) * 100) / 100 : (Number(line.orderCarton) || "");
+        return {
+          itemNo: line.itemNo || item.productCode || String(index + 1),
+          barcode: item.sku || line.barcode || "",
+          name: item.name || line.name || "",
+          pcsPerCarton: pcs || "",
+          orderPcs: qty,
+          orderCarton: cartons === 0 ? "" : cartons,
+          priceLabel,
+          price,
+          total: Number(line.total) || Math.round(qty * price * 100) / 100,
+        };
+      });
+      const ordered = rows.filter((row) => Number(row.orderPcs) > 0);
+      return ordered.length ? ordered : rows;
+    }
+
+    function pdfMoney(value, digits) {
+      if (value === "" || value == null || Number.isNaN(Number(value))) return "";
+      return Number(value).toLocaleString("en-US", {
+        minimumFractionDigits: digits || 0,
+        maximumFractionDigits: digits == null ? 2 : digits,
+      });
+    }
+
+    function buildPartyPoPrintHtml(order) {
+      const dealer = isDealerPo(order);
+      const bag = partyRecord(order) || {};
+      const lines = pdfLinesFromOrder(order);
+      const currency = dealer ? "TWD" : "USD";
+      const total = lines.reduce((sum, row) => sum + (Number(row.total) || 0), 0);
+      const poNo = order.poDocNo || order.orderNo || "";
+      const dateText = salesDateOnly(order.createdAt || nowStamp());
+      const buyerName = bag.buyerName || order.channelName || "";
+      const vendorTel = bag.vendorExt ? `${bag.vendorTel || VENDOR_TEL} Ext. ${bag.vendorExt}` : (bag.vendorTel || VENDOR_TEL);
+      const title = dealer ? "採購單 Purchase Order" : "Purchase Order";
+      const rowsHtml = lines.length
+        ? lines.map((row) => `
+            <tr>
+              <td>${escapeHtml(row.itemNo)}</td>
+              <td>${escapeHtml(row.barcode)}</td>
+              <td class="name">${escapeHtml(row.name)}</td>
+              <td class="num">${escapeHtml(row.pcsPerCarton)}</td>
+              <td class="num">${escapeHtml(row.orderPcs)}</td>
+              <td class="num">${escapeHtml(row.orderCarton)}</td>
+              <td class="num">${escapeHtml(pdfMoney(row.price, 2))}</td>
+              <td class="num">${escapeHtml(row.priceLabel === "" ? "" : pdfMoney(row.priceLabel, 2))}</td>
+              <td class="num">${escapeHtml(pdfMoney(row.total, 2))}</td>
+            </tr>`).join("")
+        : `<tr><td colspan="9" class="empty">尚無商品明細</td></tr>`;
+      return `<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>${escapeHtml(title)} ${escapeHtml(poNo)}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f5f5f5; color: #111; font-family: "Microsoft JhengHei", "Noto Sans TC", "PingFang TC", sans-serif; }
+    .toolbar { position: sticky; top: 0; display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #e8e8e8; }
+    .toolbar button { height: 32px; padding: 0 14px; border: 1px solid #d9d9d9; background: #fff; cursor: pointer; }
+    .toolbar .primary { background: #1677ff; border-color: #1677ff; color: #fff; }
+    .sheet { width: 210mm; min-height: 297mm; margin: 16px auto 32px; padding: 16mm 14mm; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+    h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: .04em; }
+    .sub { color: #666; font-size: 12px; margin-bottom: 14px; }
+    .meta { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 14px; font-size: 13px; }
+    .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
+    .box { border: 1px solid #111; padding: 10px 12px; min-height: 150px; }
+    .box h2 { margin: 0 0 8px; font-size: 14px; border-bottom: 1px solid #111; padding-bottom: 4px; }
+    .box p { margin: 0 0 4px; font-size: 12px; line-height: 1.55; }
+    .terms { display: flex; gap: 24px; font-size: 13px; margin-bottom: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th, td { border: 1px solid #111; padding: 4px 5px; vertical-align: top; }
+    th { background: #f3f3f3; font-weight: 600; }
+    td.name { width: 34%; }
+    td.num, th.num { text-align: right; white-space: nowrap; }
+    td.empty { text-align: center; color: #888; }
+    .total { margin-top: 8px; text-align: right; font-size: 14px; font-weight: 700; }
+    .stamps { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 28px; page-break-inside: avoid; }
+    .stamp { border: 1px dashed #333; min-height: 120px; padding: 10px 12px; }
+    .stamp h3 { margin: 0 0 8px; font-size: 14px; }
+    .stamp .hint { color: #888; font-size: 12px; }
+    .stamp .space { height: 72px; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none; }
+      .sheet { margin: 0; box-shadow: none; width: auto; min-height: auto; padding: 10mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" onclick="window.close()">關閉</button>
+    <button type="button" class="primary" onclick="window.print()">列印／儲存為 PDF</button>
+  </div>
+  <div class="sheet">
+    <h1>${escapeHtml(title)}</h1>
+    <div class="sub">${dealer ? "經銷採購單" : "Overseas Purchase Order"}　幣別 ${escapeHtml(currency)}</div>
+    <div class="meta">
+      <div>PO No.：${escapeHtml(poNo || "—")}</div>
+      <div>Date：${escapeHtml(dateText)}</div>
+    </div>
+    <div class="parties">
+      <div class="box">
+        <h2>Buyer</h2>
+        <p><strong>${escapeHtml(buyerName)}</strong></p>
+        <p>Attn：${escapeHtml(bag.buyerAttn || "")}</p>
+        <p>Email：${escapeHtml(bag.buyerEmail || "")}</p>
+        <p>Tel：${escapeHtml(bag.buyerTel || "")}</p>
+        <p>Address：${escapeHtml(bag.buyerAddress || order.address || "")}</p>
+      </div>
+      <div class="box">
+        <h2>Vendor</h2>
+        <p><strong>${escapeHtml(bag.vendorName || VENDOR_COMPANY)}</strong></p>
+        <p>Attn：${escapeHtml(bag.vendorAttn || "")}</p>
+        <p>Email：${escapeHtml(bag.vendorEmail || "")}</p>
+        <p>Tel：${escapeHtml(vendorTel)}</p>
+        <p>Address：${escapeHtml(bag.vendorAddress || VENDOR_ADDRESS)}</p>
+      </div>
+    </div>
+    <div class="terms">
+      <div>Terms of Delivery：${escapeHtml(bag.termsOfDelivery || "EXW")}</div>
+      ${dealer ? "" : `<div>Terms of Payment：${escapeHtml(bag.termsOfPayment || "TT, 100% prepaid")}</div>`}
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Item No</th>
+          <th>Barcode</th>
+          <th>Product Name</th>
+          <th class="num">Pcs/CTN</th>
+          <th class="num">Qty (pcs)</th>
+          <th class="num">Cartons</th>
+          <th class="num">Unit Price</th>
+          <th class="num">Price w/ label</th>
+          <th class="num">Amount</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <div class="total">Total (${escapeHtml(currency)})：${escapeHtml(pdfMoney(total, 2))}</div>
+    <div class="stamps">
+      <div class="stamp">
+        <h3>饌元股份有限公司</h3>
+        <div class="hint">用印</div>
+        <div class="space"></div>
+      </div>
+      <div class="stamp">
+        <h3>客戶</h3>
+        <div class="hint">用印</div>
+        <div class="space"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+    }
+
+    function exportPartyPoPdf() {
+      const order = getWorkspaceOrder();
+      if (!order || !(isOverseasPo(order) || isDealerPo(order))) return;
+      if (orderFormMode !== "view") applyOverseasForm(order);
+      else if (isOverseasPo(order)) ensureOverseasPo(order);
+      else ensureDealerPo(order);
+      const win = window.open("", "_blank");
+      if (!win) {
+        alert("瀏覽器已封鎖彈出視窗，請允許後再匯出 PDF");
+        return;
+      }
+      const html = buildPartyPoPrintHtml(order);
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      win.location.replace(url);
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+
     function extraPo(cfg) {
       const profile = channelProfiles[cfg.channelName] || {};
       return {
@@ -4447,6 +4642,7 @@
       document.getElementById("editSaveDraft").classList.toggle("hidden", view || !draftLike);
       document.getElementById("editSubmit").classList.toggle("hidden", view || !draftLike || currentRole !== "建檔人");
       document.getElementById("editAdjustQty").classList.toggle("hidden", !canAdjust);
+      document.getElementById("editExportPdf").classList.toggle("hidden", !(isOverseasPo(order) || isDealerPo(order)));
       document.getElementById("editApprove").classList.toggle("hidden", !(pending && currentRole === "主管"));
       document.getElementById("editReject").classList.toggle("hidden", !(pending && currentRole === "主管"));
       document.getElementById("editSave").classList.toggle("hidden", view || draftLike || pending || !approvedOps);
@@ -4559,6 +4755,7 @@
       const order = getWorkspaceOrder();
       if (order) openAdjustQtyModal(order);
     });
+    document.getElementById("editExportPdf").addEventListener("click", exportPartyPoPdf);
     document.getElementById("adjustQtyClose").addEventListener("click", closeAdjustQtyModal);
     document.getElementById("adjustQtyCancel").addEventListener("click", closeAdjustQtyModal);
     document.getElementById("adjustQtySubmit").addEventListener("click", submitQtyAdjust);
