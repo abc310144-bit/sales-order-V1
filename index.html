@@ -3512,14 +3512,14 @@
         tel: "電話",
         address: "地址",
         delivery: "貿易條件",
-        itemNo: "商品品號",
-        barcode: "國際條碼",
+        sku: "SKU",
         name: "商品名稱",
         pcs: "箱入數",
         qty: "訂購數量(pcs)",
         carton: "訂購箱數",
-        price: "商品報價",
-        amount: "小計",
+        priceNoLabel: "單價（不含標）",
+        priceLabel: "單價（含標）",
+        amount: "合計",
         remark: "備註",
         total: "合計",
         empty: "尚無商品明細",
@@ -3543,14 +3543,11 @@
         address: "Address",
         delivery: "Terms of Delivery",
         payment: "Terms of Payment",
-        itemNo: "Item No",
-        barcode: "Barcode",
+        sku: "SKU",
         name: "Product Name",
         pcs: "Pcs/CTN",
-        sku: "SKU",
         qty: "Order Pcs",
         carton: "Order Carton",
-        price: "Product Quote",
         priceNoLabel: "Price " + currency + " (No Label)",
         priceLabel: "Price " + currency + " (Label)",
         amount: "Total",
@@ -3562,20 +3559,9 @@
         close: "Close",
         print: "Print / Save as PDF",
       };
-      const colCount = dealer ? 9 : 9;
+      const amountSuffix = dealer ? "" : " " + currency;
       const rowsHtml = lines.length
-        ? lines.map((row) => dealer ? `
-            <tr>
-              <td>${escapeHtml(row.itemNo)}</td>
-              <td>${escapeHtml(row.barcode)}</td>
-              <td class="name">${escapeHtml(row.name)}</td>
-              <td class="num">${escapeHtml(row.pcsPerCarton)}</td>
-              <td class="num">${escapeHtml(row.orderPcs)}</td>
-              <td class="num">${escapeHtml(row.orderCarton)}</td>
-              <td class="num">${escapeHtml(pdfMoney(row.price, 2))}</td>
-              <td class="num">${escapeHtml(pdfMoney(row.total, 2))}</td>
-              <td class="remark">${escapeHtml(row.remark)}</td>
-            </tr>` : `
+        ? lines.map((row) => `
             <tr>
               <td>${escapeHtml(row.sku)}</td>
               <td class="name">${escapeHtml(row.name)}</td>
@@ -3584,10 +3570,10 @@
               <td class="num">${escapeHtml(row.orderCarton)}</td>
               <td class="num">${escapeHtml(pdfMoney(row.price, 2))}</td>
               <td class="num">${escapeHtml(pdfMoney(row.priceLabel, 2))}</td>
-              <td class="num">${escapeHtml(pdfMoney(row.total, 2))} ${escapeHtml(currency)}</td>
+              <td class="num">${escapeHtml(pdfMoney(row.total, 2))}${amountSuffix}</td>
               <td class="remark">${escapeHtml(row.remark)}</td>
             </tr>`).join("")
-        : `<tr><td colspan="${colCount}" class="empty">${t.empty}</td></tr>`;
+        : `<tr><td colspan="9" class="empty">${t.empty}</td></tr>`;
       return `<!DOCTYPE html>
 <html lang="${t.lang}">
 <head>
@@ -3665,17 +3651,6 @@
     <table>
       <thead>
         <tr>
-          ${dealer ? `
-          <th>${escapeHtml(t.itemNo)}</th>
-          <th>${escapeHtml(t.barcode)}</th>
-          <th>${escapeHtml(t.name)}</th>
-          <th class="num">${escapeHtml(t.pcs)}</th>
-          <th class="num">${escapeHtml(t.qty)}</th>
-          <th class="num">${escapeHtml(t.carton)}</th>
-          <th class="num">${escapeHtml(t.price)}</th>
-          <th class="num">${escapeHtml(t.amount)}</th>
-          <th>${escapeHtml(t.remark)}</th>
-          ` : `
           <th>${escapeHtml(t.sku)}</th>
           <th>${escapeHtml(t.name)}</th>
           <th class="num">${escapeHtml(t.pcs)}</th>
@@ -3683,14 +3658,13 @@
           <th class="num">${escapeHtml(t.carton)}</th>
           <th class="num">${escapeHtml(t.priceNoLabel)}</th>
           <th class="num">${escapeHtml(t.priceLabel)}</th>
-          <th class="num">${escapeHtml(t.amount)} ${escapeHtml(currency)}</th>
+          <th class="num">${escapeHtml(t.amount)}${amountSuffix}</th>
           <th>${escapeHtml(t.remark)}</th>
-          `}
         </tr>
       </thead>
       <tbody>${rowsHtml}</tbody>
     </table>
-    <div class="total">${escapeHtml(t.total)}${dealer ? "：" : "： "}${escapeHtml(pdfMoney(total, 2))}${dealer ? "" : " " + escapeHtml(currency)}</div>
+    <div class="total">${escapeHtml(t.total)}${dealer ? "：" : "： "}${escapeHtml(pdfMoney(total, 2))}${amountSuffix}</div>
     <div class="stamps">
       <div class="stamp">
         <h3>饌元股份有限公司</h3>
