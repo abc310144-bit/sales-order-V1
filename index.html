@@ -1737,6 +1737,7 @@
                       <th><span class="th-inner">商品報價(TWD)<span class="th-sort">▲<br />▼</span></span></th>
                       <th><span class="th-inner">訂單商品報價<span class="th-sort">▲<br />▼</span></span></th>
                       <th>總數量(pcs)</th>
+                      <th class="col-remark">備註</th>
                       <th>操作</th>
                     </tr>
                   </thead>
@@ -3238,13 +3239,13 @@
     }
 
     const mockItemPool = [
-      { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 24 },
-      { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12 },
-      { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18 },
-      { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 36 },
-      { sku: "UM-4412", name: "電解質補給粉", expiryAccept: "2026-09-30", unit: "盒", qty: 20 },
-      { sku: "PX-8801", name: "優質高蛋白棒", expiryAccept: "2026-11-30", unit: "盒", qty: 48 },
-      { sku: "UM-5520", name: "植物蛋白飲 原味", expiryAccept: "2027-02-28", unit: "罐", qty: 16 },
+      { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 24, pcsPerCarton: 24 },
+      { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12, pcsPerCarton: 12 },
+      { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18, pcsPerCarton: 18 },
+      { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 36, pcsPerCarton: 36 },
+      { sku: "UM-4412", name: "電解質補給粉", expiryAccept: "2026-09-30", unit: "盒", qty: 20, pcsPerCarton: 20 },
+      { sku: "PX-8801", name: "優質高蛋白棒", expiryAccept: "2026-11-30", unit: "盒", qty: 48, pcsPerCarton: 24 },
+      { sku: "UM-5520", name: "植物蛋白飲 原味", expiryAccept: "2027-02-28", unit: "罐", qty: 16, pcsPerCarton: 16 },
     ];
 
     function mockItemsFor(channelName) {
@@ -3325,10 +3326,10 @@
 
     function mockOverseasLines() {
       return [
-        { itemNo: "13", barcode: "4713025602949", name: "TRYALL Impact Protein Chips - Crispy Seaweed (30g/pack)", pcsPerCarton: 24, orderPcs: 192, orderCarton: 8, total: 153.6, priceLabel: "", priceNoLabel: 0.8 },
-        { itemNo: "14", barcode: "4713025602963", name: "TRYALL Impact Protein Chips - French Onion (30g/pack)", pcsPerCarton: 24, orderPcs: 96, orderCarton: 4, total: 76.8, priceLabel: "", priceNoLabel: 0.8 },
-        { itemNo: "15", barcode: "4713025602956", name: "TRYALL Impact Protein Chips - Margherita (30g/pack)", pcsPerCarton: 24, orderPcs: 96, orderCarton: 4, total: 76.8, priceLabel: "", priceNoLabel: 0.8 },
-        { itemNo: "16", barcode: "4713025603250", name: "TRYALL Impact Protein Chips - Cheese (30g/pack)", pcsPerCarton: 24, orderPcs: 96, orderCarton: 4, total: 76.8, priceLabel: "", priceNoLabel: 0.8 },
+        { itemNo: "13", barcode: "4713025602949", name: "TRYALL Impact Protein Chips - Crispy Seaweed (30g/pack)", pcsPerCarton: 24, orderPcs: 192, orderCarton: 8, total: 153.6, priceLabel: 0.95, priceNoLabel: 0.8 },
+        { itemNo: "14", barcode: "4713025602963", name: "TRYALL Impact Protein Chips - French Onion (30g/pack)", pcsPerCarton: 24, orderPcs: 96, orderCarton: 4, total: 76.8, priceLabel: 0.95, priceNoLabel: 0.8 },
+        { itemNo: "15", barcode: "4713025602956", name: "TRYALL Impact Protein Chips - Margherita (30g/pack)", pcsPerCarton: 24, orderPcs: 96, orderCarton: 4, total: 76.8, priceLabel: 0.95, priceNoLabel: 0.8 },
+        { itemNo: "16", barcode: "4713025603250", name: "TRYALL Impact Protein Chips - Cheese (30g/pack)", pcsPerCarton: 24, orderPcs: 96, orderCarton: 4, total: 76.8, priceLabel: 0.95, priceNoLabel: 0.8 },
         { itemNo: "14", barcode: "4713025604707", name: "TRYALL Essential Protein Shake - Oolong (45g/pack)", pcsPerCarton: 250, orderPcs: 1000, orderCarton: 4, total: 1250, priceLabel: 1.52, priceNoLabel: 1.25 },
         { itemNo: "15", barcode: "4713025604714", name: "TRYALL Essential Protein Shake - Boba Milk Tea (45g/pack)", pcsPerCarton: 250, orderPcs: 1000, orderCarton: 4, total: 1250, priceLabel: 1.52, priceNoLabel: 1.25 },
         { itemNo: "1", barcode: "MSGWPC1KG", name: "TRYALL Impact Whey Protein Concentrate - Unflavored (1000g/pack)", pcsPerCarton: 12, orderPcs: 0, orderCarton: 0, total: 0, priceLabel: 18, priceNoLabel: 18.16 },
@@ -3457,7 +3458,8 @@
         name: line.name || "",
         productCode: line.barcode ? ("SET10-" + line.barcode) : "",
         warehouse: "良品倉",
-        remark: [line.cat, line.pcsPerCarton ? ("箱入數 " + line.pcsPerCarton) : ""].filter(Boolean).join("／"),
+        remark: line.cat || "",
+        pcsPerCarton: Number(line.pcsPerCarton) || 0,
         cost: line.quote ?? "0",
         quote: line.quote ?? "0",
         orderQuote: line.quote ?? "0",
@@ -3476,8 +3478,9 @@
         name: line.name || "",
         productCode: line.barcode ? `SET10-${line.barcode}` : "",
         warehouse: "良品倉",
-        remark: line.pcsPerCarton ? `箱入數 ${line.pcsPerCarton}` : "",
-        quote: line.priceLabel || line.priceNoLabel || "0",
+        remark: "",
+        pcsPerCarton: Number(line.pcsPerCarton) || 0,
+        quote: line.priceLabel != null && line.priceLabel !== "" ? String(line.priceLabel) : String(line.priceNoLabel || "0"),
         orderQuote: line.priceNoLabel ?? "0",
         qty: Number(line.orderPcs) || 0,
       }));
@@ -3646,7 +3649,71 @@
       return m ? Number(m[1]) : 0;
     }
 
+    function isSystemPcsRemark(text) {
+      return /^\s*箱入數\s*\d+\s*$/.test(String(text || ""));
+    }
+
+    function userFacingRemark(text) {
+      let s = String(text || "").trim();
+      if (!s) return "";
+      s = s.replace(/[／/]\s*箱入數\s*\d+\s*$/g, "").replace(/^\s*箱入數\s*\d+\s*[／/]\s*/g, "").trim();
+      return isSystemPcsRemark(s) ? "" : s;
+    }
+
+    function catalogLineBySku(sku) {
+      const key = String(sku || "");
+      if (!key) return null;
+      return mockOverseasLines().find((line) => String(line.barcode) === key)
+        || mockDealerLines().find((line) => String(line.barcode) === key)
+        || mockItemPool.find((item) => item.sku === key)
+        || null;
+    }
+
+    function pcsPerCartonOf(item, extraLine) {
+      const n = Number((item && item.pcsPerCarton) || (extraLine && extraLine.pcsPerCarton) || pcsFromItemRemark(item)) || 0;
+      if (n) return n;
+      const cat = catalogLineBySku(item && item.sku);
+      return Number(cat && cat.pcsPerCarton) || 0;
+    }
+
+    function priceLabelOf(item, extraLine) {
+      if (item && item.quote != null && item.quote !== "") return Number(item.quote);
+      if (extraLine && extraLine.priceLabel != null && extraLine.priceLabel !== "") return Number(extraLine.priceLabel);
+      const cat = catalogLineBySku(item && item.sku);
+      if (cat && cat.priceLabel != null && cat.priceLabel !== "") return Number(cat.priceLabel);
+      if (cat && cat.quote != null && cat.quote !== "") return Number(cat.quote);
+      return Number((metaForSku(item && item.sku) || {}).quote) || "";
+    }
+
+    function remarksForPdfItem(order, item) {
+      const parts = [];
+      const poRemark = userFacingRemark(item && item.remark);
+      if (poRemark) parts.push(poRemark);
+      validShipsOfPo((order && order.orderNo) || "").forEach((ship) => {
+        (ship.items || []).forEach((line) => {
+          if (itemKey(line) !== itemKey(item) && String(line.sku || "") !== String((item && item.sku) || "")) return;
+          const note = userFacingRemark(line.remark);
+          if (note && !parts.includes(note)) parts.push(note);
+        });
+      });
+      return parts.join("；");
+    }
+
+    function hydratePoItemCatalogFields(order) {
+      if (!order || !Array.isArray(order.items)) return;
+      order.items.forEach((item) => {
+        item.pcsPerCarton = pcsPerCartonOf(item);
+        if (item.remark) item.remark = userFacingRemark(item.remark);
+        if (!isOverseasPo(order)) return;
+        const cat = catalogLineBySku(item.sku);
+        const catalogLabel = cat && cat.priceLabel != null && cat.priceLabel !== "" ? Number(cat.priceLabel) : "";
+        if (catalogLabel === "") return;
+        if (item.quote == null || item.quote === "") item.quote = String(catalogLabel);
+      });
+    }
+
     function pdfLinesFromOrder(order) {
+      hydratePoItemCatalogFields(order);
       const bag = partyRecord(order) || {};
       const extra = {};
       (bag.lines || []).forEach((line) => {
@@ -3656,12 +3723,13 @@
       const rows = (order.items || []).map((item, index) => {
         const line = extra[String(item.sku || "")] || extra[String(item.productCode || "")] || {};
         const qty = Number(item.qty != null ? item.qty : line.orderPcs) || 0;
-        const pcs = Number(line.pcsPerCarton) || pcsFromItemRemark(item) || 0;
+        const pcs = pcsPerCartonOf(item, line);
         const meta = metaForSku(item.sku);
         const price = Number(line.priceNoLabel != null ? line.priceNoLabel : (item.orderQuote || item.quote || meta.quote)) || 0;
-        const priceLabel = line.priceLabel != null && line.priceLabel !== "" ? Number(line.priceLabel) : "";
-        const cartons = pcs ? Math.round((qty / pcs) * 100) / 100 : (Number(line.orderCarton) || "");
+        const priceLabel = priceLabelOf(item, line);
+        const cartons = pcs ? Math.round((qty / pcs) * 100) / 100 : "";
         return {
+          sku: item.sku || line.barcode || "",
           itemNo: line.itemNo || item.productCode || String(index + 1),
           barcode: item.sku || line.barcode || "",
           name: item.name || line.name || "",
@@ -3670,7 +3738,8 @@
           orderCarton: cartons === 0 ? "" : cartons,
           priceLabel,
           price,
-          total: Number(line.total) || Math.round(qty * price * 100) / 100,
+          total: Math.round(qty * price * 100) / 100,
+          remark: remarksForPdfItem(order, item),
         };
       });
       const ordered = rows.filter((row) => Number(row.orderPcs) > 0);
@@ -3717,8 +3786,10 @@
         name: "商品名稱",
         pcs: "箱入數",
         qty: "訂購數量(pcs)",
+        carton: "訂購箱數",
         price: "商品報價",
         amount: "小計",
+        remark: "備註",
         total: "合計",
         empty: "尚無商品明細",
         stampHint: "用印",
@@ -3745,9 +3816,14 @@
         barcode: "Barcode",
         name: "Product Name",
         pcs: "Pcs/CTN",
-        qty: "Qty (pcs)",
+        sku: "SKU",
+        qty: "Order Pcs",
+        carton: "Order Carton",
         price: "Product Quote",
-        amount: "Amount",
+        priceNoLabel: "Price " + currency + " (No Label)",
+        priceLabel: "Price " + currency + " (Label)",
+        amount: "Total",
+        remark: "Remark",
         total: "Total",
         empty: "No line items",
         stampHint: "Stamp",
@@ -3755,18 +3831,32 @@
         close: "Close",
         print: "Print / Save as PDF",
       };
+      const colCount = dealer ? 9 : 9;
       const rowsHtml = lines.length
-        ? lines.map((row) => `
+        ? lines.map((row) => dealer ? `
             <tr>
               <td>${escapeHtml(row.itemNo)}</td>
               <td>${escapeHtml(row.barcode)}</td>
               <td class="name">${escapeHtml(row.name)}</td>
               <td class="num">${escapeHtml(row.pcsPerCarton)}</td>
               <td class="num">${escapeHtml(row.orderPcs)}</td>
+              <td class="num">${escapeHtml(row.orderCarton)}</td>
               <td class="num">${escapeHtml(pdfMoney(row.price, 2))}</td>
-              <td class="num">${escapeHtml(pdfMoney(row.total, 2))}${dealer ? "" : " " + escapeHtml(currency)}</td>
+              <td class="num">${escapeHtml(pdfMoney(row.total, 2))}</td>
+              <td class="remark">${escapeHtml(row.remark)}</td>
+            </tr>` : `
+            <tr>
+              <td>${escapeHtml(row.sku)}</td>
+              <td class="name">${escapeHtml(row.name)}</td>
+              <td class="num">${escapeHtml(row.pcsPerCarton)}</td>
+              <td class="num">${escapeHtml(row.orderPcs)}</td>
+              <td class="num">${escapeHtml(row.orderCarton)}</td>
+              <td class="num">${escapeHtml(pdfMoney(row.price, 2))}</td>
+              <td class="num">${escapeHtml(pdfMoney(row.priceLabel, 2))}</td>
+              <td class="num">${escapeHtml(pdfMoney(row.total, 2))} ${escapeHtml(currency)}</td>
+              <td class="remark">${escapeHtml(row.remark)}</td>
             </tr>`).join("")
-        : `<tr><td colspan="7" class="empty">${t.empty}</td></tr>`;
+        : `<tr><td colspan="${colCount}" class="empty">${t.empty}</td></tr>`;
       return `<!DOCTYPE html>
 <html lang="${t.lang}">
 <head>
@@ -3787,11 +3877,12 @@
     .box h2 { margin: 0 0 8px; font-size: 14px; border-bottom: 1px solid #111; padding-bottom: 4px; }
     .box p { margin: 0 0 4px; font-size: 12px; line-height: 1.55; }
     .terms { display: flex; gap: 24px; font-size: 13px; margin-bottom: 12px; }
-    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    table { width: 100%; border-collapse: collapse; font-size: 10px; }
     th, td { border: 1px solid #111; padding: 4px 5px; vertical-align: top; }
     th { background: #f3f3f3; font-weight: 600; }
-    td.name { width: 34%; }
+    td.name { width: 28%; }
     td.num, th.num { text-align: right; white-space: nowrap; }
+    td.remark { width: 12%; word-break: break-word; }
     td.empty { text-align: center; color: #888; }
     .total { margin-top: 8px; text-align: right; font-size: 14px; font-weight: 700; }
     .stamps { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 28px; page-break-inside: avoid; }
@@ -3843,13 +3934,27 @@
     <table>
       <thead>
         <tr>
+          ${dealer ? `
           <th>${escapeHtml(t.itemNo)}</th>
           <th>${escapeHtml(t.barcode)}</th>
           <th>${escapeHtml(t.name)}</th>
           <th class="num">${escapeHtml(t.pcs)}</th>
           <th class="num">${escapeHtml(t.qty)}</th>
+          <th class="num">${escapeHtml(t.carton)}</th>
           <th class="num">${escapeHtml(t.price)}</th>
-          <th class="num">${escapeHtml(t.amount)}${dealer ? "" : " " + escapeHtml(currency)}</th>
+          <th class="num">${escapeHtml(t.amount)}</th>
+          <th>${escapeHtml(t.remark)}</th>
+          ` : `
+          <th>${escapeHtml(t.sku)}</th>
+          <th>${escapeHtml(t.name)}</th>
+          <th class="num">${escapeHtml(t.pcs)}</th>
+          <th class="num">${escapeHtml(t.qty)}</th>
+          <th class="num">${escapeHtml(t.carton)}</th>
+          <th class="num">${escapeHtml(t.priceNoLabel)}</th>
+          <th class="num">${escapeHtml(t.priceLabel)}</th>
+          <th class="num">${escapeHtml(t.amount)} ${escapeHtml(currency)}</th>
+          <th>${escapeHtml(t.remark)}</th>
+          `}
         </tr>
       </thead>
       <tbody>${rowsHtml}</tbody>
@@ -3909,7 +4014,10 @@
         address: profile.address || "",
         arriveDate: cfg.arriveDate || addDaysToStamp(cfg.createdAt, 2),
         shipByTime: cfg.shipByTime || addDaysToStamp(cfg.createdAt, 1, true),
-        items: mockItemsFor(cfg.channelName),
+        items: channelSupplyItems(
+          cfg.channelName,
+          cfg.channelType === "境外通路" ? "境外通路" : cfg.channelType === "台灣本地經銷" ? "經銷" : "一般通路"
+        ),
       };
     }
 
@@ -4013,6 +4121,7 @@
           name: item.name || "",
           productCode: item.productCode || "",
           qty: Math.max(0, Math.floor((Number(item.qty) || 0) * factor)),
+          remark: item.remark || "",
         }));
       });
     }
@@ -4055,6 +4164,9 @@
       };
     }
 
+    salesOrders.forEach(hydratePoItemCatalogFields);
+    persistDemoData();
+
     function batchesFor(type) {
       return type === "near" ? shipBatches.near : shipBatches.regular;
     }
@@ -4074,6 +4186,7 @@
         quote: meta.quote,
         orderQuote: "0",
         qty: Number(item.qty) || 0,
+        remark: item.remark || "",
       };
     }
 
@@ -4091,7 +4204,7 @@
       if (!shipLineItems.length) {
         const po = getSelectedShipPo();
         const msg = po ? "此採購單尚無商品" : "請先選擇採購單編號";
-        body.innerHTML = `<tr class="empty-row"><td colspan="12">${msg}</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="13">${msg}</td></tr>`;
         updateShipQtyTotal();
         return;
       }
@@ -4119,6 +4232,7 @@
           <td class="col-quote">${escapeHtml(row.quote)}</td>
           <td class="col-order-quote"><input class="input-warn" type="number" min="0" step="0.01" data-field="orderQuote" value="${escapeHtml(row.orderQuote)}" /></td>
           <td class="col-qty"><input type="number" min="0" data-field="qty" value="${escapeHtml(row.qty)}" /></td>
+          <td class="col-remark"><input data-field="remark" value="${escapeHtml(row.remark || "")}" /></td>
           <td class="ops"><a data-del="1">刪除</a></td>
         </tr>`;
       }).join("");
@@ -4206,6 +4320,7 @@
         orderQuote: src.orderQuote ?? "0",
         stock: src.stock ?? 0,
         remark: src.remark || "",
+        pcsPerCarton: Number(src.pcsPerCarton) || Number((catalogLineBySku(src.sku) || {}).pcsPerCarton) || pcsFromItemRemark(src) || 0,
         qty: Number(src.qty) || 0,
       };
     }
@@ -4279,6 +4394,7 @@
           cost: meta.cost,
           quote: meta.quote,
           stock: item.stock ?? 0,
+          pcsPerCarton: Number(item.pcsPerCarton) || 0,
         };
       });
       const fromOverseas = mockOverseasLines().map((line) => ({
@@ -4286,9 +4402,11 @@
         name: line.name || "",
         productCode: line.barcode ? `SET10-${line.barcode}` : "",
         cost: String(line.priceNoLabel ?? "0"),
-        quote: String(line.priceLabel || line.priceNoLabel || "0"),
+        quote: String(line.priceLabel != null && line.priceLabel !== "" ? line.priceLabel : (line.priceNoLabel || "0")),
+        orderQuote: String(line.priceNoLabel ?? "0"),
         qty: 0,
         stock: 0,
+        pcsPerCarton: Number(line.pcsPerCarton) || 0,
       }));
       const fromDealer = mockDealerLines().map((line) => ({
         sku: String(line.barcode || ""),
@@ -4298,6 +4416,7 @@
         quote: String(line.quote ?? "0"),
         qty: 0,
         stock: 0,
+        pcsPerCarton: Number(line.pcsPerCarton) || 0,
       }));
       return fromPool.concat(fromOverseas, fromDealer);
     }
