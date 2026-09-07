@@ -9,4 +9,8 @@ alwaysApply: true
 
 不要寫死 USD。新增境外通路時，在該通路基本資料補上 currency。
 
+境外通路幣別：
+- **晨曦公司**：TWD
+- **其他境外通路**：USD（預設，含跨境- Cool Cool Trading）
+
 經銷／一般通路預設 TWD。只有境外要在小計後方與總計標上幣別代號。
