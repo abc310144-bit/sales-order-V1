@@ -2524,6 +2524,12 @@
       return !!order && ["未開立出貨單", "待出貨", "部分送達"].includes(order.status);
     }
 
+    function canExportPoPdf(order) {
+      return !!order
+        && (isOverseasPo(order) || isDealerPo(order))
+        && ["未開立出貨單", "待出貨", "部分送達", "已完成"].includes(order.status);
+    }
+
     function shipsOfPo(orderNo) {
       return rows.filter((row) => row.salesOrderNo === orderNo);
     }
@@ -3832,7 +3838,7 @@
 
     function exportPartyPoPdf() {
       const order = getWorkspaceOrder();
-      if (!order || !(isOverseasPo(order) || isDealerPo(order))) return;
+      if (!canExportPoPdf(order)) return;
       if (orderFormMode !== "view") applyOverseasForm(order);
       else if (isOverseasPo(order)) ensureOverseasPo(order);
       else ensureDealerPo(order);
@@ -4702,7 +4708,7 @@
       document.getElementById("editSaveDraft").classList.toggle("hidden", view || !draftLike);
       document.getElementById("editSubmit").classList.toggle("hidden", view || !draftLike || currentRole !== "建檔人");
       document.getElementById("editAdjustQty").classList.toggle("hidden", !canAdjust);
-      document.getElementById("editExportPdf").classList.toggle("hidden", !(isOverseasPo(order) || isDealerPo(order)));
+      document.getElementById("editExportPdf").classList.toggle("hidden", !canExportPoPdf(order));
       document.getElementById("editApprove").classList.toggle("hidden", !(pending && currentRole === "主管"));
       document.getElementById("editReject").classList.toggle("hidden", !(pending && currentRole === "主管"));
       document.getElementById("editSave").classList.toggle("hidden", view || draftLike || pending || !approvedOps);
