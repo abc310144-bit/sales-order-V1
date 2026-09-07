@@ -723,7 +723,7 @@
       white-space: nowrap;
       border: 0;
     }
-    .item-dialog-card { width: 520px; max-width: calc(100vw - 32px); }
+    .item-dialog-card { width: 560px; max-width: calc(100vw - 32px); }
     .item-dialog-card .modal-head,
     .upload-dialog-card .modal-head {
       border-bottom: 0;
@@ -735,11 +735,41 @@
     .item-dialog-card .form-row {
       grid-template-columns: 96px minmax(0, 1fr);
       margin-bottom: 0;
-      align-items: center;
+      align-items: start;
     }
-    .item-dialog-card .form-row > label { padding-top: 0; }
+    .item-dialog-card .form-row > label { padding-top: 6px; }
     .item-dialog-card .form-ctrl input { max-width: 100%; }
     .item-dialog-card .modal-foot { padding: 10px 16px 16px; }
+    .add-item-hint {
+      margin: 6px 0 0;
+      color: var(--text-3);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .add-item-hits {
+      margin-top: 8px;
+      max-height: 220px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      background: #fff;
+    }
+    .add-item-hit {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 13px;
+    }
+    .add-item-hit:last-child { border-bottom: 0; }
+    .add-item-hit .hit-code { color: var(--text); }
+    .add-item-hit .hit-name { color: var(--text-2); font-size: 12px; }
+    .add-item-hits-empty {
+      padding: 10px;
+      color: var(--text-3);
+      font-size: 13px;
+    }
     .upload-dialog-card { width: 480px; max-width: calc(100vw - 32px); }
     .upload-dialog-card .modal-body { padding: 0 24px 8px; }
     .upload-dialog-card .modal-foot {
@@ -2260,7 +2290,9 @@
         <div class="form-row">
           <label class="required" for="addPoItemCode">商品品號</label>
           <div class="form-ctrl">
-            <input type="text" id="addPoItemCode" autocomplete="off" />
+            <input type="text" id="addPoItemCode" autocomplete="off" placeholder="支援模糊查詢，多個以 , 分隔" />
+            <p class="add-item-hint">可一次輸入多個條件，用逗號隔開，例如 1001,3305</p>
+            <div id="addPoItemHits" class="add-item-hits hidden"></div>
           </div>
         </div>
       </div>
@@ -4292,9 +4324,84 @@
       )) || null;
     }
 
+    function parsePoItemQueries(value) {
+      return [...new Set(String(value || "").split(/[,，]/).map((part) => normalizeSku(part).toLowerCase()).filter(Boolean))];
+    }
+
+    function catalogItemKey(item) {
+      return (normalizeSku(item && item.sku) || "").toLowerCase() + "|" + (normalizeSku(item && item.productCode) || "").toLowerCase();
+    }
+
+    function uniqueCatalogItems() {
+      const seen = new Set();
+      const list = [];
+      allCatalogItems().forEach((item) => {
+        const key = catalogItemKey(item);
+        if (!key || key === "|" || seen.has(key)) return;
+        seen.add(key);
+        list.push(item);
+      });
+      return list;
+    }
+
+    function catalogItemFuzzyMatch(item, q) {
+      if (!q) return false;
+      return catalogCodesOf(item).some((code) => normalizeSku(code).toLowerCase().includes(q));
+    }
+
+    function findCatalogItemsFuzzy(input) {
+      const queries = parsePoItemQueries(input);
+      if (!queries.length) return { queries, items: [], missed: [] };
+      const catalog = uniqueCatalogItems();
+      const matched = new Set();
+      const items = [];
+      const missed = [];
+      queries.forEach((q) => {
+        const hits = catalog.filter((item) => catalogItemFuzzyMatch(item, q));
+        if (!hits.length) missed.push(q);
+        hits.forEach((item) => {
+          const key = catalogItemKey(item);
+          if (matched.has(key)) return;
+          matched.add(key);
+          items.push(item);
+        });
+      });
+      return { queries, items, missed };
+    }
+
+    function poHasCatalogItem(item) {
+      const key = catalogItemKey(item);
+      return poLineItems.some((row) => catalogItemKey(row) === key);
+    }
+
+    function renderAddPoItemHits() {
+      const wrap = document.getElementById("addPoItemHits");
+      const raw = document.getElementById("addPoItemCode").value;
+      if (!wrap) return;
+      if (!raw.trim()) {
+        wrap.classList.add("hidden");
+        wrap.innerHTML = "";
+        return;
+      }
+      const { items, missed } = findCatalogItemsFuzzy(raw);
+      wrap.classList.remove("hidden");
+      if (!items.length) {
+        wrap.innerHTML = `<div class="add-item-hits-empty">找不到符合的商品品號${missed.length ? "：" + escapeHtml(missed.join("、")) : ""}</div>`;
+        return;
+      }
+      const extra = missed.length ? `<div class="add-item-hits-empty">找不到：${escapeHtml(missed.join("、"))}</div>` : "";
+      wrap.innerHTML = extra + items.map((item) => `
+        <div class="add-item-hit">
+          <span class="hit-code">${escapeHtml(item.productCode || item.sku || "—")}${item.sku && item.productCode ? "　SKU " + escapeHtml(item.sku) : ""}</span>
+          <span class="hit-name">${escapeHtml(item.name || "")}</span>
+        </div>
+      `).join("");
+    }
+
     function openAddPoItemModal() {
       if (!poGoodsEditable()) return;
       document.getElementById("addPoItemCode").value = "";
+      renderAddPoItemHits();
       document.getElementById("addPoItemModal").classList.remove("hidden");
       setTimeout(() => document.getElementById("addPoItemCode").focus(), 0);
     }
@@ -4305,21 +4412,28 @@
 
     function confirmAddPoItem() {
       if (!poGoodsEditable()) return;
-      const code = document.getElementById("addPoItemCode").value.trim();
-      if (!code) {
+      const raw = document.getElementById("addPoItemCode").value.trim();
+      if (!raw) {
         alert("請輸入商品品號");
         document.getElementById("addPoItemCode").focus();
         return;
       }
-      const src = findCatalogItem(code);
-      if (!src) {
-        alert("找不到此商品品號");
+      const { items, missed } = findCatalogItemsFuzzy(raw);
+      if (!items.length) {
+        alert(missed.length ? `找不到符合的商品品號：${missed.join("、")}` : "找不到符合的商品品號");
         document.getElementById("addPoItemCode").focus();
         return;
       }
-      poLineItems.push(toPoLineItem({ ...src, qty: 0 }));
+      const fresh = items.filter((item) => !poHasCatalogItem(item));
+      if (!fresh.length) {
+        alert("這些商品已在採購明細中");
+        document.getElementById("addPoItemCode").focus();
+        return;
+      }
+      fresh.forEach((src) => poLineItems.push(toPoLineItem({ ...src, qty: 0 })));
       closeAddPoItemModal();
       renderPoGoodsTable();
+      if (missed.length) alert(`已新增 ${fresh.length} 筆，找不到：${missed.join("、")}`);
     }
 
     let pendingPoImportFile = null;
@@ -4940,6 +5054,7 @@
     document.getElementById("addPoItemClose").addEventListener("click", closeAddPoItemModal);
     document.getElementById("addPoItemCancel").addEventListener("click", closeAddPoItemModal);
     document.getElementById("addPoItemConfirm").addEventListener("click", confirmAddPoItem);
+    document.getElementById("addPoItemCode").addEventListener("input", renderAddPoItemHits);
     document.getElementById("addPoItemCode").addEventListener("keydown", (e) => {
       if (e.key === "Enter") confirmAddPoItem();
     });
