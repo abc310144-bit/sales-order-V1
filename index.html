@@ -609,10 +609,26 @@
     .edit-footer {
       display: flex;
       justify-content: flex-end;
+      flex-wrap: wrap;
       gap: 8px;
       margin-top: 28px;
       padding: 16px 0 8px;
       flex-shrink: 0;
+    }
+    .edit-footer.hidden { display: none; }
+    #page-order-edit .edit-page-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px 16px;
+      margin-bottom: 12px;
+      flex-shrink: 0;
+    }
+    #page-order-edit .edit-page-head .form-title { margin: 0 0 6px; }
+    #page-order-edit .edit-page-head .po-kind-meta { margin: 0; }
+    #page-order-edit .edit-footer {
+      margin: 0;
+      padding: 2px 0 0;
     }
     .po-kind-meta {
       margin: -8px 0 16px;
@@ -951,6 +967,7 @@
     .is-readonly #editGoodsBody .ops { visibility: hidden; }
     #page-order-edit .form-title,
     #page-order-edit .po-kind-meta,
+    #page-order-edit .edit-page-head,
     #page-order-edit .po-tabs {
       flex-shrink: 0;
     }
@@ -1825,8 +1842,21 @@
         </div>
 
         <div class="page" id="page-order-edit">
-          <h2 class="form-title" id="editPageTitle">採購單資料</h2>
-          <div class="po-kind-meta" id="editPoKindMeta"></div>
+          <div class="edit-page-head">
+            <div class="edit-page-head-text">
+              <h2 class="form-title" id="editPageTitle">採購單資料</h2>
+              <div class="po-kind-meta" id="editPoKindMeta"></div>
+            </div>
+            <div class="edit-footer" id="editFooter">
+              <button type="button" class="btn" id="editExportPdf">匯出 PDF</button>
+              <button type="button" class="btn hidden" id="editCopyPo">複製</button>
+              <button type="button" class="btn" id="editSaveDraft">儲存為草稿</button>
+              <button type="button" class="btn btn-primary" id="editSubmit">送出申請</button>
+              <button type="button" class="btn" id="editReject">審核不通過</button>
+              <button type="button" class="btn btn-primary" id="editApprove">審核通過</button>
+              <button type="button" class="btn btn-primary" id="editSave">儲存</button>
+            </div>
+          </div>
           <div class="po-tabs" id="poTabs">
             <button type="button" class="po-tab active" data-po-tab="basic">採購單基本資料</button>
             <button type="button" class="po-tab" data-po-tab="goods">採購商品</button>
@@ -2057,16 +2087,6 @@
                 </table>
               </div>
             </div>
-          </div>
-
-          <div class="edit-footer">
-            <button type="button" class="btn" id="editExportPdf">匯出 PDF</button>
-            <button type="button" class="btn hidden" id="editCopyPo">複製</button>
-            <button type="button" class="btn" id="editSaveDraft">儲存為草稿</button>
-            <button type="button" class="btn btn-primary" id="editSubmit">送出申請</button>
-            <button type="button" class="btn" id="editReject">審核不通過</button>
-            <button type="button" class="btn btn-primary" id="editApprove">審核通過</button>
-            <button type="button" class="btn btn-primary" id="editSave">儲存</button>
           </div>
         </div>
       </main>
@@ -2888,6 +2908,8 @@
     function setPoTab(name) {
       document.querySelectorAll(".po-tab").forEach((el) => el.classList.toggle("active", el.dataset.poTab === name));
       document.querySelectorAll(".po-pane").forEach((el) => el.classList.toggle("hidden", el.dataset.poPane !== name));
+      const footer = document.getElementById("editFooter");
+      if (footer) footer.classList.toggle("hidden", name === "ships");
     }
 
     function startCreateWorkspace(kind, channelName) {
