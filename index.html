@@ -2573,12 +2573,6 @@
         links.push(`<a data-action="edit" data-no="${item.orderNo}">編輯</a>`);
       }
       links.push(`<a data-action="view" data-no="${item.orderNo}">檢視</a>`);
-      if (canStampPo(item)) {
-        links.push(`<a data-action="stamp" data-no="${item.orderNo}">回壓文件</a>`);
-      }
-      if (canViewStampFile(item)) {
-        links.push(`<a data-action="stamp-view" data-no="${item.orderNo}">看檔</a>`);
-      }
       if (canVoidOrder(item)) {
         links.push(`<a data-action="void" data-no="${item.orderNo}">取消採購單</a>`);
       }
@@ -2877,14 +2871,6 @@
       }
       if (action === "reject") {
         rejectPo(order);
-        return;
-      }
-      if (action === "stamp") {
-        openStampFilePicker(order);
-        return;
-      }
-      if (action === "stamp-view") {
-        openStampFile(order);
         return;
       }
       if (action === "edit" || action === "view") {
