@@ -1194,7 +1194,7 @@
     .status-tag[data-status="待審核"] { color: #d48806; background: #fff7e6; border-color: #ffd591; }
     .status-tag[data-status="審核退回"] { color: #cf1322; background: #fff1f0; border-color: #ffa39e; }
     .status-tag[data-status="審核通過"] { color: #389e0d; background: #f6ffed; border-color: #b7eb8f; }
-    .status-tag[data-status="帶回壓文件"] { color: #d46b08; background: #fff7e6; border-color: #ffc069; }
+    .status-tag[data-status="待回壓文件"] { color: #d46b08; background: #fff7e6; border-color: #ffc069; }
     .status-tag[data-status="未開立出貨單"] { color: #096dd9; background: #e6f7ff; border-color: #91d5ff; }
     .status-tag[data-status="已開立出貨單"] { color: #389e0d; background: #f6ffed; border-color: #b7eb8f; }
     .status-tag[data-status="待出貨"] { color: #08979c; background: #e6fffb; border-color: #87e8de; }
@@ -1785,7 +1785,7 @@
                   <option value="">請選擇</option>
                   <option>草稿</option>
                   <option>待審核</option>
-                  <option>帶回壓文件</option>
+                  <option>待回壓文件</option>
                   <option>未開立出貨單</option>
                   <option>待出貨</option>
                   <option>部分送達</option>
@@ -2499,7 +2499,7 @@
     }
 
     function canCopyPo(order) {
-      return !!order && ["帶回壓文件", "未開立出貨單", "待出貨", "部分送達", "已完成"].includes(order.status);
+      return !!order && ["待回壓文件", "未開立出貨單", "待出貨", "部分送達", "已完成"].includes(order.status);
     }
 
     function canShipFromPo(order) {
@@ -2513,7 +2513,7 @@
     function canExportPoPdf(order) {
       return !!order
         && needsStampPo(order)
-        && ["帶回壓文件", "未開立出貨單", "待出貨", "部分送達", "已完成"].includes(order.status);
+        && ["待回壓文件", "未開立出貨單", "待出貨", "部分送達", "已完成"].includes(order.status);
     }
 
     function shipsOfPo(orderNo) {
@@ -2556,7 +2556,7 @@
     }
 
     function syncPoStatusFromShips(order) {
-      if (!order || ["草稿", "待審核", "已取消", "帶回壓文件"].includes(order.status)) return;
+      if (!order || ["草稿", "待審核", "已取消", "待回壓文件"].includes(order.status)) return;
       order.status = deriveApprovedPoStatus(order);
     }
 
@@ -2953,7 +2953,7 @@
 
     function applyStampToOrder(order, fileData) {
       order.stampFile = fileData;
-      if (order.status === "帶回壓文件") {
+      if (order.status === "待回壓文件") {
         order.status = "未開立出貨單";
         syncPoStatusFromShips(order);
       }
@@ -2969,8 +2969,9 @@
 
     function normalizeStampFlow(order) {
       if (!order) return;
+      if (order.status === "帶回壓文件") order.status = "待回壓文件";
       if (!needsStampPo(order)) {
-        if (order.status === "帶回壓文件") order.status = deriveApprovedPoStatus(order);
+        if (order.status === "待回壓文件") order.status = deriveApprovedPoStatus(order);
         return;
       }
       const valid = validShipsOfPo(order.orderNo);
@@ -2979,7 +2980,7 @@
         return;
       }
       if (order.status === "未開立出貨單" && !hasStampFile(order)) {
-        order.status = "帶回壓文件";
+        order.status = "待回壓文件";
       }
     }
 
@@ -3943,7 +3944,7 @@
       win.location.replace(url);
       setTimeout(() => URL.revokeObjectURL(url), 60000);
       if (needsStampPo(order) && !hasStampFile(order) && order.status === "未開立出貨單") {
-        order.status = "帶回壓文件";
+        order.status = "待回壓文件";
         persistDemoData();
         renderSalesTable(getSalesFiltered());
         if (currentEditOrderNo === order.orderNo) syncEditFooter(order, orderFormMode);
@@ -4007,7 +4008,7 @@
         extraPo({ orderNo: "SO20260822012", poDocNo: "SHP-DRAFT-0822", channelType: "台灣線上通路", channelName: "線上-蝦皮商城", status: "草稿", operator: "demo.user", createdAt: "2026-08-22 11:18:33" }),
         extraPo({ orderNo: "SO20260821013", poDocNo: "SKM-A11-0821", channelType: "台灣實體百貨", channelName: "百貨-新光三越", status: "待審核", operator: "misha.huang", createdAt: "2026-08-21 15:27:04" }),
         extraPo({ orderNo: "SO20260821014", poDocNo: "DEC-0821-14", channelType: "台灣本地通路", channelName: "實體-迪卡儂", status: "待審核", operator: "henry.huang", createdAt: "2026-08-21 09:44:51" }),
-        extraPo({ orderNo: "SO20260820015", poDocNo: "SN-PO-0820-015", channelType: "台灣本地經銷", channelName: "經銷商-學生營養股份有限公司", status: "帶回壓文件", operator: "john.pan", createdAt: "2026-08-20 14:12:08" }),
+        extraPo({ orderNo: "SO20260820015", poDocNo: "SN-PO-0820-015", channelType: "台灣本地經銷", channelName: "經銷商-學生營養股份有限公司", status: "待回壓文件", operator: "john.pan", createdAt: "2026-08-20 14:12:08" }),
         extraPo({ orderNo: "SO20260820016", poDocNo: "SKM-A11-0820", channelType: "台灣實體百貨", channelName: "百貨-新光三越", status: "未開立出貨單", operator: "vita.du", createdAt: "2026-08-20 10:05:19" }),
         extraPo({ orderNo: "SO20260819017", poDocNo: "SHP-0820-017", channelType: "台灣線上通路", channelName: "線上-蝦皮商城", status: "待出貨", operator: "sarah.lin", createdAt: "2026-08-19 17:33:42" }),
         extraPo({ orderNo: "SO20260818018", poDocNo: "SN-PO-0818-018", channelType: "台灣本地經銷", channelName: "經銷商-學生營養股份有限公司", status: "待出貨", operator: "john.pan", createdAt: "2026-08-18 13:08:27" }),
@@ -4854,7 +4855,7 @@
 
     function approvePo(order) {
       if (!canApprovePo(order)) return;
-      order.status = needsStampPo(order) ? "帶回壓文件" : "未開立出貨單";
+      order.status = needsStampPo(order) ? "待回壓文件" : "未開立出貨單";
       if (!needsStampPo(order)) syncPoStatusFromShips(order);
       persistDemoData();
       renderSalesTable(getSalesFiltered());
