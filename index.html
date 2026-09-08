@@ -2930,13 +2930,18 @@
       return (items || []).map((item) => {
         const row = { ...item };
         delete row.id;
+        row.remark = "";
         return row;
       });
     }
 
     function clonePartyForCopy(srcBag, fallback, operator) {
       const source = srcBag || {};
-      const lines = (source.lines && source.lines.length ? source.lines : (fallback.lines || [])).map((line) => ({ ...line }));
+      const lines = (source.lines && source.lines.length ? source.lines : (fallback.lines || [])).map((line) => {
+        const row = { ...line };
+        if ("remark" in row) row.remark = "";
+        return row;
+      });
       return {
         ...fallback,
         ...source,
