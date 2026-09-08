@@ -1862,13 +1862,11 @@
             <div class="edit-footer" id="editFooter">
               <button type="button" class="btn" id="editExportPdf">匯出 PDF</button>
               <button type="button" class="btn" id="editStampUpload">回壓文件</button>
-              <button type="button" class="btn" id="editStampView">檢視文件</button>
               <button type="button" class="btn" id="editCopyPo">複製</button>
-              <button type="button" class="btn" id="editSaveDraft">儲存為草稿</button>
-              <button type="button" class="btn btn-primary" id="editSubmit">送出申請</button>
               <button type="button" class="btn" id="editReject">審核不通過</button>
               <button type="button" class="btn btn-primary" id="editApprove">審核通過</button>
-              <button type="button" class="btn btn-primary" id="editSave">儲存</button>
+              <button type="button" class="btn" id="editSaveDraft">儲存為草稿</button>
+              <button type="button" class="btn btn-primary" id="editSubmit">送出申請</button>
             </div>
           </div>
           <div class="po-tabs" id="poTabs">
@@ -5036,11 +5034,18 @@
       el.disabled = !enabled;
     }
 
+    function syncStampButton(order) {
+      const btn = document.getElementById("editStampUpload");
+      if (!btn) return;
+      const canView = canViewStampFile(order);
+      btn.textContent = canView ? "檢視文件" : "回壓文件";
+      btn.disabled = canView ? false : !canStampPo(order);
+    }
+
     function syncEditFooter(order, mode) {
       const view = mode === "view";
       const draftLike = canSubmitPo(order);
       const pending = canApprovePo(order);
-      const approvedOps = false;
       const canShip = canCreateShipFromPo(order);
       const hint = document.getElementById("editShipHint");
       hint.textContent = shipCreateHint(order);
@@ -5049,12 +5054,10 @@
       setBtnEnabled("editSaveDraft", !view && draftLike);
       setBtnEnabled("editSubmit", !view && draftLike && currentRole === "建檔人");
       setBtnEnabled("editExportPdf", canExportPoPdf(order));
-      setBtnEnabled("editStampUpload", canStampPo(order));
-      setBtnEnabled("editStampView", canViewStampFile(order));
+      syncStampButton(order);
       setBtnEnabled("editCopyPo", canCopyPo(order));
       setBtnEnabled("editApprove", pending && currentRole === "主管");
       setBtnEnabled("editReject", pending && currentRole === "主管");
-      setBtnEnabled("editSave", !view && !draftLike && !pending && approvedOps);
       setBtnEnabled("poAddItemBtn", !view && draftLike);
       setBtnEnabled("poImportItemsBtn", !view && draftLike);
     }
@@ -5127,15 +5130,6 @@
       });
     }
 
-    document.getElementById("editSave").addEventListener("click", () => {
-      if (orderFormMode === "view") return;
-      const order = getWorkspaceOrder();
-      if (!order) return;
-      applyEditFormToOrder(order);
-      persistDemoData();
-      renderSalesTable(getSalesFiltered());
-      alert("已儲存");
-    });
     document.getElementById("editSaveDraft").addEventListener("click", () => {
       if (orderFormMode === "view") return;
       const order = getWorkspaceOrder();
@@ -5164,11 +5158,9 @@
     document.getElementById("editExportPdf").addEventListener("click", exportPartyPoPdf);
     document.getElementById("editStampUpload").addEventListener("click", () => {
       const order = getWorkspaceOrder();
-      if (order) openStampFilePicker(order);
-    });
-    document.getElementById("editStampView").addEventListener("click", () => {
-      const order = getWorkspaceOrder();
-      if (order) openStampFile(order);
+      if (!order) return;
+      if (canViewStampFile(order)) openStampFile(order);
+      else openStampFilePicker(order);
     });
     document.getElementById("stampFileInput").addEventListener("change", (e) => {
       const file = e.target.files && e.target.files[0];
