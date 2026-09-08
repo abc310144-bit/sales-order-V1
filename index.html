@@ -963,8 +963,12 @@
       background: #fffbe6;
       border-color: #faad14;
     }
-    .is-readonly .po-goods-toolbar { display: none; }
-    .is-readonly #editGoodsBody .ops { visibility: hidden; }
+    .is-readonly #editGoodsBody .ops a {
+      color: rgba(0, 0, 0, 0.25);
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .is-readonly #editGoodsBody .ops a:hover { text-decoration: none; }
     #page-order-edit .form-title,
     #page-order-edit .po-kind-meta,
     #page-order-edit .edit-page-head,
@@ -1217,6 +1221,12 @@
       cursor: pointer;
     }
     .ops a:hover { text-decoration: underline; }
+    .ops a.is-disabled {
+      color: rgba(0, 0, 0, 0.25);
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .ops a.is-disabled:hover { text-decoration: none; }
 
     .pager {
       display: flex;
@@ -1851,9 +1861,9 @@
             </div>
             <div class="edit-footer" id="editFooter">
               <button type="button" class="btn" id="editExportPdf">匯出 PDF</button>
-              <button type="button" class="btn hidden" id="editStampUpload">回壓文件</button>
-              <button type="button" class="btn hidden" id="editStampView">檢視文件</button>
-              <button type="button" class="btn hidden" id="editCopyPo">複製</button>
+              <button type="button" class="btn" id="editStampUpload">回壓文件</button>
+              <button type="button" class="btn" id="editStampView">檢視文件</button>
+              <button type="button" class="btn" id="editCopyPo">複製</button>
               <button type="button" class="btn" id="editSaveDraft">儲存為草稿</button>
               <button type="button" class="btn btn-primary" id="editSubmit">送出申請</button>
               <button type="button" class="btn" id="editReject">審核不通過</button>
@@ -2073,7 +2083,7 @@
           <div class="po-pane hidden" data-po-pane="ships">
             <div class="ship-tab-toolbar">
               <div class="ship-tab-hint" id="editShipHint">審核通過後才能新增出貨單</div>
-              <button type="button" class="btn btn-primary hidden" id="editCreateShip">新增出貨單</button>
+              <button type="button" class="btn btn-primary" id="editCreateShip">新增出貨單</button>
             </div>
             <div class="goods-block" style="margin-top:0">
               <h3 class="goods-title">相關出貨單</h3>
@@ -2568,18 +2578,13 @@
     }
 
     function salesRowActions(item) {
-      if (item.status === "待審核") {
-        return `<a data-action="view" data-no="${item.orderNo}">檢視</a>`;
-      }
-      const links = [];
-      if (canEditPo(item)) {
-        links.push(`<a data-action="edit" data-no="${item.orderNo}">編輯</a>`);
-      }
-      links.push(`<a data-action="view" data-no="${item.orderNo}">檢視</a>`);
-      if (canVoidOrder(item)) {
-        links.push(`<a data-action="void" data-no="${item.orderNo}">取消採購單</a>`);
-      }
-      return links.join("");
+      const editOn = canEditPo(item);
+      const voidOn = canVoidOrder(item);
+      return [
+        `<a data-action="edit" data-no="${item.orderNo}" class="${editOn ? "" : "is-disabled"}"${editOn ? "" : " aria-disabled=\"true\""}>編輯</a>`,
+        `<a data-action="view" data-no="${item.orderNo}">檢視</a>`,
+        `<a data-action="void" data-no="${item.orderNo}" class="${voidOn ? "" : "is-disabled"}"${voidOn ? "" : " aria-disabled=\"true\""}>取消採購單</a>`,
+      ].join("");
     }
 
     function getSalesFiltered() {
@@ -2860,6 +2865,7 @@
       else showPage("sales");
     });
     document.getElementById("salesTableBody").addEventListener("click", (e) => {
+      if (e.target.classList.contains("is-disabled")) return;
       const action = e.target.dataset.action;
       if (!action) return;
       const order = salesOrders.find((item) => item.orderNo === e.target.dataset.no);
@@ -5023,6 +5029,13 @@
       return "審核通過後才能新增出貨單";
     }
 
+    function setBtnEnabled(id, enabled) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove("hidden");
+      el.disabled = !enabled;
+    }
+
     function syncEditFooter(order, mode) {
       const view = mode === "view";
       const draftLike = canSubmitPo(order);
@@ -5031,18 +5044,19 @@
       const canShip = canCreateShipFromPo(order);
       const hint = document.getElementById("editShipHint");
       hint.textContent = shipCreateHint(order);
-      document.getElementById("editCreateShip").classList.toggle("hidden", !canShip);
-      document.getElementById("editCreateShip").disabled = !canShip;
+      setBtnEnabled("editCreateShip", canShip);
       hint.classList.toggle("hidden", canShip);
-      document.getElementById("editSaveDraft").classList.toggle("hidden", view || !draftLike);
-      document.getElementById("editSubmit").classList.toggle("hidden", view || !draftLike || currentRole !== "建檔人");
-      document.getElementById("editExportPdf").classList.toggle("hidden", !canExportPoPdf(order));
-      document.getElementById("editStampUpload").classList.toggle("hidden", !canStampPo(order));
-      document.getElementById("editStampView").classList.toggle("hidden", !canViewStampFile(order));
-      document.getElementById("editCopyPo").classList.toggle("hidden", !canCopyPo(order));
-      document.getElementById("editApprove").classList.toggle("hidden", !(pending && currentRole === "主管"));
-      document.getElementById("editReject").classList.toggle("hidden", !(pending && currentRole === "主管"));
-      document.getElementById("editSave").classList.toggle("hidden", view || draftLike || pending || !approvedOps);
+      setBtnEnabled("editSaveDraft", !view && draftLike);
+      setBtnEnabled("editSubmit", !view && draftLike && currentRole === "建檔人");
+      setBtnEnabled("editExportPdf", canExportPoPdf(order));
+      setBtnEnabled("editStampUpload", canStampPo(order));
+      setBtnEnabled("editStampView", canViewStampFile(order));
+      setBtnEnabled("editCopyPo", canCopyPo(order));
+      setBtnEnabled("editApprove", pending && currentRole === "主管");
+      setBtnEnabled("editReject", pending && currentRole === "主管");
+      setBtnEnabled("editSave", !view && !draftLike && !pending && approvedOps);
+      setBtnEnabled("poAddItemBtn", !view && draftLike);
+      setBtnEnabled("poImportItemsBtn", !view && draftLike);
     }
 
     function fillOrderEdit(order, mode) {
