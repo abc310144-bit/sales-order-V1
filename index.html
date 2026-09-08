@@ -2491,7 +2491,10 @@
     }
 
     function canStampPo(order) {
-      return needsStampPo(order) && !!order && !["草稿", "待審核", "已取消"].includes(order.status);
+      return needsStampPo(order)
+        && !!order
+        && !hasStampFile(order)
+        && !["草稿", "待審核", "已取消"].includes(order.status);
     }
 
     function canViewStampFile(order) {
