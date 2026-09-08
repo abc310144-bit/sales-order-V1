@@ -1852,7 +1852,7 @@
             <div class="edit-footer" id="editFooter">
               <button type="button" class="btn" id="editExportPdf">匯出 PDF</button>
               <button type="button" class="btn hidden" id="editStampUpload">回壓文件</button>
-              <button type="button" class="btn hidden" id="editStampView">看檔</button>
+              <button type="button" class="btn hidden" id="editStampView">檢視文件</button>
               <button type="button" class="btn hidden" id="editCopyPo">複製</button>
               <button type="button" class="btn" id="editSaveDraft">儲存為草稿</button>
               <button type="button" class="btn btn-primary" id="editSubmit">送出申請</button>
@@ -2905,13 +2905,160 @@
     const STAMP_MAX_BYTES = 2 * 1024 * 1024;
     let pendingStampOrderNo = "";
 
+    function pdfStrBytes(text) {
+      const out = new Uint8Array(text.length);
+      for (let i = 0; i < text.length; i++) out[i] = text.charCodeAt(i) & 0xff;
+      return out;
+    }
+
+    function pdfConcatBytes(parts) {
+      const total = parts.reduce((sum, part) => sum + part.length, 0);
+      const out = new Uint8Array(total);
+      let offset = 0;
+      parts.forEach((part) => {
+        out.set(part, offset);
+        offset += part.length;
+      });
+      return out;
+    }
+
+    function pdfEscapeText(text) {
+      return String(text || "").replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+    }
+
+    function buildPdfDocument(objectBodies) {
+      const encoder = (body) => (typeof body === "string" ? pdfStrBytes(body) : body);
+      const chunks = [pdfStrBytes("%PDF-1.4\n")];
+      const offsets = [0];
+      objectBodies.forEach((body, index) => {
+        offsets.push(chunks.reduce((sum, part) => sum + part.length, 0));
+        chunks.push(pdfStrBytes(`${index + 1} 0 obj\n`), encoder(body), pdfStrBytes("\nendobj\n"));
+      });
+      const xrefPos = chunks.reduce((sum, part) => sum + part.length, 0);
+      let xref = `xref\n0 ${objectBodies.length + 1}\n0000000000 65535 f \n`;
+      offsets.slice(1).forEach((off) => {
+        xref += `${String(off).padStart(10, "0")} 00000 n \n`;
+      });
+      chunks.push(pdfStrBytes(xref));
+      chunks.push(pdfStrBytes(`trailer << /Size ${objectBodies.length + 1} /Root 1 0 R >>\nstartxref\n${xrefPos}\n%%EOF`));
+      return pdfConcatBytes(chunks);
+    }
+
+    function plainTextPdfBytes(lines) {
+      const rows = (lines || []).map((line) => String(line || "")).filter((line) => line);
+      const content = [
+        "BT",
+        "/F1 18 Tf",
+        "50 780 Td",
+        `(${pdfEscapeText(rows[0] || "Document")}) Tj`,
+        ...rows.slice(1).map((line) => `0 -26 Td (${pdfEscapeText(line)}) Tj`),
+        "ET",
+      ].join("\n");
+      return buildPdfDocument([
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+        `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+      ]);
+    }
+
+    function jpegPdfBytes(jpegBytes, width, height) {
+      const pageW = 595;
+      const pageH = 842;
+      const margin = 36;
+      const maxW = pageW - margin * 2;
+      const maxH = pageH - margin * 2;
+      const scale = Math.min(maxW / width, maxH / height, 1);
+      const drawW = width * scale;
+      const drawH = height * scale;
+      const x = (pageW - drawW) / 2;
+      const y = (pageH - drawH) / 2;
+      const content = `q\n${drawW.toFixed(2)} 0 0 ${drawH.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)} cm\n/Im0 Do\nQ`;
+      const imageDict = `<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegBytes.length} >>\nstream\n`;
+      return buildPdfDocument([
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /XObject << /Im0 5 0 R >> >> >>",
+        `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+        pdfConcatBytes([pdfStrBytes(imageDict), jpegBytes, pdfStrBytes("\nendstream")]),
+      ]);
+    }
+
+    function dataUrlToBytes(dataUrl) {
+      const raw = String(dataUrl || "");
+      const match = raw.match(/^data:([^;,]+)?(;base64)?,(.*)$/i);
+      if (!match) return { mime: "", bytes: new Uint8Array() };
+      const mime = match[1] || "";
+      const payload = match[3] || "";
+      if (match[2]) {
+        const bin = atob(payload);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return { mime, bytes };
+      }
+      return { mime, bytes: pdfStrBytes(decodeURIComponent(payload)) };
+    }
+
+    function isPdfBytes(bytes) {
+      return bytes && bytes.length >= 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
+    }
+
+    function imageDataUrlToPdfBytes(dataUrl) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, img.naturalWidth || img.width);
+          canvas.height = Math.max(1, img.naturalHeight || img.height);
+          canvas.getContext("2d").drawImage(img, 0, 0);
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error("image"));
+              return;
+            }
+            blob.arrayBuffer().then((buf) => {
+              resolve(jpegPdfBytes(new Uint8Array(buf), canvas.width, canvas.height));
+            }, reject);
+          }, "image/jpeg", 0.92);
+        };
+        img.onerror = () => reject(new Error("image"));
+        img.src = dataUrl;
+      });
+    }
+
+    function stampFileToPdfBytes(order, file) {
+      const name = String((file && file.name) || "").toLowerCase();
+      const type = String((file && file.type) || "").toLowerCase();
+      const parsed = dataUrlToBytes(file && file.data);
+      if ((type.includes("pdf") || name.endsWith(".pdf") || parsed.mime.includes("pdf")) && isPdfBytes(parsed.bytes)) {
+        return Promise.resolve(parsed.bytes);
+      }
+      if (type.startsWith("image/") || parsed.mime.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(name)) {
+        return imageDataUrlToPdfBytes(file.data);
+      }
+      return Promise.resolve(plainTextPdfBytes([
+        "Stamped Purchase Order",
+        order.orderNo || "",
+        order.poDocNo || "",
+        "DEMO document",
+      ]));
+    }
+
     function demoStampPlaceholder(order) {
       const at = order.createdAt || nowStamp();
-      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>已回壓文件</title></head><body style="font-family:sans-serif;padding:32px"><h2>DEMO 已回壓用印文件</h2><p>採購單 ${escapeHtml(order.orderNo || "")}</p><p>此為演示用假資料，非正式用印檔。</p></body></html>`;
+      const bytes = plainTextPdfBytes([
+        "Stamped Purchase Order",
+        order.orderNo || "",
+        order.poDocNo || "",
+        "DEMO document",
+      ]);
+      let bin = "";
+      bytes.forEach((b) => { bin += String.fromCharCode(b); });
       return {
-        name: `${order.poDocNo || order.orderNo || "po"}-用印.pdf`,
-        type: "text/html",
-        data: "data:text/html;charset=utf-8," + encodeURIComponent(html),
+        name: `${order.poDocNo || order.orderNo || "po"}-stamped.pdf`,
+        type: "application/pdf",
+        data: "data:application/pdf;base64," + btoa(bin),
         uploadedAt: at,
       };
     }
@@ -2925,8 +3072,14 @@
 
     function openStampFile(order) {
       if (!canViewStampFile(order)) return;
-      const win = window.open(order.stampFile.data, "_blank");
-      if (!win) alert("瀏覽器已封鎖彈出視窗，請允許後再看檔");
+      stampFileToPdfBytes(order, order.stampFile).then((bytes) => {
+        const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+        const win = window.open(url, "_blank");
+        if (!win) alert("瀏覽器已封鎖彈出視窗，請允許後再檢視文件");
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      }).catch(() => {
+        alert("無法開啟文件，請重新回壓 PDF 或圖片");
+      });
     }
 
     function openStampFilePicker(order) {
@@ -2962,7 +3115,9 @@
       }
       const valid = validShipsOfPo(order.orderNo);
       if (["待出貨", "部分送達", "已完成"].includes(order.status) || valid.length) {
-        if (!hasStampFile(order)) order.stampFile = demoStampPlaceholder(order);
+        const stamp = order.stampFile;
+        const htmlStamp = stamp && (stamp.type === "text/html" || String(stamp.data || "").startsWith("data:text/html"));
+        if (!hasStampFile(order) || htmlStamp) order.stampFile = demoStampPlaceholder(order);
         return;
       }
       if (order.status === "未開立出貨單" && !hasStampFile(order)) {
