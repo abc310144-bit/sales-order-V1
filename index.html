@@ -2061,6 +2061,7 @@
 
           <div class="edit-footer">
             <button type="button" class="btn" id="editExportPdf">匯出 PDF</button>
+            <button type="button" class="btn hidden" id="editCopyPo">複製</button>
             <button type="button" class="btn" id="editSaveDraft">儲存為草稿</button>
             <button type="button" class="btn btn-primary" id="editSubmit">送出申請</button>
             <button type="button" class="btn" id="editReject">審核不通過</button>
@@ -2171,6 +2172,22 @@
       <div class="modal-foot">
         <button type="button" class="btn" id="voidCancel">取消</button>
         <button type="button" class="btn btn-primary" id="voidConfirm">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask hidden" id="copyPoModal">
+    <div class="modal-card void-card" role="dialog" aria-labelledby="copyPoTitle">
+      <div class="modal-head">
+        <h2 id="copyPoTitle">複製採購單</h2>
+        <button type="button" class="modal-close" id="copyPoClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="void-msg">是否複製成另一採購單草稿</p>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="copyPoCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="copyPoConfirm">確定</button>
       </div>
     </div>
   </div>
@@ -2438,6 +2455,10 @@
     }
 
     let currentRole = "建檔人";
+
+    function canCopyPo(order) {
+      return !!order && ["未開立出貨單", "待出貨", "部分送達", "已完成"].includes(order.status);
+    }
 
     function canShipFromPo(order) {
       return !!order && ["未開立出貨單", "待出貨", "部分送達"].includes(order.status);
@@ -2902,6 +2923,87 @@
       currentEditOrderNo = "__new__";
       workspaceOrder = order;
       fillOrderEdit(order, "edit");
+      setPoTab("goods");
+    }
+
+    function cloneCopiedItems(items) {
+      return (items || []).map((item) => {
+        const row = { ...item };
+        delete row.id;
+        return row;
+      });
+    }
+
+    function clonePartyForCopy(srcBag, fallback, operator) {
+      const source = srcBag || {};
+      const lines = (source.lines && source.lines.length ? source.lines : (fallback.lines || [])).map((line) => ({ ...line }));
+      return {
+        ...fallback,
+        ...source,
+        lines,
+        poDocNo: "",
+        vendorAttn: operator,
+        vendorEmail: `${operator}@urmart.com`,
+      };
+    }
+
+    function buildCopiedDraft(src) {
+      const createdAt = nowStamp();
+      const kind = poKindOf(src);
+      const op = "demo.user";
+      const profile = channelProfiles[src.channelName] || {};
+      const draft = {
+        orderNo: "",
+        poDocNo: "",
+        shipNo: "",
+        poKind: kind,
+        channelType: src.channelType || "",
+        channelName: src.channelName || "",
+        region: src.region || profile.region || "",
+        status: "草稿",
+        operator: op,
+        createdAt,
+        fileName: "",
+        fileUrl: "",
+        fileType: "",
+        address: src.address || profile.address || "",
+        arriveDate: kind === "一般通路" ? addDaysToStamp(createdAt, 2) : "",
+        shipByTime: kind === "一般通路" ? addDaysToStamp(createdAt, 1, true) : "",
+        items: cloneCopiedItems(src.items),
+        overseas: null,
+        dealer: null,
+      };
+      if (kind === "境外通路") {
+        draft.overseas = clonePartyForCopy(src.overseas, buildOverseasPo(src.channelName, op, ""), op);
+        if (!draft.address) draft.address = draft.overseas.buyerAddress || "";
+      }
+      if (kind === "經銷") {
+        draft.dealer = clonePartyForCopy(src.dealer, buildDealerPo(src.channelName, op, ""), op);
+        if (!draft.address) draft.address = draft.dealer.buyerAddress || "";
+      }
+      return draft;
+    }
+
+    function openCopyPoModal() {
+      const order = getWorkspaceOrder();
+      if (!canCopyPo(order)) return;
+      document.getElementById("copyPoModal").classList.remove("hidden");
+    }
+
+    function closeCopyPoModal() {
+      document.getElementById("copyPoModal").classList.add("hidden");
+    }
+
+    function confirmCopyPo() {
+      const src = getWorkspaceOrder();
+      closeCopyPoModal();
+      if (!canCopyPo(src)) return;
+      const draft = buildCopiedDraft(src);
+      currentEditOrderNo = "__new__";
+      workspaceOrder = draft;
+      fillOrderEdit(draft, "edit");
+      commitWorkspaceOrder(draft, "草稿");
+      fillOrderEdit(draft, "edit");
       setPoTab("goods");
     }
 
@@ -4631,6 +4733,7 @@
       document.getElementById("editSaveDraft").classList.toggle("hidden", view || !draftLike);
       document.getElementById("editSubmit").classList.toggle("hidden", view || !draftLike || currentRole !== "建檔人");
       document.getElementById("editExportPdf").classList.toggle("hidden", !canExportPoPdf(order));
+      document.getElementById("editCopyPo").classList.toggle("hidden", !canCopyPo(order));
       document.getElementById("editApprove").classList.toggle("hidden", !(pending && currentRole === "主管"));
       document.getElementById("editReject").classList.toggle("hidden", !(pending && currentRole === "主管"));
       document.getElementById("editSave").classList.toggle("hidden", view || draftLike || pending || !approvedOps);
@@ -4739,6 +4842,13 @@
       if (order) rejectPo(order);
     });
     document.getElementById("editExportPdf").addEventListener("click", exportPartyPoPdf);
+    document.getElementById("editCopyPo").addEventListener("click", openCopyPoModal);
+    document.getElementById("copyPoClose").addEventListener("click", closeCopyPoModal);
+    document.getElementById("copyPoCancel").addEventListener("click", closeCopyPoModal);
+    document.getElementById("copyPoConfirm").addEventListener("click", confirmCopyPo);
+    document.getElementById("copyPoModal").addEventListener("click", (e) => {
+      if (e.target.id === "copyPoModal") closeCopyPoModal();
+    });
     document.getElementById("editCreateShip").addEventListener("click", () => {
       const order = getWorkspaceOrder();
       if (!order) return;
