@@ -666,14 +666,17 @@
     .po-pane[data-po-pane="goods"] {
       overflow: visible;
     }
-    .ship-tab-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 12px;
+    #page-ship-create .form-title { margin: 0 0 16px; }
+    #page-ship-create.is-readonly .ship-items-actions,
+    #page-ship-create.is-readonly .ship-wizard-footer,
+    #page-ship-create.is-readonly .ship-items-table thead th:last-child,
+    #page-ship-create.is-readonly .ship-items-table td.ops { display: none; }
+    #page-ship-create.is-readonly .ship-items-table input,
+    #page-ship-create.is-readonly .ship-items-table select {
+      background: #f5f5f5;
+      color: rgba(0, 0, 0, 0.85);
+      cursor: not-allowed;
     }
-    .ship-tab-hint { color: var(--text-3); font-size: 13px; }
     .type-pick-card { width: 480px; max-width: calc(100vw - 32px); }
     .type-pick-card .modal-body { padding-bottom: 12px; }
     .visually-hidden {
@@ -1502,6 +1505,7 @@
         </div>
 
         <div class="page" id="page-ship-create">
+          <h2 class="form-title hidden" id="shipPageTitle">檢視出貨單</h2>
           <div class="wizard-steps" id="shipWizardSteps">
             <div class="wizard-step active" data-ship-step="1">
               <div class="head"><span class="num">1</span>建立訂單基本資料</div>
@@ -2079,10 +2083,6 @@
           </div>
 
           <div class="po-pane hidden" data-po-pane="ships">
-            <div class="ship-tab-toolbar">
-              <div class="ship-tab-hint" id="editShipHint">審核通過後才能新增出貨單</div>
-              <button type="button" class="btn btn-primary" id="editCreateShip">新增出貨單</button>
-            </div>
             <div class="goods-block" style="margin-top:0">
               <h3 class="goods-title">相關出貨單</h3>
               <div class="table-wrap">
@@ -2090,7 +2090,6 @@
                   <thead>
                     <tr>
                       <th>出貨單編號</th>
-                      <th>審核狀態</th>
                       <th>訂單狀態</th>
                       <th>建立時間</th>
                     </tr>
@@ -2310,7 +2309,7 @@
           <td>${r.created}</td>
           <td>${r.warehouse}</td>
           <td>${r.shipped}</td>
-          <td class="ops"><a>檢視</a><a>編輯</a></td>
+          <td class="ops"><a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=view" target="_blank" rel="noopener" data-ship-view="1">檢視</a><a>編輯</a></td>
         </tr>
       `).join("");
     }
@@ -2857,6 +2856,7 @@
       syncImportModal();
     });
     document.getElementById("tableBody").addEventListener("click", (e) => {
+      if (e.target.closest("[data-ship-view]")) persistDemoData();
       if (e.target.dataset.go !== "po-view") return;
       const order = salesOrders.find((item) => item.orderNo === e.target.dataset.no);
       if (order) openPoWorkspace({ po: order.orderNo, mode: "view" });
@@ -2886,8 +2886,7 @@
       }
     });
     document.getElementById("relatedShipBody").addEventListener("click", (e) => {
-      const shipId = e.target.dataset.goShip;
-      if (shipId) goToShippingOrder(shipId);
+      if (e.target.dataset.goShip) persistDemoData();
     });
 
     let currentEditOrderNo = "";
@@ -3314,7 +3313,14 @@
       const params = new URLSearchParams(location.search);
       const kind = params.get("kind");
       const po = params.get("po");
+      const shipNo = params.get("ship");
       const mode = params.get("mode") || "view";
+      if (shipNo) {
+        const ship = rows.find((row) => row.orderId === shipNo);
+        if (ship) fillShipView(ship);
+        else showPage("shipping");
+        return;
+      }
       if (params.get("create") === "1" && kind) {
         startCreateWorkspace(kind, params.get("channel") || "");
         return;
@@ -4362,6 +4368,7 @@
     }
 
     function addShipCatalogItem() {
+      if (shipFormMode === "view") return;
       const used = new Set(shipLineItems.map((row) => row.sku));
       const src = mockItemPool.find((item) => !used.has(item.sku)) || mockItemPool[0];
       shipLineItems.push(poItemToShipLine(src));
@@ -4369,6 +4376,7 @@
     }
 
     function importShipCatalogItems() {
+      if (shipFormMode === "view") return;
       const used = new Set(shipLineItems.map((row) => row.sku));
       const extras = mockItemPool.filter((item) => !used.has(item.sku));
       (extras.length ? extras : mockItemPool.slice(0, 1)).forEach((item) => {
@@ -4960,30 +4968,20 @@
 
     function renderRelatedShips(order) {
       const body = document.getElementById("relatedShipBody");
-      const list = !order ? [] : rows.filter((r) => r.salesOrderNo === order.orderNo);
+      const list = !order ? [] : rows.filter((r) => r.salesOrderNo === order.orderNo)
+        .slice()
+        .sort((a, b) => String(b.created).localeCompare(String(a.created)) || Number(b.id) - Number(a.id));
       if (!list.length) {
-        body.innerHTML = `<tr class="empty-row"><td class="related-empty" colspan="4">尚未開立出貨單</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td class="related-empty" colspan="3">尚未開立出貨單</td></tr>`;
         return;
       }
       body.innerHTML = list.map((r) => `
         <tr>
-          <td><a class="link" data-go-ship="${escapeHtml(r.orderId)}">${escapeHtml(r.orderId)}</a></td>
-          <td>${statusTag(r.audit)}</td>
+          <td><a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=view" target="_blank" rel="noopener" data-go-ship="${escapeHtml(r.orderId)}">${escapeHtml(r.orderId)}</a></td>
           <td>${statusTag(r.status)}</td>
           <td>${escapeHtml(r.created)}</td>
         </tr>
       `).join("");
-    }
-
-    function goToShippingOrder(orderId) {
-      document.getElementById("shipFilterPoNo").value = "";
-      renderShippingTable(rows);
-      showPage("shipping");
-      const tr = document.querySelector(`#tableBody tr[data-order-id="${orderId}"]`);
-      if (tr) {
-        tr.classList.add("row-hl");
-        tr.scrollIntoView({ block: "center" });
-      }
     }
 
     function applyEditFormToOrder(order) {
@@ -5018,15 +5016,6 @@
       if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "edit");
     }
 
-    function shipCreateHint(order) {
-      if (canCreateShipFromPo(order)) return "審核通過後才能新增出貨單";
-      if (needsStampPo(order) && !["草稿", "待審核", "已取消"].includes(order.status) && !hasStampFile(order)) {
-        return "請先回壓雙方用印文件才能新增出貨單";
-      }
-      if (order && order.status === "已完成") return "已完成的採購單不可再開立出貨單";
-      return "審核通過後才能新增出貨單";
-    }
-
     function setBtnEnabled(id, enabled) {
       const el = document.getElementById(id);
       if (!el) return;
@@ -5046,11 +5035,6 @@
       const view = mode === "view";
       const draftLike = canSubmitPo(order);
       const pending = canApprovePo(order);
-      const canShip = canCreateShipFromPo(order);
-      const hint = document.getElementById("editShipHint");
-      hint.textContent = shipCreateHint(order);
-      setBtnEnabled("editCreateShip", canShip);
-      hint.classList.toggle("hidden", canShip);
       setBtnEnabled("editSaveDraft", !view && draftLike);
       setBtnEnabled("editSubmit", !view && draftLike && currentRole === "建檔人");
       setBtnEnabled("editExportPdf", canExportPoPdf(order));
@@ -5195,30 +5179,6 @@
     document.getElementById("copyPoModal").addEventListener("click", (e) => {
       if (e.target.id === "copyPoModal") closeCopyPoModal();
     });
-    document.getElementById("editCreateShip").addEventListener("click", () => {
-      const order = getWorkspaceOrder();
-      if (!order) return;
-      if (!canCreateShipFromPo(order)) {
-        if (needsStampPo(order) && !hasStampFile(order)) {
-          alert("請先回壓雙方用印文件才能新增出貨單");
-        }
-        return;
-      }
-      persistDemoData();
-      goToShipCreateFromPo({
-        ...order,
-        channelType: isOverseasPo(order)
-          ? "境外通路"
-          : isDealerPo(order)
-            ? "台灣本地經銷"
-            : (document.getElementById("editChannelType").value || order.channelType),
-        channelName: (isOverseasPo(order) || isDealerPo(order))
-          ? (document.getElementById("editOverseasChannelName").value || order.channelName)
-          : (document.getElementById("editChannelName").value || order.channelName),
-        arriveDate: document.getElementById("editArriveDate").value || order.arriveDate,
-        shipByTime: (document.getElementById("editShipByTime").value || "").replace("T", " ") || order.shipByTime,
-      });
-    });
     document.getElementById("editChannelType").addEventListener("change", () => {
       fillChannelNameOptions("editChannelName", document.getElementById("editChannelType").value);
       document.getElementById("editAddress").value = "";
@@ -5344,6 +5304,7 @@
     });
 
     let currentShipStep = 1;
+    let shipFormMode = "create";
 
     function naText(value) {
       return value || "N/A(系統自動帶入)";
@@ -5359,7 +5320,24 @@
       if (profile.inWarehouse) document.getElementById("shipInWarehouse").value = profile.inWarehouse;
     }
 
+    function setShipFormReadonly(readonly) {
+      shipFormMode = readonly ? "view" : "create";
+      const page = document.getElementById("page-ship-create");
+      page.classList.toggle("is-readonly", readonly);
+      page.querySelectorAll("input, select, textarea").forEach((el) => {
+        el.disabled = readonly;
+      });
+      const title = document.getElementById("shipPageTitle");
+      if (title) {
+        title.textContent = readonly ? "檢視出貨單" : "建立出貨訂單";
+        title.classList.toggle("hidden", !readonly);
+      }
+      const footer = page.querySelector(".ship-wizard-footer");
+      if (footer) footer.classList.toggle("hidden", readonly);
+    }
+
     function resetShipCreateForm() {
+      setShipFormReadonly(false);
       document.getElementById("shipOutWarehouse").value = "藍田";
       document.getElementById("shipPoNo").value = "";
       document.getElementById("shipPoList").classList.add("hidden");
@@ -5380,23 +5358,40 @@
       if (document.getElementById("shipItemsBody")) renderShipItemsTable();
     }
 
-    function goToShipCreateFromPo(order) {
+    function shipItemsToLines(ship, po) {
+      const src = (ship.items && ship.items.length)
+        ? ship.items
+        : ((po && po.items) || []);
+      return src.map((item) => poItemToShipLine(item));
+    }
+
+    function fillShipView(ship) {
       resetShipCreateForm();
-      setShipCreateStep(1);
-      const createdAt = order.createdAt || nowStamp();
+      const po = salesOrders.find((item) => item.orderNo === ship.salesOrderNo) || null;
+      const createdAt = (po && po.createdAt) || ship.created || nowStamp();
+      const channelName = (po && po.channelName && po.channelName !== "—") ? po.channelName : (ship.channel || "");
+      const channelType = (po && po.channelType && po.channelType !== "—")
+        ? po.channelType
+        : (channelTypeOfName(channelName) || "");
       document.getElementById("shipOutWarehouse").value = "藍田";
-      document.getElementById("shipPoNo").value = order.orderNo || "";
-      document.getElementById("shipChannelType").value = !order.channelType || order.channelType === "—" ? "" : order.channelType;
-      document.getElementById("shipChannelName").value = !order.channelName || order.channelName === "—" ? "" : order.channelName;
+      document.getElementById("shipPoNo").value = ship.salesOrderNo || "";
+      document.getElementById("shipChannelType").value = channelType;
+      document.getElementById("shipChannelName").value = channelName;
       fillShipProfile();
-      document.getElementById("shipExpectDate").value = toDateInput(order.shipByTime) || addDaysToStamp(createdAt, 1);
-      document.getElementById("shipArriveDate").value = toDateInput(order.arriveDate) || addDaysToStamp(createdAt, 2);
+      document.getElementById("shipExpectDate").value = toDateInput(po && po.shipByTime) || addDaysToStamp(createdAt, 1);
+      document.getElementById("shipArriveDate").value = toDateInput(po && po.arriveDate) || addDaysToStamp(createdAt, 2);
       if (!document.getElementById("shipLine").value) document.getElementById("shipLine").value = "乳清";
-      if (!document.getElementById("shipCurrency").value) document.getElementById("shipCurrency").value = "TWD";
-      document.getElementById("shipRate").value = "1";
-      document.getElementById("shipIncoterm").value = "FOB";
+      const currency = channelCurrency(channelName, "TWD");
+      document.getElementById("shipCurrency").value = currency;
+      document.getElementById("shipRate").value = currency === "TWD" ? "1" : "";
+      if (!document.getElementById("shipIncoterm").value) document.getElementById("shipIncoterm").value = "FOB";
       const pickup = document.querySelector('input[name="shipPickup"][value="blackcat"]');
       if (pickup) pickup.checked = true;
+      shipLineItems = shipItemsToLines(ship, po);
+      shipItemsLoadedPo = (po && po.orderNo) || ship.salesOrderNo || "";
+      renderShipItemsTable();
+      setShipCreateStep(1);
+      setShipFormReadonly(true);
       showPage("ship-create");
     }
 
@@ -5405,21 +5400,27 @@
       return salesOrders.find((item) => item.orderNo === po) || null;
     }
 
+    function canListShipPo(order) {
+      return !!order && ["待回壓文件", "未開立出貨單", "待出貨", "部分送達"].includes(order.status);
+    }
+
+    function shipCreateBlockReason(po) {
+      if (!po) return "請選擇採購單編號";
+      if (canCreateShipFromPo(po)) return "";
+      if (needsStampPo(po) && !hasStampFile(po) && !["草稿", "待審核", "已取消"].includes(po.status)) {
+        return "請先回壓雙方用印文件才能新增出貨單";
+      }
+      return po.status === "已完成" || po.status === "已取消" ? "此採購單目前無法再建立出貨單" : "此採購單尚未審核通過，無法建立出貨單";
+    }
+
     function requireShipPo() {
       const po = getSelectedShipPo();
-      if (!po) {
-        alert("請選擇採購單編號");
-        document.getElementById("shipPoNo").focus();
-        renderShipPoList(document.getElementById("shipPoNo").value);
-        return false;
-      }
-      if (!canShipFromPo(po)) {
-        alert(po.status === "已完成" || po.status === "已取消" ? "此採購單目前無法再建立出貨單" : "此採購單尚未審核通過，無法建立出貨單");
-        document.getElementById("shipPoNo").focus();
-        renderShipPoList(document.getElementById("shipPoNo").value);
-        return false;
-      }
-      return true;
+      const reason = shipCreateBlockReason(po);
+      if (!reason) return true;
+      alert(reason);
+      document.getElementById("shipPoNo").focus();
+      renderShipPoList(document.getElementById("shipPoNo").value);
+      return false;
     }
 
     function setShipCreateStep(n) {
@@ -5431,7 +5432,15 @@
         document.getElementById("shipPane" + i).classList.toggle("hidden", i !== n);
       });
       document.getElementById("shipCreateAction").textContent = n === 1 ? "建立資料" : n === 4 ? "完成" : "下一步";
-      if (n >= 2) ensureShipItemsFromPo();
+      if (n >= 2) {
+        if (shipFormMode === "view") renderShipItemsTable();
+        else ensureShipItemsFromPo();
+      }
+      if (shipFormMode === "view") {
+        document.querySelectorAll("#page-ship-create input, #page-ship-create select, #page-ship-create textarea").forEach((el) => {
+          el.disabled = true;
+        });
+      }
     }
 
     function nextShippingIds() {
@@ -5477,11 +5486,12 @@
     document.querySelectorAll("#shipWizardSteps .wizard-step").forEach((el) => {
       el.addEventListener("click", () => {
         const n = Number(el.dataset.shipStep);
-        if (n > 1 && !requireShipPo()) return;
+        if (shipFormMode !== "view" && n > 1 && !requireShipPo()) return;
         setShipCreateStep(n);
       });
     });
     document.getElementById("shipCreateAction").addEventListener("click", () => {
+      if (shipFormMode === "view") return;
       if (currentShipStep === 1 && !requireShipPo()) return;
       if (currentShipStep === 2 && !shipLineItems.length) {
         alert("請至少保留一項出貨商品");
@@ -5503,6 +5513,7 @@
     document.getElementById("shipItemsBody").addEventListener("input", onShipItemField);
     document.getElementById("shipItemsBody").addEventListener("change", onShipItemField);
     document.getElementById("shipItemsBody").addEventListener("click", (e) => {
+      if (shipFormMode === "view") return;
       const del = e.target.closest("[data-del]");
       if (!del) return;
       const tr = e.target.closest("tr");
@@ -5512,6 +5523,7 @@
     });
 
     function onShipItemField(e) {
+      if (shipFormMode === "view") return;
       const field = e.target.dataset.field;
       if (!field) return;
       const tr = e.target.closest("tr");
@@ -5532,7 +5544,7 @@
       const list = document.getElementById("shipPoList");
       const q = (keyword || "").trim().toLowerCase();
       const options = salesOrders
-        .filter((item) => canShipFromPo(item))
+        .filter((item) => canListShipPo(item))
         .map((item) => item.orderNo)
         .filter((no) => !q || no.toLowerCase().includes(q));
       if (!options.length) {
@@ -5556,6 +5568,9 @@
         fillShipProfile();
       }
       if (orderNo !== shipItemsLoadedPo) shipItemsLoadedPo = "";
+      if (shipFormMode === "view") return;
+      const reason = shipCreateBlockReason(order);
+      if (reason) alert(reason);
     }
 
     const shipPoInput = document.getElementById("shipPoNo");
