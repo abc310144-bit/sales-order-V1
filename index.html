@@ -669,11 +669,78 @@
     .ship-tab-toolbar {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-end;
       gap: 12px;
       margin-bottom: 12px;
     }
-    .ship-tab-hint { color: var(--text-3); font-size: 13px; }
+    .ship-tab-hint { color: var(--text-3); font-size: 13px; margin-right: auto; }
+    .po-ship-create { margin-bottom: 16px; }
+    .po-ship-acc {
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+      background: #fff;
+    }
+    .po-ship-acc-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 12px 16px;
+      border: 0;
+      background: #fafafa;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      text-align: left;
+    }
+    .po-ship-acc-head .acc-arrow {
+      width: 12px;
+      height: 12px;
+      transition: transform 0.2s ease;
+    }
+    .po-ship-acc.collapsed .po-ship-acc-head .acc-arrow { transform: rotate(-90deg); }
+    .po-ship-acc-body { padding: 16px 20px 20px; }
+    .po-ship-acc.collapsed .po-ship-acc-body { display: none; }
+    .ship-fee-card {
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      background: #fff;
+    }
+    .ship-fee-card:last-child { margin-bottom: 0; }
+    .ship-fee-card h4 {
+      margin: 0 0 12px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .ship-rebate-line { font-size: 14px; color: var(--text); }
+    .po-ship-create-foot {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .fee-name-combo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 520px;
+    }
+    .fee-name-combo select { width: 160px; flex: 0 0 160px; }
+    .fee-name-combo .sep { color: var(--text-3); }
+    .fee-name-combo input { flex: 1; min-width: 0; max-width: none; }
+    .fee-suffix-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 280px;
+    }
+    .fee-suffix-field input { max-width: 220px; }
+    .fee-suffix-field .suffix { color: var(--text); }
+    .po-ship-fee-table { margin-top: 12px; }
+    .modal-card.fee-dialog-card { width: min(560px, 100%); }
     #page-ship-create .form-title { margin: 0 0 16px; }
     #page-ship-create.is-readonly .ship-items-actions,
     #page-ship-create.is-readonly .ship-wizard-footer,
@@ -1039,6 +1106,12 @@
       color: rgba(0, 0, 0, 0.85);
       cursor: not-allowed;
     }
+    #page-order-edit.is-readonly #poShipCreatePanel .form-ctrl input,
+    #page-order-edit.is-readonly #poShipCreatePanel .form-ctrl select {
+      background: #fff;
+      cursor: auto;
+    }
+    #page-order-edit.is-readonly #poShipCreatePanel .form-ctrl select { cursor: pointer; }
     .is-readonly .radio-line,
     .is-readonly .tag button {
       cursor: not-allowed;
@@ -2091,9 +2164,74 @@
           </div>
 
           <div class="po-pane hidden" data-po-pane="ships">
-            <div class="ship-tab-toolbar">
+            <div class="ship-tab-toolbar" id="poShipToolbar">
               <div class="ship-tab-hint" id="editShipHint"></div>
               <button type="button" class="btn btn-primary" id="editCreateShip">新增出貨單</button>
+            </div>
+            <div class="po-ship-create hidden" id="poShipCreatePanel">
+              <div class="po-ship-acc" data-acc="settings">
+                <button type="button" class="po-ship-acc-head">
+                  <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+                  設定
+                </button>
+                <div class="po-ship-acc-body">
+                  <div class="form-row">
+                    <label>貿易條件</label>
+                    <div class="form-ctrl">
+                      <select id="poShipIncoterm">
+                        <option value="">請選擇</option>
+                        <option>FOB</option>
+                        <option>CIF</option>
+                        <option>EXW</option>
+                        <option>CFR</option>
+                        <option>DAP</option>
+                        <option>DDP</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <label>預計拋單日</label>
+                    <div class="form-ctrl"><input type="date" id="poShipExpectDate" /></div>
+                  </div>
+                </div>
+              </div>
+              <div class="po-ship-acc" data-acc="fees">
+                <button type="button" class="po-ship-acc-head">
+                  <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+                  費用填寫
+                </button>
+                <div class="po-ship-acc-body">
+                  <div class="ship-fee-card">
+                    <h4>出貨商品後扣項目</h4>
+                    <div class="ship-rebate-line" id="poShipRebateText">後扣項目 0 %</div>
+                  </div>
+                  <div class="ship-fee-card">
+                    <h4>訂單費用</h4>
+                    <button type="button" class="btn btn-primary" id="poShipAddFeeBtn">
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M8 3v10M3 8h10"/></svg>
+                      新增訂單費用
+                    </button>
+                    <div class="table-wrap po-ship-fee-table hidden" id="poShipFeeTableWrap">
+                      <table class="related-table">
+                        <thead>
+                          <tr>
+                            <th>項目名稱</th>
+                            <th>項目細節</th>
+                            <th>項目比例</th>
+                            <th>項目金額(TWD)</th>
+                            <th>操作</th>
+                          </tr>
+                        </thead>
+                        <tbody id="poShipFeeBody"></tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="po-ship-create-foot">
+                <button type="button" class="btn" id="poShipCreateCancel">取消</button>
+                <button type="button" class="btn btn-primary" id="poShipCreateConfirm">確定</button>
+              </div>
             </div>
             <div class="goods-block" style="margin-top:0">
               <h3 class="goods-title">相關出貨單</h3>
@@ -2231,6 +2369,51 @@
       <div class="modal-foot">
         <button type="button" class="btn" id="copyPoCancel">取消</button>
         <button type="button" class="btn btn-primary" id="copyPoConfirm">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask hidden" id="poShipFeeModal">
+    <div class="modal-card fee-dialog-card" role="dialog" aria-labelledby="poShipFeeTitle">
+      <div class="modal-head">
+        <h2 id="poShipFeeTitle">費用填寫</h2>
+        <button type="button" class="modal-close" id="poShipFeeClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label class="required">項目名稱</label>
+          <div class="form-ctrl">
+            <div class="fee-name-combo">
+              <select id="poShipFeeName">
+                <option value="">請選擇</option>
+                <option>折扣(rebate)</option>
+                <option>破包</option>
+                <option>行銷費</option>
+                <option>預付金</option>
+                <option>其他</option>
+              </select>
+              <span class="sep">-</span>
+              <input type="text" id="poShipFeeDetail" maxlength="40" placeholder="項目細節，最多輸入 40 字元" />
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>項目比例</label>
+          <div class="form-ctrl">
+            <div class="fee-suffix-field">
+              <input type="number" id="poShipFeeRate" min="0" step="0.01" />
+              <span class="suffix">%</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>項目金額(TWD)</label>
+          <div class="form-ctrl"><input type="number" id="poShipFeeAmount" min="0" step="0.01" /></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="poShipFeeCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="poShipFeeConfirm">確定</button>
       </div>
     </div>
   </div>
@@ -2530,6 +2713,11 @@
 
     function canCreateShipFromPo(order) {
       return canShipFromPo(order) && (!needsStampPo(order) || hasStampFile(order));
+    }
+
+    function canShowPoShipTab(order) {
+      if (!order || !order.orderNo) return false;
+      return canCreateShipFromPo(order) || shipsOfPo(order.orderNo).length > 0;
     }
 
     function canExportPoPdf(order) {
@@ -3181,10 +3369,20 @@
     }
 
     function setPoTab(name) {
+      const shipsTab = document.querySelector('.po-tab[data-po-tab="ships"]');
+      if (name === "ships" && shipsTab && shipsTab.classList.contains("hidden")) name = "basic";
       document.querySelectorAll(".po-tab").forEach((el) => el.classList.toggle("active", el.dataset.poTab === name));
       document.querySelectorAll(".po-pane").forEach((el) => el.classList.toggle("hidden", el.dataset.poPane !== name));
       const footer = document.getElementById("editFooter");
       if (footer) footer.classList.toggle("hidden", name === "ships");
+    }
+
+    function syncPoShipTab(order) {
+      const tab = document.querySelector('.po-tab[data-po-tab="ships"]');
+      const show = canShowPoShipTab(order);
+      if (tab) tab.classList.toggle("hidden", !show);
+      const pane = document.querySelector('[data-po-pane="ships"]');
+      if (!show && pane && !pane.classList.contains("hidden")) setPoTab("basic");
     }
 
     function startCreateWorkspace(kind, channelName) {
@@ -3374,6 +3572,12 @@
       "晨曦公司": { region: "境外", mode: "跨境", currency: "TWD", phone: "02-8787-2360", contact: "晨曦窗口", email: "chenxi@example.com", address: "115臺北市南港區三重里三重路19-9號B棟6樓", inWarehouse: "藍田倉" },
       "百貨-新光三越": { region: "台灣(通路)", mode: "寄倉", currency: "TWD", phone: "02-2388-5555", contact: "新光三越專櫃", email: "skm@example.com", address: "台北市信義區松高路19號 新光三越A11專櫃", inWarehouse: "正光廊-營運部主管" },
     };
+
+    function channelRebatePercent(channelName) {
+      const profile = channelProfiles[channelName] || {};
+      const n = Number(profile.rebatePercent);
+      return Number.isFinite(n) ? n : 0;
+    }
 
     function channelCurrency(channelName, fallback) {
       const profile = channelProfiles[channelName] || {};
@@ -5048,12 +5252,16 @@
       const draftLike = canSubmitPo(order);
       const pending = canApprovePo(order);
       const canShip = canCreateShipFromPo(order);
+      syncPoShipTab(order);
       const hint = document.getElementById("editShipHint");
       if (hint) {
         hint.textContent = canShip ? "" : shipCreateBlockReason(order);
         hint.classList.toggle("hidden", canShip);
       }
+      const toolbar = document.getElementById("poShipToolbar");
+      if (toolbar) toolbar.classList.toggle("hidden", !canShip);
       setBtnEnabled("editCreateShip", canShip);
+      if (!canShip) closePoShipCreateForm();
       setBtnEnabled("editSaveDraft", !view && draftLike);
       setBtnEnabled("editSubmit", !view && draftLike && currentRole === "建檔人");
       setBtnEnabled("editExportPdf", canExportPoPdf(order));
@@ -5110,6 +5318,7 @@
         loadPoGoods(order.items);
       }
       renderRelatedShips(order);
+      closePoShipCreateForm();
       setPoTab("basic");
       setOrderFormReadonly(orderFormMode === "view");
       syncEditFooter(order, orderFormMode);
@@ -5129,6 +5338,7 @@
       const page = document.getElementById("page-order-edit");
       page.classList.toggle("is-readonly", readonly);
       page.querySelectorAll("input, select, textarea").forEach((el) => {
+        if (el.closest("#poShipCreatePanel")) return;
         el.disabled = readonly || el.hasAttribute("data-lock");
       });
     }
@@ -5206,8 +5416,28 @@
         if (reason) alert(reason);
         return;
       }
-      persistDemoData();
-      goToShipCreateFromPo(order);
+      openPoShipCreateForm(order);
+    });
+    document.getElementById("poShipCreatePanel").addEventListener("click", (e) => {
+      const head = e.target.closest(".po-ship-acc-head");
+      if (head) {
+        head.closest(".po-ship-acc").classList.toggle("collapsed");
+        return;
+      }
+      const del = e.target.closest("[data-del-fee]");
+      if (del) {
+        poShipFees = poShipFees.filter((fee) => fee.id !== del.dataset.delFee);
+        renderPoShipFees();
+      }
+    });
+    document.getElementById("poShipCreateCancel").addEventListener("click", closePoShipCreateForm);
+    document.getElementById("poShipCreateConfirm").addEventListener("click", confirmPoShipCreate);
+    document.getElementById("poShipAddFeeBtn").addEventListener("click", openPoShipFeeModal);
+    document.getElementById("poShipFeeClose").addEventListener("click", closePoShipFeeModal);
+    document.getElementById("poShipFeeCancel").addEventListener("click", closePoShipFeeModal);
+    document.getElementById("poShipFeeConfirm").addEventListener("click", confirmPoShipFee);
+    document.getElementById("poShipFeeModal").addEventListener("click", (e) => {
+      if (e.target.id === "poShipFeeModal") closePoShipFeeModal();
     });
     document.getElementById("editChannelType").addEventListener("change", () => {
       fillChannelNameOptions("editChannelName", document.getElementById("editChannelType").value);
@@ -5296,7 +5526,8 @@
     });
     document.getElementById("poTabs").addEventListener("click", (e) => {
       const tab = e.target.closest("[data-po-tab]");
-      if (tab) setPoTab(tab.dataset.poTab);
+      if (!tab || tab.classList.contains("hidden")) return;
+      setPoTab(tab.dataset.poTab);
     });
     document.getElementById("poAddItemBtn").addEventListener("click", openAddPoItemModal);
     document.getElementById("addPoItemClose").addEventListener("click", closeAddPoItemModal);
@@ -5372,6 +5603,124 @@
       if (order && order.orderNo) applyShipPo(order.orderNo, { silent: true });
       history.replaceState({}, "", location.pathname);
       showPage("ship-create");
+    }
+
+    let poShipFees = [];
+    let nextPoShipFeeId = 1;
+
+    function closePoShipCreateForm() {
+      const panel = document.getElementById("poShipCreatePanel");
+      if (panel) panel.classList.add("hidden");
+      closePoShipFeeModal();
+    }
+
+    function resetPoShipCreateForm(order) {
+      document.getElementById("poShipIncoterm").value = "FOB";
+      document.getElementById("poShipExpectDate").value = toDateInput(order && (order.shipByTime || order.createdAt)) || "";
+      poShipFees = [];
+      renderPoShipFees();
+      const pct = channelRebatePercent(order && order.channelName);
+      document.getElementById("poShipRebateText").textContent = `後扣項目 ${pct} %`;
+      document.querySelectorAll("#poShipCreatePanel .po-ship-acc").forEach((el) => el.classList.remove("collapsed"));
+    }
+
+    function openPoShipCreateForm(order) {
+      resetPoShipCreateForm(order);
+      document.getElementById("poShipCreatePanel").classList.remove("hidden");
+      document.getElementById("poShipCreatePanel").scrollIntoView({ block: "nearest" });
+    }
+
+    function renderPoShipFees() {
+      const wrap = document.getElementById("poShipFeeTableWrap");
+      const body = document.getElementById("poShipFeeBody");
+      if (!wrap || !body) return;
+      if (!poShipFees.length) {
+        wrap.classList.add("hidden");
+        body.innerHTML = "";
+        return;
+      }
+      wrap.classList.remove("hidden");
+      body.innerHTML = poShipFees.map((fee) => `
+        <tr>
+          <td>${escapeHtml(fee.name)}</td>
+          <td>${escapeHtml(fee.detail || "")}</td>
+          <td>${fee.rate === "" || fee.rate == null ? "" : `${escapeHtml(fee.rate)}%`}</td>
+          <td>${fee.amount === "" || fee.amount == null ? "" : escapeHtml(fee.amount)}</td>
+          <td class="ops"><a data-del-fee="${escapeHtml(fee.id)}">刪除</a></td>
+        </tr>
+      `).join("");
+    }
+
+    function openPoShipFeeModal() {
+      document.getElementById("poShipFeeName").value = "";
+      document.getElementById("poShipFeeDetail").value = "";
+      document.getElementById("poShipFeeRate").value = "";
+      document.getElementById("poShipFeeAmount").value = "";
+      document.getElementById("poShipFeeModal").classList.remove("hidden");
+    }
+
+    function closePoShipFeeModal() {
+      const modal = document.getElementById("poShipFeeModal");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    function confirmPoShipFee() {
+      const name = document.getElementById("poShipFeeName").value;
+      if (!name) {
+        alert("請選擇項目名稱");
+        document.getElementById("poShipFeeName").focus();
+        return;
+      }
+      poShipFees.push({
+        id: String(nextPoShipFeeId++),
+        name,
+        detail: document.getElementById("poShipFeeDetail").value.trim().slice(0, 40),
+        rate: document.getElementById("poShipFeeRate").value,
+        amount: document.getElementById("poShipFeeAmount").value,
+      });
+      renderPoShipFees();
+      closePoShipFeeModal();
+    }
+
+    function confirmPoShipCreate() {
+      const order = getWorkspaceOrder();
+      if (!order || !canCreateShipFromPo(order)) {
+        const reason = shipCreateBlockReason(order);
+        if (reason) alert(reason);
+        return;
+      }
+      const expectDate = document.getElementById("poShipExpectDate").value;
+      if (!expectDate) {
+        alert("請選擇預計拋單日");
+        document.getElementById("poShipExpectDate").focus();
+        return;
+      }
+      const ids = nextShippingIds();
+      rows.unshift({
+        id: ids.id,
+        orderId: ids.orderId,
+        salesOrderNo: order.orderNo,
+        audit: "待審核",
+        channel: order.channelName || order.channelType || "—",
+        status: "待拋單",
+        applicant: "demo.user",
+        created: nowStamp(),
+        warehouse: "",
+        shipped: "",
+        incoterm: document.getElementById("poShipIncoterm").value,
+        expectDate,
+        rebatePercent: channelRebatePercent(order.channelName),
+        fees: poShipFees.map((fee) => ({ ...fee })),
+        items: (order.items || []).map((item) => poItemToShipLine(item)),
+      });
+      syncPoStatusFromShips(order);
+      persistDemoData();
+      renderShippingTable();
+      renderSalesTable(getSalesFiltered());
+      closePoShipCreateForm();
+      renderRelatedShips(order);
+      syncEditFooter(order, orderFormMode);
+      alert("已建立出貨單 " + ids.orderId);
     }
 
     function resetShipCreateForm() {
