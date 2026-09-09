@@ -666,6 +666,14 @@
     .po-pane[data-po-pane="goods"] {
       overflow: visible;
     }
+    .ship-tab-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .ship-tab-hint { color: var(--text-3); font-size: 13px; }
     #page-ship-create .form-title { margin: 0 0 16px; }
     #page-ship-create.is-readonly .ship-items-actions,
     #page-ship-create.is-readonly .ship-wizard-footer,
@@ -2083,6 +2091,10 @@
           </div>
 
           <div class="po-pane hidden" data-po-pane="ships">
+            <div class="ship-tab-toolbar">
+              <div class="ship-tab-hint" id="editShipHint"></div>
+              <button type="button" class="btn btn-primary" id="editCreateShip">新增出貨單</button>
+            </div>
             <div class="goods-block" style="margin-top:0">
               <h3 class="goods-title">相關出貨單</h3>
               <div class="table-wrap">
@@ -5035,6 +5047,13 @@
       const view = mode === "view";
       const draftLike = canSubmitPo(order);
       const pending = canApprovePo(order);
+      const canShip = canCreateShipFromPo(order);
+      const hint = document.getElementById("editShipHint");
+      if (hint) {
+        hint.textContent = canShip ? "" : shipCreateBlockReason(order);
+        hint.classList.toggle("hidden", canShip);
+      }
+      setBtnEnabled("editCreateShip", canShip);
       setBtnEnabled("editSaveDraft", !view && draftLike);
       setBtnEnabled("editSubmit", !view && draftLike && currentRole === "建檔人");
       setBtnEnabled("editExportPdf", canExportPoPdf(order));
@@ -5178,6 +5197,17 @@
     document.getElementById("copyPoConfirm").addEventListener("click", confirmCopyPo);
     document.getElementById("copyPoModal").addEventListener("click", (e) => {
       if (e.target.id === "copyPoModal") closeCopyPoModal();
+    });
+    document.getElementById("editCreateShip").addEventListener("click", () => {
+      const order = getWorkspaceOrder();
+      if (!order) return;
+      if (!canCreateShipFromPo(order)) {
+        const reason = shipCreateBlockReason(order);
+        if (reason) alert(reason);
+        return;
+      }
+      persistDemoData();
+      goToShipCreateFromPo(order);
     });
     document.getElementById("editChannelType").addEventListener("change", () => {
       fillChannelNameOptions("editChannelName", document.getElementById("editChannelType").value);
@@ -5334,6 +5364,14 @@
       }
       const footer = page.querySelector(".ship-wizard-footer");
       if (footer) footer.classList.toggle("hidden", readonly);
+    }
+
+    function goToShipCreateFromPo(order) {
+      resetShipCreateForm();
+      setShipCreateStep(1);
+      if (order && order.orderNo) applyShipPo(order.orderNo, { silent: true });
+      history.replaceState({}, "", location.pathname);
+      showPage("ship-create");
     }
 
     function resetShipCreateForm() {
@@ -5555,7 +5593,7 @@
       list.classList.remove("hidden");
     }
 
-    function applyShipPo(orderNo) {
+    function applyShipPo(orderNo, opts) {
       document.getElementById("shipPoNo").value = orderNo;
       document.getElementById("shipPoList").classList.add("hidden");
       const order = salesOrders.find((item) => item.orderNo === orderNo);
@@ -5568,7 +5606,7 @@
         fillShipProfile();
       }
       if (orderNo !== shipItemsLoadedPo) shipItemsLoadedPo = "";
-      if (shipFormMode === "view") return;
+      if (shipFormMode === "view" || (opts && opts.silent)) return;
       const reason = shipCreateBlockReason(order);
       if (reason) alert(reason);
     }
