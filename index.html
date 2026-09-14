@@ -2001,6 +2001,7 @@
                   <th>合作通路類型</th>
                   <th>通路名稱</th>
                   <th>狀態</th>
+                  <th>完成說明</th>
                   <th>操作人</th>
                   <th>建立時間</th>
                   <th>操作</th>
@@ -2023,6 +2024,7 @@
               <button type="button" class="btn" id="editCopyPo">複製</button>
               <button type="button" class="btn" id="editReject">審核不通過</button>
               <button type="button" class="btn btn-primary" id="editApprove">審核通過</button>
+              <button type="button" class="btn btn-primary hidden" id="editConfirmComplete">確認完成</button>
               <button type="button" class="btn" id="editSaveDraft">儲存為草稿</button>
               <button type="button" class="btn btn-primary" id="editSubmit">送出申請</button>
             </div>
@@ -2471,6 +2473,28 @@
     </div>
   </div>
 
+  <div class="modal-mask hidden" id="confirmCompleteModal">
+    <div class="modal-card void-card" role="dialog" aria-labelledby="confirmCompleteTitle">
+      <div class="modal-head">
+        <h2 id="confirmCompleteTitle">確認完成</h2>
+        <button type="button" class="modal-close" id="confirmCompleteClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="void-msg">確認後訂單改為已完成，不能再開出貨單。進行中的出貨單狀態不變。</p>
+        <div class="form-row">
+          <label>完成說明</label>
+          <div class="form-ctrl">
+            <input type="text" id="confirmCompleteNote" maxlength="40" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="confirmCompleteCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="confirmCompleteConfirm">確定</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-mask hidden" id="poShipFeeModal">
     <div class="modal-card fee-dialog-card" role="dialog" aria-labelledby="poShipFeeTitle">
       <div class="modal-head">
@@ -2868,11 +2892,49 @@
       return name ? "name:" + name : "";
     }
 
+    function isSupervisorClosed(order) {
+      return !!(order && order.closedBySupervisor);
+    }
+
+    function completeNoteOf(order) {
+      if (!order || order.status !== "已完成") return "";
+      return String(order.completeNote || "").trim();
+    }
+
+    function shippedQtyByKey(orderNo) {
+      const map = {};
+      validShipsOfPo(orderNo).forEach((ship) => {
+        (ship.items || []).forEach((item) => {
+          const key = itemKey(item);
+          if (!key) return;
+          map[key] = (map[key] || 0) + (Number(item.qty) || 0);
+        });
+      });
+      return map;
+    }
+
+    function remainingQtyOfItem(order, item, shippedMap) {
+      const ordered = Number(item && item.qty) || 0;
+      const key = itemKey(item);
+      const shipped = ((shippedMap || shippedQtyByKey(order && order.orderNo))[key]) || 0;
+      return Math.max(0, ordered - shipped);
+    }
+
+    function poQtyFullyShipped(order) {
+      const items = (order && order.items) || [];
+      const relevant = items.filter((item) => (Number(item.qty) || 0) > 0);
+      if (!relevant.length) return false;
+      const shippedMap = shippedQtyByKey(order.orderNo);
+      return relevant.every((item) => remainingQtyOfItem(order, item, shippedMap) <= 0);
+    }
+
     function deriveApprovedPoStatus(order) {
+      if (isSupervisorClosed(order)) return "已完成";
       const valid = validShipsOfPo(order.orderNo);
       if (!valid.length) return "未開立出貨單";
       const delivered = valid.filter((row) => row.status === "已配達");
-      if (delivered.length === valid.length) return "已完成";
+      const allDelivered = delivered.length === valid.length;
+      if (allDelivered && poQtyFullyShipped(order)) return "已完成";
       if (delivered.length > 0) return "部分送達";
       return "待出貨";
     }
@@ -2890,6 +2952,10 @@
 
     function syncPoStatusFromShips(order) {
       if (!order || ["草稿", "待審核", "已取消", "待回壓文件"].includes(order.status)) return;
+      if (isSupervisorClosed(order)) {
+        order.status = "已完成";
+        return;
+      }
       order.status = deriveApprovedPoStatus(order);
     }
 
@@ -2935,7 +3001,7 @@
       const body = document.getElementById("salesTableBody");
       document.getElementById("salesTotal").textContent = String(list.length);
       if (!list.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="8">查無資料</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="9">查無資料</td></tr>`;
         return;
       }
       body.innerHTML = list.map((item) => `
@@ -2945,6 +3011,7 @@
           <td>${escapeHtml(item.channelType)}</td>
           <td>${item.channelName}</td>
           <td>${statusTag(item.status)}</td>
+          <td>${escapeHtml(completeNoteOf(item))}</td>
           <td>${item.operator}</td>
           <td>${item.createdAt}</td>
           <td class="ops">
@@ -3215,7 +3282,7 @@
     let currentEditOrderNo = "";
     let orderFormMode = "edit";
     let workspaceOrder = null;
-    const DEMO_STORE_KEY = "urmart-sales-demo-v1";
+    const DEMO_STORE_KEY = "urmart-sales-demo-v2";
     let demoReady = false;
 
     function persistDemoData() {
@@ -4463,6 +4530,8 @@
         address: profile.address || "",
         arriveDate: cfg.arriveDate || addDaysToStamp(cfg.createdAt, 2),
         shipByTime: cfg.shipByTime || addDaysToStamp(cfg.createdAt, 1, true),
+        closedBySupervisor: !!cfg.closedBySupervisor,
+        completeNote: cfg.completeNote || "",
         items: channelSupplyItems(
           cfg.channelName,
           cfg.channelType === "境外通路" ? "境外通路" : cfg.channelType === "台灣本地經銷" ? "經銷" : "一般通路"
@@ -4509,13 +4578,13 @@
         extraPo({ orderNo: "SO20260817020", poDocNo: "SHP-0817-020", channelType: "台灣線上通路", channelName: "線上-蝦皮商城", status: "部分送達", operator: "misha.huang", createdAt: "2026-08-17 09:16:55" }),
         extraPo({ orderNo: "SO20260816021", poDocNo: "CCT-HK-20260816", channelType: "境外通路", channelName: "跨境- Cool Cool Trading", status: "部分送達", operator: "henry.huang", createdAt: "2026-08-16 18:02:31" }),
         extraPo({ orderNo: "SO20260815022", poDocNo: "SKM-A11-0815", channelType: "台灣實體百貨", channelName: "百貨-新光三越", status: "已完成", operator: "misha.huang", createdAt: "2026-08-15 14:48:12" }),
-        extraPo({ orderNo: "SO20260814023", poDocNo: "SN-DONE-0814", channelType: "台灣本地經銷", channelName: "經銷商-學生營養股份有限公司", status: "已完成", operator: "sarah.lin", createdAt: "2026-08-14 10:22:40" }),
+        extraPo({ orderNo: "SO20260814023", poDocNo: "SN-DONE-0814", channelType: "台灣本地經銷", channelName: "經銷商-學生營養股份有限公司", status: "已完成", operator: "sarah.lin", createdAt: "2026-08-14 10:22:40", closedBySupervisor: true, completeNote: "以實收為主" }),
         extraPo({ orderNo: "SO20260813024", poDocNo: "XZ-PO-0813-024", channelType: "台灣本地經銷", channelName: "經銷商-絢綻國際企業社", status: "已完成", operator: "john.pan", createdAt: "2026-08-13 16:09:18" }),
         extraPo({ orderNo: "SO20260812025", poDocNo: "DEC-0812-25", channelType: "台灣本地通路", channelName: "實體-迪卡儂", status: "已取消", operator: "vita.du", createdAt: "2026-08-12 11:37:05" }),
         extraPo({ orderNo: "SO20260811026", poDocNo: "SHP-VOID-0811", channelType: "台灣線上通路", channelName: "線上-蝦皮商城", status: "已取消", operator: "demo.user", createdAt: "2026-08-11 15:54:29" }),
         extraPo({ orderNo: "SO20260810027", poDocNo: "PX-0810-027", channelType: "台灣本地通路", channelName: "實體-全聯", status: "待出貨", operator: "vita.du", createdAt: "2026-08-10 09:11:44" }),
         extraPo({ orderNo: "SO20260809028", poDocNo: "POYA-0809-028", channelType: "台灣本地通路", channelName: "實體-寶雅", status: "部分送達", operator: "misha.huang", createdAt: "2026-08-09 13:26:17" }),
-        extraPo({ orderNo: "SO20260808029", poDocNo: "OL-TRANSFER-0808", channelType: "台灣線上通路", channelName: "線上-轉單", status: "已完成", operator: "sarah.lin", createdAt: "2026-08-08 08:40:03" })
+        extraPo({ orderNo: "SO20260808029", poDocNo: "OL-TRANSFER-0808", channelType: "台灣線上通路", channelName: "線上-轉單", status: "已完成", operator: "sarah.lin", createdAt: "2026-08-08 08:40:03", closedBySupervisor: true, completeNote: "以實收為主" })
       );
 
       link("10473", "SO20260826008");
@@ -4565,23 +4634,54 @@
           return;
         }
         const factor = ship.status === "訂單取消" ? 0 : ship.status === "已配達" ? 0.5 : 0.25;
+        const fullQty = po.orderNo === "SO20260823007" && ship.status === "已配達";
         ship.items = po.items.map((item) => ({
           sku: item.sku || "",
           name: item.name || "",
           productCode: item.productCode || "",
-          qty: Math.max(0, Math.floor((Number(item.qty) || 0) * factor)),
+          qty: Math.max(0, Math.floor((Number(item.qty) || 0) * (fullQty ? 1 : factor))),
           remark: item.remark || "",
         }));
       });
     }
 
+    function fillSeedDeliveredToOrdered(order) {
+      if (!order || order.status !== "已完成" || isSupervisorClosed(order)) return;
+      const delivered = validShipsOfPo(order.orderNo).filter((ship) => ship.status === "已配達" && Array.isArray(ship.items));
+      if (!delivered.length) return;
+      const last = delivered[delivered.length - 1];
+      const othersMap = {};
+      validShipsOfPo(order.orderNo).forEach((ship) => {
+        if (ship === last) return;
+        (ship.items || []).forEach((item) => {
+          const key = itemKey(item);
+          if (!key) return;
+          othersMap[key] = (othersMap[key] || 0) + (Number(item.qty) || 0);
+        });
+      });
+      last.items = (order.items || []).map((item) => {
+        const key = itemKey(item);
+        const remaining = Math.max(0, (Number(item.qty) || 0) - (othersMap[key] || 0));
+        const existing = (last.items || []).find((row) => itemKey(row) === key);
+        return {
+          sku: item.sku || "",
+          name: item.name || "",
+          productCode: item.productCode || "",
+          qty: remaining,
+          remark: (existing && existing.remark) || item.remark || "",
+        };
+      });
+    }
+
     if (!restoreDemoData()) {
       seedExtraDemoData();
+      ensureSeedShipItems();
+      salesOrders.forEach(fillSeedDeliveredToOrdered);
     } else {
       renderSalesTable(getSalesFiltered());
       renderShippingTable();
+      ensureSeedShipItems();
     }
-    ensureSeedShipItems();
     normalizeAllStampFlow();
     demoReady = true;
     persistDemoData();
@@ -4738,8 +4838,8 @@
     function loadShipItemsFromPo() {
       const po = getSelectedShipPo();
       shipItemsLoadedPo = po ? po.orderNo : "";
-      const items = po && po.items && po.items.length ? po.items : [];
-      shipLineItems = items.map((item) => poItemToShipLine(item));
+      const plan = poShipFillPlan(po, po && po.items);
+      shipLineItems = plan.goods.map((item) => poItemToShipLine(item));
       renderShipItemsTable();
     }
 
@@ -5498,6 +5598,37 @@
       if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "edit");
     }
 
+    function canConfirmPoComplete(order) {
+      return !!order && order.status === "部分送達" && currentRole === "主管";
+    }
+
+    function openConfirmCompleteModal() {
+      const order = getWorkspaceOrder();
+      if (!canConfirmPoComplete(order) || orderFormMode !== "view") return;
+      document.getElementById("confirmCompleteNote").value = "以實收為主";
+      document.getElementById("confirmCompleteModal").classList.remove("hidden");
+    }
+
+    function closeConfirmCompleteModal() {
+      document.getElementById("confirmCompleteModal").classList.add("hidden");
+    }
+
+    function confirmPoComplete() {
+      const order = getWorkspaceOrder();
+      if (!canConfirmPoComplete(order) || orderFormMode !== "view") {
+        closeConfirmCompleteModal();
+        return;
+      }
+      const note = document.getElementById("confirmCompleteNote").value.trim() || "以實收為主";
+      closeConfirmCompleteModal();
+      order.closedBySupervisor = true;
+      order.completeNote = note.slice(0, 40);
+      order.status = "已完成";
+      persistDemoData();
+      renderSalesTable(getSalesFiltered());
+      fillOrderEdit(order, "view");
+    }
+
     function setBtnEnabled(id, enabled) {
       const el = document.getElementById(id);
       if (!el) return;
@@ -5535,6 +5666,12 @@
       setBtnEnabled("editCopyPo", canCopyPo(order));
       setBtnEnabled("editApprove", pending && currentRole === "主管");
       setBtnEnabled("editReject", pending && currentRole === "主管");
+      const confirmBtn = document.getElementById("editConfirmComplete");
+      if (confirmBtn) {
+        const showConfirm = !!order && order.status === "部分送達" && mode === "view";
+        confirmBtn.classList.toggle("hidden", !showConfirm);
+        confirmBtn.disabled = !showConfirm || currentRole !== "主管";
+      }
     }
 
     function fillOrderEdit(order, mode) {
@@ -5631,6 +5768,13 @@
     document.getElementById("editReject").addEventListener("click", () => {
       const order = getWorkspaceOrder();
       if (order) rejectPo(order);
+    });
+    document.getElementById("editConfirmComplete").addEventListener("click", openConfirmCompleteModal);
+    document.getElementById("confirmCompleteClose").addEventListener("click", closeConfirmCompleteModal);
+    document.getElementById("confirmCompleteCancel").addEventListener("click", closeConfirmCompleteModal);
+    document.getElementById("confirmCompleteConfirm").addEventListener("click", confirmPoComplete);
+    document.getElementById("confirmCompleteModal").addEventListener("click", (e) => {
+      if (e.target.id === "confirmCompleteModal") closeConfirmCompleteModal();
     });
     document.getElementById("editExportPdf").addEventListener("click", exportPartyPoPdf);
     document.getElementById("editStampUpload").addEventListener("click", () => {
@@ -5900,32 +6044,41 @@
       closePoShipStockModal();
     }
 
-    function resetPoShipCreateForm(order) {
-      document.getElementById("poShipIncoterm").value = "FOB";
-      document.getElementById("poShipExpectDate").value = toDateInput(order && (order.shipByTime || order.createdAt)) || "";
-      poShipFees = [];
+    function poShipFillPlan(order, sourceItems) {
       const channel = order && order.channelName;
-      const source = (poLineItems.length ? poLineItems : ((order && order.items) || [])).map((row) => toPoLineItem(row));
-      poShipGoods = [];
-      poShipShortage = [];
+      const source = (sourceItems || (order && order.items) || []).map((row) => toPoLineItem(row));
+      const shippedMap = order && order.orderNo ? shippedQtyByKey(order.orderNo) : {};
+      const goods = [];
+      const shortage = [];
       source.forEach((item) => {
-        const ordered = Number(item.qty) || 0;
-        if (!item.sku || ordered <= 0) return;
+        const remaining = remainingQtyOfItem(order, item, shippedMap);
+        if (!item.sku || remaining <= 0) return;
         const stock = virtualStockOf(channel, item.sku);
-        const row = applyFifoExpiry(toPoLineItem({ ...item, stock }));
-        if (stock >= ordered) {
-          poShipGoods.push(row);
+        const row = applyFifoExpiry(toPoLineItem({ ...item, qty: remaining, stock }));
+        if (stock >= remaining) {
+          goods.push(row);
         } else {
-          poShipShortage.push({
+          shortage.push({
             sku: row.sku,
             name: row.name,
             productCode: row.productCode,
-            orderedQty: ordered,
+            orderedQty: remaining,
             warehouseQty: stock,
             source: row,
           });
         }
       });
+      return { goods, shortage };
+    }
+
+    function resetPoShipCreateForm(order) {
+      document.getElementById("poShipIncoterm").value = "FOB";
+      document.getElementById("poShipExpectDate").value = toDateInput(order && (order.shipByTime || order.createdAt)) || "";
+      poShipFees = [];
+      const source = (poLineItems.length ? poLineItems : ((order && order.items) || [])).map((row) => toPoLineItem(row));
+      const plan = poShipFillPlan(order, source);
+      poShipGoods = plan.goods;
+      poShipShortage = plan.shortage;
       renderPoShipFees();
       renderPoShipGoodsTable();
       syncPoShipStockWarn();
