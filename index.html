@@ -584,6 +584,19 @@
       font-weight: 600;
       margin: 0 0 12px;
     }
+    .po-goods-section + .po-goods-section { margin-top: 28px; }
+    .po-goods-pick-table { min-width: 760px; }
+    .po-goods-pick-table .col-check {
+      width: 48px;
+      min-width: 48px;
+      text-align: center;
+    }
+    .po-goods-pick-table .col-alloc,
+    .po-goods-pick-table .col-pick-qty { width: 140px; min-width: 120px; }
+    .po-goods-pick-table .col-pick-qty input:disabled {
+      background: #f5f5f5;
+      color: #bfbfbf;
+    }
     .related-table { min-width: 0; width: 100%; }
     .related-empty {
       color: var(--text-3);
@@ -2193,23 +2206,43 @@
 
           <div class="po-pane hidden" data-po-pane="goods">
             <div id="editGeneralGoodsWrap">
-              <div class="table-wrap ship-items-table-wrap goods-h-scroll po-goods-scroll">
-                <table class="ship-items-table po-goods-table goods-pdf-table">
-                  <thead>
-                    <tr>
-                      <th>SKU</th>
-                      <th>商品名稱</th>
-                      <th>箱入數</th>
-                      <th>訂購數量(pcs)</th>
-                      <th>訂購箱數</th>
-                      <th>單價（不含標）</th>
-                      <th>單價（含標）</th>
-                      <th>合計</th>
-                      <th>備註</th>
-                    </tr>
-                  </thead>
-                  <tbody id="editGoodsBody"></tbody>
-                </table>
+              <div class="po-goods-section">
+                <h3 class="goods-title">選擇商品</h3>
+                <div class="table-wrap ship-items-table-wrap goods-h-scroll po-goods-scroll">
+                  <table class="ship-items-table po-goods-table po-goods-pick-table">
+                    <thead>
+                      <tr>
+                        <th class="col-check"></th>
+                        <th>SKU</th>
+                        <th>商品名稱</th>
+                        <th class="num col-alloc">當前可賣量</th>
+                        <th class="col-pick-qty">數量設定</th>
+                      </tr>
+                    </thead>
+                    <tbody id="editGoodsPickBody"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="po-goods-section">
+                <h3 class="goods-title">訂單商品總攬</h3>
+                <div class="table-wrap ship-items-table-wrap goods-h-scroll po-goods-scroll">
+                  <table class="ship-items-table po-goods-table goods-pdf-table">
+                    <thead>
+                      <tr>
+                        <th>SKU</th>
+                        <th>商品名稱</th>
+                        <th>箱入數</th>
+                        <th>訂購數量(pcs)</th>
+                        <th>訂購箱數</th>
+                        <th>單價（不含標）</th>
+                        <th>單價（含標）</th>
+                        <th>合計</th>
+                        <th>備註</th>
+                      </tr>
+                    </thead>
+                    <tbody id="editGoodsBody"></tbody>
+                  </table>
+                </div>
               </div>
             </div>
             <div id="editOverseasGoodsWrap" class="hidden">
@@ -2780,7 +2813,7 @@
         arriveDate: "2026-08-28", shipByTime: "2026-08-27 10:00",
         items: [
           { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12 },
-          { sku: "UM-4412", name: "電解質補給粉", expiryAccept: "2026-09-30", unit: "盒", qty: 24 }
+          { sku: "UM-4412", name: "電解質補給粉", expiryAccept: "2026-09-30", unit: "盒", qty: 20 }
         ]
       },
       {
@@ -2791,8 +2824,8 @@
         arriveDate: "2026-08-29", shipByTime: "2026-08-27 16:00",
         items: [
           { sku: "PX-8801", name: "優質高蛋白棒", expiryAccept: "2026-11-30", unit: "盒", qty: 48 },
-          { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 36 },
-          { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 20 }
+          { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 24 },
+          { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18 }
         ]
       },
       {
@@ -2802,8 +2835,8 @@
         address: "新北市新莊區中正路567號3樓",
         arriveDate: "2026-08-28", shipByTime: "2026-08-26 14:00",
         items: [
-          { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 60 },
-          { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 80 }
+          { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 72 },
+          { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 72 }
         ]
       },
       {
@@ -2813,8 +2846,8 @@
         address: "新北市五股區成泰路一段100號 藍田倉",
         arriveDate: "2026-08-27", shipByTime: "2026-08-26 09:00",
         items: [
-          { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 8 },
-          { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 15 }
+          { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12 },
+          { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18 }
         ]
       },
       {
@@ -2824,7 +2857,7 @@
         address: "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong",
         arriveDate: "2026-09-02", shipByTime: "2026-08-28 18:00",
         items: [
-          { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 100 },
+          { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 72 },
           { sku: "UM-4412", name: "電解質補給粉", expiryAccept: "2026-09-30", unit: "盒", qty: 40 }
         ]
       },
@@ -2835,8 +2868,8 @@
         address: "新北市樹林區佳園路二段70號 寶雅倉儲",
         arriveDate: "2026-08-26", shipByTime: "2026-08-25 11:30",
         items: [
-          { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 30 },
-          { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 18 }
+          { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 24 },
+          { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 36 }
         ]
       },
       {
@@ -2847,7 +2880,7 @@
         arriveDate: "2026-08-25", shipByTime: "2026-08-24 10:00",
         items: [
           { sku: "PX-8801", name: "優質高蛋白棒", expiryAccept: "2026-11-30", unit: "盒", qty: 24 },
-          { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 12 }
+          { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 24 }
         ]
       }
     ];
@@ -3682,7 +3715,7 @@
         arriveDate: kind === "一般通路" ? addDaysToStamp(createdAt, 2) : "",
         arriveTime: "",
         shipByTime: kind === "一般通路" ? addDaysToStamp(createdAt, 1, true) : "",
-        items: channelSupplyItems(name, kind),
+        items: [],
         overseas,
         dealer,
         general,
@@ -3869,22 +3902,28 @@
       { sku: "UM-4412", name: "電解質補給粉", expiryAccept: "2026-09-30", unit: "盒", qty: 20, pcsPerCarton: 20 },
       { sku: "PX-8801", name: "優質高蛋白棒", expiryAccept: "2026-11-30", unit: "盒", qty: 48, pcsPerCarton: 24 },
       { sku: "UM-5520", name: "植物蛋白飲 原味", expiryAccept: "2027-02-28", unit: "罐", qty: 16, pcsPerCarton: 16 },
+      { sku: "UM-6601", name: "蛋白酥脆脆 起司 30g", expiryAccept: "2027-04-30", unit: "盒", qty: 24, pcsPerCarton: 24 },
+      { sku: "UM-6602", name: "手作蛋白餅乾 原味", expiryAccept: "2027-01-15", unit: "盒", qty: 20, pcsPerCarton: 20 },
+      { sku: "UM-7703", name: "零卡果凍 蜂蜜檸檬", expiryAccept: "2027-06-30", unit: "箱", qty: 30, pcsPerCarton: 30 },
+      { sku: "UM-8804", name: "分離乳清 可可 500g", expiryAccept: "2027-03-01", unit: "袋", qty: 12, pcsPerCarton: 12 },
+      { sku: "UM-9905", name: "植物蛋白棒 花生", expiryAccept: "2027-02-10", unit: "盒", qty: 16, pcsPerCarton: 16 },
     ];
 
     function mockItemsFor(channelName) {
       const byChannel = {
-        "實體-全聯": [0, 2, 4, 5, 6],
-        "實體-寶雅": [0, 2, 3, 5],
-        "實體-迪卡儂": [1, 4, 5, 6],
-        "實體-PW健身工廠": [1, 3, 4, 6],
-        "經銷商-絢綻國際企業社": [0, 1, 2, 3, 4],
-        "經銷商-學生營養股份有限公司": [0, 2, 3, 5, 6],
-        "線上-轉單": [0, 1, 2, 6],
-        "線上-蝦皮商城": [0, 1, 2, 3, 5],
-        "跨境- Cool Cool Trading": [3, 4, 6],
-        "百貨-新光三越": [0, 3, 5, 6],
+        "實體-全聯": [0, 1, 2, 5, 6, 7, 8, 10],
+        "實體-寶雅": [0, 2, 3, 5, 7, 8, 9, 11],
+        "實體-迪卡儂": [1, 4, 5, 6, 7, 9, 10, 11],
+        "實體-PW健身工廠": [1, 3, 4, 6, 7, 8, 10, 11],
+        "經銷商-絢綻國際企業社": [0, 1, 2, 3, 4, 7, 8, 10],
+        "經銷商-學生營養股份有限公司": [0, 2, 3, 5, 6, 8, 9, 11],
+        "線上-轉單": [0, 1, 2, 6, 7, 8, 9, 10],
+        "線上-蝦皮商城": [0, 1, 2, 3, 5, 7, 9, 11],
+        "跨境- Cool Cool Trading": [1, 3, 4, 6, 7, 8, 10, 11],
+        "晨曦公司": [0, 1, 5, 6, 7, 8, 9, 11],
+        "百貨-新光三越": [0, 3, 5, 6, 7, 8, 10, 11],
       };
-      const indexes = byChannel[channelName] || [0, 1, 2];
+      const indexes = byChannel[channelName] || [0, 1, 2, 5, 6, 7, 8, 10];
       return indexes.map((i) => ({ ...mockItemPool[i] }));
     }
 
@@ -3896,6 +3935,34 @@
         return dealerSupplyItems(channelName);
       }
       return mockItemsFor(channelName);
+    }
+
+    function maxOrderableQty(sellable, pcsPerCarton) {
+      const pcs = Number(pcsPerCarton) || 0;
+      const alloc = Number(sellable) || 0;
+      if (pcs <= 0 || alloc <= 0) return 0;
+      return Math.floor(alloc / pcs) * pcs;
+    }
+
+    function channelPickCatalog(channelName) {
+      return mockItemsFor(channelName).map((item) => {
+        const meta = metaForSku(item.sku);
+        const pcs = Number(item.pcsPerCarton) || 0;
+        const sellableQty = virtualAllocOf(channelName, item.sku);
+        return {
+          sku: item.sku,
+          name: item.name,
+          unit: item.unit,
+          expiryAccept: item.expiryAccept,
+          pcsPerCarton: pcs,
+          sellableQty,
+          priceNoLabel: meta.priceNoLabel || "",
+          quote: meta.quote || "0",
+          orderQuote: meta.priceNoLabel || meta.quote || "0",
+          productCode: meta.productCode,
+          cost: meta.cost,
+        };
+      }).filter((row) => maxOrderableQty(row.sellableQty, row.pcsPerCarton) > 0);
     }
 
     const localChannelNames = ["實體-全聯", "實體-寶雅", "實體-迪卡儂", "實體-PW健身工廠", "百貨-新光三越"];
@@ -4425,7 +4492,7 @@
         const meta = metaForSku(item.sku);
         const price = Number(line.priceNoLabel != null ? line.priceNoLabel : (item.orderQuote || item.quote || meta.quote)) || 0;
         const priceLabel = priceLabelOf(item, line);
-        const cartons = pcs ? Math.round((qty / pcs) * 100) / 100 : "";
+        const cartons = pcs ? (qty % pcs === 0 ? qty / pcs : Math.floor(qty / pcs)) : "";
         return {
           sku: item.sku || line.barcode || "",
           itemNo: line.itemNo || item.productCode || String(index + 1),
@@ -4850,13 +4917,18 @@
     renderSalesTable(getSalesFiltered());
 
     const productMeta = {
-      "UM-1001": { productCode: "SET10-4713025601001", cost: "86.50", quote: "120" },
-      "UM-1002": { productCode: "SET10-4713025602642", cost: "201.15", quote: "280" },
-      "UM-2108": { productCode: "SET10-4713025602108", cost: "42.00", quote: "68" },
-      "UM-3305": { productCode: "SET10-4713025603305", cost: "155.80", quote: "220" },
-      "UM-4412": { productCode: "SET10-4713025604412", cost: "98.00", quote: "145" },
-      "PX-8801": { productCode: "SET10-4713025608801", cost: "63.20", quote: "99" },
-      "UM-5520": { productCode: "SET10-4713025605520", cost: "118.00", quote: "168" },
+      "UM-1001": { productCode: "SET10-4713025601001", cost: "86.50", quote: "120", priceNoLabel: "105" },
+      "UM-1002": { productCode: "SET10-4713025602642", cost: "201.15", quote: "280", priceNoLabel: "250" },
+      "UM-2108": { productCode: "SET10-4713025602108", cost: "42.00", quote: "68", priceNoLabel: "55" },
+      "UM-3305": { productCode: "SET10-4713025603305", cost: "155.80", quote: "220", priceNoLabel: "190" },
+      "UM-4412": { productCode: "SET10-4713025604412", cost: "98.00", quote: "145", priceNoLabel: "125" },
+      "PX-8801": { productCode: "SET10-4713025608801", cost: "63.20", quote: "99", priceNoLabel: "85" },
+      "UM-5520": { productCode: "SET10-4713025605520", cost: "118.00", quote: "168", priceNoLabel: "148" },
+      "UM-6601": { productCode: "SET10-4713025606601", cost: "18.00", quote: "27", priceNoLabel: "22" },
+      "UM-6602": { productCode: "SET10-4713025606602", cost: "9.50", quote: "13", priceNoLabel: "11" },
+      "UM-7703": { productCode: "SET10-4713025607703", cost: "36.00", quote: "50", priceNoLabel: "42" },
+      "UM-8804": { productCode: "SET10-4713025608804", cost: "240.00", quote: "345", priceNoLabel: "300" },
+      "UM-9905": { productCode: "SET10-4713025609905", cost: "78.00", quote: "110", priceNoLabel: "95" },
     };
     const shipWarehouses = ["良品倉", "不良品倉", "待驗倉"];
     const shipBatches = {
@@ -4870,16 +4942,37 @@
     let nextPoItemId = 73672;
     let poShipGoods = [];
     let poShipShortage = [];
+    let poPickRows = [];
+
+    const virtualAllocDefaults = {
+      "UM-1001": 120,
+      "UM-1002": 96,
+      "UM-2108": 90,
+      "UM-3305": 108,
+      "UM-4412": 80,
+      "PX-8801": 96,
+      "UM-5520": 80,
+      "UM-6601": 120,
+      "UM-6602": 100,
+      "UM-7703": 90,
+      "UM-8804": 72,
+      "UM-9905": 80,
+    };
 
     const virtualStockShortfalls = {
       "線上-轉單": { "UM-1001": 0, "UM-2108": 5 },
       "實體-全聯": { "UM-4412": 0 },
     };
 
-    function virtualStockOf(channelName, sku) {
+    function virtualAllocOf(channelName, sku) {
       const map = virtualStockShortfalls[channelName] || {};
       if (Object.prototype.hasOwnProperty.call(map, sku)) return Number(map[sku]) || 0;
-      return 9999;
+      if (Object.prototype.hasOwnProperty.call(virtualAllocDefaults, sku)) return Number(virtualAllocDefaults[sku]) || 0;
+      return 96;
+    }
+
+    function virtualStockOf(channelName, sku) {
+      return virtualAllocOf(channelName, sku);
     }
 
     function parseBatchDate(batch) {
@@ -5080,8 +5173,10 @@
         acceptDays: src.acceptDays ?? "",
         cost: src.cost || meta.cost,
         quote: src.quote || meta.quote,
-        orderQuote: src.orderQuote ?? "0",
+        orderQuote: src.orderQuote ?? src.priceNoLabel ?? meta.priceNoLabel ?? "0",
+        priceNoLabel: src.priceNoLabel ?? meta.priceNoLabel ?? "",
         stock: src.stock ?? 0,
+        sellableQty: src.sellableQty != null ? Number(src.sellableQty) : undefined,
         remark: src.remark || "",
         pcsPerCarton: Number(src.pcsPerCarton) || Number((catalogLineBySku(src.sku) || {}).pcsPerCarton) || pcsFromItemRemark(src) || 0,
         qty: Number(src.qty) || 0,
@@ -5093,6 +5188,129 @@
       renderPoGoodsTable();
     }
 
+    function snapPickQty(row, raw) {
+      const pcs = Number(row && row.pcsPerCarton) || 0;
+      const max = maxOrderableQty(row && row.sellableQty, pcs);
+      let n = Math.floor(Number(raw) || 0);
+      if (n < 0) n = 0;
+      if (n > max) n = max;
+      if (pcs > 0) n = Math.floor(n / pcs) * pcs;
+      return n;
+    }
+
+    function syncPoPickQtyEnabled() {
+      const readonly = !poGoodsEditable();
+      document.querySelectorAll("#editGoodsPickBody tr[data-sku]").forEach((tr) => {
+        const check = tr.querySelector('[data-pick="check"]');
+        const qty = tr.querySelector('[data-pick="qty"]');
+        if (!check || !qty) return;
+        check.disabled = readonly;
+        qty.disabled = readonly || !check.checked;
+      });
+    }
+
+    function renderPoGoodsPick() {
+      const body = document.getElementById("editGoodsPickBody");
+      if (!body) return;
+      if (!poPickRows.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="5">此通路虛擬倉目前沒有可配商品</td></tr>`;
+        return;
+      }
+      body.innerHTML = poPickRows.map((row) => {
+        const max = maxOrderableQty(row.sellableQty, row.pcsPerCarton);
+        const step = Number(row.pcsPerCarton) || 1;
+        const checked = !!row.checked;
+        const qtyVal = checked ? (Number(row.qty) || 0) : "";
+        return `
+        <tr data-sku="${escapeHtml(row.sku)}">
+          <td class="col-check"><input type="checkbox" data-pick="check"${checked ? " checked" : ""} /></td>
+          <td>${escapeHtml(row.sku)}</td>
+          <td class="col-name">${escapeHtml(row.name)}</td>
+          <td class="num col-alloc">${escapeHtml(row.sellableQty)}</td>
+          <td class="col-pick-qty">
+            <input type="number" min="0" max="${escapeHtml(max)}" step="${escapeHtml(step)}" data-pick="qty" value="${escapeHtml(qtyVal)}" />
+          </td>
+        </tr>`;
+      }).join("");
+      syncPoPickQtyEnabled();
+    }
+
+    function syncPoOverviewFromPick(order) {
+      const target = order || getWorkspaceOrder();
+      const pickSkus = new Set(poPickRows.map((row) => row.sku));
+      const leftover = ((target && target.items) || []).filter((item) => {
+        const sku = item && item.sku;
+        return sku && !pickSkus.has(sku) && (Number(item.qty) || 0) > 0;
+      });
+      const picked = poPickRows.filter((row) => row.checked && (Number(row.qty) || 0) > 0).map((row) => toPoLineItem({
+        ...row,
+        qty: Number(row.qty) || 0,
+        sellableQty: row.sellableQty,
+        priceNoLabel: row.priceNoLabel,
+        quote: row.quote,
+        orderQuote: row.priceNoLabel || row.orderQuote,
+      }));
+      poLineItems = picked.concat(leftover.map(toPoLineItem));
+      if (target) target.items = collectEditGoods();
+      renderPoGoodsTable();
+    }
+
+    function loadPoGoodsWorkspace(order) {
+      const selected = {};
+      (order && order.items || []).forEach((item) => {
+        if (!item || !item.sku) return;
+        selected[item.sku] = Number(item.qty) || 0;
+      });
+      poPickRows = channelPickCatalog(order && order.channelName).map((row) => {
+        const qty = snapPickQty(row, selected[row.sku] || 0);
+        return { ...row, checked: qty > 0, qty };
+      });
+      syncPoOverviewFromPick(order);
+      renderPoGoodsPick();
+    }
+
+    function onPoPickField(e) {
+      if (!poGoodsEditable()) return;
+      const tr = e.target.closest("tr[data-sku]");
+      if (!tr) return;
+      const row = poPickRows.find((item) => item.sku === tr.dataset.sku);
+      if (!row) return;
+      const pick = e.target.dataset.pick;
+      if (pick === "check") {
+        row.checked = e.target.checked;
+        if (!row.checked) row.qty = 0;
+        const qtyInput = tr.querySelector('[data-pick="qty"]');
+        if (qtyInput) qtyInput.value = row.checked ? (row.qty || "") : "";
+        syncPoPickQtyEnabled();
+        syncPoOverviewFromPick();
+        return;
+      }
+      if (pick === "qty") {
+        if (!row.checked) {
+          e.target.value = "";
+          return;
+        }
+        const max = maxOrderableQty(row.sellableQty, row.pcsPerCarton);
+        const pcs = Number(row.pcsPerCarton) || 0;
+        let n = Math.floor(Number(e.target.value) || 0);
+        if (n < 0) n = 0;
+        if (n > max) {
+          n = max;
+          e.target.value = String(max);
+        }
+        if (e.type === "change") {
+          row.qty = snapPickQty(row, n);
+          e.target.value = row.qty || "";
+          syncPoOverviewFromPick();
+          return;
+        }
+        if (!pcs || n % pcs === 0) {
+          row.qty = n;
+          syncPoOverviewFromPick();
+        }
+      }
+    }
+
     function updatePoQtyTotal() {
       const total = poLineItems.reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
       const el = document.getElementById("poItemsQtyTotal");
@@ -5100,10 +5318,12 @@
     }
 
     function goodsPriceNoLabel(item) {
-      const cat = catalogLineBySku(item && item.sku) || {};
-      if (cat.priceNoLabel != null && cat.priceNoLabel !== "") return Number(cat.priceNoLabel) || 0;
       const meta = metaForSku(item && item.sku);
-      return Number((item && (item.orderQuote || item.quote)) || (meta && meta.quote)) || 0;
+      if (item && item.priceNoLabel != null && item.priceNoLabel !== "") return Number(item.priceNoLabel) || 0;
+      if (meta.priceNoLabel != null && meta.priceNoLabel !== "") return Number(meta.priceNoLabel) || 0;
+      const n = Number(item && item.orderQuote);
+      if (Number.isFinite(n) && n > 0) return n;
+      return Number((item && item.quote) || (meta && meta.quote)) || 0;
     }
 
     function goodsDisplayFields(item) {
@@ -5111,13 +5331,13 @@
       const pcs = pcsPerCartonOf(item);
       const priceNo = goodsPriceNoLabel(item);
       const priceLb = priceLabelOf(item, catalogLineBySku(item && item.sku) || {});
-      const cartons = pcs ? Math.round((qty / pcs) * 100) / 100 : "";
+      const cartons = pcs ? (qty % pcs === 0 ? qty / pcs : Math.floor(qty / pcs)) : 0;
       return {
         sku: (item && item.sku) || "",
         name: (item && item.name) || "",
         pcs: pcs || "",
         qty,
-        carton: cartons === 0 ? "" : cartons,
+        carton: cartons || "",
         priceNo,
         priceLabel: priceLb === "" || priceLb == null ? "" : priceLb,
         amount: Math.round(qty * priceNo * 100) / 100,
@@ -5860,14 +6080,13 @@
       }
       if (!order.address && party && party.buyerAddress) order.address = party.buyerAddress;
       fillOverseasForm(order, orderFormMode === "view");
-      if (!order.items || !order.items.length) {
-        order.items = channelSupplyItems(order.channelName, kind);
-      }
-      loadPoGoods(order.items);
+      if (!Array.isArray(order.items)) order.items = [];
+      loadPoGoodsWorkspace(order);
       renderRelatedShips(order);
       closePoShipCreateForm();
       setPoTab("basic");
       setOrderFormReadonly(orderFormMode === "view");
+      syncPoPickQtyEnabled();
       syncEditFooter(order, orderFormMode);
       showPage("order-edit");
     }
@@ -6021,8 +6240,8 @@
       document.getElementById("editAddress").value = "";
       const order = getWorkspaceOrder();
       if (order && poKindOf(order) === "一般通路") {
-        order.items = channelSupplyItems("", "一般通路");
-        loadPoGoods(order.items);
+        order.items = [];
+        loadPoGoodsWorkspace(order);
       }
     });
     document.getElementById("editChannelName").addEventListener("change", () => {
@@ -6031,8 +6250,9 @@
       if (profile.address) document.getElementById("editAddress").value = profile.address;
       const order = getWorkspaceOrder();
       if (order && poKindOf(order) === "一般通路") {
-        order.items = channelSupplyItems(name, "一般通路");
-        loadPoGoods(order.items);
+        order.channelName = name;
+        order.items = [];
+        loadPoGoodsWorkspace(order);
       }
     });
     document.getElementById("editOverseasChannelName").addEventListener("change", () => {
@@ -6052,8 +6272,8 @@
             order.channelType = "台灣本地通路";
           }
         }
-        order.items = channelSupplyItems(name, poKindOf(order));
-        loadPoGoods(order.items);
+        order.items = [];
+        loadPoGoodsWorkspace(order);
       }
     });
 
@@ -6165,6 +6385,8 @@
     document.getElementById("importPoItemsModal").addEventListener("click", (e) => {
       if (e.target.id === "importPoItemsModal") closeImportPoItemsModal();
     });
+    document.getElementById("editGoodsPickBody").addEventListener("change", onPoPickField);
+    document.getElementById("editGoodsPickBody").addEventListener("input", onPoPickField);
     document.getElementById("editGoodsBody").addEventListener("input", onPoItemField);
     document.getElementById("editGoodsBody").addEventListener("change", onPoItemField);
     document.getElementById("editGoodsBody").addEventListener("click", (e) => {
