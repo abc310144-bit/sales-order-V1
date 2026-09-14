@@ -585,6 +585,7 @@
       margin: 0 0 12px;
     }
     .po-goods-section + .po-goods-section { margin-top: 28px; }
+    #editGoodsPickSection.hidden + .po-goods-section { margin-top: 0; }
     .po-goods-pick-table { min-width: 760px; }
     .po-goods-pick-table .col-check {
       width: 48px;
@@ -2193,7 +2194,7 @@
 
           <div class="po-pane hidden" data-po-pane="goods">
             <div id="editGeneralGoodsWrap">
-              <div class="po-goods-section">
+              <div class="po-goods-section" id="editGoodsPickSection">
                 <h3 class="goods-title">選擇商品</h3>
                 <div class="table-wrap ship-items-table-wrap goods-h-scroll po-goods-scroll">
                   <table class="ship-items-table po-goods-table po-goods-pick-table">
@@ -6115,6 +6116,8 @@
     function setOrderFormReadonly(readonly) {
       const page = document.getElementById("page-order-edit");
       page.classList.toggle("is-readonly", readonly);
+      const pick = document.getElementById("editGoodsPickSection");
+      if (pick) pick.classList.toggle("hidden", readonly);
       page.querySelectorAll("input, select, textarea").forEach((el) => {
         if (el.closest("#poShipCreatePanel")) return;
         el.disabled = readonly || el.hasAttribute("data-lock");
