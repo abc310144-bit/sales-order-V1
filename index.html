@@ -500,6 +500,31 @@
       outline: none;
       background: #fff;
     }
+    .form-ctrl input[type="date"] { max-width: 180px; }
+    .time-24 {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .time-24 select {
+      width: 72px;
+      max-width: 72px;
+    }
+    .time-24 .time-colon {
+      color: var(--text);
+      font-weight: 600;
+      line-height: 32px;
+    }
+    .form-ctrl .field-hint {
+      display: inline-block;
+      margin-left: 4px;
+      color: var(--text-3);
+      font-size: 13px;
+      line-height: 32px;
+      vertical-align: top;
+      white-space: nowrap;
+    }
     .form-ctrl textarea {
       max-width: 560px;
       height: auto;
@@ -2040,6 +2065,19 @@
               <label>採購單單號</label>
               <div class="form-ctrl"><input type="text" id="editPoDocNo" maxlength="30" placeholder="請輸入採購單單號" /></div>
             </div>
+            <div class="form-row">
+              <label>預計到貨日期</label>
+              <div class="form-ctrl"><input type="date" id="editExpectArriveDate" /></div>
+            </div>
+            <div class="form-row">
+              <label>預計到貨時間</label>
+              <div class="form-ctrl time-24">
+                <select id="editExpectArriveHour" aria-label="預計到貨時"></select>
+                <span class="time-colon">:</span>
+                <select id="editExpectArriveMinute" aria-label="預計到貨分"></select>
+                <span class="field-hint">24小時制</span>
+              </div>
+            </div>
             <div id="editGeneralBlock">
               <div class="form-row">
                 <label>合作通路類型</label>
@@ -2077,10 +2115,6 @@
               <div class="form-row">
                 <label>到貨地址</label>
                 <div class="form-ctrl"><textarea id="editAddress" rows="2"></textarea></div>
-              </div>
-              <div class="form-row">
-                <label>到貨日期</label>
-                <div class="form-ctrl"><input type="date" id="editArriveDate" /></div>
               </div>
               <div class="form-row">
                 <label>應出貨時間</label>
@@ -3126,6 +3160,36 @@
       return String(value).replace(" ", "T").slice(0, 16);
     }
 
+    function toTimeInput(value) {
+      const m = String(value || "").trim().match(/(\d{1,2}):(\d{2})/);
+      if (!m) return "";
+      const hour = Number(m[1]);
+      const minute = Number(m[2]);
+      if (hour > 23 || minute > 59) return "";
+      return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    }
+
+    function initExpectArriveTimeOptions() {
+      const hour = document.getElementById("editExpectArriveHour");
+      const minute = document.getElementById("editExpectArriveMinute");
+      if (!hour || hour.options.length) return;
+      hour.innerHTML = `<option value=""></option>` + Array.from({ length: 24 }, (_, i) => `<option value="${pad(i, 2)}">${pad(i, 2)}</option>`).join("");
+      minute.innerHTML = `<option value=""></option>` + Array.from({ length: 60 }, (_, i) => `<option value="${pad(i, 2)}">${pad(i, 2)}</option>`).join("");
+    }
+
+    function readExpectArriveTime() {
+      const hour = document.getElementById("editExpectArriveHour").value;
+      const minute = document.getElementById("editExpectArriveMinute").value;
+      if (hour === "" && minute === "") return "";
+      return `${hour || "00"}:${minute || "00"}`;
+    }
+
+    function fillExpectArriveTime(value) {
+      const t = toTimeInput(value);
+      document.getElementById("editExpectArriveHour").value = t ? t.slice(0, 2) : "";
+      document.getElementById("editExpectArriveMinute").value = t ? t.slice(3, 5) : "";
+    }
+
     function nextSalesOrderNo() {
       const seq = salesOrders.length + 1;
       const d = new Date();
@@ -3186,6 +3250,7 @@
         fileType: file.type,
         address: party ? party.buyerAddress : (profile.address || ""),
         arriveDate: party ? "" : addDaysToStamp(createdAt, 2),
+        arriveTime: party ? "" : "18:00",
         shipByTime: party ? "" : addDaysToStamp(createdAt, 1, true),
         items: isOverseas
           ? overseasLinesToItems(party.lines)
@@ -3600,6 +3665,7 @@
         fileType: "",
         address: profile.address || "",
         arriveDate: kind === "一般通路" ? addDaysToStamp(createdAt, 2) : "",
+        arriveTime: "",
         shipByTime: kind === "一般通路" ? addDaysToStamp(createdAt, 1, true) : "",
         items: channelSupplyItems(name, kind),
         overseas: kind === "境外通路" ? buildOverseasPo(name, "demo.user", "") : null,
@@ -3657,7 +3723,8 @@
         fileUrl: "",
         fileType: "",
         address: src.address || profile.address || "",
-        arriveDate: kind === "一般通路" ? addDaysToStamp(createdAt, 2) : "",
+        arriveDate: kind === "一般通路" ? addDaysToStamp(createdAt, 2) : (src.arriveDate || ""),
+        arriveTime: src.arriveTime || "",
         shipByTime: kind === "一般通路" ? addDaysToStamp(createdAt, 1, true) : "",
         items: cloneCopiedItems(src.items),
         overseas: null,
@@ -4529,6 +4596,7 @@
         fileType: "",
         address: profile.address || "",
         arriveDate: cfg.arriveDate || addDaysToStamp(cfg.createdAt, 2),
+        arriveTime: cfg.arriveTime || "18:00",
         shipByTime: cfg.shipByTime || addDaysToStamp(cfg.createdAt, 1, true),
         closedBySupervisor: !!cfg.closedBySupervisor,
         completeNote: cfg.completeNote || "",
@@ -4758,6 +4826,9 @@
 
     salesOrders.forEach(hydratePoItemCatalogFields);
     salesOrders.forEach(stripRemovedQtyAdjust);
+    salesOrders.forEach((order) => {
+      if (order && order.arriveTime == null && order.arriveDate) order.arriveTime = "18:00";
+    });
     persistDemoData();
 
     function batchesFor(type) {
@@ -5569,6 +5640,8 @@
     function applyEditFormToOrder(order) {
       order.poDocNo = document.getElementById("editPoDocNo").value.trim().slice(0, 30);
       order.poKind = poKindOf(order);
+      order.arriveDate = document.getElementById("editExpectArriveDate").value;
+      order.arriveTime = readExpectArriveTime();
       if (isOverseasPo(order) || isDealerPo(order)) {
         applyOverseasForm(order);
         return;
@@ -5576,7 +5649,6 @@
       order.channelType = document.getElementById("editChannelType").value || order.channelType;
       order.channelName = document.getElementById("editChannelName").value || order.channelName;
       order.address = document.getElementById("editAddress").value;
-      order.arriveDate = document.getElementById("editArriveDate").value;
       order.shipByTime = document.getElementById("editShipByTime").value.replace("T", " ");
       order.items = collectEditGoods();
     }
@@ -5675,6 +5747,7 @@
     }
 
     function fillOrderEdit(order, mode) {
+      initExpectArriveTimeOptions();
       workspaceOrder = order;
       currentEditOrderNo = order.orderNo || "__new__";
       const forceView = mode === "view" || !canEditPo(order);
@@ -5690,6 +5763,11 @@
       const titles = { view: "檢視採購單", edit: "編輯採購單", create: "建立採購單" };
       document.getElementById("editPageTitle").textContent = currentEditOrderNo === "__new__" ? titles.create : (titles[orderFormMode] || titles.edit);
       document.getElementById("editPoDocNo").value = order.poDocNo || "";
+      if (!overseas && !dealer && !order.arriveDate) {
+        order.arriveDate = addDaysToStamp(order.createdAt || nowStamp(), 2);
+      }
+      document.getElementById("editExpectArriveDate").value = toDateInput(order.arriveDate);
+      fillExpectArriveTime(order.arriveTime);
       if (overseas || dealer) {
         if (overseas) ensureOverseasPo(order);
         else ensureDealerPo(order);
@@ -5714,7 +5792,6 @@
         document.getElementById("editChannelType").value = type;
         document.getElementById("editChannelName").value = !order.channelName || order.channelName === "—" ? "" : order.channelName;
         document.getElementById("editAddress").value = order.address || "";
-        document.getElementById("editArriveDate").value = toDateInput(order.arriveDate);
         document.getElementById("editShipByTime").value = toDateTimeInput(order.shipByTime);
         loadPoGoods(order.items);
       }
