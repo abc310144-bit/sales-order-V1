@@ -2078,7 +2078,7 @@
                 <span class="field-hint">24小時制</span>
               </div>
             </div>
-            <div id="editGeneralBlock">
+            <div id="editGeneralBlock" class="hidden">
               <div class="form-row">
                 <label>合作通路類型</label>
                 <div class="form-ctrl">
@@ -3243,7 +3243,7 @@
         ? buildOverseasPo(channelName, "demo.user", file.name)
         : isDealer
           ? buildDealerPo(channelName, "demo.user", file.name)
-          : null;
+          : buildGeneralPo(channelName, "demo.user");
       const order = {
         orderNo: nextSalesOrderNo(),
         poDocNo: party ? (party.poDocNo || "").slice(0, 30) : "",
@@ -3258,7 +3258,7 @@
         fileName: file.name,
         fileUrl: URL.createObjectURL(file),
         fileType: file.type,
-        address: party ? party.buyerAddress : (profile.address || ""),
+        address: (party && party.buyerAddress) || profile.address || "",
         arriveDate: party ? "" : addDaysToStamp(createdAt, 2),
         arriveTime: party ? "" : "18:00",
         shipByTime: party ? "" : addDaysToStamp(createdAt, 1, true),
@@ -3269,6 +3269,7 @@
             : mockItemsFor(channelName),
         overseas: isOverseas ? party : null,
         dealer: isDealer ? party : null,
+        general: !isOverseas && !isDealer ? party : null,
       };
       salesOrders.unshift(order);
       renderSalesTable(getSalesFiltered());
@@ -3659,6 +3660,10 @@
         : kind === "境外通路"
           ? "境外通路"
           : (channelType || channelTypeOfName(name) || "");
+      const overseas = kind === "境外通路" ? buildOverseasPo(name, "demo.user", "") : null;
+      const dealer = kind === "經銷" ? buildDealerPo(name, "demo.user", "") : null;
+      const general = kind === "一般通路" ? buildGeneralPo(name, "demo.user") : null;
+      const party = overseas || dealer || general;
       const order = {
         orderNo: "",
         poDocNo: "",
@@ -3673,18 +3678,18 @@
         fileName: "",
         fileUrl: "",
         fileType: "",
-        address: profile.address || "",
+        address: (party && party.buyerAddress) || profile.address || "",
         arriveDate: kind === "一般通路" ? addDaysToStamp(createdAt, 2) : "",
         arriveTime: "",
         shipByTime: kind === "一般通路" ? addDaysToStamp(createdAt, 1, true) : "",
         items: channelSupplyItems(name, kind),
-        overseas: kind === "境外通路" ? buildOverseasPo(name, "demo.user", "") : null,
-        dealer: kind === "經銷" ? buildDealerPo(name, "demo.user", "") : null,
+        overseas,
+        dealer,
+        general,
       };
       currentEditOrderNo = "__new__";
       workspaceOrder = order;
       fillOrderEdit(order, "edit");
-      setPoTab("goods");
     }
 
     function cloneCopiedItems(items) {
@@ -3739,6 +3744,7 @@
         items: cloneCopiedItems(src.items),
         overseas: null,
         dealer: null,
+        general: null,
       };
       if (kind === "境外通路") {
         draft.overseas = clonePartyForCopy(src.overseas, buildOverseasPo(src.channelName, op, ""), op);
@@ -3747,6 +3753,10 @@
       if (kind === "經銷") {
         draft.dealer = clonePartyForCopy(src.dealer, buildDealerPo(src.channelName, op, ""), op);
         if (!draft.address) draft.address = draft.dealer.buyerAddress || "";
+      }
+      if (kind === "一般通路") {
+        draft.general = clonePartyForCopy(src.general, buildGeneralPo(src.channelName, op), op);
+        if (!draft.address) draft.address = draft.general.buyerAddress || "";
       }
       return draft;
     }
@@ -3929,6 +3939,14 @@
 
     function isDealerPo(order) {
       return !!order && (poKindOf(order) === "經銷");
+    }
+
+    function isGeneralPo(order) {
+      return !!order && (poKindOf(order) === "一般通路");
+    }
+
+    function hidePartyPayment(order) {
+      return !isOverseasPo(order);
     }
 
     function poKindOf(order) {
@@ -4169,15 +4187,68 @@
       if (!order.dealer.lines || !order.dealer.lines.length) order.dealer.lines = fallback.lines;
     }
 
-    function partyRecord(order) {
-      if (isOverseasPo(order)) return order.overseas;
-      if (isDealerPo(order)) return order.dealer;
-      return null;
+    function buildGeneralPo(channelName, operator) {
+      const profile = channelProfiles[channelName] || {};
+      const op = operator || "demo.user";
+      return {
+        buyerName: channelName || "",
+        buyerAttn: profile.contact || "",
+        buyerEmail: profile.email || "",
+        buyerTel: profile.phone || "",
+        buyerAddress: profile.address || "",
+        vendorName: VENDOR_COMPANY,
+        vendorAttn: op,
+        vendorEmail: `${op}@urmart.com`,
+        vendorTel: VENDOR_TEL,
+        vendorExt: "168",
+        vendorAddress: VENDOR_ADDRESS,
+        termsOfDelivery: "EXW",
+        termsOfPayment: "",
+        lines: [],
+        poDocNo: "",
+      };
     }
 
-    function fillPartyChannelOptions(kind, selected) {
+    function ensureGeneralPo(order) {
+      if (!isGeneralPo(order)) return;
+      const fallback = buildGeneralPo(order.channelName, order.operator);
+      if (!order.general) order.general = fallback;
+      Object.keys(fallback).forEach((key) => {
+        if (order.general[key] === undefined || order.general[key] === null) order.general[key] = fallback[key];
+      });
+      if (!order.general.buyerAddress && order.address) order.general.buyerAddress = order.address;
+      if (!order.general.buyerName) order.general.buyerName = order.channelName || "";
+      order.general.vendorName = VENDOR_COMPANY;
+      order.general.vendorAddress = VENDOR_ADDRESS;
+      order.general.vendorTel = order.general.vendorTel || VENDOR_TEL;
+    }
+
+    function ensurePartyPo(order) {
+      if (!order) return;
+      if (isOverseasPo(order)) ensureOverseasPo(order);
+      else if (isDealerPo(order)) ensureDealerPo(order);
+      else ensureGeneralPo(order);
+    }
+
+    function partyRecord(order) {
+      if (!order) return null;
+      if (isOverseasPo(order)) return order.overseas;
+      if (isDealerPo(order)) return order.dealer;
+      return order.general || null;
+    }
+
+    function fillPartyChannelOptions(kind, selected, channelType) {
       const select = document.getElementById("editOverseasChannelName");
-      const names = channelNamesForKind(kind);
+      let names = channelNamesForKind(kind);
+      if (kind === "一般通路") {
+        const group = channelType === "台灣線上通路"
+          ? "台灣線上通路"
+          : (channelType === "台灣本地通路" || channelType === "台灣線下通路" || channelType === "台灣實體百貨")
+            ? "台灣本地通路"
+            : "";
+        if (group) names = channelNamesByGroup[group] || names;
+      }
+      if (selected && !names.includes(selected)) names = [selected, ...names];
       select.innerHTML = `<option value="">請選擇</option>` + names.map((name) => `<option>${name}</option>`).join("");
       select.value = names.includes(selected) ? selected : "";
     }
@@ -4205,22 +4276,21 @@
     }
 
     function fillOverseasForm(order, readonly) {
-      if (isOverseasPo(order)) ensureOverseasPo(order);
-      else ensureDealerPo(order);
+      ensurePartyPo(order);
       const ov = partyRecord(order) || {};
-      fillPartyChannelOptions(poKindOf(order), ov.buyerName || order.channelName || "");
+      fillPartyChannelOptions(poKindOf(order), ov.buyerName || order.channelName || "", order.channelType);
       document.getElementById("editBuyerAttn").value = ov.buyerAttn || "";
       document.getElementById("editBuyerEmail").value = ov.buyerEmail || "";
       document.getElementById("editBuyerTel").value = ov.buyerTel || "";
       document.getElementById("editBuyerAddress").value = ov.buyerAddress || "";
-      document.getElementById("editVendorName").value = ov.vendorName || VENDOR_COMPANY;
+      document.getElementById("editVendorName").value = VENDOR_COMPANY;
       document.getElementById("editVendorAttn").value = ov.vendorAttn || "";
       document.getElementById("editVendorEmail").value = ov.vendorEmail || "";
-      document.getElementById("editVendorAddress").value = ov.vendorAddress || VENDOR_ADDRESS;
+      document.getElementById("editVendorAddress").value = VENDOR_ADDRESS;
       document.getElementById("editTermsOfDelivery").value = ov.termsOfDelivery || "EXW";
-      const dealer = isDealerPo(order);
-      document.getElementById("editTermsOfPaymentRow").classList.toggle("hidden", dealer);
-      document.getElementById("editTermsOfPayment").value = dealer ? "" : (ov.termsOfPayment || "");
+      const hidePay = hidePartyPayment(order);
+      document.getElementById("editTermsOfPaymentRow").classList.toggle("hidden", hidePay);
+      document.getElementById("editTermsOfPayment").value = hidePay ? "" : (ov.termsOfPayment || "");
       document.getElementById("editVendorExtWrap").classList.toggle("hidden", readonly);
       document.getElementById("editVendorExt").classList.toggle("hidden", readonly);
       if (readonly) {
@@ -4234,13 +4304,26 @@
     }
 
     function applyOverseasForm(order) {
-      const dealer = isDealerPo(order);
-      if (dealer) ensureDealerPo(order);
-      else ensureOverseasPo(order);
-      const bag = dealer ? order.dealer : order.overseas;
+      ensurePartyPo(order);
+      const kind = poKindOf(order);
+      const bag = partyRecord(order);
       const name = document.getElementById("editOverseasChannelName").value;
-      order.poKind = dealer ? "經銷" : "境外通路";
-      order.channelType = dealer ? "台灣本地經銷" : "境外通路";
+      if (kind === "經銷") {
+        order.poKind = "經銷";
+        order.channelType = "台灣本地經銷";
+      } else if (kind === "一般通路") {
+        order.poKind = "一般通路";
+        if ((channelNamesByGroup["台灣線上通路"] || []).includes(name)) {
+          order.channelType = "台灣線上通路";
+        } else if ((channelNamesByGroup["台灣本地通路"] || []).includes(name)) {
+          if (!["台灣本地通路", "台灣線下通路", "台灣實體百貨"].includes(order.channelType)) {
+            order.channelType = "台灣本地通路";
+          }
+        }
+      } else {
+        order.poKind = "境外通路";
+        order.channelType = "境外通路";
+      }
       order.channelName = name || order.channelName;
       bag.buyerName = name;
       bag.buyerAttn = document.getElementById("editBuyerAttn").value.trim();
@@ -4254,7 +4337,7 @@
       bag.vendorExt = document.getElementById("editVendorExt").value.trim();
       bag.vendorAddress = VENDOR_ADDRESS;
       bag.termsOfDelivery = document.getElementById("editTermsOfDelivery").value || "EXW";
-      bag.termsOfPayment = dealer ? "" : document.getElementById("editTermsOfPayment").value.trim();
+      bag.termsOfPayment = hidePartyPayment(order) ? "" : document.getElementById("editTermsOfPayment").value.trim();
       order.address = bag.buyerAddress;
       order.items = collectEditGoods();
     }
@@ -4570,8 +4653,7 @@
       const order = getWorkspaceOrder();
       if (!canExportPoPdf(order)) return;
       if (orderFormMode !== "view") applyOverseasForm(order);
-      else if (isOverseasPo(order)) ensureOverseasPo(order);
-      else ensureDealerPo(order);
+      else ensurePartyPo(order);
       const win = window.open("", "_blank");
       if (!win) {
         alert("瀏覽器已封鎖彈出視窗，請允許後再匯出 PDF");
@@ -5654,15 +5736,7 @@
       order.poKind = poKindOf(order);
       order.arriveDate = document.getElementById("editExpectArriveDate").value;
       order.arriveTime = readExpectArriveTime();
-      if (isOverseasPo(order) || isDealerPo(order)) {
-        applyOverseasForm(order);
-        return;
-      }
-      order.channelType = document.getElementById("editChannelType").value || order.channelType;
-      order.channelName = document.getElementById("editChannelName").value || order.channelName;
-      order.address = document.getElementById("editAddress").value;
-      order.shipByTime = document.getElementById("editShipByTime").value.replace("T", " ");
-      order.items = collectEditGoods();
+      applyOverseasForm(order);
     }
 
     function approvePo(order) {
@@ -5765,48 +5839,31 @@
       const forceView = mode === "view" || !canEditPo(order);
       orderFormMode = forceView ? "view" : "edit";
       const kind = poKindOf(order);
-      const overseas = kind === "境外通路";
-      const dealer = kind === "經銷";
-      document.getElementById("editGeneralBlock").classList.toggle("hidden", overseas || dealer);
-      document.getElementById("editOverseasBlock").classList.toggle("hidden", !(overseas || dealer));
+      document.getElementById("editGeneralBlock").classList.add("hidden");
+      document.getElementById("editOverseasBlock").classList.remove("hidden");
       document.getElementById("editGeneralGoodsWrap").classList.remove("hidden");
       document.getElementById("editOverseasGoodsWrap").classList.add("hidden");
       document.getElementById("editPoKindMeta").textContent = `採購單類型：${kind}`;
       const titles = { view: "檢視採購單", edit: "編輯採購單", create: "建立採購單" };
       document.getElementById("editPageTitle").textContent = currentEditOrderNo === "__new__" ? titles.create : (titles[orderFormMode] || titles.edit);
       document.getElementById("editPoDocNo").value = order.poDocNo || "";
-      if (!overseas && !dealer && !order.arriveDate) {
+      if (kind === "一般通路" && !order.arriveDate) {
         order.arriveDate = addDaysToStamp(order.createdAt || nowStamp(), 2);
       }
       document.getElementById("editExpectArriveDate").value = toDateInput(order.arriveDate);
       fillExpectArriveTime(order.arriveTime);
-      if (overseas || dealer) {
-        if (overseas) ensureOverseasPo(order);
-        else ensureDealerPo(order);
-        const party = partyRecord(order);
-        if (!order.poDocNo && party && party.poDocNo) {
-          order.poDocNo = party.poDocNo;
-          document.getElementById("editPoDocNo").value = order.poDocNo;
-        }
-        fillOverseasForm(order, orderFormMode === "view");
-        if (!order.items || !order.items.length) {
-          order.items = channelSupplyItems(order.channelName, kind);
-        }
-        loadPoGoods(order.items);
-      } else {
-        const profile = channelProfiles[order.channelName] || {};
-        if (!order.address) order.address = profile.address || "";
-        if (!order.arriveDate) order.arriveDate = addDaysToStamp(order.createdAt || nowStamp(), 2);
-        if (!order.shipByTime) order.shipByTime = addDaysToStamp(order.createdAt || nowStamp(), 1, true);
-        if (!order.items || !order.items.length) order.items = channelSupplyItems(order.channelName, "一般通路");
-        const type = !order.channelType || order.channelType === "—" ? "" : order.channelType;
-        if (channelNamesByGroup[type]) fillChannelNameOptions("editChannelName", type);
-        document.getElementById("editChannelType").value = type;
-        document.getElementById("editChannelName").value = !order.channelName || order.channelName === "—" ? "" : order.channelName;
-        document.getElementById("editAddress").value = order.address || "";
-        document.getElementById("editShipByTime").value = toDateTimeInput(order.shipByTime);
-        loadPoGoods(order.items);
+      ensurePartyPo(order);
+      const party = partyRecord(order);
+      if (!order.poDocNo && party && party.poDocNo) {
+        order.poDocNo = party.poDocNo;
+        document.getElementById("editPoDocNo").value = order.poDocNo;
       }
+      if (!order.address && party && party.buyerAddress) order.address = party.buyerAddress;
+      fillOverseasForm(order, orderFormMode === "view");
+      if (!order.items || !order.items.length) {
+        order.items = channelSupplyItems(order.channelName, kind);
+      }
+      loadPoGoods(order.items);
       renderRelatedShips(order);
       closePoShipCreateForm();
       setPoTab("basic");
@@ -5986,8 +6043,15 @@
       if (profile.phone) document.getElementById("editBuyerTel").value = profile.phone;
       if (profile.address) document.getElementById("editBuyerAddress").value = profile.address;
       const order = getWorkspaceOrder();
-      if (order && (isOverseasPo(order) || isDealerPo(order))) {
+      if (order) {
         order.channelName = name;
+        if (isGeneralPo(order)) {
+          if ((channelNamesByGroup["台灣線上通路"] || []).includes(name)) order.channelType = "台灣線上通路";
+          else if ((channelNamesByGroup["台灣本地通路"] || []).includes(name)
+            && !["台灣本地通路", "台灣線下通路", "台灣實體百貨"].includes(order.channelType)) {
+            order.channelType = "台灣本地通路";
+          }
+        }
         order.items = channelSupplyItems(name, poKindOf(order));
         loadPoGoods(order.items);
       }
