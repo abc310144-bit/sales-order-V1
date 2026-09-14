@@ -705,7 +705,53 @@
       height: 12px;
       transition: transform 0.2s ease;
     }
-    .po-ship-acc.collapsed .po-ship-acc-head .acc-arrow { transform: rotate(-90deg); }
+    .po-ship-acc.collapsed .po-ship-acc-head .acc-arrow,
+    .po-ship-acc.collapsed .po-ship-acc-toggle .acc-arrow { transform: rotate(-90deg); }
+    .po-ship-goods-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0;
+      cursor: default;
+    }
+    .po-ship-acc-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+      padding: 12px 16px;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      text-align: left;
+    }
+    .po-ship-acc-toggle .acc-arrow {
+      width: 12px;
+      height: 12px;
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+    .ship-stock-warn {
+      flex-shrink: 0;
+      margin-right: 16px;
+      color: #ff4d4f;
+      font-size: 13px;
+      font-weight: 400;
+      text-decoration: underline;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .ship-stock-warn.hidden { display: none; }
+    #poShipCreatePanel .po-goods-toolbar { justify-content: flex-end; }
+    .modal-card.stock-dialog-card { width: min(760px, 100%); }
+    .stock-shortage-table .num { text-align: right; }
+    .stock-shortage-table .ops { white-space: nowrap; width: 1%; }
+    .stock-shortage-table .btn[disabled] { opacity: 0.45; cursor: not-allowed; }
     .po-ship-acc-body { padding: 16px 20px 20px; }
     .po-ship-acc.collapsed .po-ship-acc-body { display: none; }
     .ship-fee-card {
@@ -2188,16 +2234,15 @@
                 </div>
               </div>
               <div class="po-ship-acc" data-acc="goods">
-                <button type="button" class="po-ship-acc-head">
-                  <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
-                  出貨商品
-                </button>
+                <div class="po-ship-acc-head po-ship-goods-head">
+                  <button type="button" class="po-ship-acc-toggle" data-acc-toggle="1">
+                    <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+                    出貨商品
+                  </button>
+                  <a class="ship-stock-warn hidden" id="poShipStockWarn">虛擬倉目前庫存品項不足，查看詳情...</a>
+                </div>
                 <div class="po-ship-acc-body">
                   <div class="ship-items-toolbar po-goods-toolbar">
-                    <div class="ship-items-actions">
-                      <button type="button" class="btn" id="poShipAddItemBtn">新增商品</button>
-                      <button type="button" class="btn btn-primary" id="poShipImportItemsBtn">匯入商品</button>
-                    </div>
                     <div class="ship-qty-box">
                       <div class="label">出貨總數量(pcs)</div>
                       <div class="value" id="poShipItemsQtyTotal">0</div>
@@ -2467,6 +2512,31 @@
       <div class="modal-foot">
         <button type="button" class="btn" id="poShipFeeCancel">取消</button>
         <button type="button" class="btn btn-primary" id="poShipFeeConfirm">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask hidden" id="poShipStockModal">
+    <div class="modal-card stock-dialog-card" role="dialog" aria-labelledby="poShipStockTitle">
+      <div class="modal-head">
+        <h2 id="poShipStockTitle">虛擬倉庫存不足</h2>
+        <button type="button" class="modal-close" id="poShipStockClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="table-wrap">
+          <table class="related-table stock-shortage-table">
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>商品名稱</th>
+                <th>下訂數量</th>
+                <th>庫存量</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="poShipStockBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -4537,6 +4607,46 @@
     let poLineItems = [];
     let nextPoItemId = 73672;
     let poShipGoods = [];
+    let poShipShortage = [];
+
+    const virtualStockShortfalls = {
+      "線上-轉單": { "UM-1001": 0, "UM-2108": 5 },
+      "實體-全聯": { "UM-4412": 0 },
+    };
+
+    function virtualStockOf(channelName, sku) {
+      const map = virtualStockShortfalls[channelName] || {};
+      if (Object.prototype.hasOwnProperty.call(map, sku)) return Number(map[sku]) || 0;
+      return 9999;
+    }
+
+    function parseBatchDate(batch) {
+      const m = String(batch || "").match(/^(\d{4}-\d{2}-\d{2})/);
+      if (!m) return null;
+      const d = new Date(`${m[1]}T00:00:00`);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    function closestFifoLot() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const lots = [];
+      shipBatches.regular.forEach((batch) => lots.push({ batch, expiryType: "regular" }));
+      shipBatches.near.forEach((batch) => lots.push({ batch, expiryType: "near" }));
+      lots.forEach((lot) => {
+        const d = parseBatchDate(lot.batch);
+        lot.diff = d ? Math.abs(d.getTime() - today.getTime()) : Number.MAX_SAFE_INTEGER;
+      });
+      lots.sort((a, b) => a.diff - b.diff);
+      return lots[0] || { batch: shipBatches.regular[0], expiryType: "regular" };
+    }
+
+    function applyFifoExpiry(item) {
+      const lot = closestFifoLot();
+      item.expiryType = lot.expiryType;
+      item.batch = lot.batch;
+      return item;
+    }
 
     function metaForSku(sku) {
       return productMeta[sku] || {
@@ -5573,9 +5683,15 @@
       openPoShipCreateForm(order);
     });
     document.getElementById("poShipCreatePanel").addEventListener("click", (e) => {
-      const head = e.target.closest(".po-ship-acc-head");
-      if (head) {
-        head.closest(".po-ship-acc").classList.toggle("collapsed");
+      if (e.target.closest("#poShipStockWarn")) {
+        e.preventDefault();
+        openPoShipStockModal();
+        return;
+      }
+      const toggle = e.target.closest("[data-acc-toggle]") || e.target.closest(".po-ship-acc-head:not(.po-ship-goods-head)");
+      if (toggle) {
+        const acc = toggle.closest(".po-ship-acc");
+        if (acc) acc.classList.toggle("collapsed");
         return;
       }
       const delFee = e.target.closest("[data-del-fee]");
@@ -5590,12 +5706,11 @@
         if (!tr) return;
         poShipGoods = poShipGoods.filter((row) => row.id !== tr.dataset.id);
         renderPoShipGoodsTable();
+        renderPoShipStockModal();
       }
     });
     document.getElementById("poShipCreatePanel").addEventListener("input", onPoShipItemField);
     document.getElementById("poShipCreatePanel").addEventListener("change", onPoShipItemField);
-    document.getElementById("poShipAddItemBtn").addEventListener("click", () => openAddPoItemModal("ship"));
-    document.getElementById("poShipImportItemsBtn").addEventListener("click", () => openImportPoItemsModal("ship"));
     document.getElementById("poShipCreateCancel").addEventListener("click", closePoShipCreateForm);
     document.getElementById("poShipCreateConfirm").addEventListener("click", confirmPoShipCreate);
     document.getElementById("poShipAddFeeBtn").addEventListener("click", openPoShipFeeModal);
@@ -5604,6 +5719,12 @@
     document.getElementById("poShipFeeConfirm").addEventListener("click", confirmPoShipFee);
     document.getElementById("poShipFeeModal").addEventListener("click", (e) => {
       if (e.target.id === "poShipFeeModal") closePoShipFeeModal();
+    });
+    document.getElementById("poShipStockClose").addEventListener("click", closePoShipStockModal);
+    document.getElementById("poShipStockModal").addEventListener("click", (e) => {
+      if (e.target.id === "poShipStockModal") closePoShipStockModal();
+      const confirmBtn = e.target.closest("[data-confirm-ship]");
+      if (confirmBtn && !confirmBtn.disabled) confirmShortageShip(confirmBtn.dataset.confirmShip);
     });
     document.getElementById("editChannelType").addEventListener("change", () => {
       fillChannelNameOptions("editChannelName", document.getElementById("editChannelType").value);
@@ -5776,15 +5897,38 @@
       const panel = document.getElementById("poShipCreatePanel");
       if (panel) panel.classList.add("hidden");
       closePoShipFeeModal();
+      closePoShipStockModal();
     }
 
     function resetPoShipCreateForm(order) {
       document.getElementById("poShipIncoterm").value = "FOB";
       document.getElementById("poShipExpectDate").value = toDateInput(order && (order.shipByTime || order.createdAt)) || "";
       poShipFees = [];
-      poShipGoods = (poLineItems.length ? poLineItems : ((order && order.items) || [])).map((row) => toPoLineItem(row));
+      const channel = order && order.channelName;
+      const source = (poLineItems.length ? poLineItems : ((order && order.items) || [])).map((row) => toPoLineItem(row));
+      poShipGoods = [];
+      poShipShortage = [];
+      source.forEach((item) => {
+        const ordered = Number(item.qty) || 0;
+        if (!item.sku || ordered <= 0) return;
+        const stock = virtualStockOf(channel, item.sku);
+        const row = applyFifoExpiry(toPoLineItem({ ...item, stock }));
+        if (stock >= ordered) {
+          poShipGoods.push(row);
+        } else {
+          poShipShortage.push({
+            sku: row.sku,
+            name: row.name,
+            productCode: row.productCode,
+            orderedQty: ordered,
+            warehouseQty: stock,
+            source: row,
+          });
+        }
+      });
       renderPoShipFees();
       renderPoShipGoodsTable();
+      syncPoShipStockWarn();
       const pct = channelRebatePercent(order && order.channelName);
       document.getElementById("poShipRebateText").textContent = `後扣項目 ${pct} %`;
       document.querySelectorAll("#poShipCreatePanel .po-ship-acc").forEach((el) => el.classList.remove("collapsed"));
@@ -5812,6 +5956,63 @@
       }
       body.innerHTML = poShipGoods.map((row) => legacyGoodsRowHtml(row, "po-ship-expiry")).join("");
       updatePoShipQtyTotal();
+    }
+
+    function shipGoodsHasSku(sku) {
+      return poShipGoods.some((row) => row.sku === sku);
+    }
+
+    function syncPoShipStockWarn() {
+      const warn = document.getElementById("poShipStockWarn");
+      if (warn) warn.classList.toggle("hidden", !poShipShortage.length);
+    }
+
+    function closePoShipStockModal() {
+      const modal = document.getElementById("poShipStockModal");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    function renderPoShipStockModal() {
+      const body = document.getElementById("poShipStockBody");
+      if (!body) return;
+      if (!poShipShortage.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="5">沒有庫存不足的品項</td></tr>`;
+        return;
+      }
+      body.innerHTML = poShipShortage.map((row) => {
+        const confirmed = shipGoodsHasSku(row.sku);
+        let action = "";
+        if (row.warehouseQty > 0) {
+          action = `<button type="button" class="btn btn-primary" data-confirm-ship="${escapeHtml(row.sku)}"${confirmed ? " disabled" : ""}>確認出貨</button>`;
+        }
+        return `
+          <tr>
+            <td>${escapeHtml(row.sku)}</td>
+            <td>${escapeHtml(row.name)}</td>
+            <td class="num">${escapeHtml(row.orderedQty)}</td>
+            <td class="num">${escapeHtml(row.warehouseQty)}</td>
+            <td class="ops">${action}</td>
+          </tr>`;
+      }).join("");
+    }
+
+    function openPoShipStockModal() {
+      if (!poShipShortage.length) return;
+      renderPoShipStockModal();
+      document.getElementById("poShipStockModal").classList.remove("hidden");
+    }
+
+    function confirmShortageShip(sku) {
+      const row = poShipShortage.find((item) => item.sku === sku);
+      if (!row || row.warehouseQty <= 0 || shipGoodsHasSku(sku)) return;
+      const item = applyFifoExpiry(toPoLineItem({
+        ...row.source,
+        qty: row.warehouseQty,
+        stock: row.warehouseQty,
+      }));
+      poShipGoods.push(item);
+      renderPoShipGoodsTable();
+      renderPoShipStockModal();
     }
 
     function renderPoShipFees() {
