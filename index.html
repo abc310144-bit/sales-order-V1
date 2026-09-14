@@ -2410,8 +2410,8 @@
           <div class="form-ctrl">
             <select id="importChannelType">
               <option value="">請選擇</option>
+              <option>台灣本地通路</option>
               <option>台灣線上通路</option>
-              <option>台灣線下通路</option>
             </select>
           </div>
         </div>
@@ -2457,6 +2457,16 @@
               <label class="radio-line"><input type="radio" name="createPoKind" value="經銷" /> 經銷</label>
               <label class="radio-line"><input type="radio" name="createPoKind" value="境外通路" /> 境外通路</label>
             </div>
+          </div>
+        </div>
+        <div class="form-row hidden" id="createGeneralTypeRow">
+          <label>合作通路類型</label>
+          <div class="form-ctrl">
+            <select id="createChannelType">
+              <option value="">請選擇</option>
+              <option>台灣本地通路</option>
+              <option>台灣線上通路</option>
+            </select>
           </div>
         </div>
         <div class="form-row hidden" id="createChannelNameRow">
@@ -3640,21 +3650,21 @@
       if (!show && pane && !pane.classList.contains("hidden")) setPoTab("basic");
     }
 
-    function startCreateWorkspace(kind, channelName) {
+    function startCreateWorkspace(kind, channelName, channelType) {
       const createdAt = nowStamp();
       const name = channelName || "";
       const profile = channelProfiles[name] || {};
-      const channelType = kind === "經銷"
+      const resolvedType = kind === "經銷"
         ? "台灣本地經銷"
         : kind === "境外通路"
           ? "境外通路"
-          : (channelTypeOfName(name) || "");
+          : (channelType || channelTypeOfName(name) || "");
       const order = {
         orderNo: "",
         poDocNo: "",
         shipNo: "",
         poKind: kind,
-        channelType,
+        channelType: resolvedType,
         channelName: name,
         region: profile.region || (kind === "境外通路" ? "境外" : "台灣"),
         status: "草稿",
@@ -3789,7 +3799,7 @@
         return;
       }
       if (params.get("create") === "1" && kind) {
-        startCreateWorkspace(kind, params.get("channel") || "");
+        startCreateWorkspace(kind, params.get("channel") || "", params.get("type") || "");
         return;
       }
       if (po) {
@@ -3878,9 +3888,11 @@
       return mockItemsFor(channelName);
     }
 
+    const localChannelNames = ["實體-全聯", "實體-寶雅", "實體-迪卡儂", "實體-PW健身工廠", "百貨-新光三越"];
     const channelNamesByGroup = {
       "台灣線上通路": ["線上-轉單", "線上-蝦皮商城"],
-      "台灣線下通路": ["實體-全聯", "實體-寶雅", "實體-迪卡儂", "實體-PW健身工廠", "百貨-新光三越"],
+      "台灣本地通路": localChannelNames,
+      "台灣線下通路": localChannelNames,
       "台灣本地經銷": ["經銷商-絢綻國際企業社", "經銷商-學生營養股份有限公司"],
       "境外通路": ["跨境- Cool Cool Trading", "晨曦公司"],
     };
@@ -3893,7 +3905,7 @@
 
     function channelNamesForKind(kind) {
       if (kind === "一般通路") {
-        return [...(channelNamesByGroup["台灣線上通路"] || []), ...(channelNamesByGroup["台灣線下通路"] || [])];
+        return [...(channelNamesByGroup["台灣本地通路"] || []), ...(channelNamesByGroup["台灣線上通路"] || [])];
       }
       if (kind === "經銷") return channelNamesByGroup["台灣本地經銷"] || [];
       if (kind === "境外通路") return channelNamesByGroup["境外通路"] || [];
@@ -5985,23 +5997,39 @@
       return document.querySelector('input[name="createPoKind"]:checked')?.value || "";
     }
 
-    function syncCreateChannelNameRow() {
+    function syncCreateModal() {
       const kind = getCreatePoKind();
-      const row = document.getElementById("createChannelNameRow");
+      const subType = document.getElementById("createChannelType").value;
+      const isGeneral = kind === "一般通路";
+      const isDealer = kind === "經銷";
+      const isOverseas = kind === "境外通路";
+      document.getElementById("createGeneralTypeRow").classList.toggle("hidden", !isGeneral);
+      const nameRow = document.getElementById("createChannelNameRow");
       const select = document.getElementById("createChannelName");
-      if (!kind) {
-        row.classList.add("hidden");
-        select.innerHTML = `<option value="">請選擇</option>`;
+      if (isGeneral) {
+        fillChannelNameOptions("createChannelName", subType);
+        nameRow.classList.toggle("hidden", !subType);
         return;
       }
-      const names = channelNamesForKind(kind);
-      select.innerHTML = `<option value="">請選擇</option>` + names.map((name) => `<option>${name}</option>`).join("");
-      row.classList.remove("hidden");
+      if (isDealer) {
+        fillChannelNameOptions("createChannelName", "台灣本地經銷");
+        nameRow.classList.remove("hidden");
+        return;
+      }
+      if (isOverseas) {
+        fillChannelNameOptions("createChannelName", "境外通路");
+        nameRow.classList.remove("hidden");
+        return;
+      }
+      nameRow.classList.add("hidden");
+      select.innerHTML = `<option value="">請選擇</option>`;
     }
 
     function openCreateModal() {
       document.querySelectorAll('input[name="createPoKind"]').forEach((el) => { el.checked = false; });
-      syncCreateChannelNameRow();
+      document.getElementById("createChannelType").value = "";
+      fillChannelNameOptions("createChannelName", "");
+      syncCreateModal();
       document.getElementById("createModal").classList.remove("hidden");
     }
 
@@ -6013,12 +6041,25 @@
     document.getElementById("createClose").addEventListener("click", closeCreateModal);
     document.getElementById("createCancel").addEventListener("click", closeCreateModal);
     document.querySelectorAll('input[name="createPoKind"]').forEach((el) => {
-      el.addEventListener("change", syncCreateChannelNameRow);
+      el.addEventListener("change", () => {
+        document.getElementById("createChannelType").value = "";
+        fillChannelNameOptions("createChannelName", "");
+        syncCreateModal();
+      });
+    });
+    document.getElementById("createChannelType").addEventListener("change", () => {
+      fillChannelNameOptions("createChannelName", document.getElementById("createChannelType").value);
+      syncCreateModal();
     });
     document.getElementById("createConfirm").addEventListener("click", () => {
       const kind = getCreatePoKind();
       if (!kind) {
         alert("請先選擇採購單類型");
+        return;
+      }
+      const channelType = document.getElementById("createChannelType").value;
+      if (kind === "一般通路" && !channelType) {
+        alert("請選擇合作通路類型");
         return;
       }
       const channel = document.getElementById("createChannelName").value;
@@ -6027,7 +6068,9 @@
         return;
       }
       closeCreateModal();
-      openPoWorkspace({ create: "1", kind, channel });
+      const params = { create: "1", kind, channel };
+      if (kind === "一般通路") params.type = channelType;
+      openPoWorkspace(params);
     });
     document.getElementById("createModal").addEventListener("click", (e) => {
       if (e.target.id === "createModal") closeCreateModal();
