@@ -1961,10 +1961,8 @@
                 <select id="salesChannelType">
                   <option value="">請選擇</option>
                   <option>台灣本地通路</option>
-                  <option>台灣本地經銷</option>
                   <option>台灣線上通路</option>
-                  <option>台灣線下通路</option>
-                  <option>台灣實體百貨</option>
+                  <option>台灣本地經銷</option>
                   <option>境外通路</option>
                 </select>
               </div>
@@ -1972,17 +1970,6 @@
                 <label>通路名稱</label>
                 <select id="salesChannelName">
                   <option value="">請選擇</option>
-                  <option>實體-全聯</option>
-                  <option>實體-寶雅</option>
-                  <option>實體-迪卡儂</option>
-                  <option>實體-PW健身工廠</option>
-                  <option>經銷商-絢綻國際企業社</option>
-                  <option>經銷商-學生營養股份有限公司</option>
-                  <option>線上-轉單</option>
-                  <option>線上-蝦皮商城</option>
-                  <option>跨境- Cool Cool Trading</option>
-                  <option>晨曦公司</option>
-                  <option>百貨-新光三越</option>
                 </select>
               </div>
               <div class="field">
@@ -3063,7 +3050,7 @@
       return salesOrders.filter((item) => {
         if (orderNo && !item.orderNo.toLowerCase().includes(orderNo)) return false;
         if (poDocNo && !(item.poDocNo || "").toLowerCase().includes(poDocNo)) return false;
-        if (channelType && item.channelType !== channelType) return false;
+        if (channelType && !itemMatchesSalesChannelType(item, channelType)) return false;
         if (channelName && item.channelName !== channelName) return false;
         if (status && item.status !== status) return false;
         if (operator && !item.operator.toLowerCase().includes(operator)) return false;
@@ -3113,11 +3100,15 @@
       renderSalesTable(getSalesFiltered());
     });
 
+    document.getElementById("salesChannelType").addEventListener("change", () => {
+      fillChannelNameOptions("salesChannelName", document.getElementById("salesChannelType").value);
+    });
+
     document.getElementById("salesClear").addEventListener("click", () => {
       document.getElementById("salesOrderNo").value = "";
       document.getElementById("salesPoDocNo").value = "";
       document.getElementById("salesChannelType").value = "";
-      document.getElementById("salesChannelName").value = "";
+      fillChannelNameOptions("salesChannelName", "");
       document.getElementById("salesStatus").value = "";
       document.getElementById("salesOperator").value = "";
       document.getElementById("salesCreatedFrom").value = "";
@@ -3980,6 +3971,17 @@
       const names = channelNamesByGroup[group] || [];
       document.getElementById(selectId).innerHTML =
         `<option value="">請選擇</option>` + names.map((name) => `<option>${name}</option>`).join("");
+    }
+
+    function salesChannelTypeAliases(filterType) {
+      if (filterType === "台灣本地通路") return ["台灣本地通路", "台灣線下通路", "台灣實體百貨"];
+      return filterType ? [filterType] : [];
+    }
+
+    function itemMatchesSalesChannelType(item, filterType) {
+      if (!filterType) return true;
+      if (salesChannelTypeAliases(filterType).includes(item.channelType)) return true;
+      return (channelNamesByGroup[filterType] || []).includes(item.channelName);
     }
 
     function channelNamesForKind(kind) {
