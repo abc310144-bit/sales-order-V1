@@ -2059,7 +2059,7 @@
             <div class="edit-footer" id="editFooter">
               <button type="button" class="btn" id="editExportPdf">匯出 PDF</button>
               <button type="button" class="btn" id="editStampUpload">回壓文件</button>
-              <button type="button" class="btn" id="editCopyPo">複製</button>
+              <button type="button" class="btn hidden" id="editCopyPo">複製</button>
               <button type="button" class="btn" id="editReject">審核不通過</button>
               <button type="button" class="btn btn-primary" id="editApprove">審核通過</button>
               <button type="button" class="btn btn-primary hidden" id="editConfirmComplete">確認完成</button>
@@ -3778,6 +3778,9 @@
         overseas: null,
         dealer: null,
         general: null,
+        stampFile: null,
+        closedBySupervisor: false,
+        completeNote: "",
       };
       if (kind === "境外通路") {
         draft.overseas = clonePartyForCopy(src.overseas, buildOverseasPo(src.channelName, op, ""), op);
@@ -3814,7 +3817,6 @@
       fillOrderEdit(draft, "edit");
       commitWorkspaceOrder(draft, "草稿");
       fillOrderEdit(draft, "edit");
-      setPoTab("goods");
     }
 
     function commitWorkspaceOrder(order, status) {
@@ -6022,6 +6024,14 @@
       btn.disabled = canView ? false : !canStampPo(order);
     }
 
+    function syncCopyButton(order) {
+      const btn = document.getElementById("editCopyPo");
+      if (!btn) return;
+      const ok = canCopyPo(order);
+      btn.classList.toggle("hidden", !ok);
+      btn.disabled = !ok;
+    }
+
     function syncEditFooter(order, mode) {
       const view = mode === "view";
       const draftLike = canSubmitPo(order);
@@ -6041,7 +6051,7 @@
       setBtnEnabled("editSubmit", !view && draftLike && currentRole === "建檔人");
       setBtnEnabled("editExportPdf", canExportPoPdf(order));
       syncStampButton(order);
-      setBtnEnabled("editCopyPo", canCopyPo(order));
+      syncCopyButton(order);
       setBtnEnabled("editApprove", pending && currentRole === "主管");
       setBtnEnabled("editReject", pending && currentRole === "主管");
       const confirmBtn = document.getElementById("editConfirmComplete");
