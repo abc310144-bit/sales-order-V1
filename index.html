@@ -674,11 +674,17 @@
       margin-bottom: 12px;
     }
     .ship-tab-hint { color: var(--text-3); font-size: 13px; margin-right: auto; }
-    .po-ship-create { margin-bottom: 16px; }
+    .po-ship-create { margin-bottom: 16px; min-width: 0; max-width: 100%; }
     .po-ship-acc {
       border: 1px solid var(--border);
       margin-bottom: 12px;
       background: #fff;
+      min-width: 0;
+      max-width: 100%;
+    }
+    #poShipCreatePanel [data-acc="goods"] .po-ship-acc-body {
+      overflow: hidden;
+      min-width: 0;
     }
     .po-ship-acc-head {
       display: flex;
@@ -962,6 +968,17 @@
       border-collapse: separate;
       border-spacing: 0;
     }
+    .po-goods-legacy-table { min-width: 2140px; }
+    .table-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--text-3);
+      padding: 16px 0;
+    }
+    .table-empty svg { display: block; }
     .goods-pdf-table .num { text-align: right; white-space: nowrap; }
     .goods-pdf-table .col-name { min-width: 220px; white-space: normal; }
     .goods-pdf-table .col-qty input {
@@ -2186,19 +2203,54 @@
                   出貨商品
                 </button>
                 <div class="po-ship-acc-body">
-                  <div class="table-wrap goods-h-scroll">
-                    <table class="ship-items-table po-goods-table goods-pdf-table">
+                  <div class="ship-items-toolbar po-goods-toolbar">
+                    <div class="ship-items-actions">
+                      <button type="button" class="btn" id="poShipAddItemBtn">新增商品</button>
+                      <button type="button" class="btn btn-primary" id="poShipImportItemsBtn">匯入商品</button>
+                    </div>
+                    <div class="ship-qty-box">
+                      <div class="label">出貨總數量(pcs)</div>
+                      <div class="value" id="poShipItemsQtyTotal">0</div>
+                    </div>
+                  </div>
+                  <div class="table-wrap ship-items-table-wrap goods-h-scroll po-goods-scroll">
+                    <table class="ship-items-table po-goods-table po-goods-legacy-table">
                       <thead>
                         <tr>
-                          <th>SKU</th>
-                          <th>商品名稱</th>
-                          <th>箱入數</th>
-                          <th>訂購數量(pcs)</th>
-                          <th>訂購箱數</th>
-                          <th>單價（不含標）</th>
-                          <th>單價（含標）</th>
-                          <th>合計</th>
+                          <th class="col-id">編號</th>
+                          <th class="col-code">
+                            <span class="th-inner">商品品號
+                              <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                            </span>
+                          </th>
+                          <th>
+                            <span class="th-inner">SKU
+                              <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                            </span>
+                          </th>
+                          <th>
+                            <span class="th-inner">品名
+                              <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                            </span>
+                          </th>
+                          <th>
+                            <span class="th-inner">倉別
+                              <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                            </span>
+                          </th>
+                          <th>
+                            <span class="th-inner">效期_批號
+                              <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                            </span>
+                          </th>
+                          <th>允收天數</th>
+                          <th><span class="th-inner">商品成本(TWD)<span class="th-sort">▲<br />▼</span></span></th>
+                          <th><span class="th-inner">商品報價(TWD)<span class="th-sort">▲<br />▼</span></span></th>
+                          <th><span class="th-inner">訂單商品報價(TWD)<span class="th-sort">▲<br />▼</span></span></th>
+                          <th>庫存數</th>
                           <th>備註</th>
+                          <th class="col-qty">總數量(pcs)</th>
+                          <th class="ops">操作</th>
                         </tr>
                       </thead>
                       <tbody id="poShipGoodsBody"></tbody>
@@ -4494,6 +4546,7 @@
     let nextShipItemId = 73672;
     let poLineItems = [];
     let nextPoItemId = 73672;
+    let poShipGoods = [];
 
     function metaForSku(sku) {
       return productMeta[sku] || {
@@ -4513,20 +4566,23 @@
 
     function poItemToShipLine(item) {
       const meta = metaForSku(item.sku);
+      const type = item.expiryType === "near" ? "near" : "regular";
+      const batches = batchesFor(type);
       return {
         id: String(nextShipItemId++),
-        productCode: meta.productCode,
+        productCode: item.productCode || meta.productCode,
         sku: item.sku || "",
         name: item.name || "",
-        warehouse: "良品倉",
-        expiryType: "regular",
-        batch: shipBatches.regular[0],
-        acceptDays: "",
-        cost: meta.cost,
-        quote: meta.quote,
-        orderQuote: "0",
+        warehouse: item.warehouse || "良品倉",
+        expiryType: type,
+        batch: batches.includes(item.batch) ? item.batch : batches[0],
+        acceptDays: item.acceptDays ?? "",
+        cost: item.cost || meta.cost,
+        quote: item.quote || meta.quote,
+        orderQuote: item.orderQuote ?? "0",
         qty: Number(item.qty) || 0,
         remark: item.remark || "",
+        stock: item.stock ?? 0,
       };
     }
 
@@ -4723,6 +4779,59 @@
         </tr>`;
     }
 
+    function goodsNoDataHtml(colspan) {
+      return `<tr class="empty-row"><td colspan="${colspan}">
+        <div class="table-empty">
+          <svg viewBox="0 0 64 41" width="64" height="41" aria-hidden="true">
+            <g transform="translate(0 1)" fill="none" fill-rule="evenodd">
+              <ellipse fill="#f5f5f5" cx="32" cy="33" rx="32" ry="7"></ellipse>
+              <g fill-rule="nonzero" stroke="#d9d9d9">
+                <path d="M55 12.76L44.854 1.258C44.367.474 43.656 0 42.907 0H21.093c-.749 0-1.46.474-1.947 1.257L9 12.761V22h46v-9.24z"/>
+                <path d="M41.613 15.931c0-1.605.994-2.93 2.227-2.931H55v18.137C55 33.26 53.68 35 52.05 35H11.95C10.32 35 9 33.259 9 31.137V13h11.16c1.233 0 2.227 1.323 2.227 2.928v.022c0 1.605 1.005 2.901 2.237 2.901h14.752c1.232 0 2.237-1.308 2.237-2.913v-.007z" fill="#fafafa"/>
+              </g>
+            </g>
+          </svg>
+          <div>No data</div>
+        </div>
+      </td></tr>`;
+    }
+
+    function legacyGoodsRowHtml(row, radioPrefix) {
+      const batches = batchesFor(row.expiryType);
+      const batchValue = batches.includes(row.batch) ? row.batch : batches[0];
+      const warn = Number(row.orderQuote) === 0;
+      return `
+        <tr data-id="${escapeHtml(row.id)}">
+          <td class="col-id">${escapeHtml(row.id)}</td>
+          <td class="col-code">${escapeHtml(row.productCode)}</td>
+          <td class="col-sku">${escapeHtml(row.sku)}</td>
+          <td class="col-name">${escapeHtml(row.name)}</td>
+          <td class="col-wh">
+            <select data-field="warehouse">${optionsHtml(shipWarehouses, row.warehouse || "良品倉")}</select>
+          </td>
+          <td class="col-expiry">
+            <div class="expiry-radios">
+              <label class="radio-line"><input type="radio" name="${escapeHtml(radioPrefix)}-${escapeHtml(row.id)}" data-field="expiryType" value="regular"${row.expiryType !== "near" ? " checked" : ""} /> 非即期品</label>
+              <label class="radio-line"><input type="radio" name="${escapeHtml(radioPrefix)}-${escapeHtml(row.id)}" data-field="expiryType" value="near"${row.expiryType === "near" ? " checked" : ""} /> 即期品</label>
+            </div>
+            <select data-field="batch">${optionsHtml(batches, batchValue)}</select>
+          </td>
+          <td class="col-days"><input type="number" min="0" data-field="acceptDays" value="${escapeHtml(row.acceptDays)}" /></td>
+          <td class="col-cost"><input class="input-readonly" data-field="cost" value="${escapeHtml(row.cost)}" readonly tabindex="-1" /></td>
+          <td class="col-quote">${escapeHtml(row.quote)}</td>
+          <td class="col-order-quote">
+            <div class="quote-input-wrap${warn ? " has-warn" : ""}">
+              <input type="number" min="0" step="0.01" data-field="orderQuote" value="${escapeHtml(row.orderQuote)}" />
+              <span class="warn-icon">!</span>
+            </div>
+          </td>
+          <td class="col-stock">${escapeHtml(row.stock)}</td>
+          <td class="col-remark"><input data-field="remark" value="${escapeHtml(row.remark)}" /></td>
+          <td class="col-qty"><input type="number" min="0" data-field="qty" value="${escapeHtml(row.qty)}" /></td>
+          <td class="ops"><a data-del="1">刪除</a></td>
+        </tr>`;
+    }
+
     function renderPoGoodsTable() {
       const body = document.getElementById("editGoodsBody");
       if (!poLineItems.length) {
@@ -4845,9 +4954,19 @@
       return { queries, items, missed };
     }
 
+    let goodsModalTarget = "po";
+
+    function isShipGoodsModal() {
+      return goodsModalTarget === "ship";
+    }
+
+    function currentGoodsList() {
+      return isShipGoodsModal() ? poShipGoods : poLineItems;
+    }
+
     function poHasCatalogItem(item) {
       const key = catalogItemKey(item);
-      return poLineItems.some((row) => catalogItemKey(row) === key);
+      return currentGoodsList().some((row) => catalogItemKey(row) === key);
     }
 
     function renderAddPoItemHits() {
@@ -4874,8 +4993,9 @@
       `).join("");
     }
 
-    function openAddPoItemModal() {
-      if (!poGoodsEditable()) return;
+    function openAddPoItemModal(target) {
+      goodsModalTarget = target || "po";
+      if (!isShipGoodsModal() && !poGoodsEditable()) return;
       document.getElementById("addPoItemCode").value = "";
       renderAddPoItemHits();
       document.getElementById("addPoItemModal").classList.remove("hidden");
@@ -4887,7 +5007,7 @@
     }
 
     function confirmAddPoItem() {
-      if (!poGoodsEditable()) return;
+      if (!isShipGoodsModal() && !poGoodsEditable()) return;
       const raw = document.getElementById("addPoItemCode").value.trim();
       if (!raw) {
         alert("請輸入商品品號");
@@ -4900,15 +5020,17 @@
         document.getElementById("addPoItemCode").focus();
         return;
       }
+      const list = currentGoodsList();
       const fresh = items.filter((item) => !poHasCatalogItem(item));
       if (!fresh.length) {
-        alert("這些商品已在採購明細中");
+        alert(isShipGoodsModal() ? "這些商品已在出貨明細中" : "這些商品已在採購明細中");
         document.getElementById("addPoItemCode").focus();
         return;
       }
-      fresh.forEach((src) => poLineItems.push(toPoLineItem({ ...src, qty: 0 })));
+      fresh.forEach((src) => list.push(toPoLineItem({ ...src, qty: 0 })));
       closeAddPoItemModal();
-      renderPoGoodsTable();
+      if (isShipGoodsModal()) renderPoShipGoodsTable();
+      else renderPoGoodsTable();
       if (missed.length) alert(`已新增 ${fresh.length} 筆，找不到：${missed.join("、")}`);
     }
 
@@ -4924,8 +5046,9 @@
       document.getElementById("importPoItemsConfirm").disabled = true;
     }
 
-    function openImportPoItemsModal() {
-      if (!poGoodsEditable()) return;
+    function openImportPoItemsModal(target) {
+      goodsModalTarget = target || "po";
+      if (!isShipGoodsModal() && !poGoodsEditable()) return;
       resetImportPoItemsModal();
       document.getElementById("importPoItemsModal").classList.remove("hidden");
     }
@@ -5162,7 +5285,7 @@
     }
 
     async function confirmImportPoItems() {
-      if (!poGoodsEditable()) return;
+      if (!isShipGoodsModal() && !poGoodsEditable()) return;
       if (!pendingPoImportFile) {
         alert("請先選擇檔案");
         return;
@@ -5178,10 +5301,12 @@
         alert("檔案沒有可匯入的商品列");
         return;
       }
+      const list = currentGoodsList();
       records.forEach((rec) => {
-        poLineItems.push(poItemFromImportRow(rec));
+        list.push(poItemFromImportRow(rec));
       });
-      renderPoGoodsTable();
+      if (isShipGoodsModal()) renderPoShipGoodsTable();
+      else renderPoGoodsTable();
       closeImportPoItemsModal();
     }
 
@@ -5199,6 +5324,25 @@
         return;
       }
       if (field === "qty") updatePoQtyTotal();
+      if (field === "orderQuote") {
+        e.target.closest(".quote-input-wrap")?.classList.toggle("has-warn", Number(item.orderQuote) === 0);
+      }
+    }
+
+    function onPoShipItemField(e) {
+      const field = e.target.dataset.field;
+      if (!field) return;
+      const tr = e.target.closest("#poShipGoodsBody tr");
+      if (!tr) return;
+      const item = poShipGoods.find((row) => row.id === tr.dataset.id);
+      if (!item) return;
+      item[field] = e.target.value;
+      if (field === "expiryType") {
+        item.batch = batchesFor(item.expiryType)[0];
+        renderPoShipGoodsTable();
+        return;
+      }
+      if (field === "qty") updatePoShipQtyTotal();
       if (field === "orderQuote") {
         e.target.closest(".quote-input-wrap")?.classList.toggle("has-warn", Number(item.orderQuote) === 0);
       }
@@ -5446,24 +5590,24 @@
         head.closest(".po-ship-acc").classList.toggle("collapsed");
         return;
       }
-      const del = e.target.closest("[data-del-fee]");
-      if (del) {
-        poShipFees = poShipFees.filter((fee) => fee.id !== del.dataset.delFee);
+      const delFee = e.target.closest("[data-del-fee]");
+      if (delFee) {
+        poShipFees = poShipFees.filter((fee) => fee.id !== delFee.dataset.delFee);
         renderPoShipFees();
+        return;
+      }
+      const delItem = e.target.closest("#poShipGoodsBody [data-del]");
+      if (delItem) {
+        const tr = delItem.closest("tr");
+        if (!tr) return;
+        poShipGoods = poShipGoods.filter((row) => row.id !== tr.dataset.id);
+        renderPoShipGoodsTable();
       }
     });
-    document.getElementById("poShipCreatePanel").addEventListener("input", (e) => {
-      if (e.target.dataset.field !== "qty") return;
-      const tr = e.target.closest("#poShipGoodsBody tr");
-      if (!tr) return;
-      const item = poShipGoods.find((row) => row.id === tr.dataset.id);
-      if (!item) return;
-      item.qty = Number(e.target.value) || 0;
-      const d = goodsDisplayFields(item);
-      const cells = tr.querySelectorAll("td");
-      if (cells[4]) cells[4].textContent = d.carton === "" ? "" : String(d.carton);
-      if (cells[7]) cells[7].textContent = pdfMoney(d.amount, 2);
-    });
+    document.getElementById("poShipCreatePanel").addEventListener("input", onPoShipItemField);
+    document.getElementById("poShipCreatePanel").addEventListener("change", onPoShipItemField);
+    document.getElementById("poShipAddItemBtn").addEventListener("click", () => openAddPoItemModal("ship"));
+    document.getElementById("poShipImportItemsBtn").addEventListener("click", () => openImportPoItemsModal("ship"));
     document.getElementById("poShipCreateCancel").addEventListener("click", closePoShipCreateForm);
     document.getElementById("poShipCreateConfirm").addEventListener("click", confirmPoShipCreate);
     document.getElementById("poShipAddFeeBtn").addEventListener("click", openPoShipFeeModal);
@@ -5563,7 +5707,7 @@
       if (!tab || tab.classList.contains("hidden")) return;
       setPoTab(tab.dataset.poTab);
     });
-    document.getElementById("poAddItemBtn").addEventListener("click", openAddPoItemModal);
+    document.getElementById("poAddItemBtn").addEventListener("click", () => openAddPoItemModal("po"));
     document.getElementById("addPoItemClose").addEventListener("click", closeAddPoItemModal);
     document.getElementById("addPoItemCancel").addEventListener("click", closeAddPoItemModal);
     document.getElementById("addPoItemConfirm").addEventListener("click", confirmAddPoItem);
@@ -5574,7 +5718,7 @@
     document.getElementById("addPoItemModal").addEventListener("click", (e) => {
       if (e.target.id === "addPoItemModal") closeAddPoItemModal();
     });
-    document.getElementById("poImportItemsBtn").addEventListener("click", openImportPoItemsModal);
+    document.getElementById("poImportItemsBtn").addEventListener("click", () => openImportPoItemsModal("po"));
     document.getElementById("importPoItemsClose").addEventListener("click", closeImportPoItemsModal);
     document.getElementById("importPoItemsPick").addEventListener("click", () => {
       document.getElementById("importPoItemsFile").click();
@@ -5641,7 +5785,6 @@
 
     let poShipFees = [];
     let nextPoShipFeeId = 1;
-    let poShipGoods = [];
 
     function closePoShipCreateForm() {
       const panel = document.getElementById("poShipCreatePanel");
@@ -5667,14 +5810,22 @@
       document.getElementById("poShipCreatePanel").scrollIntoView({ block: "nearest" });
     }
 
+    function updatePoShipQtyTotal() {
+      const total = poShipGoods.reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
+      const el = document.getElementById("poShipItemsQtyTotal");
+      if (el) el.textContent = String(total);
+    }
+
     function renderPoShipGoodsTable() {
       const body = document.getElementById("poShipGoodsBody");
       if (!body) return;
       if (!poShipGoods.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="9">尚無商品明細</td></tr>`;
+        body.innerHTML = goodsNoDataHtml(14);
+        updatePoShipQtyTotal();
         return;
       }
-      body.innerHTML = poShipGoods.map((row) => goodsPdfRowHtml(row, { qtyEditable: true })).join("");
+      body.innerHTML = poShipGoods.map((row) => legacyGoodsRowHtml(row, "po-ship-expiry")).join("");
+      updatePoShipQtyTotal();
     }
 
     function renderPoShipFees() {
