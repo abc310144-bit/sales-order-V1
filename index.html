@@ -1550,10 +1550,6 @@
       <main class="content">
         <div class="page" id="page-shipping">
         <div class="actions">
-          <button class="btn btn-primary" type="button" id="shipCreateBtn">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
-            建立出貨訂單
-          </button>
           <button class="btn" type="button" id="toggleFilter">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
               <path d="M2 3h12l-4.5 5.2V13l-3-1.5V8.2L2 3z"/>
@@ -2749,7 +2745,7 @@
           <td>${r.created}</td>
           <td>${r.warehouse}</td>
           <td>${r.shipped}</td>
-          <td class="ops"><a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=view" target="_blank" rel="noopener" data-ship-view="1">檢視</a><a>編輯</a></td>
+          <td class="ops"><a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=view" target="_blank" rel="noopener" data-ship-view="1">檢視</a></td>
         </tr>
       `).join("");
     }
@@ -6938,11 +6934,6 @@
       showPage("shipping");
     }
 
-    document.getElementById("shipCreateBtn").addEventListener("click", () => {
-      resetShipCreateForm();
-      setShipCreateStep(1);
-      showPage("ship-create");
-    });
     document.querySelectorAll("#shipWizardSteps .wizard-step").forEach((el) => {
       el.addEventListener("click", () => {
         const n = Number(el.dataset.shipStep);
