@@ -187,7 +187,7 @@
       border-radius: 2px;
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
     }
-    .modal-card.void-card { width: min(480px, 100%); }
+    .modal-card.void-card { width: min(520px, 100%); }
     .void-msg {
       margin: 8px 0 12px;
       font-size: 14px;
@@ -1425,7 +1425,7 @@
     .status-tag[data-status="部分送達"] { color: #531dab; background: #f9f0ff; border-color: #d3adf7; }
     .status-tag[data-status="已完成"],
     .status-tag[data-status="已配達"] { color: #389e0d; background: #f6ffed; border-color: #b7eb8f; }
-    .status-tag[data-status="已取消"],
+    .status-tag[data-status="已作廢"],
     .status-tag[data-status="訂單取消"] { color: #8c8c8c; background: #f5f5f5; border-color: #d9d9d9; }
     .status-tag[data-status="待拋單"] { color: #d48806; background: #fff7e6; border-color: #ffd591; }
     .status-tag[data-status="訂單處理中(已拋單)"] { color: #096dd9; background: #e6f7ff; border-color: #91d5ff; }
@@ -2011,7 +2011,7 @@
                   <option>待出貨</option>
                   <option>部分送達</option>
                   <option>已完成</option>
-                  <option>已取消</option>
+                  <option>已作廢</option>
                 </select>
               </div>
               <div class="field">
@@ -2055,6 +2055,7 @@
                   <th>通路名稱</th>
                   <th>狀態</th>
                   <th>完成說明</th>
+                  <th>作廢說明</th>
                   <th>操作人</th>
                   <th>建立時間</th>
                   <th>操作</th>
@@ -2578,6 +2579,23 @@
       </div>
       <div class="modal-body">
         <p class="void-msg">作廢採購單將一併取消所有相應出貨單</p>
+        <div class="form-row">
+          <label class="required">請輸入作廢原因</label>
+          <div class="form-ctrl">
+            <select id="voidReason">
+              <option value="">請選擇</option>
+              <option>庫存不足，不接收分批出貨</option>
+              <option>通路倉庫位置不足</option>
+              <option>其他</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row hidden" id="voidOtherRow">
+          <label class="required">其他原因</label>
+          <div class="form-ctrl">
+            <input type="text" id="voidOtherNote" maxlength="30" placeholder="最多輸入 30 字元" />
+          </div>
+        </div>
       </div>
       <div class="modal-foot">
         <button type="button" class="btn" id="voidCancel">取消</button>
@@ -2904,7 +2922,7 @@
       },
       {
         orderNo: "SO20260824005", poDocNo: "CCT-HK-20260824", shipNo: "", channelType: "境外通路", channelName: "跨境- Cool Cool Trading",
-        status: "已取消", operator: "henry.huang", createdAt: "2026-08-24 18:33:02",
+        status: "已作廢", operator: "henry.huang", createdAt: "2026-08-24 18:33:02",
         fileName: "", fileUrl: "", fileType: "",
         address: "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong",
         arriveDate: "2026-09-02", shipByTime: "2026-08-28 18:00",
@@ -2972,7 +2990,7 @@
       return needsStampPo(order)
         && !!order
         && !hasStampFile(order)
-        && !["草稿", "待審核", "已取消"].includes(order.status);
+        && !["草稿", "待審核", "已作廢"].includes(order.status);
     }
 
     function canViewStampFile(order) {
@@ -3030,6 +3048,12 @@
       return String(order.completeNote || "").trim();
     }
 
+    function voidNoteOf(order) {
+      if (!order || order.status !== "已作廢") return "";
+      if (order.voidReason === "其他") return String(order.voidNote || "").trim();
+      return String(order.voidReason || "").trim();
+    }
+
     function shippedQtyByKey(orderNo) {
       const map = {};
       validShipsOfPo(orderNo).forEach((ship) => {
@@ -3080,7 +3104,7 @@
     }
 
     function syncPoStatusFromShips(order) {
-      if (!order || ["草稿", "待審核", "已取消", "待回壓文件"].includes(order.status)) return;
+      if (!order || ["草稿", "待審核", "已作廢", "待回壓文件"].includes(order.status)) return;
       if (isSupervisorClosed(order)) {
         order.status = "已完成";
         return;
@@ -3120,7 +3144,7 @@
         if (channelType && !itemMatchesSalesChannelType(item, channelType)) return false;
         if (channelName && item.channelName !== channelName) return false;
         if (status && item.status !== status) return false;
-        if (status !== "已取消" && item.status === "已取消") return false;
+        if (status !== "已作廢" && item.status === "已作廢") return false;
         if (operator && !item.operator.toLowerCase().includes(operator)) return false;
         const created = salesDateOnly(item.createdAt);
         if (from && created < from) return false;
@@ -3133,7 +3157,7 @@
       const body = document.getElementById("salesTableBody");
       document.getElementById("salesTotal").textContent = String(list.length);
       if (!list.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="9">查無資料</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="10">查無資料</td></tr>`;
         return;
       }
       body.innerHTML = list.map((item) => `
@@ -3144,6 +3168,7 @@
           <td>${item.channelName}</td>
           <td>${statusTag(item.status)}</td>
           <td>${escapeHtml(completeNoteOf(item))}</td>
+          <td>${escapeHtml(voidNoteOf(item))}</td>
           <td>${item.operator}</td>
           <td>${item.createdAt}</td>
           <td class="ops">
@@ -3723,7 +3748,10 @@
     }
 
     function normalizeAllStampFlow() {
-      salesOrders.forEach(normalizeStampFlow);
+      salesOrders.forEach((order) => {
+        if (order.status === "已取消") order.status = "已作廢";
+        normalizeStampFlow(order);
+      });
       refreshAllPoStatusesFromShips();
     }
 
@@ -3734,6 +3762,9 @@
         const data = JSON.parse(raw);
         if (!Array.isArray(data.salesOrders) || !data.salesOrders.length) return false;
         salesOrders = data.salesOrders;
+        salesOrders.forEach((order) => {
+          if (order.status === "已取消") order.status = "已作廢";
+        });
         if (Array.isArray(data.rows)) rows = data.rows;
         return true;
       } catch (err) {
@@ -3873,6 +3904,8 @@
         stampFile: null,
         closedBySupervisor: false,
         completeNote: "",
+        voidReason: "",
+        voidNote: "",
       };
       if (kind === "境外通路") {
         draft.overseas = clonePartyForCopy(src.overseas, buildOverseasPo(src.channelName, op, ""), op);
@@ -3951,6 +3984,9 @@
         const data = JSON.parse(e.newValue);
         if (!Array.isArray(data.salesOrders)) return;
         salesOrders = data.salesOrders;
+        salesOrders.forEach((order) => {
+          if (order.status === "已取消") order.status = "已作廢";
+        });
         if (Array.isArray(data.rows)) rows = data.rows;
         renderSalesTable(getSalesFiltered());
         renderShippingTable();
@@ -4866,6 +4902,8 @@
         shipByTime: toDateInput(cfg.shipByTime) || addDaysToStamp(cfg.createdAt, 1),
         closedBySupervisor: !!cfg.closedBySupervisor,
         completeNote: cfg.completeNote || "",
+        voidReason: cfg.voidReason || "",
+        voidNote: cfg.voidNote || "",
         items: channelSupplyItems(
           cfg.channelName,
           cfg.channelType === "境外通路" ? "境外通路" : cfg.channelType === "台灣本地經銷" ? "經銷" : "一般通路"
@@ -4914,8 +4952,8 @@
         extraPo({ orderNo: "SO20260815022", poDocNo: "SKM-A11-0815", channelType: "台灣實體百貨", channelName: "百貨-新光三越", status: "已完成", operator: "misha.huang", createdAt: "2026-08-15 14:48:12" }),
         extraPo({ orderNo: "SO20260814023", poDocNo: "SN-DONE-0814", channelType: "台灣本地經銷", channelName: "經銷商-學生營養股份有限公司", status: "已完成", operator: "sarah.lin", createdAt: "2026-08-14 10:22:40", closedBySupervisor: true, completeNote: "以實收為主" }),
         extraPo({ orderNo: "SO20260813024", poDocNo: "XZ-PO-0813-024", channelType: "台灣本地經銷", channelName: "經銷商-絢綻國際企業社", status: "已完成", operator: "john.pan", createdAt: "2026-08-13 16:09:18" }),
-        extraPo({ orderNo: "SO20260812025", poDocNo: "DEC-0812-25", channelType: "台灣本地通路", channelName: "實體-迪卡儂", status: "已取消", operator: "vita.du", createdAt: "2026-08-12 11:37:05" }),
-        extraPo({ orderNo: "SO20260811026", poDocNo: "SHP-VOID-0811", channelType: "台灣線上通路", channelName: "線上-蝦皮商城", status: "已取消", operator: "demo.user", createdAt: "2026-08-11 15:54:29" }),
+        extraPo({ orderNo: "SO20260812025", poDocNo: "DEC-0812-25", channelType: "台灣本地通路", channelName: "實體-迪卡儂", status: "已作廢", operator: "vita.du", createdAt: "2026-08-12 11:37:05" }),
+        extraPo({ orderNo: "SO20260811026", poDocNo: "SHP-VOID-0811", channelType: "台灣線上通路", channelName: "線上-蝦皮商城", status: "已作廢", operator: "demo.user", createdAt: "2026-08-11 15:54:29" }),
         extraPo({ orderNo: "SO20260810027", poDocNo: "PX-0810-027", channelType: "台灣本地通路", channelName: "實體-全聯", status: "待出貨", operator: "vita.du", createdAt: "2026-08-10 09:11:44" }),
         extraPo({ orderNo: "SO20260809028", poDocNo: "POYA-0809-028", channelType: "台灣本地通路", channelName: "實體-寶雅", status: "部分送達", operator: "misha.huang", createdAt: "2026-08-09 13:26:17" }),
         extraPo({ orderNo: "SO20260808029", poDocNo: "OL-TRANSFER-0808", channelType: "台灣線上通路", channelName: "線上-轉單", status: "已完成", operator: "sarah.lin", createdAt: "2026-08-08 08:40:03", closedBySupervisor: true, completeNote: "以實收為主" })
@@ -6953,10 +6991,10 @@
     function shipCreateBlockReason(po) {
       if (!po) return "請選擇採購單編號";
       if (canCreateShipFromPo(po)) return "";
-      if (needsStampPo(po) && !hasStampFile(po) && !["草稿", "待審核", "已取消"].includes(po.status)) {
+      if (needsStampPo(po) && !hasStampFile(po) && !["草稿", "待審核", "已作廢"].includes(po.status)) {
         return "請先回壓雙方用印文件才能新增出貨單";
       }
-      return po.status === "已完成" || po.status === "已取消" ? "此採購單目前無法再建立出貨單" : "此採購單尚未審核通過，無法建立出貨單";
+      return po.status === "已完成" || po.status === "已作廢" ? "此採購單目前無法再建立出貨單" : "此採購單尚未審核通過，無法建立出貨單";
     }
 
     function requireShipPo() {
@@ -7134,13 +7172,42 @@
 
     function getLantianStatus(order) {
       if (order.lantianStatus) return order.lantianStatus;
-      if (order.status === "已取消") return "DONE";
+      if (order.status === "已作廢") return "DONE";
       return "WAITING";
     }
 
     function canVoidOrder(order) {
-      if (!order || order.status === "已取消" || order.status === "待審核") return false;
+      if (!order || order.status === "已作廢" || order.status === "待審核") return false;
       return getLantianStatus(order) === "WAITING";
+    }
+
+    function resetVoidReasonForm() {
+      document.getElementById("voidReason").value = "";
+      document.getElementById("voidOtherNote").value = "";
+      document.getElementById("voidOtherRow").classList.add("hidden");
+    }
+
+    function syncVoidOtherRow() {
+      const isOther = document.getElementById("voidReason").value === "其他";
+      document.getElementById("voidOtherRow").classList.toggle("hidden", !isOther);
+      if (!isOther) document.getElementById("voidOtherNote").value = "";
+    }
+
+    function readVoidReasonPayload() {
+      const reason = document.getElementById("voidReason").value;
+      if (!reason) {
+        alert("請選擇作廢原因");
+        document.getElementById("voidReason").focus();
+        return null;
+      }
+      if (reason !== "其他") return { voidReason: reason, voidNote: "" };
+      const note = document.getElementById("voidOtherNote").value.trim().slice(0, 30);
+      if (!note) {
+        alert("請輸入作廢原因");
+        document.getElementById("voidOtherNote").focus();
+        return null;
+      }
+      return { voidReason: reason, voidNote: note };
     }
 
     function openVoidModal(order) {
@@ -7149,11 +7216,13 @@
         return;
       }
       pendingVoidOrderNo = order.orderNo;
+      resetVoidReasonForm();
       document.getElementById("voidModal").classList.remove("hidden");
     }
 
     function closeVoidModal() {
       pendingVoidOrderNo = "";
+      resetVoidReasonForm();
       document.getElementById("voidModal").classList.add("hidden");
     }
 
@@ -7163,7 +7232,11 @@
         closeVoidModal();
         return;
       }
-      order.status = "已取消";
+      const payload = readVoidReasonPayload();
+      if (!payload) return;
+      order.status = "已作廢";
+      order.voidReason = payload.voidReason;
+      order.voidNote = payload.voidNote;
       rows.forEach((row) => {
         if (row.salesOrderNo === order.orderNo) row.status = "訂單取消";
       });
@@ -7173,6 +7246,7 @@
       closeVoidModal();
     }
 
+    document.getElementById("voidReason").addEventListener("change", syncVoidOtherRow);
     document.getElementById("voidClose").addEventListener("click", closeVoidModal);
     document.getElementById("voidCancel").addEventListener("click", closeVoidModal);
     document.getElementById("voidConfirm").addEventListener("click", confirmVoidOrder);
