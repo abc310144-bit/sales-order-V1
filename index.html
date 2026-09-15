@@ -2538,11 +2538,11 @@
   <div class="modal-mask hidden" id="voidModal">
     <div class="modal-card void-card" role="dialog" aria-labelledby="voidTitle">
       <div class="modal-head">
-        <h2 id="voidTitle">取消採購單</h2>
+        <h2 id="voidTitle">作廢採購單</h2>
         <button type="button" class="modal-close" id="voidClose" aria-label="關閉">×</button>
       </div>
       <div class="modal-body">
-        <p class="void-msg">取消採購單將一併取消所有相應出貨單</p>
+        <p class="void-msg">作廢採購單將一併取消所有相應出貨單</p>
       </div>
       <div class="modal-foot">
         <button type="button" class="btn" id="voidCancel">取消</button>
@@ -3063,7 +3063,7 @@
       return [
         `<a data-action="edit" data-no="${item.orderNo}" class="${editOn ? "" : "is-disabled"}"${editOn ? "" : " aria-disabled=\"true\""}>編輯</a>`,
         `<a data-action="view" data-no="${item.orderNo}">檢視</a>`,
-        `<a data-action="void" data-no="${item.orderNo}" class="${voidOn ? "" : "is-disabled"}"${voidOn ? "" : " aria-disabled=\"true\""}>取消採購單</a>`,
+        `<a data-action="void" data-no="${item.orderNo}" class="${voidOn ? "" : "is-disabled"}"${voidOn ? "" : " aria-disabled=\"true\""}>作廢</a>`,
       ].join("");
     }
 
