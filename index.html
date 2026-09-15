@@ -5265,7 +5265,13 @@
     function applyPoPickFilter() {
       const input = document.getElementById("poPickFilterInput");
       poPickFilterQueries = parsePoItemQueries(input ? input.value : "");
+      if (poGoodsEditable() && poPickFilterQueries.length) {
+        poPickRows.forEach((row) => {
+          if (poPickRowMatchesFilter(row, poPickFilterQueries)) row.checked = true;
+        });
+      }
       renderPoGoodsPick();
+      syncPoOverviewFromPick();
     }
 
     function clearPoPickFilter() {
