@@ -1244,6 +1244,10 @@
       cursor: auto;
     }
     #page-order-edit.is-readonly #poShipCreatePanel .form-ctrl select { cursor: pointer; }
+    #page-order-edit.is-readonly #poShipCreatePanel .radio-line {
+      cursor: pointer;
+      opacity: 1;
+    }
     .is-readonly .radio-line,
     .is-readonly .tag button {
       cursor: not-allowed;
@@ -2102,6 +2106,10 @@
                 <span class="field-hint">24小時制</span>
               </div>
             </div>
+            <div class="form-row">
+              <label>應出貨時間</label>
+              <div class="form-ctrl"><input type="datetime-local" id="editShipByTime" /></div>
+            </div>
             <div id="editGeneralBlock" class="hidden">
               <div class="form-row">
                 <label>合作通路類型</label>
@@ -2139,10 +2147,6 @@
               <div class="form-row">
                 <label>到貨地址</label>
                 <div class="form-ctrl"><textarea id="editAddress" rows="2"></textarea></div>
-              </div>
-              <div class="form-row">
-                <label>應出貨時間</label>
-                <div class="form-ctrl"><input type="datetime-local" id="editShipByTime" /></div>
               </div>
             </div>
 
@@ -2316,6 +2320,37 @@
                   <div class="form-row">
                     <label>預計拋單日</label>
                     <div class="form-ctrl"><input type="date" id="poShipExpectDate" /></div>
+                  </div>
+                  <div class="form-row">
+                    <label>預計到貨日期</label>
+                    <div class="form-ctrl"><input type="date" id="poShipArriveDate" /></div>
+                  </div>
+                  <div class="form-row">
+                    <label>預計到貨時間</label>
+                    <div class="form-ctrl time-24">
+                      <select id="poShipArriveHour" aria-label="預計到貨時"></select>
+                      <span class="time-colon">:</span>
+                      <select id="poShipArriveMinute" aria-label="預計到貨分"></select>
+                      <span class="field-hint">24小時制</span>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <label>預計出貨日</label>
+                    <div class="form-ctrl"><input type="date" id="poShipOutDate" /></div>
+                  </div>
+                  <div class="form-row">
+                    <label class="required">通路進貨倉點</label>
+                    <div class="form-ctrl wide-ctrl">
+                      <select id="poShipInWarehouse">
+                        <option value="">請選擇</option>
+                      </select>
+                      <div class="radio-group">
+                        <label class="radio-line"><input type="radio" name="poShipPickup" value="self" /> 訂單自取</label>
+                        <label class="radio-line"><input type="radio" name="poShipPickup" value="charter" /> 訂單非自取 (專車)</label>
+                        <label class="radio-line"><input type="radio" name="poShipPickup" value="hsinchu" /> 訂單非自取 (新竹)</label>
+                        <label class="radio-line"><input type="radio" name="poShipPickup" value="blackcat" /> 訂單非自取 (黑貓)</label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3256,25 +3291,38 @@
       return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
     }
 
-    function initExpectArriveTimeOptions() {
-      const hour = document.getElementById("editExpectArriveHour");
-      const minute = document.getElementById("editExpectArriveMinute");
-      if (!hour || hour.options.length) return;
+    function initHourMinuteOptions(hourId, minuteId) {
+      const hour = document.getElementById(hourId);
+      const minute = document.getElementById(minuteId);
+      if (!hour || !minute || hour.options.length) return;
       hour.innerHTML = `<option value=""></option>` + Array.from({ length: 24 }, (_, i) => `<option value="${pad(i, 2)}">${pad(i, 2)}</option>`).join("");
       minute.innerHTML = `<option value=""></option>` + Array.from({ length: 60 }, (_, i) => `<option value="${pad(i, 2)}">${pad(i, 2)}</option>`).join("");
     }
 
-    function readExpectArriveTime() {
-      const hour = document.getElementById("editExpectArriveHour").value;
-      const minute = document.getElementById("editExpectArriveMinute").value;
+    function readHourMinute(hourId, minuteId) {
+      const hour = document.getElementById(hourId).value;
+      const minute = document.getElementById(minuteId).value;
       if (hour === "" && minute === "") return "";
       return `${hour || "00"}:${minute || "00"}`;
     }
 
-    function fillExpectArriveTime(value) {
+    function fillHourMinute(hourId, minuteId, value) {
       const t = toTimeInput(value);
-      document.getElementById("editExpectArriveHour").value = t ? t.slice(0, 2) : "";
-      document.getElementById("editExpectArriveMinute").value = t ? t.slice(3, 5) : "";
+      document.getElementById(hourId).value = t ? t.slice(0, 2) : "";
+      document.getElementById(minuteId).value = t ? t.slice(3, 5) : "";
+    }
+
+    function initExpectArriveTimeOptions() {
+      initHourMinuteOptions("editExpectArriveHour", "editExpectArriveMinute");
+      initHourMinuteOptions("poShipArriveHour", "poShipArriveMinute");
+    }
+
+    function readExpectArriveTime() {
+      return readHourMinute("editExpectArriveHour", "editExpectArriveMinute");
+    }
+
+    function fillExpectArriveTime(value) {
+      fillHourMinute("editExpectArriveHour", "editExpectArriveMinute", value);
     }
 
     function nextSalesOrderNo() {
@@ -6063,6 +6111,8 @@
       order.poKind = poKindOf(order);
       order.arriveDate = document.getElementById("editExpectArriveDate").value;
       order.arriveTime = readExpectArriveTime();
+      const shipBy = document.getElementById("editShipByTime").value;
+      order.shipByTime = shipBy ? shipBy.replace("T", " ") : "";
       applyOverseasForm(order);
     }
 
@@ -6187,6 +6237,7 @@
       }
       document.getElementById("editExpectArriveDate").value = toDateInput(order.arriveDate);
       fillExpectArriveTime(order.arriveTime);
+      document.getElementById("editShipByTime").value = toDateTimeInput(order.shipByTime);
       ensurePartyPo(order);
       const party = partyRecord(order);
       if (!order.poDocNo && party && party.poDocNo) {
@@ -6603,9 +6654,26 @@
       return { goods, shortage };
     }
 
+    const poShipWarehouseOptions = ["台北士林", "藍田倉", "全聯物流中心", "正光廊-營運部主管", "寶雅倉儲"];
+
+    function fillPoShipWarehouseSelect(selected) {
+      const sel = document.getElementById("poShipInWarehouse");
+      sel.innerHTML = `<option value="">請選擇</option>` + poShipWarehouseOptions.map((name) => `<option>${name}</option>`).join("");
+      sel.value = poShipWarehouseOptions.includes(selected) ? selected : "台北士林";
+    }
+
     function resetPoShipCreateForm(order) {
+      initExpectArriveTimeOptions();
       document.getElementById("poShipIncoterm").value = "FOB";
       document.getElementById("poShipExpectDate").value = toDateInput(order && (order.shipByTime || order.createdAt)) || "";
+      const arriveDate = document.getElementById("editExpectArriveDate").value || toDateInput(order && order.arriveDate);
+      document.getElementById("poShipArriveDate").value = arriveDate || "";
+      fillHourMinute("poShipArriveHour", "poShipArriveMinute", readExpectArriveTime() || (order && order.arriveTime) || "");
+      const shipOut = toDateInput(document.getElementById("editShipByTime").value || (order && order.shipByTime));
+      document.getElementById("poShipOutDate").value = shipOut || "";
+      const profile = channelProfiles[(order && order.channelName) || ""] || {};
+      fillPoShipWarehouseSelect(profile.inWarehouse);
+      document.querySelectorAll('input[name="poShipPickup"]').forEach((el) => { el.checked = el.value === "self"; });
       poShipFees = [];
       const source = (poLineItems.length ? poLineItems : ((order && order.items) || [])).map((row) => toPoLineItem(row));
       const plan = poShipFillPlan(order, source);
@@ -6765,6 +6833,23 @@
         document.getElementById("poShipExpectDate").focus();
         return;
       }
+      const shipOutDate = document.getElementById("poShipOutDate").value;
+      if (!shipOutDate) {
+        alert("請選擇預計出貨日");
+        document.getElementById("poShipOutDate").focus();
+        return;
+      }
+      const inWarehouse = document.getElementById("poShipInWarehouse").value;
+      if (!inWarehouse) {
+        alert("請選擇通路進貨倉點");
+        document.getElementById("poShipInWarehouse").focus();
+        return;
+      }
+      const pickupEl = document.querySelector('input[name="poShipPickup"]:checked');
+      if (!pickupEl) {
+        alert("請選擇通路進貨倉點的取貨方式");
+        return;
+      }
       const ids = nextShippingIds();
       rows.unshift({
         id: ids.id,
@@ -6775,10 +6860,15 @@
         status: "待拋單",
         applicant: "demo.user",
         created: nowStamp(),
-        warehouse: "",
+        warehouse: inWarehouse,
         shipped: "",
         incoterm: document.getElementById("poShipIncoterm").value,
         expectDate,
+        arriveDate: document.getElementById("poShipArriveDate").value,
+        arriveTime: readHourMinute("poShipArriveHour", "poShipArriveMinute"),
+        shipOutDate,
+        inWarehouse,
+        pickup: pickupEl.value,
         rebatePercent: channelRebatePercent(order.channelName),
         fees: poShipFees.map((fee) => ({ ...fee })),
         items: poShipGoods.map((item) => poItemToShipLine(item)),
