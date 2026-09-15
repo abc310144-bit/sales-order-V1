@@ -1978,13 +1978,20 @@
                 <input id="salesPoDocNo" type="text" placeholder="支援模糊查詢" maxlength="30" />
               </div>
               <div class="field">
+                <label>採購單類型</label>
+                <select id="salesPoKind">
+                  <option value="">請選擇</option>
+                  <option>一般通路</option>
+                  <option>經銷</option>
+                  <option>境外通路</option>
+                </select>
+              </div>
+              <div class="field hidden" id="salesChannelTypeField">
                 <label>合作通路類型</label>
                 <select id="salesChannelType">
                   <option value="">請選擇</option>
                   <option>台灣本地通路</option>
                   <option>台灣線上通路</option>
-                  <option>台灣本地經銷</option>
-                  <option>境外通路</option>
                 </select>
               </div>
               <div class="field">
@@ -3067,6 +3074,7 @@
     function getSalesFiltered() {
       const orderNo = document.getElementById("salesOrderNo").value.trim().toLowerCase();
       const poDocNo = document.getElementById("salesPoDocNo").value.trim().toLowerCase();
+      const poKind = document.getElementById("salesPoKind").value;
       const channelType = document.getElementById("salesChannelType").value;
       const channelName = document.getElementById("salesChannelName").value;
       const status = document.getElementById("salesStatus").value;
@@ -3077,6 +3085,7 @@
       return salesOrders.filter((item) => {
         if (orderNo && !item.orderNo.toLowerCase().includes(orderNo)) return false;
         if (poDocNo && !(item.poDocNo || "").toLowerCase().includes(poDocNo)) return false;
+        if (poKind && poKindOf(item) !== poKind) return false;
         if (channelType && !itemMatchesSalesChannelType(item, channelType)) return false;
         if (channelName && item.channelName !== channelName) return false;
         if (status && item.status !== status) return false;
@@ -3127,6 +3136,25 @@
       renderSalesTable(getSalesFiltered());
     });
 
+    function syncSalesChannelFilters() {
+      const kind = document.getElementById("salesPoKind").value;
+      const typeField = document.getElementById("salesChannelTypeField");
+      const typeSel = document.getElementById("salesChannelType");
+      const isGeneral = kind === "一般通路";
+      typeField.classList.toggle("hidden", !isGeneral);
+      if (!isGeneral) typeSel.value = "";
+      if (kind === "一般通路") {
+        fillChannelNameOptions("salesChannelName", typeSel.value);
+      } else if (kind === "經銷") {
+        fillChannelNameOptions("salesChannelName", "台灣本地經銷");
+      } else if (kind === "境外通路") {
+        fillChannelNameOptions("salesChannelName", "境外通路");
+      } else {
+        fillChannelNameOptions("salesChannelName", "");
+      }
+    }
+
+    document.getElementById("salesPoKind").addEventListener("change", syncSalesChannelFilters);
     document.getElementById("salesChannelType").addEventListener("change", () => {
       fillChannelNameOptions("salesChannelName", document.getElementById("salesChannelType").value);
     });
@@ -3134,8 +3162,9 @@
     document.getElementById("salesClear").addEventListener("click", () => {
       document.getElementById("salesOrderNo").value = "";
       document.getElementById("salesPoDocNo").value = "";
+      document.getElementById("salesPoKind").value = "";
       document.getElementById("salesChannelType").value = "";
-      fillChannelNameOptions("salesChannelName", "");
+      syncSalesChannelFilters();
       document.getElementById("salesStatus").value = "";
       document.getElementById("salesOperator").value = "";
       document.getElementById("salesCreatedFrom").value = "";
@@ -6551,18 +6580,19 @@
 
     function poShipFillPlan(order, sourceItems) {
       const channel = order && order.channelName;
-      const source = (sourceItems || (order && order.items) || []).map((row) => toPoLineItem(row));
+      const source = (sourceItems || (order && order.items) || [])
+        .map((row) => toPoLineItem(row))
+        .filter((item) => item.sku && (Number(item.qty) || 0) > 0);
       const shippedMap = order && order.orderNo ? shippedQtyByKey(order.orderNo) : {};
       const goods = [];
       const shortage = [];
       source.forEach((item) => {
         const remaining = remainingQtyOfItem(order, item, shippedMap);
-        if (!item.sku || remaining <= 0) return;
+        if (remaining <= 0) return;
         const stock = virtualStockOf(channel, item.sku);
         const row = applyFifoExpiry(toPoLineItem({ ...item, qty: remaining, stock }));
-        if (stock >= remaining) {
-          goods.push(row);
-        } else {
+        goods.push(row);
+        if (stock < remaining) {
           shortage.push({
             sku: row.sku,
             name: row.name,
