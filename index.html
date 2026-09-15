@@ -2108,7 +2108,7 @@
             </div>
             <div class="form-row">
               <label>應出貨時間</label>
-              <div class="form-ctrl"><input type="datetime-local" id="editShipByTime" /></div>
+              <div class="form-ctrl"><input type="date" id="editShipByTime" /></div>
             </div>
             <div id="editGeneralBlock" class="hidden">
               <div class="form-row">
@@ -3386,7 +3386,7 @@
         address: (party && party.buyerAddress) || profile.address || "",
         arriveDate: party ? "" : addDaysToStamp(createdAt, 2),
         arriveTime: party ? "" : "18:00",
-        shipByTime: party ? "" : addDaysToStamp(createdAt, 1, true),
+        shipByTime: party ? "" : addDaysToStamp(createdAt, 1),
         items: isOverseas
           ? overseasLinesToItems(party.lines)
           : isDealer
@@ -3806,7 +3806,7 @@
         address: (party && party.buyerAddress) || profile.address || "",
         arriveDate: kind === "一般通路" ? addDaysToStamp(createdAt, 2) : "",
         arriveTime: "",
-        shipByTime: kind === "一般通路" ? addDaysToStamp(createdAt, 1, true) : "",
+        shipByTime: kind === "一般通路" ? addDaysToStamp(createdAt, 1) : "",
         items: [],
         overseas,
         dealer,
@@ -3865,7 +3865,7 @@
         address: src.address || profile.address || "",
         arriveDate: kind === "一般通路" ? addDaysToStamp(createdAt, 2) : (src.arriveDate || ""),
         arriveTime: src.arriveTime || "",
-        shipByTime: kind === "一般通路" ? addDaysToStamp(createdAt, 1, true) : "",
+        shipByTime: kind === "一般通路" ? addDaysToStamp(createdAt, 1) : "",
         items: cloneCopiedItems(src.items),
         overseas: null,
         dealer: null,
@@ -4863,7 +4863,7 @@
         address: profile.address || "",
         arriveDate: cfg.arriveDate || addDaysToStamp(cfg.createdAt, 2),
         arriveTime: cfg.arriveTime || "18:00",
-        shipByTime: cfg.shipByTime || addDaysToStamp(cfg.createdAt, 1, true),
+        shipByTime: toDateInput(cfg.shipByTime) || addDaysToStamp(cfg.createdAt, 1),
         closedBySupervisor: !!cfg.closedBySupervisor,
         completeNote: cfg.completeNote || "",
         items: channelSupplyItems(
@@ -6111,8 +6111,7 @@
       order.poKind = poKindOf(order);
       order.arriveDate = document.getElementById("editExpectArriveDate").value;
       order.arriveTime = readExpectArriveTime();
-      const shipBy = document.getElementById("editShipByTime").value;
-      order.shipByTime = shipBy ? shipBy.replace("T", " ") : "";
+      order.shipByTime = toDateInput(document.getElementById("editShipByTime").value);
       applyOverseasForm(order);
     }
 
@@ -6237,7 +6236,7 @@
       }
       document.getElementById("editExpectArriveDate").value = toDateInput(order.arriveDate);
       fillExpectArriveTime(order.arriveTime);
-      document.getElementById("editShipByTime").value = toDateTimeInput(order.shipByTime);
+      document.getElementById("editShipByTime").value = toDateInput(order.shipByTime);
       ensurePartyPo(order);
       const party = partyRecord(order);
       if (!order.poDocNo && party && party.poDocNo) {
