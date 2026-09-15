@@ -586,7 +586,8 @@
     }
     .po-goods-section + .po-goods-section { margin-top: 28px; }
     #editGoodsPickSection.hidden + .po-goods-section { margin-top: 0; }
-    .po-goods-pick-table { min-width: 760px; }
+    .po-goods-pick-table { min-width: 980px; }
+    .po-goods-pick-table .col-expiry { min-width: 180px; }
     .po-goods-pick-table .col-check {
       width: 48px;
       min-width: 48px;
@@ -2203,6 +2204,7 @@
                         <th class="col-check"></th>
                         <th>SKU</th>
                         <th>商品名稱</th>
+                        <th class="col-expiry">效期_批號</th>
                         <th class="num col-alloc">當前可賣量</th>
                         <th class="col-pick-qty">數量設定</th>
                       </tr>
@@ -5214,11 +5216,21 @@
       });
     }
 
+    function pickExpiryBatchOf(row) {
+      const date = String((row && row.expiryAccept) || "").trim();
+      const tags = ["健工", "藍田", "全聯"];
+      const sku = String((row && row.sku) || "");
+      let n = 0;
+      for (let i = 0; i < sku.length; i++) n += sku.charCodeAt(i);
+      if (date) return `${date}_${tags[n % tags.length]}`;
+      return closestFifoLot().batch;
+    }
+
     function renderPoGoodsPick() {
       const body = document.getElementById("editGoodsPickBody");
       if (!body) return;
       if (!poPickRows.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="5">此通路虛擬倉目前沒有可配商品</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="6">此通路虛擬倉目前沒有可配商品</td></tr>`;
         return;
       }
       body.innerHTML = poPickRows.map((row) => {
@@ -5231,6 +5243,7 @@
           <td class="col-check"><input type="checkbox" data-pick="check"${checked ? " checked" : ""} /></td>
           <td>${escapeHtml(row.sku)}</td>
           <td class="col-name">${escapeHtml(row.name)}</td>
+          <td class="col-expiry">${escapeHtml(pickExpiryBatchOf(row))}</td>
           <td class="num col-alloc">${escapeHtml(row.sellableQty)}</td>
           <td class="col-pick-qty">
             <input type="number" min="0" max="${escapeHtml(max)}" step="${escapeHtml(step)}" data-pick="qty" value="${escapeHtml(qtyVal)}" />
