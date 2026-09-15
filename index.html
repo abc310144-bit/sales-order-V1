@@ -588,6 +588,25 @@
     #editGoodsPickSection.hidden + .po-goods-section { margin-top: 0; }
     .po-goods-pick-table { min-width: 980px; }
     .po-goods-pick-table .col-expiry { min-width: 180px; }
+    .po-pick-filter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 12px;
+    }
+    .po-pick-filter input {
+      flex: 1;
+      min-width: 0;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 0 11px;
+      font-size: 14px;
+      outline: none;
+      background: #fff;
+    }
+    .po-pick-filter input:focus { border-color: var(--primary); }
+    .po-pick-filter .btn { flex-shrink: 0; }
     .po-goods-pick-table .col-check {
       width: 48px;
       min-width: 48px;
@@ -2197,6 +2216,11 @@
             <div id="editGeneralGoodsWrap">
               <div class="po-goods-section" id="editGoodsPickSection">
                 <h3 class="goods-title">選擇商品</h3>
+                <div class="po-pick-filter">
+                  <input id="poPickFilterInput" type="text" placeholder="支援模糊查詢，多個以 , 分隔" autocomplete="off" />
+                  <button type="button" class="btn btn-primary" id="poPickFilterSearch">搜尋</button>
+                  <button type="button" class="btn" id="poPickFilterClear">清除篩選條件</button>
+                </div>
                 <div class="table-wrap ship-items-table-wrap goods-h-scroll po-goods-scroll">
                   <table class="ship-items-table po-goods-table po-goods-pick-table">
                     <thead>
@@ -4950,6 +4974,7 @@
     let poShipGoods = [];
     let poShipShortage = [];
     let poPickRows = [];
+    let poPickFilterQueries = [];
 
     const virtualAllocDefaults = {
       "UM-1001": 120,
@@ -5226,6 +5251,30 @@
       return closestFifoLot().batch;
     }
 
+    function poPickRowMatchesFilter(row, queries) {
+      if (!queries.length) return true;
+      const sku = normalizeSku(row && row.sku).toLowerCase();
+      const name = String((row && row.name) || "").toLowerCase();
+      return queries.some((q) => sku.includes(q) || name.includes(q));
+    }
+
+    function visiblePoPickRows() {
+      return poPickRows.filter((row) => poPickRowMatchesFilter(row, poPickFilterQueries));
+    }
+
+    function applyPoPickFilter() {
+      const input = document.getElementById("poPickFilterInput");
+      poPickFilterQueries = parsePoItemQueries(input ? input.value : "");
+      renderPoGoodsPick();
+    }
+
+    function clearPoPickFilter() {
+      const input = document.getElementById("poPickFilterInput");
+      if (input) input.value = "";
+      poPickFilterQueries = [];
+      renderPoGoodsPick();
+    }
+
     function renderPoGoodsPick() {
       const body = document.getElementById("editGoodsPickBody");
       if (!body) return;
@@ -5233,7 +5282,12 @@
         body.innerHTML = `<tr class="empty-row"><td colspan="6">此通路虛擬倉目前沒有可配商品</td></tr>`;
         return;
       }
-      body.innerHTML = poPickRows.map((row) => {
+      const visible = visiblePoPickRows();
+      if (!visible.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="6">查無資料</td></tr>`;
+        return;
+      }
+      body.innerHTML = visible.map((row) => {
         const max = maxOrderableQty(row.sellableQty, row.pcsPerCarton);
         const step = Number(row.pcsPerCarton) || 1;
         const checked = !!row.checked;
@@ -5283,6 +5337,9 @@
         const qty = snapPickQty(row, selected[row.sku] || 0);
         return { ...row, checked: qty > 0, qty };
       });
+      const filterInput = document.getElementById("poPickFilterInput");
+      if (filterInput) filterInput.value = "";
+      poPickFilterQueries = [];
       syncPoOverviewFromPick(order);
       renderPoGoodsPick();
     }
@@ -6415,6 +6472,14 @@
     });
     document.getElementById("editGoodsPickBody").addEventListener("change", onPoPickField);
     document.getElementById("editGoodsPickBody").addEventListener("input", onPoPickField);
+    document.getElementById("poPickFilterSearch").addEventListener("click", applyPoPickFilter);
+    document.getElementById("poPickFilterClear").addEventListener("click", clearPoPickFilter);
+    document.getElementById("poPickFilterInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        applyPoPickFilter();
+      }
+    });
     document.getElementById("editGoodsBody").addEventListener("input", onPoItemField);
     document.getElementById("editGoodsBody").addEventListener("change", onPoItemField);
     document.getElementById("editGoodsBody").addEventListener("click", (e) => {
