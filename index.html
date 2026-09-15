@@ -1402,6 +1402,24 @@
       white-space: nowrap;
     }
     tbody tr:hover { background: #fafafa; }
+    .void-note-tip { cursor: default; }
+    .void-note-bubble {
+      position: fixed;
+      z-index: 200;
+      max-width: 260px;
+      padding: 8px 10px;
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: normal;
+      word-break: break-all;
+      pointer-events: none;
+    }
+    .void-note-bubble.hidden { display: none; }
     .status-tag {
       display: inline-block;
       max-width: 100%;
@@ -2761,6 +2779,7 @@
   </div>
 
   <input type="file" id="stampFileInput" class="hidden" accept=".pdf,image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf" />
+  <div id="voidNoteBubble" class="void-note-bubble hidden" role="tooltip"></div>
 
   <script>
     let rows = [
@@ -3054,6 +3073,13 @@
       return String(order.voidReason || "").trim();
     }
 
+    function voidNoteCellHtml(order) {
+      const full = voidNoteOf(order);
+      if (!full) return "";
+      if (full.length <= 15) return escapeHtml(full);
+      return `<span class="void-note-tip" data-tip="${escapeHtml(full)}">${escapeHtml(full.slice(0, 15))}...</span>`;
+    }
+
     function shippedQtyByKey(orderNo) {
       const map = {};
       validShipsOfPo(orderNo).forEach((ship) => {
@@ -3168,7 +3194,7 @@
           <td>${item.channelName}</td>
           <td>${statusTag(item.status)}</td>
           <td>${escapeHtml(completeNoteOf(item))}</td>
-          <td>${escapeHtml(voidNoteOf(item))}</td>
+          <td>${voidNoteCellHtml(item)}</td>
           <td>${item.operator}</td>
           <td>${item.createdAt}</td>
           <td class="ops">
@@ -3501,6 +3527,42 @@
         openPoWorkspace({ po: order.orderNo, mode });
       }
     });
+    function hideVoidNoteBubble() {
+      const bubble = document.getElementById("voidNoteBubble");
+      if (bubble) bubble.classList.add("hidden");
+    }
+    function showVoidNoteBubble(anchor) {
+      const bubble = document.getElementById("voidNoteBubble");
+      const text = anchor.getAttribute("data-tip") || "";
+      if (!bubble || !text) {
+        hideVoidNoteBubble();
+        return;
+      }
+      bubble.textContent = text;
+      bubble.classList.remove("hidden");
+      const r = anchor.getBoundingClientRect();
+      const pad = 8;
+      let top = r.bottom + pad;
+      let left = r.left;
+      const br = bubble.getBoundingClientRect();
+      if (top + br.height > window.innerHeight - 8) top = Math.max(8, r.top - br.height - pad);
+      if (left + br.width > window.innerWidth - 8) left = Math.max(8, window.innerWidth - br.width - 8);
+      if (left < 8) left = 8;
+      bubble.style.top = `${top}px`;
+      bubble.style.left = `${left}px`;
+    }
+    document.getElementById("salesTableBody").addEventListener("mouseover", (e) => {
+      const tip = e.target.closest(".void-note-tip");
+      if (tip) showVoidNoteBubble(tip);
+    });
+    document.getElementById("salesTableBody").addEventListener("mouseout", (e) => {
+      const tip = e.target.closest(".void-note-tip");
+      if (!tip) return;
+      if (tip.contains(e.relatedTarget)) return;
+      hideVoidNoteBubble();
+    });
+    const salesTableWrap = document.querySelector("#page-sales .table-wrap");
+    if (salesTableWrap) salesTableWrap.addEventListener("scroll", hideVoidNoteBubble);
     document.getElementById("relatedShipBody").addEventListener("click", (e) => {
       if (e.target.dataset.goShip) persistDemoData();
     });
