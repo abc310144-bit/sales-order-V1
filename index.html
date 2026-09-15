@@ -3085,6 +3085,7 @@
         if (channelType && !itemMatchesSalesChannelType(item, channelType)) return false;
         if (channelName && item.channelName !== channelName) return false;
         if (status && item.status !== status) return false;
+        if (status !== "已取消" && item.status === "已取消") return false;
         if (operator && !item.operator.toLowerCase().includes(operator)) return false;
         const created = salesDateOnly(item.createdAt);
         if (from && created < from) return false;
@@ -3118,7 +3119,7 @@
     }
 
     refreshAllPoStatusesFromShips();
-    renderSalesTable(salesOrders);
+    renderSalesTable(getSalesFiltered());
 
     document.getElementById("salesAccordionBtn").addEventListener("click", () => {
       const btn = document.getElementById("salesAccordionBtn");
@@ -3165,7 +3166,7 @@
       document.getElementById("salesOperator").value = "";
       document.getElementById("salesCreatedFrom").value = "";
       document.getElementById("salesCreatedTo").value = "";
-      renderSalesTable(salesOrders);
+      renderSalesTable(getSalesFiltered());
     });
 
     function resetImportModal() {
