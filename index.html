@@ -1975,8 +1975,8 @@
               篩選條件
             </button>
             <div class="sales-toolbar-actions">
-              <button type="button" class="btn btn-primary" id="salesImportBtn">匯入採購單</button>
-              <button type="button" class="btn btn-primary" id="salesCreateBtn">建立採購單</button>
+              <button type="button" class="btn btn-primary" id="salesImportBtn">匯入客戶訂單</button>
+              <button type="button" class="btn btn-primary" id="salesCreateBtn">建立客戶訂單</button>
             </div>
           </div>
           <div class="demo-hint">
@@ -2495,7 +2495,7 @@
   <div class="modal-mask hidden" id="importModal">
     <div class="modal-card" role="dialog" aria-labelledby="importTitle">
       <div class="modal-head">
-        <h2 id="importTitle">匯入採購單</h2>
+        <h2 id="importTitle">匯入客戶訂單</h2>
         <button type="button" class="modal-close" id="importClose" aria-label="關閉">×</button>
       </div>
       <div class="modal-body">
@@ -6382,7 +6382,7 @@
       document.getElementById("editGeneralGoodsWrap").classList.remove("hidden");
       document.getElementById("editOverseasGoodsWrap").classList.add("hidden");
       document.getElementById("editPoKindMeta").textContent = `採購單類型：${kind}`;
-      const titles = { view: "檢視採購單", edit: "編輯採購單", create: "建立採購單" };
+      const titles = { view: "檢視採購單", edit: "編輯採購單", create: "建立客戶訂單" };
       document.getElementById("editPageTitle").textContent = currentEditOrderNo === "__new__" ? titles.create : (titles[orderFormMode] || titles.edit);
       document.getElementById("editPoDocNo").value = order.poDocNo || "";
       if (kind === "一般通路" && !order.arriveDate) {
