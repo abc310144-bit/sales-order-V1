@@ -1244,6 +1244,11 @@
       cursor: auto;
     }
     #page-order-edit.is-readonly #poShipCreatePanel .form-ctrl select { cursor: pointer; }
+    #poShipIncoterm:disabled {
+      background: #f5f5f5;
+      color: rgba(0, 0, 0, 0.85);
+      cursor: not-allowed;
+    }
     #page-order-edit.is-readonly #poShipCreatePanel .radio-line {
       cursor: pointer;
       opacity: 1;
@@ -2224,6 +2229,7 @@
                 <label>貿易條件</label>
                 <div class="form-ctrl">
                   <select id="editTermsOfDelivery">
+                    <option value="">請選擇</option>
                     <option>FOB</option>
                     <option>CIF</option>
                     <option>EXW</option>
@@ -4405,7 +4411,7 @@
         vendorTel: VENDOR_TEL,
         vendorExt: "168",
         vendorAddress: VENDOR_ADDRESS,
-        termsOfDelivery: "EXW",
+        termsOfDelivery: "",
         termsOfPayment: "TT, 100% prepaid",
         lines: mockOverseasLines(),
         poDocNo: dateMatch ? `CCT-PO-${dateMatch[1]}` : "",
@@ -4440,7 +4446,7 @@
         vendorTel: VENDOR_TEL,
         vendorExt: "168",
         vendorAddress: VENDOR_ADDRESS,
-        termsOfDelivery: "EXW",
+        termsOfDelivery: "",
         termsOfPayment: "",
         lines: channelName === "經銷商-學生營養股份有限公司" ? mockDealerLines() : [],
         poDocNo: `${prefix}-${dateMatch ? dateMatch[1] : stamp}`,
@@ -4472,7 +4478,7 @@
         vendorTel: VENDOR_TEL,
         vendorExt: "168",
         vendorAddress: VENDOR_ADDRESS,
-        termsOfDelivery: "EXW",
+        termsOfDelivery: "",
         termsOfPayment: "",
         lines: [],
         poDocNo: "",
@@ -4557,7 +4563,7 @@
       document.getElementById("editVendorAttn").value = ov.vendorAttn || "";
       document.getElementById("editVendorEmail").value = ov.vendorEmail || "";
       document.getElementById("editVendorAddress").value = VENDOR_ADDRESS;
-      document.getElementById("editTermsOfDelivery").value = ov.termsOfDelivery || "EXW";
+      document.getElementById("editTermsOfDelivery").value = ov.termsOfDelivery || "";
       const hidePay = hidePartyPayment(order);
       document.getElementById("editTermsOfPaymentRow").classList.toggle("hidden", hidePay);
       document.getElementById("editTermsOfPayment").value = hidePay ? "" : (ov.termsOfPayment || "");
@@ -4606,7 +4612,7 @@
       bag.vendorTel = document.getElementById("editVendorTel").value.trim() || VENDOR_TEL;
       bag.vendorExt = document.getElementById("editVendorExt").value.trim();
       bag.vendorAddress = VENDOR_ADDRESS;
-      bag.termsOfDelivery = document.getElementById("editTermsOfDelivery").value || "EXW";
+      bag.termsOfDelivery = document.getElementById("editTermsOfDelivery").value;
       bag.termsOfPayment = hidePartyPayment(order) ? "" : document.getElementById("editTermsOfPayment").value.trim();
       order.address = bag.buyerAddress;
       order.items = collectEditGoods();
@@ -4896,7 +4902,7 @@
       </div>
     </div>
     <div class="terms">
-      <div>${escapeHtml(t.delivery)}：${escapeHtml(bag.termsOfDelivery || "EXW")}</div>
+      <div>${escapeHtml(t.delivery)}：${escapeHtml(bag.termsOfDelivery || "—")}</div>
       ${dealer ? "" : `<div>${escapeHtml(t.payment)}：${escapeHtml(bag.termsOfPayment || "TT, 100% prepaid")}</div>`}
     </div>
     <table>
@@ -6597,6 +6603,12 @@
         loadPoGoodsWorkspace(order);
       }
     });
+    document.getElementById("editTermsOfDelivery").addEventListener("change", () => {
+      const panel = document.getElementById("poShipCreatePanel");
+      if (panel && !panel.classList.contains("hidden")) {
+        syncPoShipIncotermFromOrder(getWorkspaceOrder());
+      }
+    });
 
     function getCreatePoKind() {
       return document.querySelector('input[name="createPoKind"]:checked')?.value || "";
@@ -6815,9 +6827,24 @@
       sel.value = poShipWarehouseOptions.includes(selected) ? selected : "台北士林";
     }
 
+    function syncPoShipIncotermFromOrder(order) {
+      const sel = document.getElementById("poShipIncoterm");
+      if (!sel) return;
+      const termsEl = document.getElementById("editTermsOfDelivery");
+      const terms = (termsEl && termsEl.value) || (partyRecord(order) && partyRecord(order).termsOfDelivery) || "";
+      if (terms && !Array.from(sel.options).some((opt) => opt.value === terms)) {
+        const opt = document.createElement("option");
+        opt.value = terms;
+        opt.textContent = terms;
+        sel.appendChild(opt);
+      }
+      sel.value = terms;
+      sel.disabled = true;
+    }
+
     function resetPoShipCreateForm(order) {
       initExpectArriveTimeOptions();
-      document.getElementById("poShipIncoterm").value = "FOB";
+      syncPoShipIncotermFromOrder(order);
       document.getElementById("poShipExpectDate").value = toDateInput(order && (order.shipByTime || order.createdAt)) || "";
       const arriveDate = document.getElementById("editExpectArriveDate").value || toDateInput(order && order.arriveDate);
       document.getElementById("poShipArriveDate").value = arriveDate || "";
@@ -7003,6 +7030,13 @@
         alert("請選擇通路進貨倉點的取貨方式");
         return;
       }
+      const incoterm = document.getElementById("poShipIncoterm").value;
+      if (!incoterm) {
+        alert("請先在訂單基本資料選擇貿易條件");
+        setPoTab("basic");
+        document.getElementById("editTermsOfDelivery").focus();
+        return;
+      }
       const ids = nextShippingIds();
       rows.unshift({
         id: ids.id,
@@ -7015,7 +7049,7 @@
         created: nowStamp(),
         warehouse: inWarehouse,
         shipped: "",
-        incoterm: document.getElementById("poShipIncoterm").value,
+        incoterm,
         expectDate,
         arriveDate: document.getElementById("poShipArriveDate").value,
         arriveTime: readHourMinute("poShipArriveHour", "poShipArriveMinute"),
