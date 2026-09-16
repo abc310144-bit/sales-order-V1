@@ -4644,13 +4644,27 @@
       return Number(cat && cat.pcsPerCarton) || 0;
     }
 
-    function priceLabelOf(item, extraLine) {
-      if (item && item.quote != null && item.quote !== "") return Number(item.quote);
-      if (extraLine && extraLine.priceLabel != null && extraLine.priceLabel !== "") return Number(extraLine.priceLabel);
-      const cat = catalogLineBySku(item && item.sku);
-      if (cat && cat.priceLabel != null && cat.priceLabel !== "") return Number(cat.priceLabel);
-      if (cat && cat.quote != null && cat.quote !== "") return Number(cat.quote);
-      return Number((metaForSku(item && item.sku) || {}).quote) || "";
+    function parsePriceWithLabel(raw) {
+      if (raw == null || String(raw).trim() === "") return NaN;
+      const n = Number(String(raw).trim());
+      if (!Number.isFinite(n) || n <= 0) return NaN;
+      return Math.round(n * 100) / 100;
+    }
+
+    function hasPriceWithLabel(item) {
+      return Number.isFinite(parsePriceWithLabel(item && item.priceWithLabel));
+    }
+
+    function pdfPriceWithLabelDisplay(item) {
+      const n = parsePriceWithLabel(item && item.priceWithLabel);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function normalizePriceWithLabelInput(raw) {
+      const trimmed = String(raw == null ? "" : raw).trim();
+      if (!trimmed) return "";
+      const n = parsePriceWithLabel(trimmed);
+      return Number.isFinite(n) ? n.toFixed(2) : null;
     }
 
     function remarksForPdfItem(order, item) {
@@ -4694,7 +4708,7 @@
         const pcs = pcsPerCartonOf(item, line);
         const meta = metaForSku(item.sku);
         const price = Number(line.priceNoLabel != null ? line.priceNoLabel : (item.orderQuote || item.quote || meta.quote)) || 0;
-        const priceLabel = priceLabelOf(item, line);
+        const priceLabel = pdfPriceWithLabelDisplay(item);
         const cartons = pcs ? (qty % pcs === 0 ? qty / pcs : Math.floor(qty / pcs)) : "";
         return {
           sku: item.sku || line.barcode || "",
@@ -4806,7 +4820,7 @@
               <td class="num">${escapeHtml(row.orderPcs)}</td>
               <td class="num">${escapeHtml(row.orderCarton)}</td>
               <td class="num">${escapeHtml(pdfMoney(row.price, 2))}</td>
-              <td class="num">${escapeHtml(pdfMoney(row.priceLabel, 2))}</td>
+              <td class="num">${row.priceLabel == null ? "-" : escapeHtml(pdfMoney(row.priceLabel, 2))}</td>
               <td class="num">${escapeHtml(pdfMoney(row.total, 2))}${amountSuffix}</td>
               <td class="remark">${escapeHtml(row.remark)}</td>
             </tr>`).join("")
@@ -5386,6 +5400,7 @@
         remark: src.remark || "",
         pcsPerCarton: Number(src.pcsPerCarton) || Number((catalogLineBySku(src.sku) || {}).pcsPerCarton) || pcsFromItemRemark(src) || 0,
         qty: Number(src.qty) || 0,
+        priceWithLabel: src.priceWithLabel != null && src.priceWithLabel !== "" ? String(src.priceWithLabel) : "",
       };
     }
 
@@ -5489,6 +5504,15 @@
 
     function syncPoOverviewFromPick(order) {
       const target = order || getWorkspaceOrder();
+      const labelBySku = {};
+      poLineItems.forEach((item) => {
+        if (item && item.sku && hasPriceWithLabel(item)) labelBySku[item.sku] = item.priceWithLabel;
+      });
+      ((target && target.items) || []).forEach((item) => {
+        if (item && item.sku && hasPriceWithLabel(item) && labelBySku[item.sku] == null) {
+          labelBySku[item.sku] = item.priceWithLabel;
+        }
+      });
       const pickSkus = new Set(poPickRows.map((row) => row.sku));
       const leftover = ((target && target.items) || []).filter((item) => {
         const sku = item && item.sku;
@@ -5501,8 +5525,12 @@
         priceNoLabel: row.priceNoLabel,
         quote: row.quote,
         orderQuote: row.priceNoLabel || row.orderQuote,
+        priceWithLabel: labelBySku[row.sku] || "",
       }));
-      poLineItems = picked.concat(leftover.map(toPoLineItem));
+      poLineItems = picked.concat(leftover.map((item) => toPoLineItem({
+        ...item,
+        priceWithLabel: labelBySku[item.sku] || item.priceWithLabel || "",
+      })));
       if (target) target.items = collectEditGoods();
       renderPoGoodsTable();
     }
@@ -5585,7 +5613,6 @@
       const qty = Number(item && item.qty) || 0;
       const pcs = pcsPerCartonOf(item);
       const priceNo = goodsPriceNoLabel(item);
-      const priceLb = priceLabelOf(item, catalogLineBySku(item && item.sku) || {});
       const cartons = pcs ? (qty % pcs === 0 ? qty / pcs : Math.floor(qty / pcs)) : 0;
       return {
         sku: (item && item.sku) || "",
@@ -5594,10 +5621,18 @@
         qty,
         carton: cartons || "",
         priceNo,
-        priceLabel: priceLb === "" || priceLb == null ? "" : priceLb,
         amount: Math.round(qty * priceNo * 100) / 100,
         remark: userFacingRemark(item && item.remark),
       };
+    }
+
+    function goodsPriceWithLabelCellHtml(item, editable) {
+      if (editable) {
+        const val = hasPriceWithLabel(item) ? String(item.priceWithLabel) : "";
+        return `<input type="number" min="0.01" step="0.01" data-field="priceWithLabel" value="${escapeHtml(val)}" />`;
+      }
+      if (!hasPriceWithLabel(item)) return "-";
+      return escapeHtml(pdfMoney(parsePriceWithLabel(item.priceWithLabel), 2));
     }
 
     function goodsPdfRowHtml(item, opts) {
@@ -5605,6 +5640,7 @@
       const qtyCell = opts && opts.qtyEditable
         ? `<input type="number" min="0" data-field="qty" value="${escapeHtml(d.qty)}" />`
         : escapeHtml(d.qty);
+      const priceLabelCell = goodsPriceWithLabelCellHtml(item, !!(opts && opts.priceLabelEditable));
       return `
         <tr data-id="${escapeHtml(item.id)}">
           <td>${escapeHtml(d.sku)}</td>
@@ -5613,7 +5649,7 @@
           <td class="col-qty">${qtyCell}</td>
           <td class="num">${escapeHtml(d.carton)}</td>
           <td class="num">${escapeHtml(pdfMoney(d.priceNo, 2))}</td>
-          <td class="num">${d.priceLabel === "" ? "" : escapeHtml(pdfMoney(d.priceLabel, 2))}</td>
+          <td class="num col-price-label">${priceLabelCell}</td>
           <td class="num">${escapeHtml(pdfMoney(d.amount, 2))}</td>
           <td>${escapeHtml(d.remark)}</td>
         </tr>`;
@@ -5679,7 +5715,10 @@
         updatePoQtyTotal();
         return;
       }
-      body.innerHTML = poLineItems.map((row) => goodsPdfRowHtml(row, { qtyEditable: false })).join("");
+      body.innerHTML = poLineItems.map((row) => goodsPdfRowHtml(row, {
+        qtyEditable: false,
+        priceLabelEditable: poGoodsEditable(),
+      })).join("");
       updatePoQtyTotal();
     }
 
@@ -6157,6 +6196,21 @@
       if (!tr) return;
       const item = poLineItems.find((row) => row.id === tr.dataset.id);
       if (!item) return;
+      if (field === "priceWithLabel") {
+        if (e.type === "input") {
+          item.priceWithLabel = e.target.value;
+          return;
+        }
+        const normalized = normalizePriceWithLabelInput(e.target.value);
+        if (normalized === null) {
+          alert("單價（含標）請輸入大於 0 的數字（如 280.00）");
+          e.target.value = hasPriceWithLabel(item) ? String(item.priceWithLabel) : "";
+          return;
+        }
+        item.priceWithLabel = normalized;
+        e.target.value = normalized;
+        return;
+      }
       item[field] = e.target.value;
       if (field === "expiryType") {
         item.batch = batchesFor(item.expiryType)[0];
