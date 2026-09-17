@@ -525,6 +525,13 @@
       vertical-align: top;
       white-space: nowrap;
     }
+    .form-ctrl .field-hint-below {
+      display: block;
+      margin: 6px 0 0;
+      color: var(--text-3);
+      font-size: 13px;
+      line-height: 1.4;
+    }
     .form-ctrl textarea {
       max-width: 560px;
       height: auto;
@@ -2148,8 +2155,11 @@
 
           <div class="po-pane" data-po-pane="basic">
             <div class="form-row">
-              <label>採購單單號</label>
-              <div class="form-ctrl"><input type="text" id="editPoDocNo" maxlength="30" placeholder="請輸入採購單單號" /></div>
+              <label id="editPoDocNoLabel">採購單單號</label>
+              <div class="form-ctrl">
+                <input type="text" id="editPoDocNo" maxlength="30" placeholder="請輸入採購單單號" />
+                <div class="field-hint-below hidden" id="editPoDocNoHint">(此欄位僅一般通路必填)</div>
+              </div>
             </div>
             <div class="form-row">
               <label>預計到貨日期</label>
@@ -6640,6 +6650,24 @@
       }
     }
 
+    function syncPoDocNoField(order) {
+      const general = isGeneralPo(order);
+      const label = document.getElementById("editPoDocNoLabel");
+      const hint = document.getElementById("editPoDocNoHint");
+      if (label) label.classList.toggle("required", general);
+      if (hint) hint.classList.toggle("hidden", general);
+    }
+
+    function validatePoDocNoRequired(order) {
+      if (!isGeneralPo(order)) return true;
+      const value = document.getElementById("editPoDocNo").value.trim();
+      if (value) return true;
+      alert("請輸入採購單單號");
+      setPoTab("basic");
+      document.getElementById("editPoDocNo").focus();
+      return false;
+    }
+
     function fillOrderEdit(order, mode) {
       initExpectArriveTimeOptions();
       workspaceOrder = order;
@@ -6655,6 +6683,7 @@
       const titles = { view: "檢視採購單", edit: "編輯採購單", create: "建立客戶訂單" };
       document.getElementById("editPageTitle").textContent = currentEditOrderNo === "__new__" ? titles.create : (titles[orderFormMode] || titles.edit);
       document.getElementById("editPoDocNo").value = order.poDocNo || "";
+      syncPoDocNoField(order);
       if (kind === "一般通路" && !order.arriveDate) {
         order.arriveDate = addDaysToStamp(order.createdAt || nowStamp(), 2);
       }
@@ -6704,6 +6733,7 @@
       if (orderFormMode === "view") return;
       const order = getWorkspaceOrder();
       if (!order || !canSubmitPo(order)) return;
+      if (!validatePoDocNoRequired(order)) return;
       commitWorkspaceOrder(order, "草稿");
       fillOrderEdit(order, "edit");
       alert("已儲存為草稿");
@@ -6713,6 +6743,7 @@
       if (currentRole !== "建檔人") return;
       const order = getWorkspaceOrder();
       if (!order || !canSubmitPo(order)) return;
+      if (!validatePoDocNoRequired(order)) return;
       commitWorkspaceOrder(order, "待審核");
       fillOrderEdit(order, "view");
       alert("已送出申請");
