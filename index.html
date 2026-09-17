@@ -2553,7 +2553,7 @@
       </div>
       <div class="modal-body">
         <div class="form-row">
-          <label>採購單類型</label>
+          <label>客戶訂單類型</label>
           <div class="form-ctrl">
             <div class="radio-group">
               <label class="radio-line"><input type="radio" name="importPoKind" value="一般通路" /> 一般通路</label>
@@ -2602,12 +2602,12 @@
   <div class="modal-mask hidden" id="createModal">
     <div class="modal-card type-pick-card" role="dialog" aria-labelledby="createTitle">
       <div class="modal-head">
-        <h2 id="createTitle">請選擇採購單類型</h2>
+        <h2 id="createTitle">請選擇客戶訂單類型</h2>
         <button type="button" class="modal-close" id="createClose" aria-label="關閉">×</button>
       </div>
       <div class="modal-body">
         <div class="form-row">
-          <label>採購單類型</label>
+          <label>客戶訂單類型</label>
           <div class="form-ctrl">
             <div class="radio-group">
               <label class="radio-line"><input type="radio" name="createPoKind" value="一般通路" /> 一般通路</label>
@@ -3455,7 +3455,7 @@
     function confirmImport() {
       const kind = getImportPoKind();
       if (!kind) {
-        alert("請先選擇採購單類型");
+        alert("請先選擇客戶訂單類型");
         return;
       }
       if (kind === "一般通路" && !document.getElementById("importChannelType").value) {
@@ -6971,7 +6971,7 @@
     document.getElementById("createConfirm").addEventListener("click", () => {
       const kind = getCreatePoKind();
       if (!kind) {
-        alert("請先選擇採購單類型");
+        alert("請先選擇客戶訂單類型");
         return;
       }
       const channelType = document.getElementById("createChannelType").value;
