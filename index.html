@@ -4893,7 +4893,7 @@
         total: "合計",
         empty: "尚無商品明細",
         stampHint: "用印",
-        customer: "客戶",
+        customer: "客戶簽章",
         close: "關閉",
         print: "列印／儲存為 PDF",
       } : {
@@ -4925,7 +4925,7 @@
         total: "Total",
         empty: "No line items",
         stampHint: "Stamp",
-        customer: "Customer",
+        customer: "Customer Signature",
         close: "Close",
         print: "Print / Save as PDF",
       };
@@ -5001,14 +5001,12 @@
       page-break-inside: avoid;
     }
     .stamp {
-      border: 1px dashed #333;
       min-height: 120px;
-      padding: 10px 12px;
+      padding: 0;
       width: calc(50% - 14px);
       box-sizing: border-box;
     }
     .stamp h3 { margin: 0 0 8px; font-size: 14px; }
-    .stamp .hint { color: #888; font-size: 12px; }
     .stamp .space { height: 72px; }
     @media print {
       body { background: #fff; }
@@ -5077,7 +5075,6 @@
     <div class="stamps">
       <div class="stamp">
         <h3>${escapeHtml(t.customer)}</h3>
-        <div class="hint">${escapeHtml(t.stampHint)}</div>
         <div class="space"></div>
       </div>
     </div>
