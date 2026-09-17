@@ -4875,8 +4875,8 @@
         buyer: "買方",
         vendor: "賣方",
         taxId: "統一編號",
-        attn: "負責人",
-        vendorAttn: "建檔人",
+        attn: "聯絡人",
+        vendorAttn: "聯絡人",
         email: "信箱",
         tel: "電話",
         address: "地址",
@@ -4906,8 +4906,8 @@
         buyer: "Buyer",
         vendor: "Vendor",
         taxId: "Tax ID",
-        attn: "Attn",
-        vendorAttn: "Attn",
+        attn: "Contact",
+        vendorAttn: "Contact",
         email: "Email",
         tel: "Tel",
         address: "Address",
@@ -5023,15 +5023,6 @@
     </div>
     <div class="parties">
       <div class="box">
-        <h2>${escapeHtml(t.buyer)}</h2>
-        <p><strong>${escapeHtml(buyerName)}</strong></p>
-        <p>${escapeHtml(t.taxId)}：${escapeHtml(buyerTaxId || "—")}</p>
-        <p>${escapeHtml(t.attn)}：${escapeHtml(bag.buyerAttn || "")}</p>
-        <p>${escapeHtml(t.email)}：${escapeHtml(bag.buyerEmail || "")}</p>
-        <p>${escapeHtml(t.tel)}：${escapeHtml(bag.buyerTel || "")}</p>
-        <p>${escapeHtml(t.address)}：${escapeHtml(bag.buyerAddress || order.address || "")}</p>
-      </div>
-      <div class="box">
         <h2>${escapeHtml(t.vendor)}</h2>
         <p><strong>${escapeHtml(bag.vendorName || VENDOR_COMPANY)}</strong></p>
         <p>${escapeHtml(t.taxId)}：${escapeHtml(vendorTaxId || "—")}</p>
@@ -5039,6 +5030,15 @@
         <p>${escapeHtml(t.email)}：${escapeHtml(bag.vendorEmail || "")}</p>
         <p>${escapeHtml(t.tel)}：${escapeHtml(vendorTel)}</p>
         <p>${escapeHtml(t.address)}：${escapeHtml(bag.vendorAddress || VENDOR_ADDRESS)}</p>
+      </div>
+      <div class="box">
+        <h2>${escapeHtml(t.buyer)}</h2>
+        <p><strong>${escapeHtml(buyerName)}</strong></p>
+        <p>${escapeHtml(t.taxId)}：${escapeHtml(buyerTaxId || "—")}</p>
+        <p>${escapeHtml(t.attn)}：${escapeHtml(bag.buyerAttn || "")}</p>
+        <p>${escapeHtml(t.email)}：${escapeHtml(bag.buyerEmail || "")}</p>
+        <p>${escapeHtml(t.tel)}：${escapeHtml(bag.buyerTel || "")}</p>
+        <p>${escapeHtml(t.address)}：${escapeHtml(bag.buyerAddress || order.address || "")}</p>
       </div>
     </div>
     <div class="terms">
