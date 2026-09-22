@@ -1894,7 +1894,6 @@
                               <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
                             </span>
                           </th>
-                          <th><span class="th-inner">商品報價(TWD)<span class="th-sort">▲<br />▼</span></span></th>
                           <th>庫存數</th>
                           <th class="col-qty">總數量(pcs)</th>
                           <th class="ops">操作</th>
@@ -5200,7 +5199,7 @@
       if (!shipLineItems.length) {
         const po = getSelectedShipPo();
         const msg = po ? "此採購單尚無商品" : "請先選擇採購單編號";
-        body.innerHTML = `<tr class="empty-row"><td colspan="9">${msg}</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="8">${msg}</td></tr>`;
         updateShipQtyTotal();
         return;
       }
@@ -5220,7 +5219,6 @@
             </div>
             <select data-field="batch">${optionsHtml(batches, batchValue)}</select>
           </td>
-          <td class="col-quote">${escapeHtml(row.quote)}</td>
           <td class="col-qty"><input type="number" min="0" data-field="qty" value="${escapeHtml(row.qty)}" /></td>
           <td class="ops"><a data-del="1">刪除</a></td>
         </tr>`;
@@ -5617,7 +5615,6 @@
             </div>
             <select data-field="batch">${optionsHtml(batches, batchValue)}</select>
           </td>
-          <td class="col-quote">${escapeHtml(row.quote)}</td>
           <td class="col-stock">${escapeHtml(row.stock)}</td>
           <td class="col-qty"><input type="number" min="0" data-field="qty" value="${escapeHtml(row.qty)}" /></td>
           <td class="ops"><a data-del="1">刪除</a></td>
@@ -7037,7 +7034,7 @@
       const body = document.getElementById("poShipGoodsBody");
       if (!body) return;
       if (!poShipGoods.length) {
-        body.innerHTML = goodsNoDataHtml(9);
+        body.innerHTML = goodsNoDataHtml(8);
         updatePoShipQtyTotal();
         return;
       }
