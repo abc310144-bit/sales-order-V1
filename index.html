@@ -7282,6 +7282,12 @@
       showPage("ship-create");
     }
 
+    function nextShippingIds() {
+      const maxId = rows.reduce((m, r) => Math.max(m, Number(r.id) || 0), 0);
+      const id = String(maxId + 1);
+      return { id, orderId: `VN${pad(maxId + 1, 8)}` };
+    }
+
     function getSelectedShipPo() {
       const po = document.getElementById("shipPoNo").value.trim();
       return salesOrders.find((item) => item.orderNo === po) || null;
