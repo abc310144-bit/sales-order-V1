@@ -872,9 +872,10 @@
     .po-ship-fee-table { margin-top: 12px; }
     .modal-card.fee-dialog-card { width: min(560px, 100%); }
     #page-ship-create .form-title { margin: 0 0 16px; }
-    #page-ship-create.is-readonly .ship-items-actions,
-    #page-ship-create.is-readonly .ship-wizard-footer,
-    #page-ship-create.is-readonly .ship-items-table thead th:last-child,
+    #page-ship-create.is-readonly #poShipAddFeeBtn,
+    #page-ship-create.is-readonly #poShipCreateConfirm,
+    #page-ship-create.is-readonly .po-ship-fee-table td.ops,
+    #page-ship-create.is-readonly .ship-items-table thead th.ops,
     #page-ship-create.is-readonly .ship-items-table td.ops { display: none; }
     #page-ship-create.is-readonly .ship-items-table input,
     #page-ship-create.is-readonly .ship-items-table select {
@@ -882,6 +883,7 @@
       color: rgba(0, 0, 0, 0.85);
       cursor: not-allowed;
     }
+    #page-ship-create.is-readonly #shipPoNo { background: #f5f5f5; cursor: not-allowed; }
     .type-pick-card { width: 480px; max-width: calc(100vw - 32px); }
     .type-pick-card .modal-body { padding-bottom: 12px; }
     .visually-hidden {
@@ -1279,20 +1281,10 @@
       color: rgba(0, 0, 0, 0.85);
       cursor: not-allowed;
     }
-    #page-order-edit.is-readonly #poShipCreatePanel .form-ctrl input,
-    #page-order-edit.is-readonly #poShipCreatePanel .form-ctrl select {
-      background: #fff;
-      cursor: auto;
-    }
-    #page-order-edit.is-readonly #poShipCreatePanel .form-ctrl select { cursor: pointer; }
     #poShipIncoterm:disabled {
       background: #f5f5f5;
       color: rgba(0, 0, 0, 0.85);
       cursor: not-allowed;
-    }
-    #page-order-edit.is-readonly #poShipCreatePanel .radio-line {
-      cursor: pointer;
-      opacity: 1;
     }
     .is-readonly .radio-line,
     .is-readonly .tag button {
@@ -1618,6 +1610,10 @@
       <main class="content">
         <div class="page" id="page-shipping">
         <div class="actions">
+          <button class="btn btn-primary" type="button" id="shipCreateBtn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
+            建立出貨訂單
+          </button>
           <button class="btn" type="button" id="toggleFilter">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
               <path d="M2 3h12l-4.5 5.2V13l-3-1.5V8.2L2 3z"/>
@@ -1782,37 +1778,9 @@
         </div>
 
         <div class="page" id="page-ship-create">
-          <h2 class="form-title hidden" id="shipPageTitle">檢視出貨單</h2>
-          <div class="wizard-steps" id="shipWizardSteps">
-            <div class="wizard-step active" data-ship-step="1">
-              <div class="head"><span class="num">1</span>建立訂單基本資料</div>
-            </div>
-            <span class="wizard-chevron">›</span>
-            <div class="wizard-step" data-ship-step="2">
-              <div class="head"><span class="num">2</span>選擇訂單商品</div>
-            </div>
-            <span class="wizard-chevron">›</span>
-            <div class="wizard-step" data-ship-step="3">
-              <div class="head"><span class="num">3</span>費用填寫</div>
-            </div>
-            <span class="wizard-chevron">›</span>
-            <div class="wizard-step" data-ship-step="4">
-              <div class="head"><span class="num">4</span>訂單預覽</div>
-            </div>
-          </div>
-
-          <div class="ship-wizard-body">
-            <div class="ship-pane" id="shipPane1">
-              <div class="form-row">
-                <label class="required">出庫倉庫</label>
-                <div class="form-ctrl">
-                  <select id="shipOutWarehouse">
-                    <option>藍田</option>
-                    <option>正光廊</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
+          <h2 class="form-title" id="shipPageTitle">建立出貨訂單</h2>
+          <div class="po-ship-create" id="poShipCreatePanel">
+              <div class="form-row" id="shipPoSelectRow">
                 <label class="required">採購單編號</label>
                 <div class="form-ctrl">
                   <div class="combo" id="shipPoCombo">
@@ -1821,196 +1789,160 @@
                   </div>
                 </div>
               </div>
-              <div class="form-row">
-                <label class="required">預計拋單時間</label>
-                <div class="form-ctrl"><input type="date" id="shipExpectDate" /></div>
-              </div>
-              <div class="form-row">
-                <label class="required">指定送達日</label>
-                <div class="form-ctrl"><input type="date" id="shipArriveDate" /></div>
-              </div>
-              <div class="form-row">
-                <label class="required">合作通路類型</label>
-                <div class="form-ctrl">
-                  <select id="shipChannelType">
-                    <option value="">請選擇</option>
-                    <option>台灣本地通路</option>
-                    <option>台灣本地經銷</option>
-                    <option>台灣線上通路</option>
-                    <option>台灣實體百貨</option>
-                    <option>境外通路</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <label class="required">地區</label>
-                <div class="form-ctrl">
-                  <select id="shipRegion">
-                    <option value="">請選擇</option>
-                    <option>台灣</option>
-                    <option>台灣(通路)</option>
-                    <option>台灣(經銷)</option>
-                    <option>境外</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <label class="required">通路名稱</label>
-                <div class="form-ctrl">
-                  <select id="shipChannelName">
-                    <option value="">請選擇</option>
-                    <option>實體-全聯</option>
-                    <option>實體-寶雅</option>
-                    <option>實體-迪卡儂</option>
-                    <option>實體-PW健身工廠</option>
-                    <option>經銷商-絢綻國際企業社</option>
-                    <option>經銷商-學生營養股份有限公司</option>
-                    <option>線上-轉單</option>
-                    <option>線上-蝦皮商城</option>
-                    <option>跨境- Cool Cool Trading</option>
-                    <option>晨曦公司</option>
-                    <option>百貨-新光三越</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <label>合作模式</label>
-                <div class="readonly-text" id="shipMode">N/A(系統自動帶入)</div>
-              </div>
-              <div class="form-row">
-                <label class="required">通路線別</label>
-                <div class="form-ctrl">
-                  <select id="shipLine">
-                    <option value="">請選擇</option>
-                    <option>乳清</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <label>通路電話</label>
-                <div class="readonly-text" id="shipPhone">N/A(系統自動帶入)</div>
-              </div>
-              <div class="form-row">
-                <label>通路窗口</label>
-                <div class="readonly-text" id="shipContact">N/A(系統自動帶入)</div>
-              </div>
-              <div class="form-row">
-                <label>通路電子郵件</label>
-                <div class="readonly-text" id="shipEmail">N/A(系統自動帶入)</div>
-              </div>
-              <div class="form-row">
-                <label class="required">通路進貨倉點</label>
-                <div class="form-ctrl wide-ctrl">
-                  <select id="shipInWarehouse">
-                    <option value="">請選擇</option>
-                    <option>藍田倉</option>
-                    <option>全聯物流中心</option>
-                    <option>正光廊-營運部主管</option>
-                    <option>寶雅倉儲</option>
-                  </select>
-                  <div class="radio-group">
-                    <label class="radio-line"><input type="radio" name="shipPickup" value="self" /> 訂單自取</label>
-                    <label class="radio-line"><input type="radio" name="shipPickup" value="charter" /> 訂單非自取 (專車)</label>
-                    <label class="radio-line"><input type="radio" name="shipPickup" value="hsinchu" /> 訂單非自取 (新竹)</label>
-                    <label class="radio-line"><input type="radio" name="shipPickup" value="blackcat" /> 訂單非自取 (黑貓)</label>
+              <div class="po-ship-acc" data-acc="settings">
+                <button type="button" class="po-ship-acc-head">
+                  <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+                  設定
+                </button>
+                <div class="po-ship-acc-body">
+                  <div class="form-row">
+                    <label>貿易條件</label>
+                    <div class="form-ctrl">
+                      <select id="poShipIncoterm">
+                        <option value="">請選擇</option>
+                        <option>FOB</option>
+                        <option>CIF</option>
+                        <option>EXW</option>
+                        <option>CFR</option>
+                        <option>DAP</option>
+                        <option>DDP</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <label>預計拋單日</label>
+                    <div class="form-ctrl"><input type="date" id="poShipExpectDate" /></div>
+                  </div>
+                  <div class="form-row">
+                    <label>預計到貨日期</label>
+                    <div class="form-ctrl"><input type="date" id="poShipArriveDate" /></div>
+                  </div>
+                  <div class="form-row">
+                    <label>預計到貨時間</label>
+                    <div class="form-ctrl time-24">
+                      <select id="poShipArriveHour" aria-label="預計到貨時"></select>
+                      <span class="time-colon">:</span>
+                      <select id="poShipArriveMinute" aria-label="預計到貨分"></select>
+                      <span class="field-hint">24小時制</span>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <label>預計出貨日</label>
+                    <div class="form-ctrl"><input type="date" id="poShipOutDate" /></div>
+                  </div>
+                  <div class="form-row">
+                    <label class="required">通路進貨倉點</label>
+                    <div class="form-ctrl wide-ctrl">
+                      <select id="poShipInWarehouse">
+                        <option value="">請選擇</option>
+                      </select>
+                      <div class="radio-group">
+                        <label class="radio-line"><input type="radio" name="poShipPickup" value="self" /> 訂單自取</label>
+                        <label class="radio-line"><input type="radio" name="poShipPickup" value="charter" /> 訂單非自取 (專車)</label>
+                        <label class="radio-line"><input type="radio" name="poShipPickup" value="hsinchu" /> 訂單非自取 (新竹)</label>
+                        <label class="radio-line"><input type="radio" name="poShipPickup" value="blackcat" /> 訂單非自取 (黑貓)</label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div class="form-row">
-                <label class="required">交易幣別</label>
-                <div class="form-ctrl wide-ctrl">
-                  <select id="shipCurrency">
-                    <option value="">請選擇</option>
-                    <option>TWD</option>
-                    <option>USD</option>
-                    <option>EUR</option>
-                    <option>JPY</option>
-                    <option>CNY</option>
-                    <option>HKD</option>
-                  </select>
-                  <input type="text" class="rate-input" id="shipRate" placeholder="填寫當前匯率" />
+              <div class="po-ship-acc" data-acc="goods">
+                <div class="po-ship-acc-head po-ship-goods-head">
+                  <button type="button" class="po-ship-acc-toggle" data-acc-toggle="1">
+                    <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+                    出貨商品
+                  </button>
+                  <a class="ship-stock-warn hidden" id="poShipStockWarn">虛擬倉目前庫存品項不足，查看詳情...</a>
+                </div>
+                <div class="po-ship-acc-body">
+                  <div class="ship-items-toolbar po-goods-toolbar">
+                    <div class="ship-qty-box">
+                      <div class="label">出貨總數量(pcs)</div>
+                      <div class="value" id="poShipItemsQtyTotal">0</div>
+                    </div>
+                  </div>
+                  <div class="table-wrap ship-items-table-wrap goods-h-scroll po-goods-scroll">
+                    <table class="ship-items-table po-goods-table po-goods-legacy-table">
+                      <thead>
+                        <tr>
+                          <th class="col-id">編號</th>
+                          <th class="col-code">
+                            <span class="th-inner">商品品號
+                              <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                            </span>
+                          </th>
+                          <th>
+                            <span class="th-inner">SKU
+                              <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                            </span>
+                          </th>
+                          <th>
+                            <span class="th-inner">品名
+                              <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                            </span>
+                          </th>
+                          <th>
+                            <span class="th-inner">倉別
+                              <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                            </span>
+                          </th>
+                          <th>
+                            <span class="th-inner">效期_批號
+                              <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                            </span>
+                          </th>
+                          <th>允收天數</th>
+                          <th><span class="th-inner">商品成本(TWD)<span class="th-sort">▲<br />▼</span></span></th>
+                          <th><span class="th-inner">商品報價(TWD)<span class="th-sort">▲<br />▼</span></span></th>
+                          <th><span class="th-inner">訂單商品報價(TWD)<span class="th-sort">▲<br />▼</span></span></th>
+                          <th>庫存數</th>
+                          <th>備註</th>
+                          <th class="col-qty">總數量(pcs)</th>
+                          <th class="ops">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody id="poShipGoodsBody"></tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
-              <div class="form-row">
-                <label>貿易條件</label>
-                <div class="form-ctrl">
-                  <select id="shipIncoterm">
-                    <option value="">請選擇</option>
-                    <option>FOB</option>
-                    <option>CIF</option>
-                    <option>EXW</option>
-                    <option>CFR</option>
-                    <option>DAP</option>
-                    <option>DDP</option>
-                  </select>
+              <div class="po-ship-acc" data-acc="fees">
+                <button type="button" class="po-ship-acc-head">
+                  <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+                  費用填寫
+                </button>
+                <div class="po-ship-acc-body">
+                  <div class="ship-fee-card">
+                    <h4>出貨商品後扣項目</h4>
+                    <div class="ship-rebate-line" id="poShipRebateText">後扣項目 0 %</div>
+                  </div>
+                  <div class="ship-fee-card">
+                    <h4>訂單費用</h4>
+                    <button type="button" class="btn btn-primary" id="poShipAddFeeBtn">
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M8 3v10M3 8h10"/></svg>
+                      新增訂單費用
+                    </button>
+                    <div class="table-wrap po-ship-fee-table hidden" id="poShipFeeTableWrap">
+                      <table class="related-table">
+                        <thead>
+                          <tr>
+                            <th>項目名稱</th>
+                            <th>項目細節</th>
+                            <th>項目比例</th>
+                            <th>項目金額(TWD)</th>
+                            <th>操作</th>
+                          </tr>
+                        </thead>
+                        <tbody id="poShipFeeBody"></tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div class="ship-pane hidden" id="shipPane2">
-              <div class="ship-items-toolbar">
-                <div class="ship-items-actions">
-                  <button type="button" class="btn" id="shipAddItemBtn">新增商品</button>
-                  <button type="button" class="btn btn-primary" id="shipImportItemsBtn">匯入商品</button>
-                  <input type="file" id="shipImportItemsFile" class="hidden" accept=".csv,.xlsx,.xls,.txt" />
-                </div>
-                <div class="ship-qty-box">
-                  <div class="label">出貨總數量(pcs)</div>
-                  <div class="value" id="shipItemsQtyTotal">0</div>
-                </div>
+              <div class="po-ship-create-foot">
+                <button type="button" class="btn" id="poShipCreateCancel">取消</button>
+                <button type="button" class="btn btn-primary" id="poShipCreateConfirm">送出出貨單</button>
               </div>
-              <div class="table-wrap ship-items-table-wrap">
-                <table class="ship-items-table">
-                  <thead>
-                    <tr>
-                      <th>編號</th>
-                      <th>
-                        <span class="th-inner">商品貨號
-                          <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
-                        </span>
-                      </th>
-                      <th>
-                        <span class="th-inner">SKU
-                          <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
-                        </span>
-                      </th>
-                      <th>
-                        <span class="th-inner">品名
-                          <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
-                        </span>
-                      </th>
-                      <th>
-                        <span class="th-inner">倉別
-                          <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
-                        </span>
-                      </th>
-                      <th>
-                        <span class="th-inner">效期_批號
-                          <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
-                        </span>
-                      </th>
-                      <th>允收天數</th>
-                      <th><span class="th-inner">商品成本(TWD)<span class="th-sort">▲<br />▼</span></span></th>
-                      <th><span class="th-inner">商品報價(TWD)<span class="th-sort">▲<br />▼</span></span></th>
-                      <th><span class="th-inner">訂單商品報價<span class="th-sort">▲<br />▼</span></span></th>
-                      <th>總數量(pcs)</th>
-                      <th class="col-remark">備註</th>
-                      <th>操作</th>
-                    </tr>
-                  </thead>
-                  <tbody id="shipItemsBody"></tbody>
-                </table>
-              </div>
-            </div>
-            <div class="ship-pane hidden" id="shipPane3">
-              <div class="placeholder-pane">費用填寫（此步驟 DEMO 畫面待補）</div>
-            </div>
-            <div class="ship-pane hidden" id="shipPane4">
-              <div class="placeholder-pane">訂單預覽（此步驟 DEMO 畫面待補）</div>
-            </div>
-          </div>
-
-          <div class="ship-wizard-footer">
-            <button type="button" class="btn btn-primary" id="shipCreateAction">建立資料</button>
           </div>
         </div>
 
@@ -2372,166 +2304,6 @@
           </div>
 
           <div class="po-pane hidden" data-po-pane="ships">
-            <div class="ship-tab-toolbar" id="poShipToolbar">
-              <div class="ship-tab-hint" id="editShipHint"></div>
-              <button type="button" class="btn btn-primary" id="editCreateShip">新增出貨單</button>
-            </div>
-            <div class="po-ship-create hidden" id="poShipCreatePanel">
-              <div class="po-ship-acc" data-acc="settings">
-                <button type="button" class="po-ship-acc-head">
-                  <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
-                  設定
-                </button>
-                <div class="po-ship-acc-body">
-                  <div class="form-row">
-                    <label>貿易條件</label>
-                    <div class="form-ctrl">
-                      <select id="poShipIncoterm">
-                        <option value="">請選擇</option>
-                        <option>FOB</option>
-                        <option>CIF</option>
-                        <option>EXW</option>
-                        <option>CFR</option>
-                        <option>DAP</option>
-                        <option>DDP</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div class="form-row">
-                    <label>預計拋單日</label>
-                    <div class="form-ctrl"><input type="date" id="poShipExpectDate" /></div>
-                  </div>
-                  <div class="form-row">
-                    <label>預計到貨日期</label>
-                    <div class="form-ctrl"><input type="date" id="poShipArriveDate" /></div>
-                  </div>
-                  <div class="form-row">
-                    <label>預計到貨時間</label>
-                    <div class="form-ctrl time-24">
-                      <select id="poShipArriveHour" aria-label="預計到貨時"></select>
-                      <span class="time-colon">:</span>
-                      <select id="poShipArriveMinute" aria-label="預計到貨分"></select>
-                      <span class="field-hint">24小時制</span>
-                    </div>
-                  </div>
-                  <div class="form-row">
-                    <label>預計出貨日</label>
-                    <div class="form-ctrl"><input type="date" id="poShipOutDate" /></div>
-                  </div>
-                  <div class="form-row">
-                    <label class="required">通路進貨倉點</label>
-                    <div class="form-ctrl wide-ctrl">
-                      <select id="poShipInWarehouse">
-                        <option value="">請選擇</option>
-                      </select>
-                      <div class="radio-group">
-                        <label class="radio-line"><input type="radio" name="poShipPickup" value="self" /> 訂單自取</label>
-                        <label class="radio-line"><input type="radio" name="poShipPickup" value="charter" /> 訂單非自取 (專車)</label>
-                        <label class="radio-line"><input type="radio" name="poShipPickup" value="hsinchu" /> 訂單非自取 (新竹)</label>
-                        <label class="radio-line"><input type="radio" name="poShipPickup" value="blackcat" /> 訂單非自取 (黑貓)</label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="po-ship-acc" data-acc="goods">
-                <div class="po-ship-acc-head po-ship-goods-head">
-                  <button type="button" class="po-ship-acc-toggle" data-acc-toggle="1">
-                    <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
-                    出貨商品
-                  </button>
-                  <a class="ship-stock-warn hidden" id="poShipStockWarn">虛擬倉目前庫存品項不足，查看詳情...</a>
-                </div>
-                <div class="po-ship-acc-body">
-                  <div class="ship-items-toolbar po-goods-toolbar">
-                    <div class="ship-qty-box">
-                      <div class="label">出貨總數量(pcs)</div>
-                      <div class="value" id="poShipItemsQtyTotal">0</div>
-                    </div>
-                  </div>
-                  <div class="table-wrap ship-items-table-wrap goods-h-scroll po-goods-scroll">
-                    <table class="ship-items-table po-goods-table po-goods-legacy-table">
-                      <thead>
-                        <tr>
-                          <th class="col-id">編號</th>
-                          <th class="col-code">
-                            <span class="th-inner">商品品號
-                              <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
-                            </span>
-                          </th>
-                          <th>
-                            <span class="th-inner">SKU
-                              <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
-                            </span>
-                          </th>
-                          <th>
-                            <span class="th-inner">品名
-                              <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
-                            </span>
-                          </th>
-                          <th>
-                            <span class="th-inner">倉別
-                              <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
-                            </span>
-                          </th>
-                          <th>
-                            <span class="th-inner">效期_批號
-                              <svg class="th-search" viewBox="0 0 12 12" aria-hidden="true"><circle cx="5" cy="5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 7.5 10.5 10.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
-                            </span>
-                          </th>
-                          <th>允收天數</th>
-                          <th><span class="th-inner">商品成本(TWD)<span class="th-sort">▲<br />▼</span></span></th>
-                          <th><span class="th-inner">商品報價(TWD)<span class="th-sort">▲<br />▼</span></span></th>
-                          <th><span class="th-inner">訂單商品報價(TWD)<span class="th-sort">▲<br />▼</span></span></th>
-                          <th>庫存數</th>
-                          <th>備註</th>
-                          <th class="col-qty">總數量(pcs)</th>
-                          <th class="ops">操作</th>
-                        </tr>
-                      </thead>
-                      <tbody id="poShipGoodsBody"></tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <div class="po-ship-acc" data-acc="fees">
-                <button type="button" class="po-ship-acc-head">
-                  <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
-                  費用填寫
-                </button>
-                <div class="po-ship-acc-body">
-                  <div class="ship-fee-card">
-                    <h4>出貨商品後扣項目</h4>
-                    <div class="ship-rebate-line" id="poShipRebateText">後扣項目 0 %</div>
-                  </div>
-                  <div class="ship-fee-card">
-                    <h4>訂單費用</h4>
-                    <button type="button" class="btn btn-primary" id="poShipAddFeeBtn">
-                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M8 3v10M3 8h10"/></svg>
-                      新增訂單費用
-                    </button>
-                    <div class="table-wrap po-ship-fee-table hidden" id="poShipFeeTableWrap">
-                      <table class="related-table">
-                        <thead>
-                          <tr>
-                            <th>項目名稱</th>
-                            <th>項目細節</th>
-                            <th>項目比例</th>
-                            <th>項目金額(TWD)</th>
-                            <th>操作</th>
-                          </tr>
-                        </thead>
-                        <tbody id="poShipFeeBody"></tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="po-ship-create-foot">
-                <button type="button" class="btn" id="poShipCreateCancel">取消</button>
-                <button type="button" class="btn btn-primary" id="poShipCreateConfirm">送出出貨單</button>
-              </div>
-            </div>
             <div class="goods-block" style="margin-top:0">
               <h3 class="goods-title">相關出貨單</h3>
               <div class="table-wrap">
@@ -2547,7 +2319,7 @@
                 </table>
               </div>
             </div>
-          </div>
+          </div>          </div>
         </div>
       </main>
     </div>
@@ -3108,7 +2880,7 @@
 
     function canShowPoShipTab(order) {
       if (!order || !order.orderNo) return false;
-      return canCreateShipFromPo(order) || shipsOfPo(order.orderNo).length > 0;
+      return shipsOfPo(order.orderNo).length > 0;
     }
 
     function canExportPoPdf(order) {
@@ -5479,6 +5251,8 @@
       else renderShipItemsTable();
     }
 
+    let shipFormMode = "create";
+
     function addShipCatalogItem() {
       if (shipFormMode === "view") return;
       const used = new Set(shipLineItems.map((row) => row.sku));
@@ -6566,6 +6340,7 @@
     }
 
     function onPoShipItemField(e) {
+      if (shipFormMode === "view") return;
       const field = e.target.dataset.field;
       if (!field) return;
       const tr = e.target.closest("#poShipGoodsBody tr");
@@ -6686,17 +6461,7 @@
       const view = mode === "view";
       const draftLike = canSubmitPo(order);
       const pending = canApprovePo(order);
-      const canShip = canCreateShipFromPo(order);
       syncPoShipTab(order);
-      const hint = document.getElementById("editShipHint");
-      if (hint) {
-        hint.textContent = canShip ? "" : shipCreateBlockReason(order);
-        hint.classList.toggle("hidden", canShip);
-      }
-      const toolbar = document.getElementById("poShipToolbar");
-      if (toolbar) toolbar.classList.toggle("hidden", !canShip);
-      setBtnEnabled("editCreateShip", canShip);
-      if (!canShip) closePoShipCreateForm();
       setBtnEnabled("editSaveDraft", !view && draftLike);
       setBtnEnabled("editSubmit", !view && draftLike && currentRole === "建檔人");
       setBtnEnabled("editExportPdf", canExportPoPdf(order));
@@ -6763,7 +6528,6 @@
       if (!Array.isArray(order.items)) order.items = [];
       loadPoGoodsWorkspace(order);
       renderRelatedShips(order);
-      closePoShipCreateForm();
       setPoTab("basic");
       setOrderFormReadonly(orderFormMode === "view");
       syncPoPickQtyEnabled();
@@ -6865,22 +6629,8 @@
     document.getElementById("copyPoModal").addEventListener("click", (e) => {
       if (e.target.id === "copyPoModal") closeCopyPoModal();
     });
-    document.getElementById("editCreateShip").addEventListener("click", () => {
-      const order = getWorkspaceOrder();
-      if (!order) return;
-      if (!canCreateShipFromPo(order)) {
-        const reason = shipCreateBlockReason(order);
-        if (reason) alert(reason);
-        return;
-      }
-      const oversell = orderQtyOversellList(order);
-      if (oversell.length) {
-        openPoOversellWarnModal(oversell, () => openPoShipCreateForm(order));
-        return;
-      }
-      openPoShipCreateForm(order);
-    });
     document.getElementById("poShipCreatePanel").addEventListener("click", (e) => {
+      if (shipFormMode === "view") return;
       if (e.target.closest("#poShipStockWarn")) {
         e.preventDefault();
         openPoShipStockModal();
@@ -6909,8 +6659,14 @@
     });
     document.getElementById("poShipCreatePanel").addEventListener("input", onPoShipItemField);
     document.getElementById("poShipCreatePanel").addEventListener("change", onPoShipItemField);
-    document.getElementById("poShipCreateCancel").addEventListener("click", closePoShipCreateForm);
+    document.getElementById("poShipCreateCancel").addEventListener("click", () => {
+      closePoShipFeeModal();
+      closePoShipStockModal();
+      history.replaceState({}, "", location.pathname);
+      showPage("shipping");
+    });
     document.getElementById("poShipCreateConfirm").addEventListener("click", confirmPoShipCreate);
+    document.getElementById("shipCreateBtn").addEventListener("click", openShipCreatePage);
     document.getElementById("poShipAddFeeBtn").addEventListener("click", openPoShipFeeModal);
     document.getElementById("poShipFeeClose").addEventListener("click", closePoShipFeeModal);
     document.getElementById("poShipFeeCancel").addEventListener("click", closePoShipFeeModal);
@@ -6966,12 +6722,7 @@
         loadPoGoodsWorkspace(order);
       }
     });
-    document.getElementById("editTermsOfDelivery").addEventListener("change", () => {
-      const panel = document.getElementById("poShipCreatePanel");
-      if (panel && !panel.classList.contains("hidden")) {
-        syncPoShipIncotermFromOrder(getWorkspaceOrder());
-      }
-    });
+    document.getElementById("editTermsOfDelivery").addEventListener("change", () => {});
 
     function getCreatePoKind() {
       return document.querySelector('input[name="createPoKind"]:checked')?.value || "";
@@ -7112,21 +6863,8 @@
       renderPoGoodsTable();
     });
 
-    let currentShipStep = 1;
-    let shipFormMode = "create";
-
     function naText(value) {
       return value || "N/A(系統自動帶入)";
-    }
-
-    function fillShipProfile() {
-      const profile = channelProfiles[document.getElementById("shipChannelName").value] || {};
-      document.getElementById("shipMode").textContent = naText(profile.mode);
-      document.getElementById("shipPhone").textContent = naText(profile.phone);
-      document.getElementById("shipContact").textContent = naText(profile.contact);
-      document.getElementById("shipEmail").textContent = naText(profile.email);
-      if (profile.region) document.getElementById("shipRegion").value = profile.region;
-      if (profile.inWarehouse) document.getElementById("shipInWarehouse").value = profile.inWarehouse;
     }
 
     function setShipFormReadonly(readonly) {
@@ -7139,28 +6877,49 @@
       const title = document.getElementById("shipPageTitle");
       if (title) {
         title.textContent = readonly ? "檢視出貨單" : "建立出貨訂單";
-        title.classList.toggle("hidden", !readonly);
+        title.classList.remove("hidden");
       }
-      const footer = page.querySelector(".ship-wizard-footer");
-      if (footer) footer.classList.toggle("hidden", readonly);
-    }
-
-    function goToShipCreateFromPo(order) {
-      resetShipCreateForm();
-      setShipCreateStep(1);
-      if (order && order.orderNo) applyShipPo(order.orderNo, { silent: true });
-      history.replaceState({}, "", location.pathname);
-      showPage("ship-create");
+      const confirmBtn = document.getElementById("poShipCreateConfirm");
+      if (confirmBtn) confirmBtn.classList.toggle("hidden", readonly);
+      const cancelBtn = document.getElementById("poShipCreateCancel");
+      if (cancelBtn) cancelBtn.textContent = readonly ? "返回列表" : "取消";
+      const addFeeBtn = document.getElementById("poShipAddFeeBtn");
+      if (addFeeBtn) addFeeBtn.classList.toggle("hidden", readonly);
+      // 貿易條件在建立時也一律鎖定
+      const incoterm = document.getElementById("poShipIncoterm");
+      if (incoterm) incoterm.disabled = true;
     }
 
     let poShipFees = [];
     let nextPoShipFeeId = 1;
 
-    function closePoShipCreateForm() {
-      const panel = document.getElementById("poShipCreatePanel");
-      if (panel) panel.classList.add("hidden");
+    function clearPoShipCreateFields() {
+      document.getElementById("shipPoNo").value = "";
+      document.getElementById("shipPoList").classList.add("hidden");
+      syncPoShipIncotermFromOrder(null);
+      document.getElementById("poShipExpectDate").value = "";
+      document.getElementById("poShipArriveDate").value = "";
+      fillHourMinute("poShipArriveHour", "poShipArriveMinute", "");
+      document.getElementById("poShipOutDate").value = "";
+      fillPoShipWarehouseSelect("台北士林");
+      document.querySelectorAll('input[name="poShipPickup"]').forEach((el) => { el.checked = el.value === "self"; });
+      poShipFees = [];
+      poShipGoods = [];
+      poShipShortage = [];
+      renderPoShipFees();
+      renderPoShipGoodsTable();
+      syncPoShipStockWarn();
+      document.getElementById("poShipRebateText").textContent = "後扣項目 0 %";
+    }
+
+    function openShipCreatePage() {
       closePoShipFeeModal();
       closePoShipStockModal();
+      clearPoShipCreateFields();
+      setShipFormReadonly(false);
+      history.replaceState({}, "", location.pathname);
+      showPage("ship-create");
+      document.getElementById("shipPoNo").focus();
     }
 
     function poShipFillPlan(order, sourceItems) {
@@ -7202,8 +6961,8 @@
     function syncPoShipIncotermFromOrder(order) {
       const sel = document.getElementById("poShipIncoterm");
       if (!sel) return;
-      const termsEl = document.getElementById("editTermsOfDelivery");
-      const terms = (termsEl && termsEl.value) || (partyRecord(order) && partyRecord(order).termsOfDelivery) || "";
+      const party = order ? partyRecord(order) : null;
+      const terms = (party && party.termsOfDelivery) || "";
       if (terms && !Array.from(sel.options).some((opt) => opt.value === terms)) {
         const opt = document.createElement("option");
         opt.value = terms;
@@ -7218,16 +6977,14 @@
       initExpectArriveTimeOptions();
       syncPoShipIncotermFromOrder(order);
       document.getElementById("poShipExpectDate").value = toDateInput(order && (order.shipByTime || order.createdAt)) || "";
-      const arriveDate = document.getElementById("editExpectArriveDate").value || toDateInput(order && order.arriveDate);
-      document.getElementById("poShipArriveDate").value = arriveDate || "";
-      fillHourMinute("poShipArriveHour", "poShipArriveMinute", readExpectArriveTime() || (order && order.arriveTime) || "");
-      const shipOut = toDateInput(document.getElementById("editShipByTime").value || (order && order.shipByTime));
-      document.getElementById("poShipOutDate").value = shipOut || "";
+      document.getElementById("poShipArriveDate").value = toDateInput(order && order.arriveDate) || "";
+      fillHourMinute("poShipArriveHour", "poShipArriveMinute", (order && order.arriveTime) || "");
+      document.getElementById("poShipOutDate").value = toDateInput(order && order.shipByTime) || "";
       const profile = channelProfiles[(order && order.channelName) || ""] || {};
       fillPoShipWarehouseSelect(profile.inWarehouse);
       document.querySelectorAll('input[name="poShipPickup"]').forEach((el) => { el.checked = el.value === "self"; });
       poShipFees = [];
-      const source = (poLineItems.length ? poLineItems : ((order && order.items) || [])).map((row) => toPoLineItem(row));
+      const source = ((order && order.items) || []).map((row) => toPoLineItem(row));
       const plan = poShipFillPlan(order, source);
       poShipGoods = plan.goods;
       poShipShortage = plan.shortage;
@@ -7280,10 +7037,10 @@
       if (next) next();
     }
 
-    function openPoShipCreateForm(order) {
+    function fillCreateFromSelectedPo(order) {
+      if (!order) return;
+      document.getElementById("shipPoNo").value = order.orderNo;
       resetPoShipCreateForm(order);
-      document.getElementById("poShipCreatePanel").classList.remove("hidden");
-      document.getElementById("poShipCreatePanel").scrollIntoView({ block: "nearest" });
     }
 
     function updatePoShipQtyTotal() {
@@ -7383,6 +7140,7 @@
     }
 
     function openPoShipFeeModal() {
+      if (shipFormMode === "view") return;
       document.getElementById("poShipFeeName").value = "";
       document.getElementById("poShipFeeDetail").value = "";
       document.getElementById("poShipFeeRate").value = "";
@@ -7414,10 +7172,12 @@
     }
 
     function confirmPoShipCreate() {
-      const order = getWorkspaceOrder();
+      if (shipFormMode === "view") return;
+      const order = getSelectedShipPo();
       if (!order || !canCreateShipFromPo(order)) {
         const reason = shipCreateBlockReason(order);
         if (reason) alert(reason);
+        document.getElementById("shipPoNo").focus();
         return;
       }
       const expectDate = document.getElementById("poShipExpectDate").value;
@@ -7445,9 +7205,11 @@
       }
       const incoterm = document.getElementById("poShipIncoterm").value;
       if (!incoterm) {
-        alert("請先在訂單基本資料選擇貿易條件");
-        setPoTab("basic");
-        document.getElementById("editTermsOfDelivery").focus();
+        alert("請先在客戶訂單基本資料選擇貿易條件");
+        return;
+      }
+      if (!poShipGoods.length) {
+        alert("請至少保留一項出貨商品");
         return;
       }
       const ids = nextShippingIds();
@@ -7477,67 +7239,45 @@
       persistDemoData();
       renderShippingTable();
       renderSalesTable(getSalesFiltered());
-      closePoShipCreateForm();
-      renderRelatedShips(order);
-      syncEditFooter(order, orderFormMode);
+      history.replaceState({}, "", location.pathname);
+      showPage("shipping");
       alert("已建立出貨單 " + ids.orderId);
     }
 
-    function resetShipCreateForm() {
-      setShipFormReadonly(false);
-      document.getElementById("shipOutWarehouse").value = "藍田";
-      document.getElementById("shipPoNo").value = "";
-      document.getElementById("shipPoList").classList.add("hidden");
-      document.getElementById("shipExpectDate").value = "";
-      document.getElementById("shipArriveDate").value = "";
-      document.getElementById("shipChannelType").value = "";
-      document.getElementById("shipRegion").value = "";
-      document.getElementById("shipChannelName").value = "";
-      document.getElementById("shipLine").value = "";
-      document.getElementById("shipInWarehouse").value = "";
-      document.getElementById("shipCurrency").value = "";
-      document.getElementById("shipRate").value = "";
-      document.getElementById("shipIncoterm").value = "";
-      document.querySelectorAll('input[name="shipPickup"]').forEach((el) => { el.checked = false; });
-      fillShipProfile();
-      shipLineItems = [];
-      shipItemsLoadedPo = "";
-      if (document.getElementById("shipItemsBody")) renderShipItemsTable();
-    }
-
-    function shipItemsToLines(ship, po) {
-      const src = (ship.items && ship.items.length)
-        ? ship.items
-        : ((po && po.items) || []);
-      return src.map((item) => poItemToShipLine(item));
-    }
-
     function fillShipView(ship) {
-      resetShipCreateForm();
       const po = salesOrders.find((item) => item.orderNo === ship.salesOrderNo) || null;
-      const createdAt = (po && po.createdAt) || ship.created || nowStamp();
-      const channelName = (po && po.channelName && po.channelName !== "—") ? po.channelName : (ship.channel || "");
-      const channelType = (po && po.channelType && po.channelType !== "—")
-        ? po.channelType
-        : (channelTypeOfName(channelName) || "");
-      document.getElementById("shipOutWarehouse").value = "藍田";
+      clearPoShipCreateFields();
       document.getElementById("shipPoNo").value = ship.salesOrderNo || "";
-      document.getElementById("shipChannelType").value = channelType;
-      document.getElementById("shipChannelName").value = channelName;
-      fillShipProfile();
-      document.getElementById("shipExpectDate").value = toDateInput(po && po.shipByTime) || addDaysToStamp(createdAt, 1);
-      document.getElementById("shipArriveDate").value = toDateInput(po && po.arriveDate) || addDaysToStamp(createdAt, 2);
-      if (!document.getElementById("shipLine").value) document.getElementById("shipLine").value = "乳清";
-      const currency = channelCurrency(channelName, "TWD");
-      document.getElementById("shipCurrency").value = currency;
-      document.getElementById("shipRate").value = currency === "TWD" ? "1" : "";
-      if (!document.getElementById("shipIncoterm").value) document.getElementById("shipIncoterm").value = "FOB";
-      const pickup = document.querySelector('input[name="shipPickup"][value="blackcat"]');
-      if (pickup) pickup.checked = true;
-      shipLineItems = shipItemsToLines(ship, po);
-      shipItemsLoadedPo = (po && po.orderNo) || ship.salesOrderNo || "";
-      renderShipItemsTable();
-      setShipCreateStep(1);
+      syncPoShipIncotermFromOrder(po);
+      if (ship.incoterm) {
+        const sel = document.getElementById("poShipIncoterm");
+        if (sel && !Array.from(sel.options).some((opt) => opt.value === ship.incoterm)) {
+          const opt = document.createElement("option");
+          opt.value = ship.incoterm;
+          opt.textContent = ship.incoterm;
+          sel.appendChild(opt);
+        }
+        if (sel) sel.value = ship.incoterm;
+      }
+      document.getElementById("poShipExpectDate").value = toDateInput(ship.expectDate || (po && po.shipByTime)) || "";
+      document.getElementById("poShipArriveDate").value = toDateInput(ship.arriveDate || (po && po.arriveDate)) || "";
+      fillHourMinute("poShipArriveHour", "poShipArriveMinute", ship.arriveTime || (po && po.arriveTime) || "");
+      document.getElementById("poShipOutDate").value = toDateInput(ship.shipOutDate || (po && po.shipByTime)) || "";
+      fillPoShipWarehouseSelect(ship.inWarehouse || ship.warehouse || (channelProfiles[(po && po.channelName) || ""] || {}).inWarehouse);
+      const pickupVal = ship.pickup || "self";
+      document.querySelectorAll('input[name="poShipPickup"]').forEach((el) => { el.checked = el.value === pickupVal; });
+      poShipFees = Array.isArray(ship.fees) ? ship.fees.map((fee) => ({ ...fee })) : [];
+      const channel = (po && po.channelName) || ship.channel || "";
+      poShipGoods = (ship.items || []).map((item) => applyFifoExpiry(toPoLineItem({
+        ...item,
+        stock: virtualStockOf(channel, item.sku),
+      })));
+      poShipShortage = [];
+      renderPoShipFees();
+      renderPoShipGoodsTable();
+      syncPoShipStockWarn();
+      document.getElementById("poShipRebateText").textContent = `後扣項目 ${ship.rebatePercent != null ? ship.rebatePercent : channelRebatePercent(channel)} %`;
+      document.querySelectorAll("#poShipCreatePanel .po-ship-acc").forEach((el) => el.classList.remove("collapsed"));
       setShipFormReadonly(true);
       showPage("ship-create");
     }
@@ -7548,7 +7288,7 @@
     }
 
     function canListShipPo(order) {
-      return !!order && ["待回壓文件", "未開立出貨單", "待出貨", "部分送達"].includes(order.status);
+      return canCreateShipFromPo(order);
     }
 
     function shipCreateBlockReason(po) {
@@ -7570,156 +7310,37 @@
       return false;
     }
 
-    function setShipCreateStep(n) {
-      currentShipStep = n;
-      document.querySelectorAll("#shipWizardSteps .wizard-step").forEach((el) => {
-        el.classList.toggle("active", Number(el.dataset.shipStep) === n);
-      });
-      [1, 2, 3, 4].forEach((i) => {
-        document.getElementById("shipPane" + i).classList.toggle("hidden", i !== n);
-      });
-      document.getElementById("shipCreateAction").textContent = n === 1 ? "建立資料" : n === 4 ? "完成" : "下一步";
-      if (n >= 2) {
-        if (shipFormMode === "view") renderShipItemsTable();
-        else ensureShipItemsFromPo();
-      }
-      if (shipFormMode === "view") {
-        document.querySelectorAll("#page-ship-create input, #page-ship-create select, #page-ship-create textarea").forEach((el) => {
-          el.disabled = true;
-        });
-      }
-    }
-
-    function nextShippingIds() {
-      const maxId = rows.reduce((m, r) => Math.max(m, Number(r.id) || 0), 0);
-      const id = String(maxId + 1);
-      return { id, orderId: `VN${pad(maxId + 1, 8)}` };
-    }
-
-    function finishShipCreate() {
-      if (!requireShipPo()) {
-        setShipCreateStep(1);
-        return;
-      }
-      const ids = nextShippingIds();
-      const channelName = document.getElementById("shipChannelName").value;
-      const poNo = document.getElementById("shipPoNo").value.trim();
-      const po = salesOrders.find((item) => item.orderNo === poNo);
-      rows.unshift({
-        id: ids.id,
-        orderId: ids.orderId,
-        salesOrderNo: poNo,
-        audit: "待審核",
-        channel: channelName || document.getElementById("shipChannelType").value || "—",
-        status: "待拋單",
-        applicant: "demo.user",
-        created: nowStamp(),
-        warehouse: "",
-        shipped: "",
-        items: shipLineItems.map((row) => ({ ...row })),
-      });
-      if (po) syncPoStatusFromShips(po);
-      persistDemoData();
-      renderShippingTable();
-      renderSalesTable(getSalesFiltered());
-      showPage("shipping");
-    }
-
-    document.querySelectorAll("#shipWizardSteps .wizard-step").forEach((el) => {
-      el.addEventListener("click", () => {
-        const n = Number(el.dataset.shipStep);
-        if (shipFormMode !== "view" && n > 1 && !requireShipPo()) return;
-        setShipCreateStep(n);
-      });
-    });
-    document.getElementById("shipCreateAction").addEventListener("click", () => {
-      if (shipFormMode === "view") return;
-      if (currentShipStep === 1 && !requireShipPo()) return;
-      if (currentShipStep === 2 && !shipLineItems.length) {
-        alert("請至少保留一項出貨商品");
-        return;
-      }
-      if (currentShipStep < 4) setShipCreateStep(currentShipStep + 1);
-      else finishShipCreate();
-    });
-    document.getElementById("shipAddItemBtn").addEventListener("click", addShipCatalogItem);
-    document.getElementById("shipImportItemsBtn").addEventListener("click", () => {
-      document.getElementById("shipImportItemsFile").click();
-    });
-    document.getElementById("shipImportItemsFile").addEventListener("change", () => {
-      const file = document.getElementById("shipImportItemsFile").files[0];
-      document.getElementById("shipImportItemsFile").value = "";
-      if (!file) return;
-      importShipCatalogItems();
-    });
-    document.getElementById("shipItemsBody").addEventListener("input", onShipItemField);
-    document.getElementById("shipItemsBody").addEventListener("change", onShipItemField);
-    document.getElementById("shipItemsBody").addEventListener("click", (e) => {
-      if (shipFormMode === "view") return;
-      const del = e.target.closest("[data-del]");
-      if (!del) return;
-      const tr = e.target.closest("tr");
-      if (!tr) return;
-      shipLineItems = shipLineItems.filter((row) => row.id !== tr.dataset.id);
-      renderShipItemsTable();
-    });
-
-    function onShipItemField(e) {
-      if (shipFormMode === "view") return;
-      const field = e.target.dataset.field;
-      if (!field) return;
-      const tr = e.target.closest("tr");
-      if (!tr) return;
-      const item = shipLineItems.find((row) => row.id === tr.dataset.id);
-      if (!item) return;
-      item[field] = e.target.value;
-      if (field === "expiryType") {
-        item.batch = batchesFor(item.expiryType)[0];
-        renderShipItemsTable();
-        return;
-      }
-      if (field === "qty") updateShipQtyTotal();
-    }
-    document.getElementById("shipChannelName").addEventListener("change", fillShipProfile);
-
-    function renderShipPoList(keyword) {
-      const list = document.getElementById("shipPoList");
-      const q = (keyword || "").trim().toLowerCase();
-      const options = salesOrders
-        .filter((item) => canListShipPo(item))
-        .map((item) => item.orderNo)
-        .filter((no) => !q || no.toLowerCase().includes(q));
-      if (!options.length) {
-        list.innerHTML = `<div class="combo-empty">查無採購單編號</div>`;
-      } else {
-        list.innerHTML = options.map((no) => `<div class="combo-item" data-no="${escapeHtml(no)}">${escapeHtml(no)}</div>`).join("");
-      }
-      list.classList.remove("hidden");
-    }
-
     function applyShipPo(orderNo, opts) {
       document.getElementById("shipPoNo").value = orderNo;
       document.getElementById("shipPoList").classList.add("hidden");
       const order = salesOrders.find((item) => item.orderNo === orderNo);
       if (!order) return;
-      if (order.channelType && order.channelType !== "—") {
-        document.getElementById("shipChannelType").value = order.channelType;
+      if (shipFormMode === "view" || (opts && opts.silent)) {
+        if (opts && opts.silent) fillCreateFromSelectedPo(order);
+        return;
       }
-      if (order.channelName && order.channelName !== "—") {
-        document.getElementById("shipChannelName").value = order.channelName;
-        fillShipProfile();
-      }
-      if (orderNo !== shipItemsLoadedPo) shipItemsLoadedPo = "";
-      if (shipFormMode === "view" || (opts && opts.silent)) return;
       const reason = shipCreateBlockReason(order);
-      if (reason) alert(reason);
+      if (reason) {
+        alert(reason);
+        clearPoShipCreateFields();
+        return;
+      }
+      const oversell = orderQtyOversellList(order);
+      if (oversell.length) {
+        openPoOversellWarnModal(oversell, () => fillCreateFromSelectedPo(order));
+        return;
+      }
+      fillCreateFromSelectedPo(order);
     }
 
     const shipPoInput = document.getElementById("shipPoNo");
-    shipPoInput.addEventListener("focus", () => renderShipPoList(shipPoInput.value));
-    shipPoInput.addEventListener("input", () => {
+    shipPoInput.addEventListener("focus", () => {
+      if (shipFormMode === "view") return;
       renderShipPoList(shipPoInput.value);
-      if (shipPoInput.value.trim() !== shipItemsLoadedPo) shipItemsLoadedPo = "";
+    });
+    shipPoInput.addEventListener("input", () => {
+      if (shipFormMode === "view") return;
+      renderShipPoList(shipPoInput.value);
     });
     document.getElementById("shipPoList").addEventListener("mousedown", (e) => {
       const item = e.target.closest(".combo-item");
