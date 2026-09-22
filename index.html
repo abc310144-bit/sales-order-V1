@@ -465,6 +465,14 @@
       color: var(--text);
     }
     .combo-item:hover { background: var(--selected-bg); color: var(--primary); }
+    .combo-item-main { font-size: 14px; line-height: 1.4; }
+    .combo-item-sub {
+      margin-top: 2px;
+      font-size: 12px;
+      color: var(--text-3);
+      line-height: 1.3;
+    }
+    .combo-item:hover .combo-item-sub { color: var(--primary); opacity: 0.85; }
     .combo-empty {
       padding: 8px 11px;
       color: var(--text-3);
@@ -1784,7 +1792,7 @@
                 <label class="required">採購單編號</label>
                 <div class="form-ctrl">
                   <div class="combo" id="shipPoCombo">
-                    <input type="text" id="shipPoNo" placeholder="請選擇或搜尋採購單編號" autocomplete="off" />
+                    <input type="text" id="shipPoNo" placeholder="請選擇或模糊搜尋採購單編號" autocomplete="off" />
                     <div class="combo-list hidden" id="shipPoList"></div>
                   </div>
                 </div>
@@ -7306,6 +7314,41 @@
       return po.status === "已完成" || po.status === "已作廢" ? "此採購單目前無法再建立出貨單" : "此採購單尚未審核通過，無法建立出貨單";
     }
 
+    function shipPoFuzzyMatch(order, keyword) {
+      const q = String(keyword || "").trim().toLowerCase();
+      if (!q) return true;
+      const hay = [
+        order.orderNo,
+        order.poDocNo,
+        order.channelName,
+        order.channelType,
+        order.status,
+        poKindOf(order),
+      ].map((v) => String(v || "").toLowerCase()).join(" ");
+      return hay.includes(q);
+    }
+
+    function renderShipPoList(keyword) {
+      const list = document.getElementById("shipPoList");
+      if (!list) return;
+      const options = salesOrders
+        .filter((item) => canListShipPo(item))
+        .filter((item) => shipPoFuzzyMatch(item, keyword))
+        .slice()
+        .sort((a, b) => String(b.orderNo).localeCompare(String(a.orderNo)));
+      if (!options.length) {
+        list.innerHTML = `<div class="combo-empty">查無採購單編號</div>`;
+      } else {
+        list.innerHTML = options.map((item) => `
+          <div class="combo-item" data-no="${escapeHtml(item.orderNo)}">
+            <div class="combo-item-main">${escapeHtml(item.orderNo)}</div>
+            <div class="combo-item-sub">${escapeHtml(item.channelName || "—")} · ${escapeHtml(item.status)}</div>
+          </div>
+        `).join("");
+      }
+      list.classList.remove("hidden");
+    }
+
     function requireShipPo() {
       const po = getSelectedShipPo();
       const reason = shipCreateBlockReason(po);
@@ -7344,8 +7387,20 @@
       if (shipFormMode === "view") return;
       renderShipPoList(shipPoInput.value);
     });
+    shipPoInput.addEventListener("click", () => {
+      if (shipFormMode === "view") return;
+      renderShipPoList(shipPoInput.value);
+    });
     shipPoInput.addEventListener("input", () => {
       if (shipFormMode === "view") return;
+      const typed = shipPoInput.value.trim();
+      const selected = getSelectedShipPo();
+      if (!selected || selected.orderNo !== typed) {
+        // 改字後若不是完整選中單號，先清掉已帶入的出貨內容，保留輸入文字供繼續搜尋
+        const keep = shipPoInput.value;
+        clearPoShipCreateFields();
+        shipPoInput.value = keep;
+      }
       renderShipPoList(shipPoInput.value);
     });
     document.getElementById("shipPoList").addEventListener("mousedown", (e) => {
