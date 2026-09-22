@@ -32,4 +32,4 @@ alwaysApply: true
 
 DEMO 用假虛擬倉與假單價（含不含標），不接真倉。選擇商品不要放「新增商品」「出貨總數量(pcs)」；匯入商品僅放在選擇商品標題旁。
 
-建立出貨單「出貨商品」用舊版採購商品表（不是 PDF 欄）：編號、商品品號、SKU、品名、倉別、效期_批號、允收天數、商品成本(TWD)、商品報價(TWD)、訂單商品報價(TWD)、庫存數、備註、總數量(pcs)、操作。工具列只留出貨總數量(pcs)，不要新增／匯入。可覆蓋的品項自動帶入；不足見 later-ship-virtual-stock。效期 FIFO 見 later-ship-fifo-expiry。建立入口見 later-ship-create-stamp。
+建立出貨單「出貨商品」欄位：編號、商品品號、SKU、品名、效期_批號、商品報價(TWD)、庫存數、總數量(pcs)、操作。不要倉別、允收天數、商品成本、訂單商品報價、備註。工具列只留出貨總數量(pcs)，不要新增／匯入。可覆蓋的品項自動帶入；不足見 later-ship-virtual-stock。效期 FIFO 見 later-ship-fifo-expiry。建立入口見 later-ship-create-stamp。設定欄：貿易條件依採購單自動帶入；其餘欄位有值才帶、無則空。
