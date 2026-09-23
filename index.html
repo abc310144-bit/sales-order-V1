@@ -5235,11 +5235,15 @@
       }
       body.innerHTML = shipLineItems.map((row) => {
         const useFifo = row.useFifo !== false;
-        const batches = allShipBatches();
-        const batchValue = batches.includes(row.batch) ? row.batch : (closestFifoLot().batch || batches[0]);
+        const batches = useFifo ? allShipBatches() : batchesFor(row.expiryType);
+        const batchValue = batches.includes(row.batch) ? row.batch : (batches[0] || closestFifoLot().batch);
         const expiryBody = useFifo
           ? `<div class="fifo-batch-readonly">${escapeHtml(batchValue)}</div>`
-          : `<select data-field="batch">${optionsHtml(batches, batchValue)}</select>`;
+          : `<div class="expiry-radios">
+              <label class="radio-line"><input type="radio" name="expiry-${escapeHtml(row.id)}" data-field="expiryType" value="regular"${row.expiryType !== "near" ? " checked" : ""} /> 非即期品</label>
+              <label class="radio-line"><input type="radio" name="expiry-${escapeHtml(row.id)}" data-field="expiryType" value="near"${row.expiryType === "near" ? " checked" : ""} /> 即期品</label>
+            </div>
+            <select data-field="batch">${optionsHtml(batches, batchValue)}</select>`;
         return `
         <tr data-id="${escapeHtml(row.id)}">
           <td class="col-id">${escapeHtml(row.id)}</td>
@@ -5623,11 +5627,15 @@
 
     function legacyGoodsRowHtml(row, radioPrefix) {
       const useFifo = row.useFifo !== false;
-      const batches = allShipBatches();
-      const batchValue = batches.includes(row.batch) ? row.batch : (closestFifoLot().batch || batches[0]);
+      const batches = useFifo ? allShipBatches() : batchesFor(row.expiryType);
+      const batchValue = batches.includes(row.batch) ? row.batch : (batches[0] || closestFifoLot().batch);
       const expiryBody = useFifo
         ? `<div class="fifo-batch-readonly">${escapeHtml(batchValue)}</div>`
-        : `<select data-field="batch">${optionsHtml(batches, batchValue)}</select>`;
+        : `<div class="expiry-radios">
+              <label class="radio-line"><input type="radio" name="${escapeHtml(radioPrefix)}-${escapeHtml(row.id)}" data-field="expiryType" value="regular"${row.expiryType !== "near" ? " checked" : ""} /> 非即期品</label>
+              <label class="radio-line"><input type="radio" name="${escapeHtml(radioPrefix)}-${escapeHtml(row.id)}" data-field="expiryType" value="near"${row.expiryType === "near" ? " checked" : ""} /> 即期品</label>
+            </div>
+            <select data-field="batch">${optionsHtml(batches, batchValue)}</select>`;
       return `
         <tr data-id="${escapeHtml(row.id)}">
           <td class="col-id">${escapeHtml(row.id)}</td>
@@ -6354,6 +6362,14 @@
           item.batch = meta.batch;
           item.expiryType = meta.expiryType;
         }
+        renderPoShipGoodsTable();
+        return;
+      }
+      if (field === "expiryType") {
+        item.useFifo = false;
+        item.expiryType = e.target.value === "near" ? "near" : "regular";
+        const list = batchesFor(item.expiryType);
+        item.batch = list.includes(item.batch) ? item.batch : list[0];
         renderPoShipGoodsTable();
         return;
       }
