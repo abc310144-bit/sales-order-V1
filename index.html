@@ -891,7 +891,9 @@
       color: rgba(0, 0, 0, 0.85);
       cursor: not-allowed;
     }
-    #page-ship-create.is-readonly #shipPoNo { background: #f5f5f5; cursor: not-allowed; }
+    #page-ship-create.is-readonly #shipPoNo,
+    #page-ship-create.po-locked #shipPoNo { background: #f5f5f5; cursor: not-allowed; }
+    #page-ship-create.po-locked #shipPoList { display: none !important; }
     .type-pick-card { width: 480px; max-width: calc(100vw - 32px); }
     .type-pick-card .modal-body { padding-bottom: 12px; }
     .visually-hidden {
@@ -2083,6 +2085,7 @@
               <button type="button" class="btn" id="editExportPdf">匯出 PDF</button>
               <button type="button" class="btn" id="editStampUpload">回壓文件</button>
               <button type="button" class="btn hidden" id="editCopyPo">複製</button>
+              <button type="button" class="btn hidden" id="editAddShip" disabled>新增出貨單</button>
               <button type="button" class="btn" id="editReject">審核不通過</button>
               <button type="button" class="btn btn-primary" id="editApprove">審核通過</button>
               <button type="button" class="btn btn-primary hidden" id="editConfirmComplete">確認完成</button>
@@ -6489,6 +6492,12 @@
       setBtnEnabled("editExportPdf", canExportPoPdf(order));
       syncStampButton(order);
       syncCopyButton(order);
+      const addShipBtn = document.getElementById("editAddShip");
+      if (addShipBtn) {
+        const showAddShip = view && !!order && currentEditOrderNo !== "__new__";
+        addShipBtn.classList.toggle("hidden", !showAddShip);
+        addShipBtn.disabled = !showAddShip || !canCreateShipFromPo(order);
+      }
       setBtnEnabled("editApprove", pending && currentRole === "主管");
       setBtnEnabled("editReject", pending && currentRole === "主管");
       const confirmBtn = document.getElementById("editConfirmComplete");
@@ -6645,6 +6654,11 @@
       reader.readAsDataURL(file);
     });
     document.getElementById("editCopyPo").addEventListener("click", openCopyPoModal);
+    document.getElementById("editAddShip").addEventListener("click", () => {
+      const order = getWorkspaceOrder();
+      if (!order || orderFormMode !== "view" || !canCreateShipFromPo(order)) return;
+      openShipCreateFromPo(order);
+    });
     document.getElementById("copyPoClose").addEventListener("click", closeCopyPoModal);
     document.getElementById("copyPoCancel").addEventListener("click", closeCopyPoModal);
     document.getElementById("copyPoConfirm").addEventListener("click", confirmCopyPo);
@@ -6889,6 +6903,17 @@
       return value || "N/A(系統自動帶入)";
     }
 
+    let shipPoLocked = false;
+
+    function setShipPoLocked(locked) {
+      shipPoLocked = !!locked;
+      const page = document.getElementById("page-ship-create");
+      if (page) page.classList.toggle("po-locked", shipPoLocked);
+      const input = document.getElementById("shipPoNo");
+      if (input && shipFormMode !== "view") input.disabled = shipPoLocked;
+      if (shipPoLocked) document.getElementById("shipPoList").classList.add("hidden");
+    }
+
     function setShipFormReadonly(readonly) {
       shipFormMode = readonly ? "view" : "create";
       const page = document.getElementById("page-ship-create");
@@ -6910,6 +6935,11 @@
       // 貿易條件在建立時也一律鎖定
       const incoterm = document.getElementById("poShipIncoterm");
       if (incoterm) incoterm.disabled = true;
+      if (!readonly && shipPoLocked) {
+        const input = document.getElementById("shipPoNo");
+        if (input) input.disabled = true;
+      }
+      if (readonly) setShipPoLocked(false);
     }
 
     let poShipFees = [];
@@ -6938,10 +6968,32 @@
       closePoShipFeeModal();
       closePoShipStockModal();
       clearPoShipCreateFields();
+      setShipPoLocked(false);
       setShipFormReadonly(false);
       history.replaceState({}, "", location.pathname);
       showPage("ship-create");
       document.getElementById("shipPoNo").focus();
+    }
+
+    function openShipCreateFromPo(order) {
+      if (!order || !canCreateShipFromPo(order)) return;
+      closePoShipFeeModal();
+      closePoShipStockModal();
+      clearPoShipCreateFields();
+      setShipPoLocked(true);
+      setShipFormReadonly(false);
+      history.replaceState({}, "", location.pathname);
+      showPage("ship-create");
+      const oversell = orderQtyOversellList(order);
+      if (oversell.length) {
+        openPoOversellWarnModal(oversell, () => {
+          fillCreateFromSelectedPo(order);
+          setShipPoLocked(true);
+        });
+        return;
+      }
+      fillCreateFromSelectedPo(order);
+      setShipPoLocked(true);
     }
 
     function poShipFillPlan(order, sourceItems) {
@@ -7413,15 +7465,15 @@
 
     const shipPoInput = document.getElementById("shipPoNo");
     shipPoInput.addEventListener("focus", () => {
-      if (shipFormMode === "view") return;
+      if (shipFormMode === "view" || shipPoLocked) return;
       renderShipPoList(shipPoInput.value);
     });
     shipPoInput.addEventListener("click", () => {
-      if (shipFormMode === "view") return;
+      if (shipFormMode === "view" || shipPoLocked) return;
       renderShipPoList(shipPoInput.value);
     });
     shipPoInput.addEventListener("input", () => {
-      if (shipFormMode === "view") return;
+      if (shipFormMode === "view" || shipPoLocked) return;
       const typed = shipPoInput.value.trim();
       const selected = getSelectedShipPo();
       if (!selected || selected.orderNo !== typed) {
@@ -7433,6 +7485,7 @@
       renderShipPoList(shipPoInput.value);
     });
     document.getElementById("shipPoList").addEventListener("mousedown", (e) => {
+      if (shipPoLocked || shipFormMode === "view") return;
       const item = e.target.closest(".combo-item");
       if (item) applyShipPo(item.dataset.no);
     });
