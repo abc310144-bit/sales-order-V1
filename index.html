@@ -1266,6 +1266,22 @@
       margin-bottom: 8px;
     }
     .expiry-radios .radio-line { font-size: 13px; }
+    .fifo-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+    .fifo-batch-readonly {
+      min-height: 32px;
+      padding: 4px 8px;
+      border: 1px solid #d9d9d9;
+      border-radius: 6px;
+      background: #f5f5f5;
+      color: rgba(0, 0, 0, 0.65);
+      line-height: 22px;
+    }
     .file-preview { margin-top: 8px; }
     .file-preview pre {
       margin: 12px 0 0;
@@ -2245,7 +2261,6 @@
                         <th class="col-check"></th>
                         <th>SKU</th>
                         <th>商品名稱</th>
-                        <th class="col-expiry">效期_批號</th>
                         <th class="num col-alloc">當前可賣量</th>
                         <th class="col-pick-qty">數量設定</th>
                       </tr>
@@ -5141,6 +5156,7 @@
       const lot = closestFifoLot();
       item.expiryType = lot.expiryType;
       item.batch = lot.batch;
+      item.useFifo = true;
       return item;
     }
 
@@ -5163,11 +5179,22 @@
       return type === "near" ? shipBatches.near : shipBatches.regular;
     }
 
+    function allShipBatches() {
+      return shipBatches.regular.concat(shipBatches.near);
+    }
+
+    function resolveBatchMeta(batch) {
+      if (shipBatches.near.includes(batch)) return { batch, expiryType: "near" };
+      if (shipBatches.regular.includes(batch)) return { batch, expiryType: "regular" };
+      return closestFifoLot();
+    }
+
     function poItemToShipLine(item) {
       const meta = metaForSku(item.sku);
+      const useFifo = item.useFifo !== false;
       const type = item.expiryType === "near" ? "near" : "regular";
-      const batches = batchesFor(type);
-      return {
+      const batches = allShipBatches();
+      const line = {
         id: String(nextShipItemId++),
         productCode: item.productCode || meta.productCode,
         sku: item.sku || "",
@@ -5175,6 +5202,7 @@
         warehouse: item.warehouse || "良品倉",
         expiryType: type,
         batch: batches.includes(item.batch) ? item.batch : batches[0],
+        useFifo,
         acceptDays: item.acceptDays ?? "",
         cost: item.cost || meta.cost,
         quote: item.quote || meta.quote,
@@ -5183,6 +5211,8 @@
         remark: item.remark || "",
         stock: item.stock ?? 0,
       };
+      if (useFifo) applyFifoExpiry(line);
+      return line;
     }
 
     function optionsHtml(list, selected) {
@@ -5204,8 +5234,12 @@
         return;
       }
       body.innerHTML = shipLineItems.map((row) => {
-        const batches = batchesFor(row.expiryType);
-        const batchValue = batches.includes(row.batch) ? row.batch : batches[0];
+        const useFifo = row.useFifo !== false;
+        const batches = allShipBatches();
+        const batchValue = batches.includes(row.batch) ? row.batch : (closestFifoLot().batch || batches[0]);
+        const expiryBody = useFifo
+          ? `<div class="fifo-batch-readonly">${escapeHtml(batchValue)}</div>`
+          : `<select data-field="batch">${optionsHtml(batches, batchValue)}</select>`;
         return `
         <tr data-id="${escapeHtml(row.id)}">
           <td class="col-id">${escapeHtml(row.id)}</td>
@@ -5213,11 +5247,10 @@
           <td class="col-sku">${escapeHtml(row.sku)}</td>
           <td class="col-name">${escapeHtml(row.name)}</td>
           <td class="col-expiry">
-            <div class="expiry-radios">
-              <label class="radio-line"><input type="radio" name="expiry-${escapeHtml(row.id)}" data-field="expiryType" value="regular"${row.expiryType !== "near" ? " checked" : ""} /> 非即期品</label>
-              <label class="radio-line"><input type="radio" name="expiry-${escapeHtml(row.id)}" data-field="expiryType" value="near"${row.expiryType === "near" ? " checked" : ""} /> 即期品</label>
-            </div>
-            <select data-field="batch">${optionsHtml(batches, batchValue)}</select>
+            <label class="radio-line fifo-check">
+              <input type="checkbox" data-field="useFifo"${useFifo ? " checked" : ""} /> 先進先出
+            </label>
+            ${expiryBody}
           </td>
           <td class="col-qty"><input type="number" min="0" data-field="qty" value="${escapeHtml(row.qty)}" /></td>
           <td class="ops"><a data-del="1">刪除</a></td>
@@ -5347,16 +5380,6 @@
       });
     }
 
-    function pickExpiryBatchOf(row) {
-      const date = String((row && row.expiryAccept) || "").trim();
-      const tags = ["健工", "藍田", "全聯"];
-      const sku = String((row && row.sku) || "");
-      let n = 0;
-      for (let i = 0; i < sku.length; i++) n += sku.charCodeAt(i);
-      if (date) return `${date}_${tags[n % tags.length]}`;
-      return closestFifoLot().batch;
-    }
-
     function poPickRowMatchesFilter(row, queries) {
       if (!queries.length) return true;
       const sku = normalizeSku(row && row.sku).toLowerCase();
@@ -5406,12 +5429,12 @@
       const body = document.getElementById("editGoodsPickBody");
       if (!body) return;
       if (!poPickRows.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="6">此通路虛擬倉目前沒有可配商品</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="5">此通路虛擬倉目前沒有可配商品</td></tr>`;
         return;
       }
       const visible = visiblePoPickRows();
       if (!visible.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="6">查無資料</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="5">查無資料</td></tr>`;
         return;
       }
       body.innerHTML = visible.map((row) => {
@@ -5424,7 +5447,6 @@
           <td class="col-check"><input type="checkbox" data-pick="check"${checked ? " checked" : ""} /></td>
           <td>${escapeHtml(row.sku)}</td>
           <td class="col-name">${escapeHtml(row.name)}</td>
-          <td class="col-expiry">${escapeHtml(pickExpiryBatchOf(row))}</td>
           <td class="num col-alloc">${escapeHtml(row.sellableQty)}</td>
           <td class="col-pick-qty">
             <input type="number" min="0" step="${escapeHtml(step)}" data-pick="qty" value="${escapeHtml(qtyVal)}"${oversell ? ' class="is-oversell"' : ""} />
@@ -5600,8 +5622,12 @@
     }
 
     function legacyGoodsRowHtml(row, radioPrefix) {
-      const batches = batchesFor(row.expiryType);
-      const batchValue = batches.includes(row.batch) ? row.batch : batches[0];
+      const useFifo = row.useFifo !== false;
+      const batches = allShipBatches();
+      const batchValue = batches.includes(row.batch) ? row.batch : (closestFifoLot().batch || batches[0]);
+      const expiryBody = useFifo
+        ? `<div class="fifo-batch-readonly">${escapeHtml(batchValue)}</div>`
+        : `<select data-field="batch">${optionsHtml(batches, batchValue)}</select>`;
       return `
         <tr data-id="${escapeHtml(row.id)}">
           <td class="col-id">${escapeHtml(row.id)}</td>
@@ -5609,11 +5635,10 @@
           <td class="col-sku">${escapeHtml(row.sku)}</td>
           <td class="col-name">${escapeHtml(row.name)}</td>
           <td class="col-expiry">
-            <div class="expiry-radios">
-              <label class="radio-line"><input type="radio" name="${escapeHtml(radioPrefix)}-${escapeHtml(row.id)}" data-field="expiryType" value="regular"${row.expiryType !== "near" ? " checked" : ""} /> 非即期品</label>
-              <label class="radio-line"><input type="radio" name="${escapeHtml(radioPrefix)}-${escapeHtml(row.id)}" data-field="expiryType" value="near"${row.expiryType === "near" ? " checked" : ""} /> 即期品</label>
-            </div>
-            <select data-field="batch">${optionsHtml(batches, batchValue)}</select>
+            <label class="radio-line fifo-check">
+              <input type="checkbox" data-field="useFifo"${useFifo ? " checked" : ""} /> 先進先出
+            </label>
+            ${expiryBody}
           </td>
           <td class="col-stock">${escapeHtml(row.stock)}</td>
           <td class="col-qty"><input type="number" min="0" data-field="qty" value="${escapeHtml(row.qty)}" /></td>
@@ -6029,17 +6054,16 @@
         const key = String(header[col] || "").replace(/\*/g, "").replace(/\s+/g, "");
         if (/^SKU$/i.test(key) || key === "品號") map[col] = "sku";
         else if (key.includes("商品名稱") || key === "品名" || /name/i.test(key)) map[col] = "name";
-        else if (key.includes("效期") || key.includes("批號")) map[col] = "expiry";
         else if (key === "數量" || key.includes("訂購數量") || /qty|quantity/i.test(key)) map[col] = "qty";
       });
       return matrix.slice(1).map((row) => {
-        const rec = { sku: "", name: "", expiry: "", qty: "" };
+        const rec = { sku: "", name: "", qty: "" };
         Object.keys(map).forEach((col) => {
           rec[map[col]] = String(row[col] == null ? "" : row[col]).trim();
         });
         rec.sku = normalizeSku(rec.sku);
         return rec;
-      }).filter((rec) => rec.sku || rec.name || rec.expiry || rec.qty);
+      }).filter((rec) => rec.sku || rec.name || rec.qty);
     }
 
     function parseCsvRecords(text, mapper) {
@@ -6178,8 +6202,7 @@
       records.forEach((rec) => {
         const sku = normalizeSku(rec.sku);
         const name = String(rec.name || "").trim();
-        const expiry = String(rec.expiry || "").trim();
-        if (!sku || !name || !expiry) {
+        if (!sku || !name) {
           missingField.push(rec);
           return;
         }
@@ -6193,7 +6216,7 @@
         }
       });
       if (missingField.length) {
-        alert("所有欄位皆為必填，請檢查 SKU、商品名稱、效期_批號、數量");
+        alert("所有欄位皆為必填，請檢查 SKU、商品名稱、數量");
         return false;
       }
       if (invalidQty.length) {
@@ -6323,12 +6346,25 @@
       if (!tr) return;
       const item = poShipGoods.find((row) => row.id === tr.dataset.id);
       if (!item) return;
-      item[field] = e.target.value;
-      if (field === "expiryType") {
-        item.batch = batchesFor(item.expiryType)[0];
+      if (field === "useFifo") {
+        item.useFifo = !!e.target.checked;
+        if (item.useFifo) applyFifoExpiry(item);
+        else {
+          const meta = resolveBatchMeta(item.batch);
+          item.batch = meta.batch;
+          item.expiryType = meta.expiryType;
+        }
         renderPoShipGoodsTable();
         return;
       }
+      if (field === "batch") {
+        const meta = resolveBatchMeta(e.target.value);
+        item.batch = meta.batch;
+        item.expiryType = meta.expiryType;
+        item.useFifo = false;
+        return;
+      }
+      item[field] = e.target.value;
       if (field === "qty") updatePoShipQtyTotal();
     }
 
@@ -6907,7 +6943,8 @@
         const remaining = remainingQtyOfItem(order, item, shippedMap);
         if (remaining <= 0) return;
         const stock = virtualStockOf(channel, item.sku);
-        const row = applyFifoExpiry(toPoLineItem({ ...item, qty: remaining, stock }));
+        const row = applyFifoExpiry(toPoLineItem({ ...item, qty: remaining, stock, useFifo: true }));
+        row.useFifo = true;
         goods.push(row);
         if (stock < remaining) {
           shortage.push({
@@ -7089,11 +7126,12 @@
     function confirmShortageShip(sku) {
       const row = poShipShortage.find((item) => item.sku === sku);
       if (!row || row.warehouseQty <= 0 || shipGoodsHasSku(sku)) return;
-      const item = applyFifoExpiry(toPoLineItem({
+      const item = poItemToShipLine({
         ...row.source,
         qty: row.warehouseQty,
         stock: row.warehouseQty,
-      }));
+        useFifo: true,
+      });
       poShipGoods.push(item);
       renderPoShipGoodsTable();
       renderPoShipStockModal();
@@ -7253,10 +7291,11 @@
       }
       poShipFees = Array.isArray(ship.fees) ? ship.fees.map((fee) => ({ ...fee })) : [];
       const channel = (po && po.channelName) || ship.channel || "";
-      poShipGoods = (ship.items || []).map((item) => applyFifoExpiry(toPoLineItem({
+      poShipGoods = (ship.items || []).map((item) => poItemToShipLine({
         ...item,
         stock: virtualStockOf(channel, item.sku),
-      })));
+        useFifo: item.useFifo !== false,
+      }));
       poShipShortage = [];
       renderPoShipFees();
       renderPoShipGoodsTable();
