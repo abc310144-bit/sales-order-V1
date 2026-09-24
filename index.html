@@ -1550,6 +1550,15 @@
       cursor: pointer;
     }
     .ops a:hover { text-decoration: underline; }
+    #page-ship-create:not(.is-online) .online-ship-only { display: none !important; }
+    #page-ship-create.is-online .po-ship-acc.online-ship-only { display: block; }
+    #page-ship-create.is-online .form-row.online-ship-only { display: grid; }
+    #page-ship-create.is-online .online-ship-only input[readonly],
+    #page-ship-create.is-online .online-ship-only textarea[readonly] {
+      background: #f5f5f5;
+      color: rgba(0, 0, 0, 0.85);
+      cursor: not-allowed;
+    }
     .ops a.is-disabled {
       color: rgba(0, 0, 0, 0.25);
       cursor: not-allowed;
@@ -1647,7 +1656,7 @@
             <div class="menu-leaf">通路/經銷商</div>
             <div class="menu-leaf">通路商品列表</div>
             <div class="menu-leaf" data-page="shipping">出貨訂單管理</div>
-            <div class="menu-leaf">線上出貨訂單</div>
+            <div class="menu-leaf" data-page="online-shipping">線上出貨訂單</div>
           </div>
         </div>
 
@@ -1830,6 +1839,65 @@
         </div>
         </div>
 
+        <div class="page" id="page-online-shipping">
+          <div class="actions">
+            <button class="btn btn-primary" type="button" id="onlineShipCreateBtn">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
+              新增出貨單
+            </button>
+            <button class="btn" type="button" id="onlineToggleFilter">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M2 3h12l-4.5 5.2V13l-3-1.5V8.2L2 3z"/>
+              </svg>
+              篩選
+            </button>
+          </div>
+          <section class="filter hidden" id="onlineFilterPanel">
+            <div class="filter-grid">
+              <div class="field">
+                <label>訂單編號</label>
+                <input type="text" id="onlineFilterOrderId" placeholder="支援模糊查詢" />
+              </div>
+              <div class="field">
+                <label>平台訂單編號</label>
+                <input type="text" id="onlineFilterPlatformNo" placeholder="支援模糊查詢" />
+              </div>
+            </div>
+            <div class="filter-actions">
+              <button class="btn" type="button" id="onlineFilterClear">清除篩選條件</button>
+              <button class="btn btn-primary" type="button" id="onlineFilterApply">套用</button>
+            </div>
+          </section>
+          <div class="table-meta">
+            總共 <span id="onlineShippingTotal">0</span> 筆，每頁顯示
+            <select><option>20</option></select>
+            筆
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>訂單編號</th>
+                  <th>出貨倉庫</th>
+                  <th>通路平台</th>
+                  <th>平台訂單編號</th>
+                  <th>訂單狀態</th>
+                  <th>收件人</th>
+                  <th>預計出貨總數量(pcs)</th>
+                  <th>預計出貨日</th>
+                  <th>實際出貨總數量(pcs)</th>
+                  <th>實際出貨時間</th>
+                  <th>建立人員</th>
+                  <th>建立時間</th>
+                  <th>提交時間</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="onlineShippingBody"></tbody>
+            </table>
+          </div>
+        </div>
+
         <div class="page" id="page-ship-create">
           <h2 class="form-title" id="shipPageTitle">建立出貨訂單</h2>
           <div class="po-ship-create" id="poShipCreatePanel">
@@ -1896,6 +1964,46 @@
                         <label class="radio-line"><input type="radio" name="poShipPickup" value="blackcat" /> 訂單非自取 (黑貓)</label>
                       </div>
                     </div>
+                  </div>
+                  <div class="form-row online-ship-only">
+                    <label>平台訂單編號</label>
+                    <div class="form-ctrl"><input type="text" id="poShipPlatformOrderNo" readonly /></div>
+                  </div>
+                  <div class="form-row online-ship-only">
+                    <label class="required">運送方式</label>
+                    <div class="form-ctrl">
+                      <select id="poShipMethod">
+                        <option value="">請選擇</option>
+                        <option>新竹物流</option>
+                        <option>黑猫</option>
+                        <option>全盛貨運(邱哥)</option>
+                        <option>宅配通</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="po-ship-acc online-ship-only" data-acc="recipient">
+                <button type="button" class="po-ship-acc-head">
+                  <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+                  收件人
+                </button>
+                <div class="po-ship-acc-body">
+                  <div class="form-row">
+                    <label>收件人</label>
+                    <div class="form-ctrl"><input type="text" id="poShipRecvName" readonly /></div>
+                  </div>
+                  <div class="form-row">
+                    <label>收件人電話</label>
+                    <div class="form-ctrl"><input type="text" id="poShipRecvTel" readonly /></div>
+                  </div>
+                  <div class="form-row">
+                    <label>收件人地址</label>
+                    <div class="form-ctrl"><textarea id="poShipRecvAddress" rows="2" readonly></textarea></div>
+                  </div>
+                  <div class="form-row">
+                    <label>備註</label>
+                    <div class="form-ctrl"><input type="text" id="poShipRecvRemark" readonly /></div>
                   </div>
                 </div>
               </div>
@@ -2744,19 +2852,36 @@
       { id: "10468", orderId: "VN00010468", salesOrderNo: "", audit: "待審核", channel: "經銷商-絢綻國際企業社", status: "配送異常", applicant: "john.pan", created: "2026-08-26 10:08:19", warehouse: "", shipped: "" },
       { id: "10467", orderId: "VN00010467", salesOrderNo: "SO20260824006", audit: "待審核", channel: "實體-寶雅", status: "已配達", applicant: "misha.huang", created: "2026-08-25 18:33:02", warehouse: "", shipped: "" },
       { id: "10466", orderId: "VN00010466", salesOrderNo: "SO20260824005", audit: "待審核", channel: "跨境- Cool Cool Trading", status: "訂單取消", applicant: "vita.du", created: "2026-08-25 16:12:47", warehouse: "", shipped: "" },
-      { id: "10465", orderId: "VN00010465", salesOrderNo: "SO20260823007", audit: "待審核", channel: "實體-全聯", status: "已配達", applicant: "vita.du", created: "2026-08-23 17:02:11", warehouse: "", shipped: "2026-08-25 09:10:00" }
+      { id: "10465", orderId: "VN00010465", salesOrderNo: "SO20260823007", audit: "待審核", channel: "實體-全聯", status: "已配達", applicant: "vita.du", created: "2026-08-23 17:02:11", warehouse: "", shipped: "2026-08-25 09:10:00" },
+      {
+        id: "20001", orderId: "TRY0000031686", salesOrderNo: "SO20260825004", audit: "待審核", channel: "線上-轉單",
+        status: "待拋單", applicant: "miffy.jhong", created: "2026-09-24 10:11:42", warehouse: "藍田倉", shipped: "",
+        online: true, platform: "B2C-PChome", platformOrderNo: "650277948", shipMethod: "新竹物流",
+        recvName: "陳小美", recvTel: "0912-000-111", recvAddress: "台北市信義區信義路五段7號", recvRemark: "白天配送",
+        inWarehouse: "藍田倉", shipOutDate: "2026-09-24", submittedAt: "",
+        items: [{ sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", qty: 1 }]
+      },
+      {
+        id: "20002", orderId: "TRY0000031685", salesOrderNo: "SO20260825004", audit: "待審核", channel: "線上-轉單",
+        status: "待拋單", applicant: "miffy.jhong", created: "2026-09-24 10:10:05", warehouse: "藍田倉", shipped: "",
+        online: true, platform: "B2C-好市多", platformOrderNo: "650277900", shipMethod: "黑猫",
+        recvName: "林大同", recvTel: "0922-333-444", recvAddress: "新北市板橋區文化路一段188號", recvRemark: "",
+        inWarehouse: "藍田倉", shipOutDate: "2026-09-24", submittedAt: "",
+        items: [{ sku: "UM-2108", name: "益生菌隨手包", qty: 2 }]
+      }
     ];
 
     function getShippingFiltered() {
       const po = document.getElementById("shipFilterPoNo").value.trim().toLowerCase();
       return rows.filter((r) => {
+        if (r.online) return false;
         if (po && !(r.salesOrderNo || "").toLowerCase().includes(po)) return false;
         return true;
       });
     }
 
     function renderShippingTable(list) {
-      const data = list || rows;
+      const data = (list || rows).filter((r) => !r.online);
       document.getElementById("shippingTotal").textContent = String(data.length);
       document.getElementById("tableBody").innerHTML = data.map((r) => `
         <tr data-order-id="${r.orderId}">
@@ -2773,6 +2898,56 @@
           <td class="ops"><a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=view" target="_blank" rel="noopener" data-ship-view="1">檢視</a></td>
         </tr>
       `).join("");
+    }
+
+    function maskRecvName(name) {
+      const s = String(name || "").trim();
+      if (!s) return "—";
+      return s.slice(0, 1) + "**";
+    }
+
+    function onlineShipQty(ship) {
+      return (ship.items || []).reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+    }
+
+    function getOnlineShippingRows() {
+      return rows.filter((r) => r.online);
+    }
+
+    function renderOnlineShippingTable(list) {
+      const data = list || getOnlineShippingRows();
+      const body = document.getElementById("onlineShippingBody");
+      const total = document.getElementById("onlineShippingTotal");
+      if (total) total.textContent = String(data.length);
+      if (!body) return;
+      if (!data.length) {
+        body.innerHTML = `<tr><td colspan="14" style="text-align:center;color:#8c8c8c;padding:24px;">尚無資料</td></tr>`;
+        return;
+      }
+      body.innerHTML = data.map((r) => {
+        const qty = onlineShipQty(r);
+        const rec = r.recvName || "";
+        return `
+        <tr>
+          <td>${escapeHtml(r.orderId)}</td>
+          <td>${escapeHtml(r.inWarehouse || r.warehouse || "—")}</td>
+          <td>${escapeHtml(r.platform || "—")}</td>
+          <td>${escapeHtml(r.platformOrderNo || "—")}</td>
+          <td>${statusTag(r.status)}</td>
+          <td>${escapeHtml(maskRecvName(rec))}</td>
+          <td>${qty}</td>
+          <td>${escapeHtml(toDateInput(r.shipOutDate) || "—")}</td>
+          <td>${r.status === "已出貨" || r.status === "已配達" ? qty : 0}</td>
+          <td>${escapeHtml(r.shipped || "")}</td>
+          <td>${escapeHtml(r.applicant || "—")}</td>
+          <td>${escapeHtml(r.created || "—")}</td>
+          <td>${escapeHtml(r.submittedAt || "")}</td>
+          <td class="ops">
+            <a class="is-disabled" aria-disabled="true">編輯</a>
+            <a class="is-disabled" aria-disabled="true">取消訂單</a>
+          </td>
+        </tr>`;
+      }).join("");
     }
 
     renderShippingTable();
@@ -2806,14 +2981,24 @@
       });
     });
 
+    let shipCreateKind = "normal";
+
     function showPage(page) {
-      const menuPage = page === "order-edit" ? "sales" : page === "ship-create" ? "shipping" : page;
+      let menuPage = page;
+      if (page === "order-edit") menuPage = "sales";
+      else if (page === "ship-create") menuPage = shipCreateKind === "online" ? "online-shipping" : "shipping";
       document.querySelectorAll("[data-page]").forEach((item) => {
         item.classList.toggle("active", item.dataset.page === menuPage);
       });
       document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
       document.getElementById("page-" + page)?.classList.add("active");
-      document.title = page === "shipping" || page === "ship-create" ? "出貨訂單管理 - UrMart" : "客戶訂單管理 - UrMart";
+      if (page === "online-shipping" || (page === "ship-create" && shipCreateKind === "online")) {
+        document.title = "線上出貨訂單 - UrMart";
+      } else if (page === "shipping" || page === "ship-create") {
+        document.title = "出貨訂單管理 - UrMart";
+      } else {
+        document.title = "客戶訂單管理 - UrMart";
+      }
     }
 
     document.querySelectorAll("[data-page]").forEach((el) => {
@@ -3731,7 +3916,7 @@
     let currentEditOrderNo = "";
     let orderFormMode = "edit";
     let workspaceOrder = null;
-    const DEMO_STORE_KEY = "urmart-sales-demo-v4";
+    const DEMO_STORE_KEY = "urmart-sales-demo-v5";
     let demoReady = false;
 
     function persistDemoData() {
@@ -5499,6 +5684,7 @@
     persistDemoData();
     renderSalesTable(getSalesFiltered());
     renderShippingTable();
+    renderOnlineShippingTable();
 
     const productMeta = {
       "UM-1001": { productCode: "SET10-4713025601001", cost: "86.50", quote: "120", priceNoLabel: "105" },
@@ -7133,10 +7319,28 @@
       closePoShipFeeModal();
       closePoShipStockModal();
       history.replaceState({}, "", location.pathname);
-      showPage("shipping");
+      showPage(shipCreateKind === "online" ? "online-shipping" : "shipping");
     });
     document.getElementById("poShipCreateConfirm").addEventListener("click", confirmPoShipCreate);
     document.getElementById("shipCreateBtn").addEventListener("click", openShipCreatePage);
+    document.getElementById("onlineShipCreateBtn").addEventListener("click", openOnlineShipCreatePage);
+    document.getElementById("onlineToggleFilter").addEventListener("click", () => {
+      document.getElementById("onlineFilterPanel").classList.toggle("hidden");
+    });
+    document.getElementById("onlineFilterApply").addEventListener("click", () => {
+      const oid = document.getElementById("onlineFilterOrderId").value.trim().toLowerCase();
+      const pno = document.getElementById("onlineFilterPlatformNo").value.trim().toLowerCase();
+      renderOnlineShippingTable(getOnlineShippingRows().filter((r) => {
+        if (oid && !String(r.orderId || "").toLowerCase().includes(oid)) return false;
+        if (pno && !String(r.platformOrderNo || "").toLowerCase().includes(pno)) return false;
+        return true;
+      }));
+    });
+    document.getElementById("onlineFilterClear").addEventListener("click", () => {
+      document.getElementById("onlineFilterOrderId").value = "";
+      document.getElementById("onlineFilterPlatformNo").value = "";
+      renderOnlineShippingTable();
+    });
     document.getElementById("poShipAddFeeBtn").addEventListener("click", openPoShipFeeModal);
     document.getElementById("poShipFeeClose").addEventListener("click", closePoShipFeeModal);
     document.getElementById("poShipFeeCancel").addEventListener("click", closePoShipFeeModal);
@@ -7363,7 +7567,9 @@
       });
       const title = document.getElementById("shipPageTitle");
       if (title) {
-        title.textContent = readonly ? "檢視出貨單" : "建立出貨訂單";
+        title.textContent = readonly
+          ? "檢視出貨單"
+          : (shipCreateKind === "online" ? "新增出貨單" : "建立出貨訂單");
         title.classList.remove("hidden");
       }
       const confirmBtn = document.getElementById("poShipCreateConfirm");
@@ -7385,6 +7591,44 @@
     let poShipFees = [];
     let nextPoShipFeeId = 1;
 
+    function setShipCreateKind(kind) {
+      shipCreateKind = kind === "online" ? "online" : "normal";
+      const page = document.getElementById("page-ship-create");
+      if (page) page.classList.toggle("is-online", shipCreateKind === "online");
+      const title = document.getElementById("shipPageTitle");
+      if (title && shipFormMode !== "view") {
+        title.textContent = shipCreateKind === "online" ? "新增出貨單" : "建立出貨訂單";
+      }
+    }
+
+    function clearOnlineShipFields() {
+      const platformNo = document.getElementById("poShipPlatformOrderNo");
+      const method = document.getElementById("poShipMethod");
+      const name = document.getElementById("poShipRecvName");
+      const tel = document.getElementById("poShipRecvTel");
+      const address = document.getElementById("poShipRecvAddress");
+      const remark = document.getElementById("poShipRecvRemark");
+      if (platformNo) platformNo.value = "";
+      if (method) method.value = "";
+      if (name) name.value = "";
+      if (tel) tel.value = "";
+      if (address) address.value = "";
+      if (remark) remark.value = "";
+    }
+
+    function fillOnlineShipFieldsFromOrder(order) {
+      const rec = (order && order.recipient) || {};
+      document.getElementById("poShipPlatformOrderNo").value = rec.platformOrderNo || "";
+      document.getElementById("poShipRecvName").value = rec.name || "";
+      document.getElementById("poShipRecvTel").value = rec.tel || "";
+      document.getElementById("poShipRecvAddress").value = rec.address || "";
+      document.getElementById("poShipRecvRemark").value = rec.remark || "";
+      // 運送方式必填、由操作人選；不清空已選值（切單時重選）
+      if (!document.getElementById("poShipMethod").value) {
+        document.getElementById("poShipMethod").value = "";
+      }
+    }
+
     function clearPoShipCreateFields() {
       document.getElementById("shipPoNo").value = "";
       document.getElementById("shipPoList").classList.add("hidden");
@@ -7395,6 +7639,7 @@
       document.getElementById("poShipOutDate").value = "";
       fillPoShipWarehouseSelect("");
       document.querySelectorAll('input[name="poShipPickup"]').forEach((el) => { el.checked = false; });
+      clearOnlineShipFields();
       poShipFees = [];
       poShipGoods = [];
       poShipShortage = [];
@@ -7407,6 +7652,19 @@
     function openShipCreatePage() {
       closePoShipFeeModal();
       closePoShipStockModal();
+      setShipCreateKind("normal");
+      clearPoShipCreateFields();
+      setShipPoLocked(false);
+      setShipFormReadonly(false);
+      history.replaceState({}, "", location.pathname);
+      showPage("ship-create");
+      document.getElementById("shipPoNo").focus();
+    }
+
+    function openOnlineShipCreatePage() {
+      closePoShipFeeModal();
+      closePoShipStockModal();
+      setShipCreateKind("online");
       clearPoShipCreateFields();
       setShipPoLocked(false);
       setShipFormReadonly(false);
@@ -7419,6 +7677,7 @@
       if (!order || !canCreateShipFromPo(order)) return;
       closePoShipFeeModal();
       closePoShipStockModal();
+      setShipCreateKind(isOnlineTransferPo(order) ? "online" : "normal");
       clearPoShipCreateFields();
       setShipPoLocked(true);
       setShipFormReadonly(false);
@@ -7564,6 +7823,7 @@
       if (!order) return;
       document.getElementById("shipPoNo").value = order.orderNo;
       resetPoShipCreateForm(order);
+      if (shipCreateKind === "online") fillOnlineShipFieldsFromOrder(order);
     }
 
     function updatePoShipQtyTotal() {
@@ -7698,9 +7958,11 @@
     function confirmPoShipCreate() {
       if (shipFormMode === "view") return;
       const order = getSelectedShipPo();
-      if (!order || !canCreateShipFromPo(order)) {
+      if (!order || !canCreateShipFromPo(order) || !canListShipPo(order)) {
         const reason = shipCreateBlockReason(order);
         if (reason) alert(reason);
+        else if (shipCreateKind === "online") alert("請選擇線上-轉單且可出貨的採購單");
+        else alert("此採購單請改由出貨訂單管理建立出貨單");
         document.getElementById("shipPoNo").focus();
         return;
       }
@@ -7732,11 +7994,18 @@
         alert("請先在客戶訂單基本資料選擇貿易條件");
         return;
       }
+      const shipMethod = document.getElementById("poShipMethod").value;
+      if (shipCreateKind === "online" && !shipMethod) {
+        alert("請選擇運送方式");
+        document.getElementById("poShipMethod").focus();
+        return;
+      }
       if (!poShipGoods.length) {
         alert("請至少保留一項出貨商品");
         return;
       }
-      const ids = nextShippingIds();
+      const ids = nextShippingIds(shipCreateKind === "online");
+      const rec = order.recipient || {};
       rows.unshift({
         id: ids.id,
         orderId: ids.orderId,
@@ -7758,18 +8027,29 @@
         rebatePercent: channelRebatePercent(order.channelName),
         fees: poShipFees.map((fee) => ({ ...fee })),
         items: poShipGoods.map((item) => poItemToShipLine(item)),
+        online: shipCreateKind === "online",
+        platform: rec.platform || "",
+        platformOrderNo: document.getElementById("poShipPlatformOrderNo").value.trim(),
+        shipMethod: shipCreateKind === "online" ? shipMethod : "",
+        recvName: document.getElementById("poShipRecvName").value.trim(),
+        recvTel: document.getElementById("poShipRecvTel").value.trim(),
+        recvAddress: document.getElementById("poShipRecvAddress").value.trim(),
+        recvRemark: document.getElementById("poShipRecvRemark").value.trim(),
+        submittedAt: "",
       });
       syncPoStatusFromShips(order);
       persistDemoData();
       renderShippingTable();
+      renderOnlineShippingTable();
       renderSalesTable(getSalesFiltered());
       history.replaceState({}, "", location.pathname);
-      showPage("shipping");
+      showPage(shipCreateKind === "online" ? "online-shipping" : "shipping");
       alert("已建立出貨單 " + ids.orderId);
     }
 
     function fillShipView(ship) {
       const po = salesOrders.find((item) => item.orderNo === ship.salesOrderNo) || null;
+      setShipCreateKind(ship.online ? "online" : "normal");
       clearPoShipCreateFields();
       document.getElementById("shipPoNo").value = ship.salesOrderNo || "";
       syncPoShipIncotermFromOrder(po);
@@ -7794,6 +8074,14 @@
           el.checked = el.value === ship.pickup;
         });
       }
+      if (ship.online) {
+        document.getElementById("poShipPlatformOrderNo").value = ship.platformOrderNo || "";
+        document.getElementById("poShipMethod").value = ship.shipMethod || "";
+        document.getElementById("poShipRecvName").value = ship.recvName || "";
+        document.getElementById("poShipRecvTel").value = ship.recvTel || "";
+        document.getElementById("poShipRecvAddress").value = ship.recvAddress || "";
+        document.getElementById("poShipRecvRemark").value = ship.recvRemark || "";
+      }
       poShipFees = Array.isArray(ship.fees) ? ship.fees.map((fee) => ({ ...fee })) : [];
       const channel = (po && po.channelName) || ship.channel || "";
       poShipGoods = (ship.items || []).map((item) => poItemToShipLine({
@@ -7811,10 +8099,14 @@
       showPage("ship-create");
     }
 
-    function nextShippingIds() {
+    function nextShippingIds(online) {
       const maxId = rows.reduce((m, r) => Math.max(m, Number(r.id) || 0), 0);
       const id = String(maxId + 1);
-      return { id, orderId: `VN${pad(maxId + 1, 8)}` };
+      const seq = maxId + 1;
+      return {
+        id,
+        orderId: online ? `TRY${pad(seq, 10)}` : `VN${pad(seq, 8)}`,
+      };
     }
 
     function getSelectedShipPo() {
@@ -7823,7 +8115,9 @@
     }
 
     function canListShipPo(order) {
-      return canCreateShipFromPo(order);
+      if (!canCreateShipFromPo(order)) return false;
+      if (shipCreateKind === "online") return isOnlineTransferPo(order);
+      return !isOnlineTransferPo(order);
     }
 
     function shipCreateBlockReason(po) {
