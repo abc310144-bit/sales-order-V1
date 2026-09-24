@@ -2427,10 +2427,6 @@
                 <div class="form-ctrl"><input type="date" id="editRecvShipDate" /></div>
               </div>
               <div class="form-row">
-                <label>預計到貨日</label>
-                <div class="form-ctrl"><input type="date" id="editRecvArriveDate" /></div>
-              </div>
-              <div class="form-row">
                 <label>備註</label>
                 <div class="form-ctrl"><input type="text" id="editRecvRemark" maxlength="30" /></div>
               </div>
@@ -3170,7 +3166,6 @@
           orderAmount: "1280",
           platformOrderNo: "PC_20260825_001",
           shipDate: "2026-08-26",
-          arriveDate: "2026-08-27",
           remark: "請於白天配送",
         },
         items: [
@@ -3931,7 +3926,6 @@
           orderAmount: first.orderAmount === "" ? "0" : first.orderAmount,
           platformOrderNo: first.platformOrderNo,
           shipDate,
-          arriveDate,
           remark: (first.remark || "").slice(0, 30),
         },
         items,
@@ -4802,7 +4796,6 @@
         orderAmount: "",
         platformOrderNo: "",
         shipDate: "",
-        arriveDate: "",
         remark: "",
       };
     }
@@ -4825,11 +4818,9 @@
       document.getElementById("editRecvOrderAmount").value = rec.orderAmount === 0 || rec.orderAmount ? rec.orderAmount : "";
       document.getElementById("editRecvPlatformOrderNo").value = rec.platformOrderNo || "";
       document.getElementById("editRecvShipDate").value = toDateInput(rec.shipDate || (order && order.shipByTime)) || "";
-      document.getElementById("editRecvArriveDate").value = toDateInput(rec.arriveDate || (order && order.arriveDate)) || "";
       document.getElementById("editRecvRemark").value = rec.remark || "";
-      if (isOnlineTransferPo(order)) {
-        if (rec.shipDate) document.getElementById("editShipByTime").value = toDateInput(rec.shipDate);
-        if (rec.arriveDate) document.getElementById("editExpectArriveDate").value = toDateInput(rec.arriveDate);
+      if (isOnlineTransferPo(order) && rec.shipDate) {
+        document.getElementById("editShipByTime").value = toDateInput(rec.shipDate);
       }
       syncRecipientPanel(order);
     }
@@ -4841,7 +4832,6 @@
         return;
       }
       const shipDate = toDateInput(document.getElementById("editRecvShipDate").value);
-      const arriveDate = toDateInput(document.getElementById("editRecvArriveDate").value);
       order.recipient = {
         platform: document.getElementById("editRecvPlatform").value.trim(),
         name: document.getElementById("editRecvName").value.trim(),
@@ -4851,11 +4841,9 @@
         orderAmount: document.getElementById("editRecvOrderAmount").value,
         platformOrderNo: document.getElementById("editRecvPlatformOrderNo").value.trim(),
         shipDate,
-        arriveDate,
         remark: document.getElementById("editRecvRemark").value.trim().slice(0, 30),
       };
       if (shipDate) order.shipByTime = shipDate;
-      if (arriveDate) order.arriveDate = arriveDate;
     }
 
     function validateRecipientRequired(order) {
@@ -8176,7 +8164,7 @@
       const inWarehouse = order.inWarehouse || profile.inWarehouse || "藍田倉";
       const expectDate = toDateInput((opts && opts.expectDate) || nowStamp());
       const shipOutDate = toDateInput(rec.shipDate || order.shipByTime) || expectDate;
-      const arriveDate = toDateInput(rec.arriveDate || order.arriveDate) || "";
+      const arriveDate = toDateInput(order.arriveDate) || "";
       const ids = nextShippingIds(true);
       return {
         ship: {
