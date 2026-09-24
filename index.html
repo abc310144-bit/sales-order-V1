@@ -726,23 +726,38 @@
       min-width: 0;
       max-width: 100%;
     }
-    .po-basic-layout.has-recipient {
-      display: grid;
-      grid-template-columns: minmax(300px, 520px) minmax(300px, 380px);
-      gap: 16px 36px;
-      justify-content: start;
-      align-items: start;
+    .po-basic-top {
+      max-width: 520px;
+      min-width: 0;
     }
-    .po-basic-main { min-width: 0; max-width: 520px; }
+    .po-buyer-recv-row {
+      display: block;
+      min-width: 0;
+    }
+    .po-basic-layout.has-recipient .po-buyer-recv-row {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr);
+      gap: 16px 36px;
+      align-items: start;
+      max-width: 1100px;
+    }
+    .po-buyer-col { min-width: 0; }
+    .po-vendor-col {
+      min-width: 0;
+      max-width: 520px;
+      margin-top: 4px;
+    }
+    .po-basic-layout.has-recipient .po-vendor-col {
+      max-width: 520px;
+    }
     .po-recipient-panel {
       border-left: 1px solid var(--border);
       padding-left: 28px;
       min-width: 0;
-      max-width: 380px;
     }
     .po-recipient-panel .goods-title { margin-top: 0; }
     @media (max-width: 1100px) {
-      .po-basic-layout.has-recipient {
+      .po-basic-layout.has-recipient .po-buyer-recv-row {
         grid-template-columns: 1fr;
       }
       .po-recipient-panel {
@@ -2267,7 +2282,7 @@
 
           <div class="po-pane" data-po-pane="basic">
             <div class="po-basic-layout" id="poBasicLayout">
-            <div class="po-basic-main">
+            <div class="po-basic-top">
             <div class="form-row">
               <label id="editPoDocNoLabel">採購單單號</label>
               <div class="form-ctrl">
@@ -2331,8 +2346,11 @@
                 <div class="form-ctrl"><textarea id="editAddress" rows="2"></textarea></div>
               </div>
             </div>
+            </div>
 
             <div id="editOverseasBlock" class="hidden">
+              <div class="po-buyer-recv-row" id="poBuyerRecvRow">
+              <div class="po-buyer-col">
               <h3 class="goods-title">買方 Buyer</h3>
               <div class="form-row">
                 <label>通路名稱</label>
@@ -2362,53 +2380,7 @@
                 <label>通路地址</label>
                 <div class="form-ctrl"><textarea id="editBuyerAddress" rows="2"></textarea></div>
               </div>
-              <h3 class="goods-title">賣方 Vendor</h3>
-              <div class="form-row">
-                <label>公司名稱</label>
-                <div class="form-ctrl"><input type="text" id="editVendorName" data-lock="1" /></div>
               </div>
-              <div class="form-row">
-                <label>統一編號</label>
-                <div class="form-ctrl"><input type="text" id="editVendorTaxId" data-lock="1" /></div>
-              </div>
-              <div class="form-row">
-                <label>建檔人</label>
-                <div class="form-ctrl"><input type="text" id="editVendorAttn" /></div>
-              </div>
-              <div class="form-row">
-                <label>建檔人信箱</label>
-                <div class="form-ctrl"><input type="text" id="editVendorEmail" /></div>
-              </div>
-              <div class="form-row">
-                <label>電話</label>
-                <div class="form-ctrl tel-ext">
-                  <input type="text" id="editVendorTel" />
-                  <span class="ext-label" id="editVendorExtWrap">分機</span>
-                  <input type="text" class="ext-input" id="editVendorExt" placeholder="分機" />
-                </div>
-              </div>
-              <div class="form-row">
-                <label>地址</label>
-                <div class="form-ctrl"><textarea id="editVendorAddress" rows="2" data-lock="1"></textarea></div>
-              </div>
-              <div class="form-row">
-                <label>貿易條件</label>
-                <div class="form-ctrl">
-                  <select id="editTermsOfDelivery">
-                    <option value="">請選擇</option>
-                    <option>FOB</option>
-                    <option>CIF</option>
-                    <option>EXW</option>
-                    <option>DDU</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row" id="editTermsOfPaymentRow">
-                <label>付款條件</label>
-                <div class="form-ctrl"><input type="text" id="editTermsOfPayment" /></div>
-              </div>
-            </div>
-            </div>
             <aside class="po-recipient-panel hidden" id="editRecipientPanel">
               <h3 class="goods-title">收件人</h3>
               <div class="form-row">
@@ -2463,6 +2435,55 @@
                 <div class="form-ctrl"><input type="text" id="editRecvRemark" maxlength="30" /></div>
               </div>
             </aside>
+              </div>
+              <div class="po-vendor-col">
+              <h3 class="goods-title">賣方 Vendor</h3>
+              <div class="form-row">
+                <label>公司名稱</label>
+                <div class="form-ctrl"><input type="text" id="editVendorName" data-lock="1" /></div>
+              </div>
+              <div class="form-row">
+                <label>統一編號</label>
+                <div class="form-ctrl"><input type="text" id="editVendorTaxId" data-lock="1" /></div>
+              </div>
+              <div class="form-row">
+                <label>建檔人</label>
+                <div class="form-ctrl"><input type="text" id="editVendorAttn" /></div>
+              </div>
+              <div class="form-row">
+                <label>建檔人信箱</label>
+                <div class="form-ctrl"><input type="text" id="editVendorEmail" /></div>
+              </div>
+              <div class="form-row">
+                <label>電話</label>
+                <div class="form-ctrl tel-ext">
+                  <input type="text" id="editVendorTel" />
+                  <span class="ext-label" id="editVendorExtWrap">分機</span>
+                  <input type="text" class="ext-input" id="editVendorExt" placeholder="分機" />
+                </div>
+              </div>
+              <div class="form-row">
+                <label>地址</label>
+                <div class="form-ctrl"><textarea id="editVendorAddress" rows="2" data-lock="1"></textarea></div>
+              </div>
+              <div class="form-row">
+                <label>貿易條件</label>
+                <div class="form-ctrl">
+                  <select id="editTermsOfDelivery">
+                    <option value="">請選擇</option>
+                    <option>FOB</option>
+                    <option>CIF</option>
+                    <option>EXW</option>
+                    <option>DDU</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row" id="editTermsOfPaymentRow">
+                <label>付款條件</label>
+                <div class="form-ctrl"><input type="text" id="editTermsOfPayment" /></div>
+              </div>
+              </div>
+            </div>
             </div>
           </div>
 
