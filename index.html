@@ -2423,6 +2423,18 @@
                 <div class="form-ctrl"><input type="date" id="editRecvShipDate" /></div>
               </div>
               <div class="form-row">
+                <label class="required">運送方式</label>
+                <div class="form-ctrl">
+                  <select id="editRecvShipMethod">
+                    <option value="">請選擇</option>
+                    <option>新竹物流</option>
+                    <option>黑猫</option>
+                    <option>全盛貨運(邱哥)</option>
+                    <option>宅配通</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
                 <label>備註</label>
                 <div class="form-ctrl"><input type="text" id="editRecvRemark" maxlength="30" /></div>
               </div>
@@ -3161,6 +3173,7 @@
           tel: "0912-345-678",
           orderAmount: "1280",
           shipDate: "2026-08-26",
+          shipMethod: "新竹物流",
           remark: "請於白天配送",
         },
         items: [
@@ -3498,7 +3511,9 @@
         return;
       }
       document.getElementById("batchOnlineShipCount").textContent = String(nos.length);
-      document.getElementById("batchOnlineShipMethod").value = "";
+      const first = salesOrders.find((item) => item.orderNo === nos[0]);
+      const method = (first && first.recipient && first.recipient.shipMethod) || "";
+      document.getElementById("batchOnlineShipMethod").value = method;
       document.querySelectorAll('input[name="batchOnlineShipPickup"]').forEach((el) => {
         el.checked = el.value === "hsinchu";
       });
@@ -4797,6 +4812,7 @@
         tel: "",
         orderAmount: "",
         shipDate: "",
+        shipMethod: "",
         remark: "",
       };
     }
@@ -4818,6 +4834,7 @@
       document.getElementById("editRecvTel").value = rec.tel || "";
       document.getElementById("editRecvOrderAmount").value = rec.orderAmount === 0 || rec.orderAmount ? rec.orderAmount : "";
       document.getElementById("editRecvShipDate").value = toDateInput(rec.shipDate || (order && order.shipByTime)) || "";
+      document.getElementById("editRecvShipMethod").value = rec.shipMethod || "";
       document.getElementById("editRecvRemark").value = rec.remark || "";
       if (isOnlineTransferPo(order) && rec.shipDate) {
         document.getElementById("editShipByTime").value = toDateInput(rec.shipDate);
@@ -4840,6 +4857,7 @@
         tel: document.getElementById("editRecvTel").value.trim(),
         orderAmount: document.getElementById("editRecvOrderAmount").value,
         shipDate,
+        shipMethod: document.getElementById("editRecvShipMethod").value.trim(),
         remark: document.getElementById("editRecvRemark").value.trim().slice(0, 30),
       };
       if (shipDate) order.shipByTime = shipDate;
@@ -4877,6 +4895,12 @@
         alert("請輸入收件人電話");
         setPoTab("basic");
         document.getElementById("editRecvTel").focus();
+        return false;
+      }
+      if (!rec.shipMethod) {
+        alert("請選擇運送方式");
+        setPoTab("basic");
+        document.getElementById("editRecvShipMethod").focus();
         return false;
       }
       if (rec.remark && (rec.remark.length < 5 || rec.remark.length > 30)) {
@@ -7801,9 +7825,7 @@
       document.getElementById("poShipRecvTel").value = rec.tel || "";
       document.getElementById("poShipRecvAddress").value = rec.address || "";
       document.getElementById("poShipRecvRemark").value = rec.remark || "";
-      if (!document.getElementById("poShipMethod").value) {
-        document.getElementById("poShipMethod").value = "";
-      }
+      if (rec.shipMethod) document.getElementById("poShipMethod").value = rec.shipMethod;
     }
 
     function clearPoShipCreateFields() {
@@ -8136,7 +8158,7 @@
       if (!order || !canBatchOnlineShip(order)) {
         return { error: `無法建立出貨單：${order ? order.orderNo : ""}` };
       }
-      const shipMethod = String((opts && opts.shipMethod) || "").trim();
+      const shipMethod = String((opts && opts.shipMethod) || (order.recipient && order.recipient.shipMethod) || "").trim();
       const pickup = String((opts && opts.pickup) || "").trim();
       if (!shipMethod) return { error: "請選擇運送方式" };
       if (!pickup) return { error: "請選擇取貨方式" };
