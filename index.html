@@ -724,10 +724,14 @@
     .po-basic-layout {
       display: flex;
       flex-direction: column;
+      gap: 8px;
       min-width: 0;
       max-width: 100%;
     }
     #editOverseasBlock:not(.hidden) {
+      display: contents;
+    }
+    .po-online-head {
       display: contents;
     }
     .po-basic-top {
@@ -735,48 +739,82 @@
       max-width: 520px;
       min-width: 0;
     }
-    .po-buyer-recv-row {
+    .po-buyer-col {
       order: 2;
-      display: block;
       min-width: 0;
+      max-width: 520px;
     }
+    .po-recipient-panel {
+      order: 2;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .po-recipient-panel .goods-title { margin-top: 0; }
     .po-vendor-col {
       order: 3;
       min-width: 0;
       max-width: 520px;
       margin-top: 4px;
     }
-    .po-basic-layout.has-recipient .po-buyer-recv-row {
-      order: 1;
+    .po-basic-layout.has-recipient .po-online-head {
       display: grid;
       grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr);
       gap: 16px 36px;
       align-items: start;
+      order: 1;
       max-width: 1100px;
+      width: 100%;
     }
-    .po-basic-layout.has-recipient .po-basic-top {
+    .po-basic-layout.has-recipient .po-online-head .po-buyer-col {
+      order: unset;
+      max-width: none;
+    }
+    .po-basic-layout.has-recipient .po-online-head .po-basic-top {
+      order: unset;
+      max-width: none;
+    }
+    .po-basic-layout.has-recipient .po-online-head .po-buyer-col .goods-title {
+      margin-top: 0;
+    }
+    .po-basic-layout.has-recipient .po-recipient-panel {
       order: 2;
+      margin-top: 8px;
     }
     .po-basic-layout.has-recipient .po-vendor-col {
       order: 3;
       max-width: 520px;
     }
-    .po-buyer-col { min-width: 0; }
-    .po-recipient-panel {
-      border-left: 1px solid var(--border);
-      padding-left: 28px;
-      min-width: 0;
+    .recv-table-wrap {
+      overflow-x: auto;
+      max-width: 100%;
     }
-    .po-recipient-panel .goods-title { margin-top: 0; }
+    .recv-list-table {
+      min-width: 960px;
+      width: 100%;
+    }
+    .recv-list-table th,
+    .recv-list-table td {
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    .recv-list-table td.recv-col-address {
+      white-space: normal;
+      min-width: 160px;
+    }
+    .recv-list-table input,
+    .recv-list-table select,
+    .recv-list-table textarea {
+      width: 100%;
+      min-width: 72px;
+      box-sizing: border-box;
+    }
+    .recv-list-table textarea {
+      min-height: 36px;
+      resize: vertical;
+    }
     @media (max-width: 1100px) {
-      .po-basic-layout.has-recipient .po-buyer-recv-row {
+      .po-basic-layout.has-recipient .po-online-head {
         grid-template-columns: 1fr;
-      }
-      .po-recipient-panel {
-        border-left: 0;
-        border-top: 1px solid var(--border);
-        padding-left: 0;
-        padding-top: 16px;
       }
     }
     .po-tabs {
@@ -2295,6 +2333,39 @@
 
           <div class="po-pane" data-po-pane="basic">
             <div class="po-basic-layout" id="poBasicLayout">
+            <div id="editOverseasBlock" class="hidden">
+              <div class="po-online-head" id="poOnlineHead">
+              <div class="po-buyer-col">
+              <h3 class="goods-title">買方 Buyer</h3>
+              <div class="form-row">
+                <label>通路名稱</label>
+                <div class="form-ctrl">
+                  <select id="editOverseasChannelName">
+                    <option value="">請選擇</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <label>統一編號</label>
+                <div class="form-ctrl"><input type="text" id="editBuyerTaxId" data-lock="1" /></div>
+              </div>
+              <div class="form-row">
+                <label>通路負責人</label>
+                <div class="form-ctrl"><input type="text" id="editBuyerAttn" /></div>
+              </div>
+              <div class="form-row">
+                <label>通路信箱</label>
+                <div class="form-ctrl"><input type="text" id="editBuyerEmail" /></div>
+              </div>
+              <div class="form-row">
+                <label>通路電話</label>
+                <div class="form-ctrl"><input type="text" id="editBuyerTel" /></div>
+              </div>
+              <div class="form-row">
+                <label>通路地址</label>
+                <div class="form-ctrl"><textarea id="editBuyerAddress" rows="2"></textarea></div>
+              </div>
+              </div>
             <div class="po-basic-top">
             <div class="form-row">
               <label id="editPoDocNoLabel">採購單單號</label>
@@ -2360,95 +2431,27 @@
               </div>
             </div>
             </div>
-
-            <div id="editOverseasBlock" class="hidden">
-              <div class="po-buyer-recv-row" id="poBuyerRecvRow">
-              <div class="po-buyer-col">
-              <h3 class="goods-title">買方 Buyer</h3>
-              <div class="form-row">
-                <label>通路名稱</label>
-                <div class="form-ctrl">
-                  <select id="editOverseasChannelName">
-                    <option value="">請選擇</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <label>統一編號</label>
-                <div class="form-ctrl"><input type="text" id="editBuyerTaxId" data-lock="1" /></div>
-              </div>
-              <div class="form-row">
-                <label>通路負責人</label>
-                <div class="form-ctrl"><input type="text" id="editBuyerAttn" /></div>
-              </div>
-              <div class="form-row">
-                <label>通路信箱</label>
-                <div class="form-ctrl"><input type="text" id="editBuyerEmail" /></div>
-              </div>
-              <div class="form-row">
-                <label>通路電話</label>
-                <div class="form-ctrl"><input type="text" id="editBuyerTel" /></div>
-              </div>
-              <div class="form-row">
-                <label>通路地址</label>
-                <div class="form-ctrl"><textarea id="editBuyerAddress" rows="2"></textarea></div>
-              </div>
               </div>
             <aside class="po-recipient-panel hidden" id="editRecipientPanel">
               <h3 class="goods-title">收件人</h3>
-              <div class="form-row">
-                <label class="required">通路平台</label>
-                <div class="form-ctrl">
-                  <select id="editRecvPlatform">
-                    <option value="">請選擇</option>
-                    <option>B2B-PChome</option>
-                    <option>B2B-博客來</option>
-                    <option>B2B-Yahoo</option>
-                    <option>B2B-MOMO</option>
-                    <option>B2C-PChome</option>
-                    <option>B2C-康是美</option>
-                    <option>B2C-誠品</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <label class="required">收件人姓名</label>
-                <div class="form-ctrl"><input type="text" id="editRecvName" maxlength="50" /></div>
-              </div>
-              <div class="form-row">
-                <label class="required">郵遞區號</label>
-                <div class="form-ctrl"><input type="text" id="editRecvZip" maxlength="3" placeholder="三碼數字" inputmode="numeric" /></div>
-              </div>
-              <div class="form-row">
-                <label class="required">地址</label>
-                <div class="form-ctrl"><textarea id="editRecvAddress" rows="2"></textarea></div>
-              </div>
-              <div class="form-row">
-                <label class="required">電話</label>
-                <div class="form-ctrl"><input type="text" id="editRecvTel" maxlength="30" /></div>
-              </div>
-              <div class="form-row">
-                <label>訂單總金額</label>
-                <div class="form-ctrl"><input type="number" id="editRecvOrderAmount" min="0" step="0.01" /></div>
-              </div>
-              <div class="form-row">
-                <label class="required">運送方式</label>
-                <div class="form-ctrl">
-                  <select id="editRecvShipMethod">
-                    <option value="">請選擇</option>
-                    <option>新竹物流</option>
-                    <option>黑猫</option>
-                    <option>全盛貨運(邱哥)</option>
-                    <option>宅配通</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <label>備註</label>
-                <div class="form-ctrl"><input type="text" id="editRecvRemark" maxlength="30" /></div>
+              <div class="table-wrap recv-table-wrap">
+                <table class="ship-items-table recv-list-table">
+                  <thead>
+                    <tr>
+                      <th>通路平台</th>
+                      <th>收件人姓名</th>
+                      <th>郵遞區號</th>
+                      <th>地址</th>
+                      <th>電話</th>
+                      <th>訂單總金額</th>
+                      <th>運送方式</th>
+                      <th>備註</th>
+                    </tr>
+                  </thead>
+                  <tbody id="editRecvBody"></tbody>
+                </table>
               </div>
             </aside>
-              </div>
               <div class="po-vendor-col">
               <h3 class="goods-title">賣方 Vendor</h3>
               <div class="form-row">
@@ -4804,6 +4807,30 @@
       };
     }
 
+    const RECV_PLATFORM_OPTS = [
+      "B2B-PChome", "B2B-博客來", "B2B-Yahoo", "B2B-MOMO",
+      "B2C-PChome", "B2C-康是美", "B2C-誠品",
+    ];
+    const RECV_SHIP_OPTS = ["新竹物流", "黑猫", "全盛貨運(邱哥)", "宅配通"];
+
+    function recipientListOf(order) {
+      if (!order) return [emptyRecipient()];
+      if (Array.isArray(order.recipients) && order.recipients.length) {
+        return order.recipients.map((r) => ({ ...emptyRecipient(), ...r }));
+      }
+      if (order.recipient) return [{ ...emptyRecipient(), ...order.recipient }];
+      return [emptyRecipient()];
+    }
+
+    function recvSelectHtml(options, value, field) {
+      const opts = ['<option value="">請選擇</option>']
+        .concat(options.map((opt) => {
+          const sel = opt === value ? " selected" : "";
+          return `<option value="${escapeHtml(opt)}"${sel}>${escapeHtml(opt)}</option>`;
+        }));
+      return `<select data-recv="${field}">${opts.join("")}</select>`;
+    }
+
     function syncRecipientPanel(order) {
       const show = isOnlineTransferPo(order);
       const layout = document.getElementById("poBasicLayout");
@@ -4813,81 +4840,114 @@
     }
 
     function fillRecipientForm(order) {
-      const rec = (order && order.recipient) || emptyRecipient();
-      document.getElementById("editRecvPlatform").value = rec.platform || "";
-      document.getElementById("editRecvName").value = rec.name || "";
-      document.getElementById("editRecvZip").value = rec.zip || "";
-      document.getElementById("editRecvAddress").value = rec.address || "";
-      document.getElementById("editRecvTel").value = rec.tel || "";
-      document.getElementById("editRecvOrderAmount").value = rec.orderAmount === 0 || rec.orderAmount ? rec.orderAmount : "";
-      document.getElementById("editRecvShipMethod").value = rec.shipMethod || "";
-      document.getElementById("editRecvRemark").value = rec.remark || "";
+      const body = document.getElementById("editRecvBody");
+      if (!body) return;
+      const list = isOnlineTransferPo(order) ? recipientListOf(order) : [];
+      body.innerHTML = list.map((rec) => `
+        <tr>
+          <td>${recvSelectHtml(RECV_PLATFORM_OPTS, rec.platform || "", "platform")}</td>
+          <td><input type="text" data-recv="name" maxlength="50" value="${escapeHtml(rec.name || "")}" /></td>
+          <td><input type="text" data-recv="zip" maxlength="3" inputmode="numeric" placeholder="三碼" value="${escapeHtml(rec.zip || "")}" /></td>
+          <td class="recv-col-address"><textarea data-recv="address" rows="1">${escapeHtml(rec.address || "")}</textarea></td>
+          <td><input type="text" data-recv="tel" maxlength="30" value="${escapeHtml(rec.tel || "")}" /></td>
+          <td><input type="number" data-recv="orderAmount" min="0" step="0.01" value="${rec.orderAmount === 0 || rec.orderAmount ? escapeHtml(String(rec.orderAmount)) : ""}" /></td>
+          <td>${recvSelectHtml(RECV_SHIP_OPTS, rec.shipMethod || "", "shipMethod")}</td>
+          <td><input type="text" data-recv="remark" maxlength="30" value="${escapeHtml(rec.remark || "")}" /></td>
+        </tr>
+      `).join("");
       syncRecipientPanel(order);
+    }
+
+    function readRecipientRowsFromDom() {
+      const body = document.getElementById("editRecvBody");
+      if (!body) return [];
+      return Array.from(body.querySelectorAll("tr")).map((tr) => {
+        const get = (field) => {
+          const el = tr.querySelector(`[data-recv="${field}"]`);
+          return el ? String(el.value || "").trim() : "";
+        };
+        return {
+          platform: get("platform"),
+          name: get("name"),
+          zip: get("zip"),
+          address: get("address"),
+          tel: get("tel"),
+          orderAmount: get("orderAmount"),
+          shipMethod: get("shipMethod"),
+          remark: get("remark").slice(0, 30),
+        };
+      });
     }
 
     function applyRecipientForm(order) {
       if (!order) return;
       if (!isOnlineTransferPo(order)) {
         delete order.recipient;
+        delete order.recipients;
         return;
       }
-      order.recipient = {
-        platform: document.getElementById("editRecvPlatform").value.trim(),
-        name: document.getElementById("editRecvName").value.trim(),
-        zip: document.getElementById("editRecvZip").value.trim(),
-        address: document.getElementById("editRecvAddress").value.trim(),
-        tel: document.getElementById("editRecvTel").value.trim(),
-        orderAmount: document.getElementById("editRecvOrderAmount").value,
-        shipMethod: document.getElementById("editRecvShipMethod").value.trim(),
-        remark: document.getElementById("editRecvRemark").value.trim().slice(0, 30),
-      };
+      const list = readRecipientRowsFromDom();
+      order.recipients = list;
+      order.recipient = list[0] ? { ...list[0] } : emptyRecipient();
+    }
+
+    function focusRecvField(rowIdx, field) {
+      setPoTab("basic");
+      const body = document.getElementById("editRecvBody");
+      const tr = body && body.querySelectorAll("tr")[rowIdx];
+      const el = tr && tr.querySelector(`[data-recv="${field}"]`);
+      if (el) el.focus();
     }
 
     function validateRecipientRequired(order) {
       if (!isOnlineTransferPo(order)) return true;
       applyRecipientForm(order);
-      const rec = order.recipient || emptyRecipient();
-      if (!rec.platform) {
-        alert("請選擇通路平台");
+      const list = order.recipients && order.recipients.length
+        ? order.recipients
+        : [order.recipient || emptyRecipient()];
+      if (!list.length) {
+        alert("請至少填寫一筆收件人");
         setPoTab("basic");
-        document.getElementById("editRecvPlatform").focus();
         return false;
       }
-      if (!rec.name) {
-        alert("請輸入收件人姓名");
-        setPoTab("basic");
-        document.getElementById("editRecvName").focus();
-        return false;
-      }
-      if (!/^\d{3}$/.test(rec.zip)) {
-        alert("郵遞區號請輸入三碼數字");
-        setPoTab("basic");
-        document.getElementById("editRecvZip").focus();
-        return false;
-      }
-      if (!rec.address) {
-        alert("請輸入收件人地址");
-        setPoTab("basic");
-        document.getElementById("editRecvAddress").focus();
-        return false;
-      }
-      if (!rec.tel) {
-        alert("請輸入收件人電話");
-        setPoTab("basic");
-        document.getElementById("editRecvTel").focus();
-        return false;
-      }
-      if (!rec.shipMethod) {
-        alert("請選擇運送方式");
-        setPoTab("basic");
-        document.getElementById("editRecvShipMethod").focus();
-        return false;
-      }
-      if (rec.remark && (rec.remark.length < 5 || rec.remark.length > 30)) {
-        alert("備註最少 5 字、最多 30 字");
-        setPoTab("basic");
-        document.getElementById("editRecvRemark").focus();
-        return false;
+      for (let i = 0; i < list.length; i++) {
+        const rec = list[i];
+        const prefix = list.length > 1 ? `收件人第 ${i + 1} 列：` : "";
+        if (!rec.platform) {
+          alert(prefix + "請選擇通路平台");
+          focusRecvField(i, "platform");
+          return false;
+        }
+        if (!rec.name) {
+          alert(prefix + "請輸入收件人姓名");
+          focusRecvField(i, "name");
+          return false;
+        }
+        if (!/^\d{3}$/.test(rec.zip)) {
+          alert(prefix + "郵遞區號請輸入三碼數字");
+          focusRecvField(i, "zip");
+          return false;
+        }
+        if (!rec.address) {
+          alert(prefix + "請輸入收件人地址");
+          focusRecvField(i, "address");
+          return false;
+        }
+        if (!rec.tel) {
+          alert(prefix + "請輸入收件人電話");
+          focusRecvField(i, "tel");
+          return false;
+        }
+        if (!rec.shipMethod) {
+          alert(prefix + "請選擇運送方式");
+          focusRecvField(i, "shipMethod");
+          return false;
+        }
+        if (rec.remark && (rec.remark.length < 5 || rec.remark.length > 30)) {
+          alert(prefix + "備註最少 5 字、最多 30 字");
+          focusRecvField(i, "remark");
+          return false;
+        }
       }
       return true;
     }
