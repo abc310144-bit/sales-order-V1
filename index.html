@@ -1591,6 +1591,7 @@
     #page-ship-create:not(.is-online) .online-ship-only { display: none !important; }
     #page-ship-create.is-online .po-ship-acc.online-ship-only { display: block; }
     #page-ship-create.is-online .form-row.online-ship-only { display: grid; }
+    #page-ship-create.is-online .online-ship-hide { display: none !important; }
     #page-ship-create.is-online .online-ship-only input[readonly],
     #page-ship-create.is-online .online-ship-only textarea[readonly] {
       background: #f5f5f5;
@@ -1954,7 +1955,7 @@
                   設定
                 </button>
                 <div class="po-ship-acc-body">
-                  <div class="form-row">
+                  <div class="form-row online-ship-hide">
                     <label>貿易條件</label>
                     <div class="form-ctrl">
                       <select id="poShipIncoterm">
@@ -1976,7 +1977,7 @@
                     <label>預計到貨日期</label>
                     <div class="form-ctrl"><input type="date" id="poShipArriveDate" /></div>
                   </div>
-                  <div class="form-row">
+                  <div class="form-row online-ship-hide">
                     <label>預計到貨時間</label>
                     <div class="form-ctrl time-24">
                       <select id="poShipArriveHour" aria-label="預計到貨時"></select>
@@ -1989,7 +1990,7 @@
                     <label>預計出貨日</label>
                     <div class="form-ctrl"><input type="date" id="poShipOutDate" /></div>
                   </div>
-                  <div class="form-row">
+                  <div class="form-row online-ship-hide">
                     <label class="required">通路進貨倉點</label>
                     <div class="form-ctrl wide-ctrl">
                       <select id="poShipInWarehouse">
@@ -2095,7 +2096,7 @@
                   </div>
                 </div>
               </div>
-              <div class="po-ship-acc" data-acc="fees">
+              <div class="po-ship-acc online-ship-hide" data-acc="fees">
                 <button type="button" class="po-ship-acc-head">
                   <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
                   費用填寫
@@ -2754,17 +2755,6 @@
               <option>全盛貨運(邱哥)</option>
               <option>宅配通</option>
             </select>
-          </div>
-        </div>
-        <div class="form-row">
-          <label class="required">取貨方式</label>
-          <div class="form-ctrl">
-            <div class="radio-group">
-              <label class="radio-line"><input type="radio" name="batchOnlineShipPickup" value="self" /> 訂單自取</label>
-              <label class="radio-line"><input type="radio" name="batchOnlineShipPickup" value="charter" /> 訂單非自取 (專車)</label>
-              <label class="radio-line"><input type="radio" name="batchOnlineShipPickup" value="hsinchu" checked /> 訂單非自取 (新竹)</label>
-              <label class="radio-line"><input type="radio" name="batchOnlineShipPickup" value="blackcat" /> 訂單非自取 (黑貓)</label>
-            </div>
           </div>
         </div>
       </div>
@@ -3514,9 +3504,6 @@
       const first = salesOrders.find((item) => item.orderNo === nos[0]);
       const method = (first && first.recipient && first.recipient.shipMethod) || "";
       document.getElementById("batchOnlineShipMethod").value = method;
-      document.querySelectorAll('input[name="batchOnlineShipPickup"]').forEach((el) => {
-        el.checked = el.value === "hsinchu";
-      });
       document.getElementById("batchOnlineShipModal").classList.remove("hidden");
     }
 
@@ -3536,16 +3523,11 @@
         document.getElementById("batchOnlineShipMethod").focus();
         return;
       }
-      const pickupEl = document.querySelector('input[name="batchOnlineShipPickup"]:checked');
-      if (!pickupEl) {
-        alert("請選擇取貨方式");
-        return;
-      }
       const created = [];
       const errors = [];
       nos.forEach((no) => {
         const order = salesOrders.find((item) => item.orderNo === no);
-        const result = buildOnlineShipFromPo(order, { shipMethod, pickup: pickupEl.value });
+        const result = buildOnlineShipFromPo(order, { shipMethod });
         if (result.error) {
           errors.push(result.error);
           return;
@@ -8159,17 +8141,10 @@
         return { error: `無法建立出貨單：${order ? order.orderNo : ""}` };
       }
       const shipMethod = String((opts && opts.shipMethod) || (order.recipient && order.recipient.shipMethod) || "").trim();
-      const pickup = String((opts && opts.pickup) || "").trim();
       if (!shipMethod) return { error: "請選擇運送方式" };
-      if (!pickup) return { error: "請選擇取貨方式" };
-      const party = partyRecord(order) || {};
-      let incoterm = party.termsOfDelivery || "";
-      if (!incoterm) incoterm = "FOB";
       const plan = poShipFillPlan(order, order.items);
       if (!plan.goods.length) return { error: `無可出貨商品：${order.orderNo}` };
       const rec = order.recipient || emptyRecipient();
-      const profile = channelProfiles[order.channelName] || {};
-      const inWarehouse = order.inWarehouse || profile.inWarehouse || "藍田倉";
       const expectDate = toDateInput((opts && opts.expectDate) || nowStamp());
       const shipOutDate = toDateInput(rec.shipDate || order.shipByTime) || expectDate;
       const arriveDate = toDateInput(order.arriveDate) || "";
@@ -8184,16 +8159,16 @@
           status: "待拋單",
           applicant: "demo.user",
           created: nowStamp(),
-          warehouse: inWarehouse,
+          warehouse: "",
           shipped: "",
-          incoterm,
+          incoterm: "",
           expectDate,
           arriveDate,
-          arriveTime: order.arriveTime || "",
+          arriveTime: "",
           shipOutDate,
-          inWarehouse,
-          pickup,
-          rebatePercent: channelRebatePercent(order.channelName),
+          inWarehouse: "",
+          pickup: "",
+          rebatePercent: 0,
           fees: [],
           items: plan.goods.map((item) => poItemToShipLine(item)),
           online: true,
@@ -8220,6 +8195,7 @@
         document.getElementById("shipPoNo").focus();
         return;
       }
+      const isOnline = shipCreateKind === "online";
       const expectDate = document.getElementById("poShipExpectDate").value;
       if (!expectDate) {
         alert("請選擇預計拋單日");
@@ -8232,24 +8208,30 @@
         document.getElementById("poShipOutDate").focus();
         return;
       }
-      const inWarehouse = document.getElementById("poShipInWarehouse").value;
-      if (!inWarehouse) {
-        alert("請選擇通路進貨倉點");
-        document.getElementById("poShipInWarehouse").focus();
-        return;
-      }
-      const pickupEl = document.querySelector('input[name="poShipPickup"]:checked');
-      if (!pickupEl) {
-        alert("請選擇通路進貨倉點的取貨方式");
-        return;
-      }
-      const incoterm = document.getElementById("poShipIncoterm").value;
-      if (!incoterm) {
-        alert("請先在客戶訂單基本資料選擇貿易條件");
-        return;
+      let inWarehouse = "";
+      let pickup = "";
+      let incoterm = "";
+      if (!isOnline) {
+        inWarehouse = document.getElementById("poShipInWarehouse").value;
+        if (!inWarehouse) {
+          alert("請選擇通路進貨倉點");
+          document.getElementById("poShipInWarehouse").focus();
+          return;
+        }
+        const pickupEl = document.querySelector('input[name="poShipPickup"]:checked');
+        if (!pickupEl) {
+          alert("請選擇通路進貨倉點的取貨方式");
+          return;
+        }
+        pickup = pickupEl.value;
+        incoterm = document.getElementById("poShipIncoterm").value;
+        if (!incoterm) {
+          alert("請先在客戶訂單基本資料選擇貿易條件");
+          return;
+        }
       }
       const shipMethod = document.getElementById("poShipMethod").value;
-      if (shipCreateKind === "online" && !shipMethod) {
+      if (isOnline && !shipMethod) {
         alert("請選擇運送方式");
         document.getElementById("poShipMethod").focus();
         return;
@@ -8258,7 +8240,7 @@
         alert("請至少保留一項出貨商品");
         return;
       }
-      const ids = nextShippingIds(shipCreateKind === "online");
+      const ids = nextShippingIds(isOnline);
       const rec = order.recipient || {};
       rows.unshift({
         id: ids.id,
@@ -8274,17 +8256,17 @@
         incoterm,
         expectDate,
         arriveDate: document.getElementById("poShipArriveDate").value,
-        arriveTime: readHourMinute("poShipArriveHour", "poShipArriveMinute"),
+        arriveTime: isOnline ? "" : readHourMinute("poShipArriveHour", "poShipArriveMinute"),
         shipOutDate,
         inWarehouse,
-        pickup: pickupEl.value,
-        rebatePercent: channelRebatePercent(order.channelName),
-        fees: poShipFees.map((fee) => ({ ...fee })),
+        pickup,
+        rebatePercent: isOnline ? 0 : channelRebatePercent(order.channelName),
+        fees: isOnline ? [] : poShipFees.map((fee) => ({ ...fee })),
         items: poShipGoods.map((item) => poItemToShipLine(item)),
-        online: shipCreateKind === "online",
+        online: isOnline,
         platform: rec.platform || "",
-        platformOrderNo: document.getElementById("poShipPlatformOrderNo").value.trim(),
-        shipMethod: shipCreateKind === "online" ? shipMethod : "",
+        platformOrderNo: isOnline ? document.getElementById("poShipPlatformOrderNo").value.trim() : "",
+        shipMethod: isOnline ? shipMethod : "",
         recvName: document.getElementById("poShipRecvName").value.trim(),
         recvTel: document.getElementById("poShipRecvTel").value.trim(),
         recvAddress: document.getElementById("poShipRecvAddress").value.trim(),
