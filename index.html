@@ -808,6 +808,11 @@
       min-width: 72px;
       box-sizing: border-box;
     }
+    .recv-list-table input[readonly] {
+      background: #f5f5f5;
+      color: var(--text-2);
+      cursor: default;
+    }
     .recv-list-table textarea {
       min-height: 36px;
       resize: vertical;
@@ -3167,7 +3172,7 @@
         address: "新北市五股區成泰路一段100號 藍田倉",
         arriveDate: "2026-08-27", shipByTime: "2026-08-26 09:00",
         recipient: {
-          platform: "B2C-PChome",
+          platform: "線上-轉單",
           name: "王小明",
           zip: "248",
           address: "新北市五股區成泰路一段88號",
@@ -3873,7 +3878,6 @@
       }
       const first = rows[0];
       const required = [
-        ["platform", "通路平台"],
         ["name", "收件人姓名"],
         ["zip", "郵遞區號"],
         ["address", "地址"],
@@ -3925,7 +3929,7 @@
       const arriveDate = excelDateToInput(first.arriveDate);
       return {
         recipient: {
-          platform: first.platform,
+          platform: "線上-轉單",
           name: first.name,
           zip: first.zip,
           address: first.address,
@@ -3997,6 +4001,10 @@
         general: !isOverseas && !isDealer ? party : null,
         recipient: isTransfer && payload ? payload.recipient : (isTransfer ? emptyRecipient() : null),
       };
+      if (isTransfer && order.recipient) {
+        order.recipient.platform = channelName || "線上-轉單";
+        order.recipients = [{ ...order.recipient }];
+      }
       salesOrders.unshift(order);
       renderSalesTable(getSalesFiltered());
       return order;
@@ -4807,11 +4815,21 @@
       };
     }
 
-    const RECV_PLATFORM_OPTS = [
-      "B2B-PChome", "B2B-博客來", "B2B-Yahoo", "B2B-MOMO",
-      "B2C-PChome", "B2C-康是美", "B2C-誠品",
-    ];
     const RECV_SHIP_OPTS = ["新竹物流", "黑猫", "全盛貨運(邱哥)", "宅配通"];
+
+    function buyerChannelNameOf(order) {
+      const sel = document.getElementById("editOverseasChannelName");
+      const fromSel = sel && sel.value ? sel.value.trim() : "";
+      return fromSel || (order && order.channelName) || "";
+    }
+
+    function syncRecipientPlatformFromBuyer(order) {
+      if (!order || !isOnlineTransferPo(order)) return;
+      const platform = buyerChannelNameOf(order) || "線上-轉單";
+      const list = recipientListOf(order).map((r) => ({ ...r, platform }));
+      order.recipients = list;
+      order.recipient = { ...list[0] };
+    }
 
     function recipientListOf(order) {
       if (!order) return [emptyRecipient()];
@@ -4842,10 +4860,12 @@
     function fillRecipientForm(order) {
       const body = document.getElementById("editRecvBody");
       if (!body) return;
+      if (isOnlineTransferPo(order)) syncRecipientPlatformFromBuyer(order);
+      const platform = buyerChannelNameOf(order) || (order && order.channelName) || "";
       const list = isOnlineTransferPo(order) ? recipientListOf(order) : [];
       body.innerHTML = list.map((rec) => `
         <tr>
-          <td>${recvSelectHtml(RECV_PLATFORM_OPTS, rec.platform || "", "platform")}</td>
+          <td><input type="text" data-recv="platform" readonly value="${escapeHtml(platform || rec.platform || "")}" /></td>
           <td><input type="text" data-recv="name" maxlength="50" value="${escapeHtml(rec.name || "")}" /></td>
           <td><input type="text" data-recv="zip" maxlength="3" inputmode="numeric" placeholder="三碼" value="${escapeHtml(rec.zip || "")}" /></td>
           <td class="recv-col-address"><textarea data-recv="address" rows="1">${escapeHtml(rec.address || "")}</textarea></td>
@@ -4886,9 +4906,11 @@
         delete order.recipients;
         return;
       }
-      const list = readRecipientRowsFromDom();
+      const platform = buyerChannelNameOf(order) || order.channelName || "線上-轉單";
+      const list = readRecipientRowsFromDom().map((r) => ({ ...r, platform }));
       order.recipients = list;
       order.recipient = list[0] ? { ...list[0] } : emptyRecipient();
+      order.recipient.platform = platform;
     }
 
     function focusRecvField(rowIdx, field) {
@@ -4914,8 +4936,9 @@
         const rec = list[i];
         const prefix = list.length > 1 ? `收件人第 ${i + 1} 列：` : "";
         if (!rec.platform) {
-          alert(prefix + "請選擇通路平台");
-          focusRecvField(i, "platform");
+          alert(prefix + "請先選擇買方通路名稱（將同步至通路平台）");
+          setPoTab("basic");
+          document.getElementById("editOverseasChannelName").focus();
           return false;
         }
         if (!rec.name) {
@@ -7636,8 +7659,10 @@
         }
         if (name === "線上-轉單") {
           if (!order.recipient) order.recipient = emptyRecipient();
+          syncRecipientPlatformFromBuyer(order);
         } else {
           delete order.recipient;
+          delete order.recipients;
         }
         fillRecipientForm(order);
         order.items = [];
