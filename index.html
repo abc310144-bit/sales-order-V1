@@ -728,15 +728,17 @@
     }
     .po-basic-layout.has-recipient {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
-      gap: 20px 28px;
+      grid-template-columns: minmax(300px, 520px) minmax(300px, 380px);
+      gap: 16px 36px;
+      justify-content: start;
       align-items: start;
     }
-    .po-basic-main { min-width: 0; }
+    .po-basic-main { min-width: 0; max-width: 520px; }
     .po-recipient-panel {
       border-left: 1px solid var(--border);
-      padding-left: 24px;
+      padding-left: 28px;
       min-width: 0;
+      max-width: 380px;
     }
     .po-recipient-panel .goods-title { margin-top: 0; }
     @media (max-width: 1100px) {
@@ -1469,6 +1471,27 @@
       font-size: 14px;
       margin-bottom: 8px;
     }
+    .table-meta.sales-table-meta {
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .sales-batch-actions { min-height: 32px; }
+    .sales-table-meta-right {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+    }
+    th.col-check, td.col-check {
+      width: 40px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    td.col-check input:disabled {
+      cursor: not-allowed;
+      opacity: 0.35;
+    }
     .table-meta select {
       height: 24px;
       margin: 0 4px;
@@ -2182,19 +2205,25 @@
             </div>
           </section>
 
-          <div class="table-meta">
-            總共 <span id="salesTotal">0</span> 筆，每頁顯示
-            <select id="salesPageSize">
-              <option>20</option>
-              <option>50</option>
-              <option>100</option>
-            </select>
-            筆
+          <div class="table-meta sales-table-meta">
+            <div class="sales-batch-actions">
+              <button type="button" class="btn btn-primary hidden" id="salesBatchShipBtn">批次建立出貨單</button>
+            </div>
+            <div class="sales-table-meta-right">
+              總共 <span id="salesTotal">0</span> 筆，每頁顯示
+              <select id="salesPageSize">
+                <option>20</option>
+                <option>50</option>
+                <option>100</option>
+              </select>
+              筆
+            </div>
           </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
+                  <th class="col-check"><input type="checkbox" id="salesBatchCheckAll" aria-label="全選可出貨轉單" /></th>
                   <th>採購單編號</th>
                   <th>採購單單號</th>
                   <th>合作通路類型</th>
@@ -2678,6 +2707,45 @@
       <div class="modal-foot">
         <button type="button" class="btn" id="copyPoCancel">取消</button>
         <button type="button" class="btn btn-primary" id="copyPoConfirm">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask hidden" id="batchOnlineShipModal">
+    <div class="modal-card void-card" role="dialog" aria-labelledby="batchOnlineShipTitle">
+      <div class="modal-head">
+        <h2 id="batchOnlineShipTitle">批次建立出貨單</h2>
+        <button type="button" class="modal-close" id="batchOnlineShipClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="void-msg">將為勾選的 <span id="batchOnlineShipCount">0</span> 張線上-轉單客戶訂單，各建立一張線上出貨單。</p>
+        <div class="form-row">
+          <label class="required">運送方式</label>
+          <div class="form-ctrl">
+            <select id="batchOnlineShipMethod">
+              <option value="">請選擇</option>
+              <option>新竹物流</option>
+              <option>黑猫</option>
+              <option>全盛貨運(邱哥)</option>
+              <option>宅配通</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="required">取貨方式</label>
+          <div class="form-ctrl">
+            <div class="radio-group">
+              <label class="radio-line"><input type="radio" name="batchOnlineShipPickup" value="self" /> 訂單自取</label>
+              <label class="radio-line"><input type="radio" name="batchOnlineShipPickup" value="charter" /> 訂單非自取 (專車)</label>
+              <label class="radio-line"><input type="radio" name="batchOnlineShipPickup" value="hsinchu" checked /> 訂單非自取 (新竹)</label>
+              <label class="radio-line"><input type="radio" name="batchOnlineShipPickup" value="blackcat" /> 訂單非自取 (黑貓)</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="batchOnlineShipCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="batchOnlineShipConfirm">確定建立</button>
       </div>
     </div>
   </div>
@@ -3326,15 +3394,29 @@
       });
     }
 
+    function canBatchOnlineShip(order) {
+      return isOnlineTransferPo(order) && canCreateShipFromPo(order);
+    }
+
     function renderSalesTable(list) {
       const body = document.getElementById("salesTableBody");
       document.getElementById("salesTotal").textContent = String(list.length);
+      const prevChecked = new Set(
+        [...document.querySelectorAll("#salesTableBody input[data-batch-po]:checked")].map((el) => el.dataset.batchPo)
+      );
       if (!list.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="10">查無資料</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="11">查無資料</td></tr>`;
+        syncSalesBatchUi([]);
         return;
       }
-      body.innerHTML = list.map((item) => `
+      body.innerHTML = list.map((item) => {
+        const batchable = canBatchOnlineShip(item);
+        const checked = batchable && prevChecked.has(item.orderNo) ? " checked" : "";
+        return `
         <tr>
+          <td class="col-check">
+            <input type="checkbox" data-batch-po="${escapeHtml(item.orderNo)}"${batchable ? checked : " disabled"} aria-label="勾選 ${escapeHtml(item.orderNo)}" />
+          </td>
           <td>${escapeHtml(item.orderNo)}</td>
           <td>${escapeHtml(item.poDocNo || "—")}</td>
           <td>${escapeHtml(item.channelType)}</td>
@@ -3347,8 +3429,28 @@
           <td class="ops">
               ${salesRowActions(item)}
           </td>
-        </tr>
-      `).join("");
+        </tr>`;
+      }).join("");
+      syncSalesBatchUi(list);
+    }
+
+    function getSelectedBatchPoNos() {
+      return [...document.querySelectorAll("#salesTableBody input[data-batch-po]:checked")]
+        .map((el) => el.dataset.batchPo)
+        .filter(Boolean);
+    }
+
+    function syncSalesBatchUi(list) {
+      const selected = getSelectedBatchPoNos();
+      const btn = document.getElementById("salesBatchShipBtn");
+      if (btn) btn.classList.toggle("hidden", selected.length === 0);
+      const all = document.getElementById("salesBatchCheckAll");
+      if (!all) return;
+      const eligible = (list || getSalesFiltered()).filter(canBatchOnlineShip);
+      const checkedCount = eligible.filter((o) => selected.includes(o.orderNo)).length;
+      all.disabled = eligible.length === 0;
+      all.checked = eligible.length > 0 && checkedCount === eligible.length;
+      all.indeterminate = checkedCount > 0 && checkedCount < eligible.length;
     }
 
     refreshAllPoStatusesFromShips();
@@ -3364,6 +3466,86 @@
 
     document.getElementById("salesApply").addEventListener("click", () => {
       renderSalesTable(getSalesFiltered());
+    });
+    document.getElementById("salesTableBody").addEventListener("change", (e) => {
+      if (!e.target.matches("input[data-batch-po]")) return;
+      syncSalesBatchUi(getSalesFiltered());
+    });
+    document.getElementById("salesBatchCheckAll").addEventListener("change", () => {
+      const on = document.getElementById("salesBatchCheckAll").checked;
+      document.querySelectorAll("#salesTableBody input[data-batch-po]:not(:disabled)").forEach((el) => {
+        el.checked = on;
+      });
+      syncSalesBatchUi(getSalesFiltered());
+    });
+    document.getElementById("salesBatchShipBtn").addEventListener("click", openBatchOnlineShipModal);
+
+    function openBatchOnlineShipModal() {
+      const nos = getSelectedBatchPoNos();
+      if (!nos.length) {
+        alert("請先勾選可出貨的線上-轉單");
+        return;
+      }
+      document.getElementById("batchOnlineShipCount").textContent = String(nos.length);
+      document.getElementById("batchOnlineShipMethod").value = "";
+      document.querySelectorAll('input[name="batchOnlineShipPickup"]').forEach((el) => {
+        el.checked = el.value === "hsinchu";
+      });
+      document.getElementById("batchOnlineShipModal").classList.remove("hidden");
+    }
+
+    function closeBatchOnlineShipModal() {
+      document.getElementById("batchOnlineShipModal").classList.add("hidden");
+    }
+
+    function confirmBatchOnlineShip() {
+      const nos = getSelectedBatchPoNos();
+      if (!nos.length) {
+        closeBatchOnlineShipModal();
+        return;
+      }
+      const shipMethod = document.getElementById("batchOnlineShipMethod").value;
+      if (!shipMethod) {
+        alert("請選擇運送方式");
+        document.getElementById("batchOnlineShipMethod").focus();
+        return;
+      }
+      const pickupEl = document.querySelector('input[name="batchOnlineShipPickup"]:checked');
+      if (!pickupEl) {
+        alert("請選擇取貨方式");
+        return;
+      }
+      const created = [];
+      const errors = [];
+      nos.forEach((no) => {
+        const order = salesOrders.find((item) => item.orderNo === no);
+        const result = buildOnlineShipFromPo(order, { shipMethod, pickup: pickupEl.value });
+        if (result.error) {
+          errors.push(result.error);
+          return;
+        }
+        rows.unshift(result.ship);
+        syncPoStatusFromShips(order);
+        created.push(result.ship.orderId);
+      });
+      closeBatchOnlineShipModal();
+      persistDemoData();
+      renderShippingTable();
+      renderOnlineShippingTable();
+      renderSalesTable(getSalesFiltered());
+      if (created.length) {
+        showPage("online-shipping");
+        alert(`已建立 ${created.length} 張線上出貨單` + (errors.length ? `\n部分失敗：\n${errors.join("\n")}` : ""));
+      } else {
+        alert(errors.length ? errors.join("\n") : "沒有建立任何出貨單");
+      }
+    }
+
+    document.getElementById("batchOnlineShipClose").addEventListener("click", closeBatchOnlineShipModal);
+    document.getElementById("batchOnlineShipCancel").addEventListener("click", closeBatchOnlineShipModal);
+    document.getElementById("batchOnlineShipConfirm").addEventListener("click", confirmBatchOnlineShip);
+    document.getElementById("batchOnlineShipModal").addEventListener("click", (e) => {
+      if (e.target.id === "batchOnlineShipModal") closeBatchOnlineShipModal();
     });
 
     function syncSalesChannelFilters() {
@@ -7953,6 +8135,61 @@
       });
       renderPoShipFees();
       closePoShipFeeModal();
+    }
+
+    function buildOnlineShipFromPo(order, opts) {
+      if (!order || !canBatchOnlineShip(order)) {
+        return { error: `無法建立出貨單：${order ? order.orderNo : ""}` };
+      }
+      const shipMethod = String((opts && opts.shipMethod) || "").trim();
+      const pickup = String((opts && opts.pickup) || "").trim();
+      if (!shipMethod) return { error: "請選擇運送方式" };
+      if (!pickup) return { error: "請選擇取貨方式" };
+      const party = partyRecord(order) || {};
+      let incoterm = party.termsOfDelivery || "";
+      if (!incoterm) incoterm = "FOB";
+      const plan = poShipFillPlan(order, order.items);
+      if (!plan.goods.length) return { error: `無可出貨商品：${order.orderNo}` };
+      const rec = order.recipient || emptyRecipient();
+      const profile = channelProfiles[order.channelName] || {};
+      const inWarehouse = order.inWarehouse || profile.inWarehouse || "藍田倉";
+      const expectDate = toDateInput((opts && opts.expectDate) || nowStamp());
+      const shipOutDate = toDateInput(rec.shipDate || order.shipByTime) || expectDate;
+      const arriveDate = toDateInput(rec.arriveDate || order.arriveDate) || "";
+      const ids = nextShippingIds(true);
+      return {
+        ship: {
+          id: ids.id,
+          orderId: ids.orderId,
+          salesOrderNo: order.orderNo,
+          audit: "待審核",
+          channel: order.channelName || order.channelType || "—",
+          status: "待拋單",
+          applicant: "demo.user",
+          created: nowStamp(),
+          warehouse: inWarehouse,
+          shipped: "",
+          incoterm,
+          expectDate,
+          arriveDate,
+          arriveTime: order.arriveTime || "",
+          shipOutDate,
+          inWarehouse,
+          pickup,
+          rebatePercent: channelRebatePercent(order.channelName),
+          fees: [],
+          items: plan.goods.map((item) => poItemToShipLine(item)),
+          online: true,
+          platform: rec.platform || "",
+          platformOrderNo: rec.platformOrderNo || "",
+          shipMethod,
+          recvName: rec.name || "",
+          recvTel: rec.tel || "",
+          recvAddress: rec.address || "",
+          recvRemark: rec.remark || "",
+          submittedAt: "",
+        },
+      };
     }
 
     function confirmPoShipCreate() {
