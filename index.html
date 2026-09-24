@@ -722,34 +722,46 @@
       font-size: 13px;
     }
     .po-basic-layout {
-      display: block;
+      display: flex;
+      flex-direction: column;
       min-width: 0;
       max-width: 100%;
     }
+    #editOverseasBlock:not(.hidden) {
+      display: contents;
+    }
     .po-basic-top {
+      order: 1;
       max-width: 520px;
       min-width: 0;
     }
     .po-buyer-recv-row {
+      order: 2;
       display: block;
       min-width: 0;
     }
+    .po-vendor-col {
+      order: 3;
+      min-width: 0;
+      max-width: 520px;
+      margin-top: 4px;
+    }
     .po-basic-layout.has-recipient .po-buyer-recv-row {
+      order: 1;
       display: grid;
       grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr);
       gap: 16px 36px;
       align-items: start;
       max-width: 1100px;
     }
-    .po-buyer-col { min-width: 0; }
-    .po-vendor-col {
-      min-width: 0;
-      max-width: 520px;
-      margin-top: 4px;
+    .po-basic-layout.has-recipient .po-basic-top {
+      order: 2;
     }
     .po-basic-layout.has-recipient .po-vendor-col {
+      order: 3;
       max-width: 520px;
     }
+    .po-buyer-col { min-width: 0; }
     .po-recipient-panel {
       border-left: 1px solid var(--border);
       padding-left: 28px;
