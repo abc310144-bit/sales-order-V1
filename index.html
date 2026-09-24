@@ -2419,10 +2419,6 @@
                 <div class="form-ctrl"><input type="number" id="editRecvOrderAmount" min="0" step="0.01" /></div>
               </div>
               <div class="form-row">
-                <label class="required">平台訂單編號</label>
-                <div class="form-ctrl"><input type="text" id="editRecvPlatformOrderNo" maxlength="50" /></div>
-              </div>
-              <div class="form-row">
                 <label>預計出貨日</label>
                 <div class="form-ctrl"><input type="date" id="editRecvShipDate" /></div>
               </div>
@@ -3164,7 +3160,6 @@
           address: "新北市五股區成泰路一段88號",
           tel: "0912-345-678",
           orderAmount: "1280",
-          platformOrderNo: "PC_20260825_001",
           shipDate: "2026-08-26",
           remark: "請於白天配送",
         },
@@ -3888,8 +3883,13 @@
         alert("郵遞區號請輸入三碼數字");
         return null;
       }
-      if (!/^[A-Za-z0-9_\u4e00-\u9fff]{1,50}$/.test(first.platformOrderNo)) {
-        alert("平台訂單編號最多 50 字，僅可中、英、數、_");
+      const poDocNo = String(first.platformOrderNo || "").trim().slice(0, 30);
+      if (!poDocNo) {
+        alert("請填寫平台訂單編號（將寫入採購單單號）");
+        return null;
+      }
+      if (!/^[A-Za-z0-9_\u4e00-\u9fff]{1,30}$/.test(poDocNo)) {
+        alert("平台訂單編號（採購單單號）最多 30 字，僅可中、英、數、_");
         return null;
       }
       const bound = channelBoundSkuMap("線上-轉單");
@@ -3924,10 +3924,10 @@
           address: first.address,
           tel: first.tel,
           orderAmount: first.orderAmount === "" ? "0" : first.orderAmount,
-          platformOrderNo: first.platformOrderNo,
           shipDate,
           remark: (first.remark || "").slice(0, 30),
         },
+        poDocNo,
         items,
         inWarehouse: first.warehouse || "",
         shipByTime: shipDate,
@@ -3957,7 +3957,9 @@
       const payload = transferPayload || null;
       const order = {
         orderNo: nextSalesOrderNo(),
-        poDocNo: party ? (party.poDocNo || "").slice(0, 30) : "",
+        poDocNo: (payload && payload.poDocNo)
+          ? String(payload.poDocNo).slice(0, 30)
+          : (party ? (party.poDocNo || "").slice(0, 30) : ""),
         shipNo: "",
         poKind: kind,
         channelType: isOverseas ? "境外通路" : isDealer ? "台灣本地經銷" : (document.getElementById("importChannelType").value || "—"),
@@ -4794,7 +4796,6 @@
         address: "",
         tel: "",
         orderAmount: "",
-        platformOrderNo: "",
         shipDate: "",
         remark: "",
       };
@@ -4816,7 +4817,6 @@
       document.getElementById("editRecvAddress").value = rec.address || "";
       document.getElementById("editRecvTel").value = rec.tel || "";
       document.getElementById("editRecvOrderAmount").value = rec.orderAmount === 0 || rec.orderAmount ? rec.orderAmount : "";
-      document.getElementById("editRecvPlatformOrderNo").value = rec.platformOrderNo || "";
       document.getElementById("editRecvShipDate").value = toDateInput(rec.shipDate || (order && order.shipByTime)) || "";
       document.getElementById("editRecvRemark").value = rec.remark || "";
       if (isOnlineTransferPo(order) && rec.shipDate) {
@@ -4839,7 +4839,6 @@
         address: document.getElementById("editRecvAddress").value.trim(),
         tel: document.getElementById("editRecvTel").value.trim(),
         orderAmount: document.getElementById("editRecvOrderAmount").value,
-        platformOrderNo: document.getElementById("editRecvPlatformOrderNo").value.trim(),
         shipDate,
         remark: document.getElementById("editRecvRemark").value.trim().slice(0, 30),
       };
@@ -4878,18 +4877,6 @@
         alert("請輸入收件人電話");
         setPoTab("basic");
         document.getElementById("editRecvTel").focus();
-        return false;
-      }
-      if (!rec.platformOrderNo) {
-        alert("請輸入平台訂單編號");
-        setPoTab("basic");
-        document.getElementById("editRecvPlatformOrderNo").focus();
-        return false;
-      }
-      if (!/^[A-Za-z0-9_\u4e00-\u9fff]{1,50}$/.test(rec.platformOrderNo)) {
-        alert("平台訂單編號最多 50 字，僅可中、英、數、_");
-        setPoTab("basic");
-        document.getElementById("editRecvPlatformOrderNo").focus();
         return false;
       }
       if (rec.remark && (rec.remark.length < 5 || rec.remark.length > 30)) {
@@ -7809,12 +7796,11 @@
 
     function fillOnlineShipFieldsFromOrder(order) {
       const rec = (order && order.recipient) || {};
-      document.getElementById("poShipPlatformOrderNo").value = rec.platformOrderNo || "";
+      document.getElementById("poShipPlatformOrderNo").value = (order && order.poDocNo) || "";
       document.getElementById("poShipRecvName").value = rec.name || "";
       document.getElementById("poShipRecvTel").value = rec.tel || "";
       document.getElementById("poShipRecvAddress").value = rec.address || "";
       document.getElementById("poShipRecvRemark").value = rec.remark || "";
-      // 運送方式必填、由操作人選；不清空已選值（切單時重選）
       if (!document.getElementById("poShipMethod").value) {
         document.getElementById("poShipMethod").value = "";
       }
@@ -8190,7 +8176,7 @@
           items: plan.goods.map((item) => poItemToShipLine(item)),
           online: true,
           platform: rec.platform || "",
-          platformOrderNo: rec.platformOrderNo || "",
+          platformOrderNo: order.poDocNo || "",
           shipMethod,
           recvName: rec.name || "",
           recvTel: rec.tel || "",
