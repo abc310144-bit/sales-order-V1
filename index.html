@@ -721,6 +721,35 @@
       color: var(--text-2);
       font-size: 13px;
     }
+    .po-basic-layout {
+      display: block;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .po-basic-layout.has-recipient {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+      gap: 20px 28px;
+      align-items: start;
+    }
+    .po-basic-main { min-width: 0; }
+    .po-recipient-panel {
+      border-left: 1px solid var(--border);
+      padding-left: 24px;
+      min-width: 0;
+    }
+    .po-recipient-panel .goods-title { margin-top: 0; }
+    @media (max-width: 1100px) {
+      .po-basic-layout.has-recipient {
+        grid-template-columns: 1fr;
+      }
+      .po-recipient-panel {
+        border-left: 0;
+        border-top: 1px solid var(--border);
+        padding-left: 0;
+        padding-top: 16px;
+      }
+    }
     .po-tabs {
       display: flex;
       gap: 4px;
@@ -2100,6 +2129,8 @@
           </div>
 
           <div class="po-pane" data-po-pane="basic">
+            <div class="po-basic-layout" id="poBasicLayout">
+            <div class="po-basic-main">
             <div class="form-row">
               <label id="editPoDocNoLabel">採購單單號</label>
               <div class="form-ctrl">
@@ -2240,6 +2271,62 @@
                 <div class="form-ctrl"><input type="text" id="editTermsOfPayment" /></div>
               </div>
             </div>
+            </div>
+            <aside class="po-recipient-panel hidden" id="editRecipientPanel">
+              <h3 class="goods-title">收件人</h3>
+              <div class="form-row">
+                <label class="required">通路平台</label>
+                <div class="form-ctrl">
+                  <select id="editRecvPlatform">
+                    <option value="">請選擇</option>
+                    <option>B2B-PChome</option>
+                    <option>B2B-博客來</option>
+                    <option>B2B-Yahoo</option>
+                    <option>B2B-MOMO</option>
+                    <option>B2C-PChome</option>
+                    <option>B2C-康是美</option>
+                    <option>B2C-誠品</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <label class="required">收件人姓名</label>
+                <div class="form-ctrl"><input type="text" id="editRecvName" maxlength="50" /></div>
+              </div>
+              <div class="form-row">
+                <label class="required">郵遞區號</label>
+                <div class="form-ctrl"><input type="text" id="editRecvZip" maxlength="3" placeholder="三碼數字" inputmode="numeric" /></div>
+              </div>
+              <div class="form-row">
+                <label class="required">地址</label>
+                <div class="form-ctrl"><textarea id="editRecvAddress" rows="2"></textarea></div>
+              </div>
+              <div class="form-row">
+                <label class="required">電話</label>
+                <div class="form-ctrl"><input type="text" id="editRecvTel" maxlength="30" /></div>
+              </div>
+              <div class="form-row">
+                <label>訂單總金額</label>
+                <div class="form-ctrl"><input type="number" id="editRecvOrderAmount" min="0" step="0.01" /></div>
+              </div>
+              <div class="form-row">
+                <label class="required">平台訂單編號</label>
+                <div class="form-ctrl"><input type="text" id="editRecvPlatformOrderNo" maxlength="50" /></div>
+              </div>
+              <div class="form-row">
+                <label>預計出貨日</label>
+                <div class="form-ctrl"><input type="date" id="editRecvShipDate" /></div>
+              </div>
+              <div class="form-row">
+                <label>預計到貨日</label>
+                <div class="form-ctrl"><input type="date" id="editRecvArriveDate" /></div>
+              </div>
+              <div class="form-row">
+                <label>備註</label>
+                <div class="form-ctrl"><input type="text" id="editRecvRemark" maxlength="30" /></div>
+              </div>
+            </aside>
+            </div>
           </div>
 
           <div class="po-pane hidden" data-po-pane="goods">
@@ -2379,8 +2466,11 @@
           <div class="form-ctrl">
             <div class="file-pick">
               <button type="button" class="btn" id="importFileBtn">選擇檔案</button>
-              <input type="file" id="importFile" class="hidden" accept=".csv,.xlsx,.xls,.txt,.pdf" />
+              <input type="file" id="importFile" class="hidden" accept=".csv,.xlsx,.xls,.txt" />
               <span class="file-name empty" id="importFileName">尚未選擇檔案</span>
+            </div>
+            <div class="field-hint-below hidden" id="importTransferHint">
+              線上-轉單請使用 <a class="upload-link" href="轉單匯入模板.xlsx" download="轉單匯入模板.xlsx">轉單匯入模板.xlsx</a>
             </div>
           </div>
         </div>
@@ -2797,6 +2887,18 @@
         fileName: "", fileUrl: "", fileType: "",
         address: "新北市五股區成泰路一段100號 藍田倉",
         arriveDate: "2026-08-27", shipByTime: "2026-08-26 09:00",
+        recipient: {
+          platform: "B2C-PChome",
+          name: "王小明",
+          zip: "248",
+          address: "新北市五股區成泰路一段88號",
+          tel: "0912-345-678",
+          orderAmount: "1280",
+          platformOrderNo: "PC_20260825_001",
+          shipDate: "2026-08-26",
+          arriveDate: "2026-08-27",
+          remark: "請於白天配送",
+        },
         items: [
           { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12 },
           { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18 }
@@ -3142,6 +3244,7 @@
         document.getElementById("importChannelNameRow").classList.toggle("hidden", !subType);
         document.getElementById("importFileRow").classList.toggle("hidden", !subType);
         document.getElementById("importPlanning").classList.add("hidden");
+        syncImportTransferHint();
         return;
       }
       if (isDealer) {
@@ -3149,6 +3252,7 @@
         document.getElementById("importChannelNameRow").classList.remove("hidden");
         document.getElementById("importFileRow").classList.remove("hidden");
         document.getElementById("importPlanning").classList.add("hidden");
+        syncImportTransferHint();
         return;
       }
       if (isOverseas) {
@@ -3156,11 +3260,20 @@
         document.getElementById("importChannelNameRow").classList.remove("hidden");
         document.getElementById("importFileRow").classList.remove("hidden");
         document.getElementById("importPlanning").classList.add("hidden");
+        syncImportTransferHint();
         return;
       }
       document.getElementById("importChannelNameRow").classList.add("hidden");
       document.getElementById("importFileRow").classList.add("hidden");
       document.getElementById("importPlanning").classList.add("hidden");
+      syncImportTransferHint();
+    }
+
+    function syncImportTransferHint() {
+      const hint = document.getElementById("importTransferHint");
+      if (!hint) return;
+      const name = document.getElementById("importChannelName").value;
+      hint.classList.toggle("hidden", name !== "線上-轉單");
     }
 
     function pad(n, width) {
@@ -3256,13 +3369,191 @@
         alert("請選擇通路名稱");
         return;
       }
-      const order = createPoFromImport("草稿");
+      const fileInput = document.getElementById("importFile");
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        alert("請選擇要匯入的檔案");
+        return;
+      }
+      const channelName = document.getElementById("importChannelName").value;
+      if (channelName === "線上-轉單") {
+        parseTransferImportFile(file).then((payload) => {
+          if (!payload) return;
+          const order = createPoFromImport("草稿", payload);
+          if (!order) return;
+          persistDemoData();
+          closeImportModal();
+          openPoWorkspace({ po: order.orderNo, mode: "edit" });
+        }).catch((err) => {
+          alert(err && err.message ? err.message : "轉單匯入失敗");
+        });
+        return;
+      }
+      const order = createPoFromImport("草稿", null);
       if (!order) return;
       persistDemoData();
       closeImportModal();
     }
 
-    function createPoFromImport(status) {
+    function excelDateToInput(val) {
+      const s = String(val == null ? "" : val).trim();
+      if (!s) return "";
+      if (/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/.test(s)) {
+        const p = s.replace(/\//g, "-").slice(0, 10).split("-");
+        return `${p[0]}-${pad(Number(p[1]), 2)}-${pad(Number(p[2]), 2)}`;
+      }
+      const n = Number(s);
+      if (!Number.isFinite(n) || n < 20000 || n > 80000) return "";
+      const d = new Date(Math.round((n - 25569) * 86400 * 1000));
+      if (Number.isNaN(d.getTime())) return "";
+      return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1, 2)}-${pad(d.getUTCDate(), 2)}`;
+    }
+
+    function normalizeTransferHeaderKey(raw) {
+      return String(raw || "").replace(/\*/g, "").replace(/\s+/g, "");
+    }
+
+    function recordsFromTransferMatrix(matrix) {
+      if (!matrix.length) return [];
+      const header = matrix[0];
+      const map = {};
+      Object.keys(header).forEach((col) => {
+        const key = normalizeTransferHeaderKey(header[col]);
+        if (key.includes("通路平台")) map[col] = "platform";
+        else if (key.includes("收件人姓名")) map[col] = "name";
+        else if (key.includes("郵遞區號")) map[col] = "zip";
+        else if (key === "地址") map[col] = "address";
+        else if (key === "電話") map[col] = "tel";
+        else if (key.includes("訂單總金額")) map[col] = "orderAmount";
+        else if (key.includes("商品平台訂單編號")) map[col] = "itemPlatformOrderNo";
+        else if (key.includes("平台訂單編號")) map[col] = "platformOrderNo";
+        else if (key.includes("預計出貨")) map[col] = "shipDate";
+        else if (key.includes("預計到貨")) map[col] = "arriveDate";
+        else if (key === "備註") map[col] = "remark";
+        else if (/^SKU/i.test(key) || key.includes("品號")) map[col] = "sku";
+        else if (key === "數量") map[col] = "qty";
+        else if (key.includes("單品總金額")) map[col] = "lineAmount";
+        else if (key.includes("倉別")) map[col] = "warehouse";
+        else if (key.includes("商品效期")) map[col] = "expiry";
+        else if (key === "批號") map[col] = "batch";
+      });
+      return matrix.slice(1).map((row) => {
+        const rec = {};
+        Object.keys(map).forEach((col) => {
+          rec[map[col]] = String(row[col] == null ? "" : row[col]).trim();
+        });
+        if (rec.sku) rec.sku = normalizeSku(rec.sku);
+        return rec;
+      }).filter((rec) => {
+        const blob = Object.values(rec).join("");
+        if (!blob) return false;
+        if (blob.includes("輸入三碼") || blob.includes("留空則視為") || blob.includes("B2B-PChome、")) return false;
+        return true;
+      });
+    }
+
+    async function sheetMatrixFromFile(file) {
+      const name = (file.name || "").toLowerCase();
+      if (name.endsWith(".csv") || name.endsWith(".txt")) {
+        const text = await file.text();
+        const raw = String(text || "").replace(/^\uFEFF/, "");
+        const lines = raw.split(/\r?\n/).filter((line) => line.trim());
+        if (!lines.length) return [];
+        const delim = lines[0].includes("\t") && !lines[0].includes(",") ? "\t" : ",";
+        return lines.map((line) => {
+          const rec = {};
+          splitCsvLine(line, delim).forEach((val, i) => {
+            rec[colNameFromIndex(i)] = val;
+          });
+          return rec;
+        });
+      }
+      if (name.endsWith(".xls")) throw new Error("請使用 xlsx 或 csv");
+      const files = await unzipArrayBuffer(await file.arrayBuffer());
+      const shared = sharedStringsFromXml(decodeZipText(files["xl/sharedStrings.xml"] || new Uint8Array()));
+      const sheetPath = worksheetPathFromWorkbook(files, false);
+      return sheetMatrixFromXml(decodeZipText(files[sheetPath]), shared);
+    }
+
+    async function parseTransferImportFile(file) {
+      const matrix = await sheetMatrixFromFile(file);
+      const rows = recordsFromTransferMatrix(matrix);
+      if (!rows.length) {
+        alert("轉單檔案沒有可匯入的資料列");
+        return null;
+      }
+      if (rows.length > 1000) {
+        alert("單次匯入上限 1000 筆");
+        return null;
+      }
+      const first = rows[0];
+      const required = [
+        ["platform", "通路平台"],
+        ["name", "收件人姓名"],
+        ["zip", "郵遞區號"],
+        ["address", "地址"],
+        ["tel", "電話"],
+        ["platformOrderNo", "平台訂單編號"],
+      ];
+      for (const [key, label] of required) {
+        if (!String(first[key] || "").trim()) {
+          alert(`請填寫${label}`);
+          return null;
+        }
+      }
+      if (!/^\d{3}$/.test(first.zip)) {
+        alert("郵遞區號請輸入三碼數字");
+        return null;
+      }
+      if (!/^[A-Za-z0-9_\u4e00-\u9fff]{1,50}$/.test(first.platformOrderNo)) {
+        alert("平台訂單編號最多 50 字，僅可中、英、數、_");
+        return null;
+      }
+      const bound = channelBoundSkuMap("線上-轉單");
+      const items = [];
+      for (const row of rows) {
+        if (!row.sku || !isPositiveIntQty(row.qty)) {
+          alert("SKU、數量皆必填，數量須為大於 0 的正整數");
+          return null;
+        }
+        const key = String(row.sku).toLowerCase();
+        if (!bound[key]) {
+          alert(`SKU ${row.sku} 未綁定通路商品，整檔不匯入`);
+          return null;
+        }
+        const src = bound[key];
+        items.push(toPoLineItem({
+          ...src,
+          qty: Number(row.qty),
+          lineAmount: row.lineAmount || "",
+          platformItemOrderNo: row.itemPlatformOrderNo || "",
+          expiry: row.expiry || "",
+          batch: row.batch || "",
+        }));
+      }
+      const shipDate = excelDateToInput(first.shipDate);
+      const arriveDate = excelDateToInput(first.arriveDate);
+      return {
+        recipient: {
+          platform: first.platform,
+          name: first.name,
+          zip: first.zip,
+          address: first.address,
+          tel: first.tel,
+          orderAmount: first.orderAmount === "" ? "0" : first.orderAmount,
+          platformOrderNo: first.platformOrderNo,
+          shipDate,
+          arriveDate,
+          remark: (first.remark || "").slice(0, 30),
+        },
+        items,
+        inWarehouse: first.warehouse || "",
+        shipByTime: shipDate,
+        arriveDate,
+      };
+    }
+
+    function createPoFromImport(status, transferPayload) {
       const kind = getImportPoKind();
       const fileInput = document.getElementById("importFile");
       const file = fileInput.files && fileInput.files[0];
@@ -3275,11 +3566,13 @@
       const profile = channelProfiles[channelName] || {};
       const isOverseas = kind === "境外通路";
       const isDealer = kind === "經銷";
+      const isTransfer = channelName === "線上-轉單";
       const party = isOverseas
         ? buildOverseasPo(channelName, "demo.user", file.name)
         : isDealer
           ? buildDealerPo(channelName, "demo.user", file.name)
           : buildGeneralPo(channelName, "demo.user");
+      const payload = transferPayload || null;
       const order = {
         orderNo: nextSalesOrderNo(),
         poDocNo: party ? (party.poDocNo || "").slice(0, 30) : "",
@@ -3294,18 +3587,25 @@
         fileName: file.name,
         fileUrl: URL.createObjectURL(file),
         fileType: file.type,
-        address: (party && party.buyerAddress) || profile.address || "",
-        arriveDate: party ? "" : addDaysToStamp(createdAt, 2),
-        arriveTime: party ? "" : "18:00",
-        shipByTime: party ? "" : addDaysToStamp(createdAt, 1),
-        items: isOverseas
-          ? overseasLinesToItems(party.lines)
-          : isDealer
-            ? dealerSupplyItems(channelName)
-            : mockItemsFor(channelName),
+        address: (payload && payload.recipient && payload.recipient.address)
+          || (party && party.buyerAddress)
+          || profile.address
+          || "",
+        arriveDate: payload ? (payload.arriveDate || "") : (party ? "" : addDaysToStamp(createdAt, 2)),
+        arriveTime: party || isTransfer ? "" : "18:00",
+        shipByTime: payload ? (payload.shipByTime || "") : (party ? "" : addDaysToStamp(createdAt, 1)),
+        inWarehouse: payload ? (payload.inWarehouse || profile.inWarehouse || "") : (profile.inWarehouse || ""),
+        items: isTransfer && payload
+          ? payload.items
+          : isOverseas
+            ? overseasLinesToItems(party.lines)
+            : isDealer
+              ? dealerSupplyItems(channelName)
+              : mockItemsFor(channelName),
         overseas: isOverseas ? party : null,
         dealer: isDealer ? party : null,
         general: !isOverseas && !isDealer ? party : null,
+        recipient: isTransfer && payload ? payload.recipient : (isTransfer ? emptyRecipient() : null),
       };
       salesOrders.unshift(order);
       renderSalesTable(getSalesFiltered());
@@ -3357,6 +3657,7 @@
       fillChannelNameOptions("importChannelName", document.getElementById("importChannelType").value);
       syncImportModal();
     });
+    document.getElementById("importChannelName").addEventListener("change", syncImportTransferHint);
     document.getElementById("tableBody").addEventListener("click", (e) => {
       if (e.target.closest("[data-ship-view]")) persistDemoData();
       if (e.target.dataset.go !== "po-view") return;
@@ -3430,7 +3731,7 @@
     let currentEditOrderNo = "";
     let orderFormMode = "edit";
     let workspaceOrder = null;
-    const DEMO_STORE_KEY = "urmart-sales-demo-v3";
+    const DEMO_STORE_KEY = "urmart-sales-demo-v4";
     let demoReady = false;
 
     function persistDemoData() {
@@ -3769,6 +4070,7 @@
         overseas,
         dealer,
         general,
+        recipient: name === "線上-轉單" ? emptyRecipient() : null,
       };
       currentEditOrderNo = "__new__";
       workspaceOrder = order;
@@ -3833,6 +4135,9 @@
         completeNote: "",
         voidReason: "",
         voidNote: "",
+        recipient: src.channelName === "線上-轉單"
+          ? { ...(src.recipient || emptyRecipient()) }
+          : null,
       };
       if (kind === "境外通路") {
         draft.overseas = clonePartyForCopy(src.overseas, buildOverseasPo(src.channelName, op, ""), op);
@@ -4093,6 +4398,131 @@
 
     function isGeneralPo(order) {
       return !!order && (poKindOf(order) === "一般通路");
+    }
+
+    function isOnlineTransferPo(order) {
+      return !!(order && order.channelName === "線上-轉單");
+    }
+
+    function emptyRecipient() {
+      return {
+        platform: "",
+        name: "",
+        zip: "",
+        address: "",
+        tel: "",
+        orderAmount: "",
+        platformOrderNo: "",
+        shipDate: "",
+        arriveDate: "",
+        remark: "",
+      };
+    }
+
+    function syncRecipientPanel(order) {
+      const show = isOnlineTransferPo(order);
+      const layout = document.getElementById("poBasicLayout");
+      const panel = document.getElementById("editRecipientPanel");
+      if (layout) layout.classList.toggle("has-recipient", show);
+      if (panel) panel.classList.toggle("hidden", !show);
+    }
+
+    function fillRecipientForm(order) {
+      const rec = (order && order.recipient) || emptyRecipient();
+      document.getElementById("editRecvPlatform").value = rec.platform || "";
+      document.getElementById("editRecvName").value = rec.name || "";
+      document.getElementById("editRecvZip").value = rec.zip || "";
+      document.getElementById("editRecvAddress").value = rec.address || "";
+      document.getElementById("editRecvTel").value = rec.tel || "";
+      document.getElementById("editRecvOrderAmount").value = rec.orderAmount === 0 || rec.orderAmount ? rec.orderAmount : "";
+      document.getElementById("editRecvPlatformOrderNo").value = rec.platformOrderNo || "";
+      document.getElementById("editRecvShipDate").value = toDateInput(rec.shipDate || (order && order.shipByTime)) || "";
+      document.getElementById("editRecvArriveDate").value = toDateInput(rec.arriveDate || (order && order.arriveDate)) || "";
+      document.getElementById("editRecvRemark").value = rec.remark || "";
+      if (isOnlineTransferPo(order)) {
+        if (rec.shipDate) document.getElementById("editShipByTime").value = toDateInput(rec.shipDate);
+        if (rec.arriveDate) document.getElementById("editExpectArriveDate").value = toDateInput(rec.arriveDate);
+      }
+      syncRecipientPanel(order);
+    }
+
+    function applyRecipientForm(order) {
+      if (!order) return;
+      if (!isOnlineTransferPo(order)) {
+        delete order.recipient;
+        return;
+      }
+      const shipDate = toDateInput(document.getElementById("editRecvShipDate").value);
+      const arriveDate = toDateInput(document.getElementById("editRecvArriveDate").value);
+      order.recipient = {
+        platform: document.getElementById("editRecvPlatform").value.trim(),
+        name: document.getElementById("editRecvName").value.trim(),
+        zip: document.getElementById("editRecvZip").value.trim(),
+        address: document.getElementById("editRecvAddress").value.trim(),
+        tel: document.getElementById("editRecvTel").value.trim(),
+        orderAmount: document.getElementById("editRecvOrderAmount").value,
+        platformOrderNo: document.getElementById("editRecvPlatformOrderNo").value.trim(),
+        shipDate,
+        arriveDate,
+        remark: document.getElementById("editRecvRemark").value.trim().slice(0, 30),
+      };
+      if (shipDate) order.shipByTime = shipDate;
+      if (arriveDate) order.arriveDate = arriveDate;
+    }
+
+    function validateRecipientRequired(order) {
+      if (!isOnlineTransferPo(order)) return true;
+      applyRecipientForm(order);
+      const rec = order.recipient || emptyRecipient();
+      if (!rec.platform) {
+        alert("請選擇通路平台");
+        setPoTab("basic");
+        document.getElementById("editRecvPlatform").focus();
+        return false;
+      }
+      if (!rec.name) {
+        alert("請輸入收件人姓名");
+        setPoTab("basic");
+        document.getElementById("editRecvName").focus();
+        return false;
+      }
+      if (!/^\d{3}$/.test(rec.zip)) {
+        alert("郵遞區號請輸入三碼數字");
+        setPoTab("basic");
+        document.getElementById("editRecvZip").focus();
+        return false;
+      }
+      if (!rec.address) {
+        alert("請輸入收件人地址");
+        setPoTab("basic");
+        document.getElementById("editRecvAddress").focus();
+        return false;
+      }
+      if (!rec.tel) {
+        alert("請輸入收件人電話");
+        setPoTab("basic");
+        document.getElementById("editRecvTel").focus();
+        return false;
+      }
+      if (!rec.platformOrderNo) {
+        alert("請輸入平台訂單編號");
+        setPoTab("basic");
+        document.getElementById("editRecvPlatformOrderNo").focus();
+        return false;
+      }
+      if (!/^[A-Za-z0-9_\u4e00-\u9fff]{1,50}$/.test(rec.platformOrderNo)) {
+        alert("平台訂單編號最多 50 字，僅可中、英、數、_");
+        setPoTab("basic");
+        document.getElementById("editRecvPlatformOrderNo").focus();
+        return false;
+      }
+      if (rec.remark && (rec.remark.length < 5 || rec.remark.length > 30)) {
+        alert("備註最少 5 字、最多 30 字");
+        setPoTab("basic");
+        document.getElementById("editRecvRemark").focus();
+        return false;
+      }
+      return true;
     }
 
     function hidePartyPayment(order) {
@@ -6409,6 +6839,7 @@
       order.arriveTime = readExpectArriveTime();
       order.shipByTime = toDateInput(document.getElementById("editShipByTime").value);
       applyOverseasForm(order);
+      applyRecipientForm(order);
     }
 
     function approvePo(order) {
@@ -6556,6 +6987,7 @@
       }
       if (!order.address && party && party.buyerAddress) order.address = party.buyerAddress;
       fillOverseasForm(order, orderFormMode === "view");
+      fillRecipientForm(order);
       if (!Array.isArray(order.items)) order.items = [];
       loadPoGoodsWorkspace(order);
       renderRelatedShips(order);
@@ -6591,6 +7023,7 @@
       const order = getWorkspaceOrder();
       if (!order || !canSubmitPo(order)) return;
       if (!validatePoDocNoRequired(order)) return;
+      if (!validateRecipientRequired(order)) return;
       commitWorkspaceOrder(order, "草稿");
       fillOrderEdit(order, "edit");
       alert("已儲存為草稿");
@@ -6601,6 +7034,7 @@
       const order = getWorkspaceOrder();
       if (!order || !canSubmitPo(order)) return;
       if (!validatePoDocNoRequired(order)) return;
+      if (!validateRecipientRequired(order)) return;
       commitWorkspaceOrder(order, "待審核");
       fillOrderEdit(order, "view");
       alert("已送出申請");
@@ -6754,6 +7188,12 @@
             order.channelType = "台灣本地通路";
           }
         }
+        if (name === "線上-轉單") {
+          if (!order.recipient) order.recipient = emptyRecipient();
+        } else {
+          delete order.recipient;
+        }
+        fillRecipientForm(order);
         order.items = [];
         loadPoGoodsWorkspace(order);
       }
