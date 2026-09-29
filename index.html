@@ -756,28 +756,43 @@
       max-width: 520px;
       margin-top: 4px;
     }
-    .po-basic-layout.has-recipient .po-online-head {
+    .po-basic-layout.has-recipient {
       display: grid;
-      grid-template-columns: minmax(280px, 520px);
+      grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr);
       gap: 16px 36px;
       align-items: start;
-      order: 1;
       max-width: 1100px;
-      width: 100%;
+    }
+    .po-basic-layout.has-recipient .po-online-head {
+      display: contents;
     }
     .po-basic-layout.has-recipient .po-basic-top {
       display: none !important;
     }
-    .po-basic-layout.has-recipient .po-online-head .po-buyer-col .goods-title {
+    .po-basic-layout.has-recipient .po-buyer-col {
+      grid-column: 1;
+      grid-row: 1;
+      order: unset;
+      max-width: none;
+    }
+    .po-basic-layout.has-recipient .po-buyer-col .goods-title {
+      margin-top: 0;
+    }
+    .po-basic-layout.has-recipient .po-vendor-col {
+      grid-column: 2;
+      grid-row: 1;
+      order: unset;
+      max-width: none;
+      margin-top: 0;
+    }
+    .po-basic-layout.has-recipient .po-vendor-col .goods-title {
       margin-top: 0;
     }
     .po-basic-layout.has-recipient .po-recipient-panel {
-      order: 2;
-      margin-top: 8px;
-    }
-    .po-basic-layout.has-recipient .po-vendor-col {
-      order: 3;
-      max-width: 520px;
+      grid-column: 1 / -1;
+      grid-row: 2;
+      order: unset;
+      margin-top: 0;
     }
     .recv-table-wrap {
       overflow-x: auto;
@@ -813,9 +828,17 @@
       resize: vertical;
     }
     @media (max-width: 1100px) {
-      .po-basic-layout.has-recipient .po-online-head {
+      .po-basic-layout.has-recipient {
         grid-template-columns: 1fr;
       }
+      .po-basic-layout.has-recipient .po-buyer-col,
+      .po-basic-layout.has-recipient .po-vendor-col,
+      .po-basic-layout.has-recipient .po-recipient-panel {
+        grid-column: 1;
+      }
+      .po-basic-layout.has-recipient .po-buyer-col { grid-row: 1; }
+      .po-basic-layout.has-recipient .po-vendor-col { grid-row: 2; }
+      .po-basic-layout.has-recipient .po-recipient-panel { grid-row: 3; }
     }
     .po-tabs {
       display: flex;
