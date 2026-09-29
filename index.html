@@ -758,20 +758,15 @@
     }
     .po-basic-layout.has-recipient .po-online-head {
       display: grid;
-      grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr);
+      grid-template-columns: minmax(280px, 520px);
       gap: 16px 36px;
       align-items: start;
       order: 1;
       max-width: 1100px;
       width: 100%;
     }
-    .po-basic-layout.has-recipient .po-online-head .po-buyer-col {
-      order: unset;
-      max-width: none;
-    }
-    .po-basic-layout.has-recipient .po-online-head .po-basic-top {
-      order: unset;
-      max-width: none;
+    .po-basic-layout.has-recipient .po-basic-top {
+      display: none !important;
     }
     .po-basic-layout.has-recipient .po-online-head .po-buyer-col .goods-title {
       margin-top: 0;
@@ -789,7 +784,7 @@
       max-width: 100%;
     }
     .recv-list-table {
-      min-width: 960px;
+      min-width: 1280px;
       width: 100%;
     }
     .recv-list-table th,
@@ -2444,6 +2439,10 @@
                   <thead>
                     <tr>
                       <th>通路平台</th>
+                      <th>平台訂單編號</th>
+                      <th>預計到貨日期</th>
+                      <th>預計到貨時間</th>
+                      <th>應出貨日</th>
                       <th>收件人姓名</th>
                       <th>郵遞區號</th>
                       <th>地址</th>
@@ -2951,23 +2950,7 @@
       { id: "10468", orderId: "VN00010468", salesOrderNo: "", audit: "待審核", channel: "經銷商-絢綻國際企業社", status: "配送異常", applicant: "john.pan", created: "2026-08-26 10:08:19", warehouse: "", shipped: "" },
       { id: "10467", orderId: "VN00010467", salesOrderNo: "SO20260824006", audit: "待審核", channel: "實體-寶雅", status: "已配達", applicant: "misha.huang", created: "2026-08-25 18:33:02", warehouse: "", shipped: "" },
       { id: "10466", orderId: "VN00010466", salesOrderNo: "SO20260824005", audit: "待審核", channel: "跨境- Cool Cool Trading", status: "訂單取消", applicant: "vita.du", created: "2026-08-25 16:12:47", warehouse: "", shipped: "" },
-      { id: "10465", orderId: "VN00010465", salesOrderNo: "SO20260823007", audit: "待審核", channel: "實體-全聯", status: "已配達", applicant: "vita.du", created: "2026-08-23 17:02:11", warehouse: "", shipped: "2026-08-25 09:10:00" },
-      {
-        id: "20001", orderId: "TRY0000031686", salesOrderNo: "SO20260825004", audit: "待審核", channel: "線上-轉單",
-        status: "待拋單", applicant: "miffy.jhong", created: "2026-09-24 10:11:42", warehouse: "藍田倉", shipped: "",
-        online: true, platform: "B2C-PChome", platformOrderNo: "650277948", shipMethod: "新竹物流",
-        recvName: "陳小美", recvTel: "0912-000-111", recvAddress: "台北市信義區信義路五段7號", recvRemark: "白天配送",
-        inWarehouse: "藍田倉", shipOutDate: "2026-09-24", submittedAt: "",
-        items: [{ sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", qty: 1 }]
-      },
-      {
-        id: "20002", orderId: "TRY0000031685", salesOrderNo: "SO20260825004", audit: "待審核", channel: "線上-轉單",
-        status: "待拋單", applicant: "miffy.jhong", created: "2026-09-24 10:10:05", warehouse: "藍田倉", shipped: "",
-        online: true, platform: "B2C-好市多", platformOrderNo: "650277900", shipMethod: "黑猫",
-        recvName: "林大同", recvTel: "0922-333-444", recvAddress: "新北市板橋區文化路一段188號", recvRemark: "",
-        inWarehouse: "藍田倉", shipOutDate: "2026-09-24", submittedAt: "",
-        items: [{ sku: "UM-2108", name: "益生菌隨手包", qty: 2 }]
-      }
+      { id: "10465", orderId: "VN00010465", salesOrderNo: "SO20260823007", audit: "待審核", channel: "實體-全聯", status: "已配達", applicant: "vita.du", created: "2026-08-23 17:02:11", warehouse: "", shipped: "2026-08-25 09:10:00" }
     ];
 
     function getShippingFiltered() {
@@ -3166,13 +3149,34 @@
         ]
       },
       {
-        orderNo: "SO20260825004", poDocNo: "OL-TRANSFER-0825", shipNo: "", channelType: "台灣線上通路", channelName: "線上-轉單",
+        orderNo: "SO20260825004", poDocNo: "", shipNo: "", channelType: "台灣線上通路", channelName: "線上-轉單",
         status: "未開立出貨單", operator: "sarah.lin", createdAt: "2026-08-25 10:08:19",
         fileName: "", fileUrl: "", fileType: "",
         address: "新北市五股區成泰路一段100號 藍田倉",
-        arriveDate: "2026-08-27", shipByTime: "2026-08-26 09:00",
+        arriveDate: "", shipByTime: "",
+        recipients: [
+          {
+            platform: "線上-轉單",
+            platformOrderNo: "OL-TRANSFER-0825",
+            name: "王小明",
+            zip: "248",
+            address: "新北市五股區成泰路一段88號",
+            tel: "0912-345-678",
+            orderAmount: "1280",
+            shipMethod: "新竹物流",
+            remark: "請於白天配送",
+            arriveDate: "2026-08-27",
+            arriveTime: "18:00",
+            shipDate: "2026-08-26",
+            items: [
+              { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12 },
+              { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18 }
+            ],
+          },
+        ],
         recipient: {
           platform: "線上-轉單",
+          platformOrderNo: "OL-TRANSFER-0825",
           name: "王小明",
           zip: "248",
           address: "新北市五股區成泰路一段88號",
@@ -3180,6 +3184,9 @@
           orderAmount: "1280",
           shipMethod: "新竹物流",
           remark: "請於白天配送",
+          arriveDate: "2026-08-27",
+          arriveTime: "18:00",
+          shipDate: "2026-08-26",
         },
         items: [
           { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12 },
@@ -3517,7 +3524,8 @@
       }
       document.getElementById("batchOnlineShipCount").textContent = String(nos.length);
       const first = salesOrders.find((item) => item.orderNo === nos[0]);
-      const method = (first && first.recipient && first.recipient.shipMethod) || "";
+      const recs = first ? recipientListOf(first) : [];
+      const method = (recs[0] && recs[0].shipMethod) || (first && first.recipient && first.recipient.shipMethod) || "";
       document.getElementById("batchOnlineShipMethod").value = method;
       document.getElementById("batchOnlineShipModal").classList.remove("hidden");
     }
@@ -3547,9 +3555,11 @@
           errors.push(result.error);
           return;
         }
-        rows.unshift(result.ship);
+        (result.ships || []).forEach((ship) => {
+          rows.unshift(ship);
+          created.push(ship.orderId);
+        });
         syncPoStatusFromShips(order);
-        created.push(result.ship.orderId);
       });
       closeBatchOnlineShipModal();
       persistDemoData();
@@ -3817,8 +3827,10 @@
         else if (key.includes("訂單總金額")) map[col] = "orderAmount";
         else if (key.includes("商品平台訂單編號")) map[col] = "itemPlatformOrderNo";
         else if (key.includes("平台訂單編號")) map[col] = "platformOrderNo";
-        else if (key.includes("預計出貨")) map[col] = "shipDate";
+        else if (key.includes("預計到貨時間") || (key.includes("到貨時間") && !key.includes("日期"))) map[col] = "arriveTime";
         else if (key.includes("預計到貨")) map[col] = "arriveDate";
+        else if (key.includes("預計出貨")) map[col] = "shipDate";
+        else if (key.includes("運送方式")) map[col] = "shipMethod";
         else if (key === "備註") map[col] = "remark";
         else if (/^SKU/i.test(key) || key.includes("品號")) map[col] = "sku";
         else if (key === "數量") map[col] = "qty";
@@ -3865,6 +3877,33 @@
       return sheetMatrixFromXml(decodeZipText(files[sheetPath]), shared);
     }
 
+    function excelTimeToHm(val) {
+      const s = String(val == null ? "" : val).trim();
+      if (!s) return "";
+      const m = s.match(/^(\d{1,2}):(\d{2})/);
+      if (m) return `${pad(Number(m[1]), 2)}:${m[2]}`;
+      const n = Number(s);
+      if (Number.isFinite(n) && n > 0 && n < 1) {
+        const mins = Math.round(n * 24 * 60);
+        return `${pad(Math.floor(mins / 60) % 24, 2)}:${pad(mins % 60, 2)}`;
+      }
+      return "";
+    }
+
+    function aggregateItemsBySku(itemList) {
+      const map = {};
+      (itemList || []).forEach((raw) => {
+        const item = toPoLineItem(raw);
+        if (!item.sku) return;
+        const key = String(item.sku).toLowerCase();
+        if (!map[key]) {
+          map[key] = { ...item, qty: 0 };
+        }
+        map[key].qty += Number(item.qty) || 0;
+      });
+      return Object.values(map);
+    }
+
     async function parseTransferImportFile(file) {
       const matrix = await sheetMatrixFromFile(file);
       const rows = recordsFromTransferMatrix(matrix);
@@ -3876,72 +3915,91 @@
         alert("單次匯入上限 1000 筆");
         return null;
       }
-      const first = rows[0];
-      const required = [
-        ["name", "收件人姓名"],
-        ["zip", "郵遞區號"],
-        ["address", "地址"],
-        ["tel", "電話"],
-        ["platformOrderNo", "平台訂單編號"],
-      ];
-      for (const [key, label] of required) {
-        if (!String(first[key] || "").trim()) {
-          alert(`請填寫${label}`);
-          return null;
-        }
-      }
-      if (!/^\d{3}$/.test(first.zip)) {
-        alert("郵遞區號請輸入三碼數字");
-        return null;
-      }
-      const poDocNo = String(first.platformOrderNo || "").trim().slice(0, 30);
-      if (!poDocNo) {
-        alert("請填寫平台訂單編號（將寫入採購單單號）");
-        return null;
-      }
-      if (!/^[A-Za-z0-9_\u4e00-\u9fff]{1,30}$/.test(poDocNo)) {
-        alert("平台訂單編號（採購單單號）最多 30 字，僅可中、英、數、_");
-        return null;
-      }
       const bound = channelBoundSkuMap("線上-轉單");
-      const items = [];
-      for (const row of rows) {
-        if (!row.sku || !isPositiveIntQty(row.qty)) {
-          alert("SKU、數量皆必填，數量須為大於 0 的正整數");
+      const groups = new Map();
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const platformOrderNo = String(row.platformOrderNo || "").trim().slice(0, 30);
+        if (!platformOrderNo) {
+          alert(`第 ${i + 2} 列：請填寫平台訂單編號`);
           return null;
         }
-        const key = String(row.sku).toLowerCase();
-        if (!bound[key]) {
+        if (!/^[A-Za-z0-9_\u4e00-\u9fff]{1,30}$/.test(platformOrderNo)) {
+          alert(`第 ${i + 2} 列：平台訂單編號最多 30 字，僅可中、英、數、_`);
+          return null;
+        }
+        if (!row.sku || !isPositiveIntQty(row.qty)) {
+          alert(`第 ${i + 2} 列：SKU、數量皆必填，數量須為大於 0 的正整數`);
+          return null;
+        }
+        const skuKey = String(row.sku).toLowerCase();
+        if (!bound[skuKey]) {
           alert(`SKU ${row.sku} 未綁定通路商品，整檔不匯入`);
           return null;
         }
-        const src = bound[key];
-        items.push(toPoLineItem({
-          ...src,
-          qty: Number(row.qty),
-          lineAmount: row.lineAmount || "",
-          platformItemOrderNo: row.itemPlatformOrderNo || "",
-          expiry: row.expiry || "",
-          batch: row.batch || "",
-        }));
+        if (!groups.has(platformOrderNo)) {
+          groups.set(platformOrderNo, { rows: [], meta: row });
+        }
+        groups.get(platformOrderNo).rows.push(row);
       }
-      const shipDate = excelDateToInput(first.shipDate);
-      const arriveDate = excelDateToInput(first.arriveDate);
-      return {
-        recipient: {
+      const recipients = [];
+      const allItems = [];
+      for (const [platformOrderNo, group] of groups) {
+        const first = group.meta;
+        const required = [
+          ["name", "收件人姓名"],
+          ["zip", "郵遞區號"],
+          ["address", "地址"],
+          ["tel", "電話"],
+        ];
+        for (const [key, label] of required) {
+          if (!String(first[key] || "").trim()) {
+            alert(`平台訂單 ${platformOrderNo}：請填寫${label}`);
+            return null;
+          }
+        }
+        if (!/^\d{3}$/.test(String(first.zip || "").trim())) {
+          alert(`平台訂單 ${platformOrderNo}：郵遞區號請輸入三碼數字`);
+          return null;
+        }
+        const items = group.rows.map((row) => {
+          const src = bound[String(row.sku).toLowerCase()];
+          return toPoLineItem({
+            ...src,
+            qty: Number(row.qty),
+            lineAmount: row.lineAmount || "",
+            platformItemOrderNo: row.itemPlatformOrderNo || "",
+            platformOrderNo,
+            expiry: row.expiry || "",
+            batch: row.batch || "",
+          });
+        });
+        allItems.push(...items);
+        recipients.push({
           platform: "線上-轉單",
+          platformOrderNo,
           name: first.name,
           zip: first.zip,
           address: first.address,
           tel: first.tel,
           orderAmount: first.orderAmount === "" ? "0" : first.orderAmount,
+          shipMethod: first.shipMethod || "",
           remark: (first.remark || "").slice(0, 30),
-        },
-        poDocNo,
-        items,
-        inWarehouse: first.warehouse || "",
-        shipByTime: shipDate,
-        arriveDate,
+          arriveDate: excelDateToInput(first.arriveDate),
+          arriveTime: excelTimeToHm(first.arriveTime),
+          shipDate: excelDateToInput(first.shipDate),
+          items,
+        });
+      }
+      const firstWarehouse = String((rows[0] && rows[0].warehouse) || "").trim();
+      return {
+        recipients,
+        recipient: { ...recipients[0] },
+        poDocNo: "",
+        items: aggregateItemsBySku(allItems),
+        inWarehouse: firstWarehouse,
+        shipByTime: "",
+        arriveDate: "",
       };
     }
 
@@ -3981,13 +4039,14 @@
         fileName: file.name,
         fileUrl: URL.createObjectURL(file),
         fileType: file.type,
-        address: (payload && payload.recipient && payload.recipient.address)
+        address: (payload && payload.recipients && payload.recipients[0] && payload.recipients[0].address)
+          || (payload && payload.recipient && payload.recipient.address)
           || (party && party.buyerAddress)
           || profile.address
           || "",
-        arriveDate: payload ? (payload.arriveDate || "") : (party ? "" : addDaysToStamp(createdAt, 2)),
-        arriveTime: party || isTransfer ? "" : "18:00",
-        shipByTime: payload ? (payload.shipByTime || "") : (party ? "" : addDaysToStamp(createdAt, 1)),
+        arriveDate: isTransfer ? "" : (payload ? (payload.arriveDate || "") : (party ? "" : addDaysToStamp(createdAt, 2))),
+        arriveTime: isTransfer || party ? "" : "18:00",
+        shipByTime: isTransfer ? "" : (payload ? (payload.shipByTime || "") : (party ? "" : addDaysToStamp(createdAt, 1))),
         inWarehouse: payload ? (payload.inWarehouse || profile.inWarehouse || "") : (profile.inWarehouse || ""),
         items: isTransfer && payload
           ? payload.items
@@ -3999,11 +4058,22 @@
         overseas: isOverseas ? party : null,
         dealer: isDealer ? party : null,
         general: !isOverseas && !isDealer ? party : null,
-        recipient: isTransfer && payload ? payload.recipient : (isTransfer ? emptyRecipient() : null),
+        recipient: null,
+        recipients: null,
       };
-      if (isTransfer && order.recipient) {
-        order.recipient.platform = channelName || "線上-轉單";
-        order.recipients = [{ ...order.recipient }];
+      if (isTransfer) {
+        order.poDocNo = "";
+        if (payload && Array.isArray(payload.recipients) && payload.recipients.length) {
+          order.recipients = payload.recipients.map((r) => ({
+            ...r,
+            platform: channelName || "線上-轉單",
+          }));
+          order.recipient = { ...order.recipients[0] };
+        } else {
+          order.recipient = emptyRecipient();
+          order.recipient.platform = channelName || "線上-轉單";
+          order.recipients = [{ ...order.recipient }];
+        }
       }
       salesOrders.unshift(order);
       renderSalesTable(getSalesFiltered());
@@ -4469,6 +4539,7 @@
         dealer,
         general,
         recipient: name === "線上-轉單" ? emptyRecipient() : null,
+        recipients: name === "線上-轉單" ? [emptyRecipient()] : null,
       };
       currentEditOrderNo = "__new__";
       workspaceOrder = order;
@@ -4536,7 +4607,20 @@
         recipient: src.channelName === "線上-轉單"
           ? { ...(src.recipient || emptyRecipient()) }
           : null,
+        recipients: src.channelName === "線上-轉單"
+          ? recipientListOf(src).map((r) => ({
+              ...r,
+              items: (r.items || []).map((item) => ({ ...item })),
+            }))
+          : null,
       };
+      if (draft.recipients && draft.recipients.length) {
+        draft.recipient = { ...draft.recipients[0] };
+        draft.poDocNo = "";
+        draft.arriveDate = "";
+        draft.arriveTime = "";
+        draft.shipByTime = "";
+      }
       if (kind === "境外通路") {
         draft.overseas = clonePartyForCopy(src.overseas, buildOverseasPo(src.channelName, op, ""), op);
         if (!draft.address) draft.address = draft.overseas.buyerAddress || "";
@@ -4805,6 +4889,7 @@
     function emptyRecipient() {
       return {
         platform: "",
+        platformOrderNo: "",
         name: "",
         zip: "",
         address: "",
@@ -4812,6 +4897,10 @@
         orderAmount: "",
         shipMethod: "",
         remark: "",
+        arriveDate: "",
+        arriveTime: "",
+        shipDate: "",
+        items: [],
       };
     }
 
@@ -4834,9 +4923,11 @@
     function recipientListOf(order) {
       if (!order) return [emptyRecipient()];
       if (Array.isArray(order.recipients) && order.recipients.length) {
-        return order.recipients.map((r) => ({ ...emptyRecipient(), ...r }));
+        return order.recipients.map((r) => ({ ...emptyRecipient(), ...r, items: Array.isArray(r.items) ? r.items : [] }));
       }
-      if (order.recipient) return [{ ...emptyRecipient(), ...order.recipient }];
+      if (order.recipient) {
+        return [{ ...emptyRecipient(), ...order.recipient, items: Array.isArray(order.recipient.items) ? order.recipient.items : [] }];
+      }
       return [emptyRecipient()];
     }
 
@@ -4862,10 +4953,18 @@
       if (!body) return;
       if (isOnlineTransferPo(order)) syncRecipientPlatformFromBuyer(order);
       const platform = buyerChannelNameOf(order) || (order && order.channelName) || "";
-      const list = isOnlineTransferPo(order) ? recipientListOf(order) : [];
+      let list = isOnlineTransferPo(order) ? recipientListOf(order) : [];
+      if (isOnlineTransferPo(order) && list.length > 1 && orderFormMode === "edit" && !(order.recipients && order.recipients.some((r) => (r.items || []).length))) {
+        /* keep multi from import */
+      }
+      if (isOnlineTransferPo(order) && !list.length) list = [emptyRecipient()];
       body.innerHTML = list.map((rec) => `
         <tr>
           <td><input type="text" data-recv="platform" readonly value="${escapeHtml(platform || rec.platform || "")}" /></td>
+          <td><input type="text" data-recv="platformOrderNo" maxlength="30" value="${escapeHtml(rec.platformOrderNo || "")}" /></td>
+          <td><input type="date" data-recv="arriveDate" value="${escapeHtml(toDateInput(rec.arriveDate) || "")}" /></td>
+          <td><input type="text" data-recv="arriveTime" placeholder="HH:MM" maxlength="5" value="${escapeHtml(rec.arriveTime || "")}" /></td>
+          <td><input type="date" data-recv="shipDate" value="${escapeHtml(toDateInput(rec.shipDate) || "")}" /></td>
           <td><input type="text" data-recv="name" maxlength="50" value="${escapeHtml(rec.name || "")}" /></td>
           <td><input type="text" data-recv="zip" maxlength="3" inputmode="numeric" placeholder="三碼" value="${escapeHtml(rec.zip || "")}" /></td>
           <td class="recv-col-address"><textarea data-recv="address" rows="1">${escapeHtml(rec.address || "")}</textarea></td>
@@ -4881,13 +4980,19 @@
     function readRecipientRowsFromDom() {
       const body = document.getElementById("editRecvBody");
       if (!body) return [];
-      return Array.from(body.querySelectorAll("tr")).map((tr) => {
+      const prev = recipientListOf(getWorkspaceOrder());
+      return Array.from(body.querySelectorAll("tr")).map((tr, idx) => {
         const get = (field) => {
           const el = tr.querySelector(`[data-recv="${field}"]`);
           return el ? String(el.value || "").trim() : "";
         };
+        const prevItems = (prev[idx] && Array.isArray(prev[idx].items)) ? prev[idx].items : [];
         return {
           platform: get("platform"),
+          platformOrderNo: get("platformOrderNo").slice(0, 30),
+          arriveDate: get("arriveDate"),
+          arriveTime: get("arriveTime"),
+          shipDate: get("shipDate"),
           name: get("name"),
           zip: get("zip"),
           address: get("address"),
@@ -4895,6 +5000,7 @@
           orderAmount: get("orderAmount"),
           shipMethod: get("shipMethod"),
           remark: get("remark").slice(0, 30),
+          items: prevItems,
         };
       });
     }
@@ -4907,10 +5013,23 @@
         return;
       }
       const platform = buyerChannelNameOf(order) || order.channelName || "線上-轉單";
-      const list = readRecipientRowsFromDom().map((r) => ({ ...r, platform }));
+      let list = readRecipientRowsFromDom().map((r) => ({ ...r, platform }));
+      if (list.length > 1) {
+        const imported = list.some((r) => (r.items || []).length > 0);
+        if (!imported && orderFormMode === "edit") {
+          list = [list[0]];
+        }
+      }
       order.recipients = list;
       order.recipient = list[0] ? { ...list[0] } : emptyRecipient();
       order.recipient.platform = platform;
+      order.poDocNo = "";
+      order.arriveDate = "";
+      order.arriveTime = "";
+      order.shipByTime = "";
+      if (list.some((r) => (r.items || []).length)) {
+        order.items = aggregateItemsBySku(list.flatMap((r) => r.items || []));
+      }
     }
 
     function focusRecvField(rowIdx, field) {
@@ -4924,9 +5043,19 @@
     function validateRecipientRequired(order) {
       if (!isOnlineTransferPo(order)) return true;
       applyRecipientForm(order);
-      const list = order.recipients && order.recipients.length
+      let list = order.recipients && order.recipients.length
         ? order.recipients
         : [order.recipient || emptyRecipient()];
+      const hasImportedItems = list.some((r) => (r.items || []).length > 0);
+      if (!hasImportedItems && list.length > 1) {
+        list = [list[0]];
+        order.recipients = list;
+        order.recipient = { ...list[0] };
+        fillRecipientForm(order);
+        alert("手動建立僅可填寫一筆收件人；多收件人請使用匯入");
+        setPoTab("basic");
+        return false;
+      }
       if (!list.length) {
         alert("請至少填寫一筆收件人");
         setPoTab("basic");
@@ -4939,6 +5068,16 @@
           alert(prefix + "請先選擇買方通路名稱（將同步至通路平台）");
           setPoTab("basic");
           document.getElementById("editOverseasChannelName").focus();
+          return false;
+        }
+        if (!rec.platformOrderNo) {
+          alert(prefix + "請輸入平台訂單編號");
+          focusRecvField(i, "platformOrderNo");
+          return false;
+        }
+        if (!/^[A-Za-z0-9_\u4e00-\u9fff]{1,30}$/.test(rec.platformOrderNo)) {
+          alert(prefix + "平台訂單編號最多 30 字，僅可中、英、數、_");
+          focusRecvField(i, "platformOrderNo");
           return false;
         }
         if (!rec.name) {
@@ -4966,11 +5105,22 @@
           focusRecvField(i, "shipMethod");
           return false;
         }
+        if (rec.arriveTime && !/^\d{2}:\d{2}$/.test(rec.arriveTime)) {
+          alert(prefix + "預計到貨時間格式為 HH:MM");
+          focusRecvField(i, "arriveTime");
+          return false;
+        }
         if (rec.remark && (rec.remark.length < 5 || rec.remark.length > 30)) {
           alert(prefix + "備註最少 5 字、最多 30 字");
           focusRecvField(i, "remark");
           return false;
         }
+      }
+      const nos = list.map((r) => r.platformOrderNo);
+      if (new Set(nos).size !== nos.length) {
+        alert("平台訂單編號不可重複");
+        setPoTab("basic");
+        return false;
       }
       return true;
     }
@@ -7399,7 +7549,7 @@
     }
 
     function validatePoDocNoRequired(order) {
-      if (!isGeneralPo(order)) return true;
+      if (!isGeneralPo(order) || isOnlineTransferPo(order)) return true;
       const value = document.getElementById("editPoDocNo").value.trim();
       if (value) return true;
       alert("請輸入採購單單號");
@@ -7422,14 +7572,14 @@
       document.getElementById("editPoKindMeta").textContent = `採購單類型：${kind}`;
       const titles = { view: "檢視採購單", edit: "編輯採購單", create: "建立客戶訂單" };
       document.getElementById("editPageTitle").textContent = currentEditOrderNo === "__new__" ? titles.create : (titles[orderFormMode] || titles.edit);
-      document.getElementById("editPoDocNo").value = order.poDocNo || "";
+      document.getElementById("editPoDocNo").value = isOnlineTransferPo(order) ? "" : (order.poDocNo || "");
       syncPoDocNoField(order);
-      if (kind === "一般通路" && !order.arriveDate) {
+      if (kind === "一般通路" && !isOnlineTransferPo(order) && !order.arriveDate) {
         order.arriveDate = addDaysToStamp(order.createdAt || nowStamp(), 2);
       }
-      document.getElementById("editExpectArriveDate").value = toDateInput(order.arriveDate);
-      fillExpectArriveTime(order.arriveTime);
-      document.getElementById("editShipByTime").value = toDateInput(order.shipByTime);
+      document.getElementById("editExpectArriveDate").value = isOnlineTransferPo(order) ? "" : toDateInput(order.arriveDate);
+      fillExpectArriveTime(isOnlineTransferPo(order) ? "" : order.arriveTime);
+      document.getElementById("editShipByTime").value = isOnlineTransferPo(order) ? "" : toDateInput(order.shipByTime);
       ensurePartyPo(order);
       const party = partyRecord(order);
       if (!order.poDocNo && party && party.poDocNo) {
@@ -7542,6 +7692,10 @@
     document.getElementById("editAddShip").addEventListener("click", () => {
       const order = getWorkspaceOrder();
       if (!order || orderFormMode !== "view" || !canCreateShipFromPo(order)) return;
+      if (isOnlineTransferPo(order)) {
+        createAllOnlineShipsFromPo(order, {});
+        return;
+      }
       openShipCreateFromPo(order);
     });
     document.getElementById("copyPoClose").addEventListener("click", closeCopyPoModal);
@@ -7939,9 +8093,13 @@
 
     function openShipCreateFromPo(order) {
       if (!order || !canCreateShipFromPo(order)) return;
+      if (isOnlineTransferPo(order)) {
+        createAllOnlineShipsFromPo(order, {});
+        return;
+      }
       closePoShipFeeModal();
       closePoShipStockModal();
-      setShipCreateKind(isOnlineTransferPo(order) ? "online" : "normal");
+      setShipCreateKind("normal");
       clearPoShipCreateFields();
       setShipPoLocked(true);
       setShipFormReadonly(false);
@@ -7957,6 +8115,132 @@
       }
       fillCreateFromSelectedPo(order);
       setShipPoLocked(true);
+    }
+
+    function onlineShipsForPo(orderNo) {
+      return rows.filter((r) => r.online && r.salesOrderNo === orderNo && r.status !== "訂單取消");
+    }
+
+    function recipientsNeedingOnlineShip(order) {
+      const list = recipientListOf(order);
+      const used = new Set(onlineShipsForPo(order.orderNo).map((r) => String(r.platformOrderNo || "")));
+      return list.filter((rec) => {
+        const no = String(rec.platformOrderNo || "");
+        return no && !used.has(no);
+      });
+    }
+
+    function sourceItemsForRecipient(order, rec) {
+      if (rec && Array.isArray(rec.items) && rec.items.length) return rec.items.map((row) => toPoLineItem(row));
+      const list = recipientListOf(order);
+      if (list.length <= 1) return ((order && order.items) || []).map((row) => toPoLineItem(row));
+      return [];
+    }
+
+    function buildOnlineShipForRecipient(order, rec, opts) {
+      if (!order || !rec) return { error: "無法建立出貨單" };
+      const shipMethod = String((opts && opts.shipMethod) || rec.shipMethod || "").trim();
+      if (!shipMethod) return { error: `請選擇運送方式（平台訂單 ${rec.platformOrderNo || ""}）` };
+      const sourceItems = sourceItemsForRecipient(order, rec).filter((item) => item.sku && (Number(item.qty) || 0) > 0);
+      if (!sourceItems.length) return { error: `平台訂單 ${rec.platformOrderNo || ""} 無可出貨商品` };
+      const channel = order.channelName;
+      const goods = sourceItems.map((item) => {
+        const stock = virtualStockOf(channel, item.sku);
+        const row = applyFifoExpiry(toPoLineItem({ ...item, qty: Number(item.qty) || 0, stock, useFifo: true }));
+        row.useFifo = true;
+        return row;
+      });
+      const expectDate = toDateInput((opts && opts.expectDate) || nowStamp());
+      const shipOutDate = toDateInput(rec.shipDate) || expectDate;
+      const arriveDate = toDateInput(rec.arriveDate) || "";
+      const ids = nextShippingIds(true);
+      return {
+        ship: {
+          id: ids.id,
+          orderId: ids.orderId,
+          salesOrderNo: order.orderNo,
+          audit: "待審核",
+          channel: order.channelName || order.channelType || "—",
+          status: "待拋單",
+          applicant: "demo.user",
+          created: nowStamp(),
+          warehouse: "",
+          shipped: "",
+          incoterm: "",
+          expectDate,
+          arriveDate,
+          arriveTime: rec.arriveTime || "",
+          shipOutDate,
+          inWarehouse: "",
+          pickup: "",
+          rebatePercent: 0,
+          fees: [],
+          items: goods.map((item) => poItemToShipLine(item)),
+          online: true,
+          platform: rec.platform || order.channelName || "",
+          platformOrderNo: rec.platformOrderNo || "",
+          shipMethod,
+          recvName: rec.name || "",
+          recvTel: rec.tel || "",
+          recvAddress: rec.address || "",
+          recvRemark: rec.remark || "",
+          submittedAt: "",
+        },
+      };
+    }
+
+    function createAllOnlineShipsFromPo(order, opts) {
+      if (!order || !canCreateShipFromPo(order) || !isOnlineTransferPo(order)) {
+        alert(shipCreateBlockReason(order) || "無法建立線上出貨單");
+        return [];
+      }
+      const pending = recipientsNeedingOnlineShip(order);
+      if (!pending.length) {
+        alert("所有收件人皆已建立出貨單");
+        return [];
+      }
+      const created = [];
+      const errors = [];
+      pending.forEach((rec) => {
+        const result = buildOnlineShipForRecipient(order, rec, opts || {});
+        if (result.error) {
+          errors.push(result.error);
+          return;
+        }
+        rows.unshift(result.ship);
+        created.push(result.ship.orderId);
+      });
+      if (created.length) {
+        syncPoStatusFromShips(order);
+        persistDemoData();
+        renderShippingTable();
+        renderOnlineShippingTable();
+        renderSalesTable(getSalesFiltered());
+        if (typeof fillOrderEdit === "function" && getWorkspaceOrder() && getWorkspaceOrder().orderNo === order.orderNo) {
+          fillOrderEdit(order, "view");
+        }
+        history.replaceState({}, "", location.pathname);
+        showPage("online-shipping");
+        alert(`已建立 ${created.length} 張線上出貨單` + (errors.length ? `\n部分失敗：\n${errors.join("\n")}` : ""));
+      } else {
+        alert(errors.length ? errors.join("\n") : "沒有建立任何出貨單");
+      }
+      return created;
+    }
+
+    function buildOnlineShipFromPo(order, opts) {
+      if (!order || !canBatchOnlineShip(order)) {
+        return { error: `無法建立出貨單：${order ? order.orderNo : ""}` };
+      }
+      const pending = recipientsNeedingOnlineShip(order);
+      if (!pending.length) return { error: `所有收件人皆已建立出貨單：${order.orderNo}` };
+      const ships = [];
+      for (const rec of pending) {
+        const result = buildOnlineShipForRecipient(order, rec, opts);
+        if (result.error) return { error: result.error };
+        ships.push(result.ship);
+      }
+      return { ships };
     }
 
     function poShipFillPlan(order, sourceItems) {
@@ -8219,54 +8503,6 @@
       closePoShipFeeModal();
     }
 
-    function buildOnlineShipFromPo(order, opts) {
-      if (!order || !canBatchOnlineShip(order)) {
-        return { error: `無法建立出貨單：${order ? order.orderNo : ""}` };
-      }
-      const shipMethod = String((opts && opts.shipMethod) || (order.recipient && order.recipient.shipMethod) || "").trim();
-      if (!shipMethod) return { error: "請選擇運送方式" };
-      const plan = poShipFillPlan(order, order.items);
-      if (!plan.goods.length) return { error: `無可出貨商品：${order.orderNo}` };
-      const rec = order.recipient || emptyRecipient();
-      const expectDate = toDateInput((opts && opts.expectDate) || nowStamp());
-      const shipOutDate = toDateInput(order.shipByTime) || expectDate;
-      const arriveDate = toDateInput(order.arriveDate) || "";
-      const ids = nextShippingIds(true);
-      return {
-        ship: {
-          id: ids.id,
-          orderId: ids.orderId,
-          salesOrderNo: order.orderNo,
-          audit: "待審核",
-          channel: order.channelName || order.channelType || "—",
-          status: "待拋單",
-          applicant: "demo.user",
-          created: nowStamp(),
-          warehouse: "",
-          shipped: "",
-          incoterm: "",
-          expectDate,
-          arriveDate,
-          arriveTime: "",
-          shipOutDate,
-          inWarehouse: "",
-          pickup: "",
-          rebatePercent: 0,
-          fees: [],
-          items: plan.goods.map((item) => poItemToShipLine(item)),
-          online: true,
-          platform: rec.platform || "",
-          platformOrderNo: order.poDocNo || "",
-          shipMethod,
-          recvName: rec.name || "",
-          recvTel: rec.tel || "",
-          recvAddress: rec.address || "",
-          recvRemark: rec.remark || "",
-          submittedAt: "",
-        },
-      };
-    }
-
     function confirmPoShipCreate() {
       if (shipFormMode === "view") return;
       const order = getSelectedShipPo();
@@ -8279,6 +8515,12 @@
         return;
       }
       const isOnline = shipCreateKind === "online";
+      if (isOnline) {
+        const shipMethod = document.getElementById("poShipMethod").value;
+        const expectDate = document.getElementById("poShipExpectDate").value || toDateInput(nowStamp());
+        createAllOnlineShipsFromPo(order, { shipMethod: shipMethod || undefined, expectDate });
+        return;
+      }
       const expectDate = document.getElementById("poShipExpectDate").value;
       if (!expectDate) {
         alert("請選擇預計拋單日");
@@ -8294,37 +8536,28 @@
       let inWarehouse = "";
       let pickup = "";
       let incoterm = "";
-      if (!isOnline) {
-        inWarehouse = document.getElementById("poShipInWarehouse").value;
-        if (!inWarehouse) {
-          alert("請選擇通路進貨倉點");
-          document.getElementById("poShipInWarehouse").focus();
-          return;
-        }
-        const pickupEl = document.querySelector('input[name="poShipPickup"]:checked');
-        if (!pickupEl) {
-          alert("請選擇通路進貨倉點的取貨方式");
-          return;
-        }
-        pickup = pickupEl.value;
-        incoterm = document.getElementById("poShipIncoterm").value;
-        if (!incoterm) {
-          alert("請先在客戶訂單基本資料選擇貿易條件");
-          return;
-        }
+      inWarehouse = document.getElementById("poShipInWarehouse").value;
+      if (!inWarehouse) {
+        alert("請選擇通路進貨倉點");
+        document.getElementById("poShipInWarehouse").focus();
+        return;
       }
-      const shipMethod = document.getElementById("poShipMethod").value;
-      if (isOnline && !shipMethod) {
-        alert("請選擇運送方式");
-        document.getElementById("poShipMethod").focus();
+      const pickupEl = document.querySelector('input[name="poShipPickup"]:checked');
+      if (!pickupEl) {
+        alert("請選擇通路進貨倉點的取貨方式");
+        return;
+      }
+      pickup = pickupEl.value;
+      incoterm = document.getElementById("poShipIncoterm").value;
+      if (!incoterm) {
+        alert("請先在客戶訂單基本資料選擇貿易條件");
         return;
       }
       if (!poShipGoods.length) {
         alert("請至少保留一項出貨商品");
         return;
       }
-      const ids = nextShippingIds(isOnline);
-      const rec = order.recipient || {};
+      const ids = nextShippingIds(false);
       rows.unshift({
         id: ids.id,
         orderId: ids.orderId,
@@ -8339,21 +8572,21 @@
         incoterm,
         expectDate,
         arriveDate: document.getElementById("poShipArriveDate").value,
-        arriveTime: isOnline ? "" : readHourMinute("poShipArriveHour", "poShipArriveMinute"),
+        arriveTime: readHourMinute("poShipArriveHour", "poShipArriveMinute"),
         shipOutDate,
         inWarehouse,
         pickup,
-        rebatePercent: isOnline ? 0 : channelRebatePercent(order.channelName),
-        fees: isOnline ? [] : poShipFees.map((fee) => ({ ...fee })),
+        rebatePercent: channelRebatePercent(order.channelName),
+        fees: poShipFees.map((fee) => ({ ...fee })),
         items: poShipGoods.map((item) => poItemToShipLine(item)),
-        online: isOnline,
-        platform: rec.platform || "",
-        platformOrderNo: isOnline ? document.getElementById("poShipPlatformOrderNo").value.trim() : "",
-        shipMethod: isOnline ? shipMethod : "",
-        recvName: document.getElementById("poShipRecvName").value.trim(),
-        recvTel: document.getElementById("poShipRecvTel").value.trim(),
-        recvAddress: document.getElementById("poShipRecvAddress").value.trim(),
-        recvRemark: document.getElementById("poShipRecvRemark").value.trim(),
+        online: false,
+        platform: "",
+        platformOrderNo: "",
+        shipMethod: "",
+        recvName: "",
+        recvTel: "",
+        recvAddress: "",
+        recvRemark: "",
         submittedAt: "",
       });
       syncPoStatusFromShips(order);
@@ -8362,7 +8595,7 @@
       renderOnlineShippingTable();
       renderSalesTable(getSalesFiltered());
       history.replaceState({}, "", location.pathname);
-      showPage(shipCreateKind === "online" ? "online-shipping" : "shipping");
+      showPage("shipping");
       alert("已建立出貨單 " + ids.orderId);
     }
 
