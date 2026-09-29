@@ -3850,6 +3850,8 @@
         const blob = Object.values(rec).join("");
         if (!blob) return false;
         if (blob.includes("輸入三碼") || blob.includes("留空則視為") || blob.includes("B2B-PChome、")) return false;
+        if (blob.includes("只能輸入") || blob.includes("YYYY-MM-DD") || blob.includes("字元")) return false;
+        if (blob.includes("需填寫倉別") || blob.includes("先進先出") || blob.includes("指定無批號")) return false;
         return true;
       });
     }
@@ -3904,6 +3906,16 @@
       return Object.values(map);
     }
 
+    function normalizePlatformOrderNo(raw) {
+      return String(raw == null ? "" : raw).trim().replace(/\s+/g, "");
+    }
+
+    function isValidPlatformOrderNo(raw) {
+      const s = normalizePlatformOrderNo(raw);
+      // 與轉單範本一致：最多 50 字；允許中英數、底線、連字號（常見於平台單號）
+      return /^[A-Za-z0-9_\-\u4e00-\u9fff]{1,50}$/.test(s);
+    }
+
     async function parseTransferImportFile(file) {
       const matrix = await sheetMatrixFromFile(file);
       const rows = recordsFromTransferMatrix(matrix);
@@ -3919,13 +3931,13 @@
       const groups = new Map();
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
-        const platformOrderNo = String(row.platformOrderNo || "").trim().slice(0, 30);
+        const platformOrderNo = normalizePlatformOrderNo(row.platformOrderNo).slice(0, 50);
         if (!platformOrderNo) {
           alert(`第 ${i + 2} 列：請填寫平台訂單編號`);
           return null;
         }
-        if (!/^[A-Za-z0-9_\u4e00-\u9fff]{1,30}$/.test(platformOrderNo)) {
-          alert(`第 ${i + 2} 列：平台訂單編號最多 30 字，僅可中、英、數、_`);
+        if (!isValidPlatformOrderNo(platformOrderNo)) {
+          alert(`第 ${i + 2} 列：平台訂單編號「${platformOrderNo}」最多 50 字，僅可中、英、數、_、-`);
           return null;
         }
         if (!row.sku || !isPositiveIntQty(row.qty)) {
@@ -3934,7 +3946,8 @@
         }
         const skuKey = String(row.sku).toLowerCase();
         if (!bound[skuKey]) {
-          alert(`SKU ${row.sku} 未綁定通路商品，整檔不匯入`);
+          const samples = Object.keys(bound).slice(0, 5).join("、");
+          alert(`第 ${i + 2} 列：SKU ${row.sku} 未綁定「線上-轉單」通路商品，整檔不匯入` + (samples ? `\n可參考：${samples}` : ""));
           return null;
         }
         if (!groups.has(platformOrderNo)) {
@@ -4961,7 +4974,7 @@
       body.innerHTML = list.map((rec) => `
         <tr>
           <td><input type="text" data-recv="platform" readonly value="${escapeHtml(platform || rec.platform || "")}" /></td>
-          <td><input type="text" data-recv="platformOrderNo" maxlength="30" value="${escapeHtml(rec.platformOrderNo || "")}" /></td>
+          <td><input type="text" data-recv="platformOrderNo" maxlength="50" value="${escapeHtml(rec.platformOrderNo || "")}" /></td>
           <td><input type="date" data-recv="arriveDate" value="${escapeHtml(toDateInput(rec.arriveDate) || "")}" /></td>
           <td><input type="text" data-recv="arriveTime" placeholder="HH:MM" maxlength="5" value="${escapeHtml(rec.arriveTime || "")}" /></td>
           <td><input type="date" data-recv="shipDate" value="${escapeHtml(toDateInput(rec.shipDate) || "")}" /></td>
@@ -4989,7 +5002,7 @@
         const prevItems = (prev[idx] && Array.isArray(prev[idx].items)) ? prev[idx].items : [];
         return {
           platform: get("platform"),
-          platformOrderNo: get("platformOrderNo").slice(0, 30),
+          platformOrderNo: get("platformOrderNo").slice(0, 50),
           arriveDate: get("arriveDate"),
           arriveTime: get("arriveTime"),
           shipDate: get("shipDate"),
@@ -5075,8 +5088,8 @@
           focusRecvField(i, "platformOrderNo");
           return false;
         }
-        if (!/^[A-Za-z0-9_\u4e00-\u9fff]{1,30}$/.test(rec.platformOrderNo)) {
-          alert(prefix + "平台訂單編號最多 30 字，僅可中、英、數、_");
+        if (!isValidPlatformOrderNo(rec.platformOrderNo)) {
+          alert(prefix + `平台訂單編號「${rec.platformOrderNo}」最多 50 字，僅可中、英、數、_、-`);
           focusRecvField(i, "platformOrderNo");
           return false;
         }
