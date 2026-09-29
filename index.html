@@ -761,7 +761,7 @@
       grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr);
       gap: 16px 36px;
       align-items: start;
-      max-width: 1100px;
+      max-width: 100%;
     }
     .po-basic-layout.has-recipient .po-online-head {
       display: contents;
@@ -793,29 +793,32 @@
       grid-row: 2;
       order: unset;
       margin-top: 0;
+      overflow: visible;
     }
     .recv-table-wrap {
-      overflow-x: auto;
-      max-width: 100%;
+      overflow: visible;
+      max-width: none;
+      width: 100%;
     }
     .recv-list-table {
-      min-width: 1280px;
+      min-width: 0;
       width: 100%;
+      table-layout: auto;
     }
     .recv-list-table th,
     .recv-list-table td {
-      white-space: nowrap;
+      white-space: normal;
       vertical-align: middle;
+      word-break: break-word;
     }
     .recv-list-table td.recv-col-address {
-      white-space: normal;
-      min-width: 160px;
+      min-width: 120px;
     }
     .recv-list-table input,
     .recv-list-table select,
     .recv-list-table textarea {
       width: 100%;
-      min-width: 72px;
+      min-width: 0;
       box-sizing: border-box;
     }
     .recv-list-table input[readonly] {
@@ -826,6 +829,12 @@
     .recv-list-table textarea {
       min-height: 36px;
       resize: vertical;
+    }
+    #page-order-edit .po-pane[data-po-pane="basic"] {
+      overflow: visible;
+    }
+    #page-order-edit.has-online-recv {
+      overflow-x: auto;
     }
     @media (max-width: 1100px) {
       .po-basic-layout.has-recipient {
@@ -2672,6 +2681,8 @@
             </div>
             <div class="field-hint-below hidden" id="importTransferHint">
               線上-轉單請使用 <a class="upload-link" href="轉單匯入模板.xlsx" download="轉單匯入模板.xlsx">轉單匯入模板.xlsx</a>
+              ；可下載測試檔 <a class="upload-link" href="transfer-import-sample.xlsx" download="轉單匯入測試範例.xlsx">轉單匯入測試範例.xlsx</a>
+              （含 2 個平台訂單、已綁定 SKU）
             </div>
           </div>
         </div>
@@ -4980,8 +4991,10 @@
       const show = isOnlineTransferPo(order);
       const layout = document.getElementById("poBasicLayout");
       const panel = document.getElementById("editRecipientPanel");
+      const page = document.getElementById("page-order-edit");
       if (layout) layout.classList.toggle("has-recipient", show);
       if (panel) panel.classList.toggle("hidden", !show);
+      if (page) page.classList.toggle("has-online-recv", show);
     }
 
     function fillRecipientForm(order) {
