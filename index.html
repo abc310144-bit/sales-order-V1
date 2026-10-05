@@ -2541,8 +2541,8 @@
               <div class="po-kind-meta" id="accViewMeta"></div>
             </div>
             <div class="acc-head-actions">
-              <button type="button" class="btn" id="accViewOpenPo">檢視客戶訂單</button>
               <button type="button" class="btn btn-primary hidden" id="accAcceptBtn">驗收</button>
+              <button type="button" class="btn btn-primary hidden" id="accImportBtn">匯入驗收商品</button>
             </div>
           </div>
           <div class="acc-tabs">
@@ -2556,7 +2556,6 @@
           <div class="acc-pane hidden" data-acc-pane="goods">
             <div class="goods-title-row">
               <h3 class="goods-title">驗收商品</h3>
-              <button type="button" class="btn btn-primary" id="accImportBtn">匯入驗收商品</button>
             </div>
             <div class="po-pick-filter" id="accGoodsFilterRow">
               <input id="accGoodsFilterInput" type="text" placeholder="輸入 SKU 或商品名稱，支援模糊查詢，多個以 , 分隔" autocomplete="off" />
@@ -9659,7 +9658,9 @@
       document.querySelectorAll(".acc-tab").forEach((el) => el.classList.toggle("active", el.dataset.accTab === name));
       document.querySelectorAll(".acc-pane").forEach((el) => el.classList.toggle("hidden", el.dataset.accPane !== name));
       const order = accOrderOf(accViewOrderNo);
-      document.getElementById("accAcceptBtn").classList.toggle("hidden", name !== "goods" || !order || !accEditable(order));
+      const showAcceptActions = name === "goods" && !!order && accEditable(order);
+      document.getElementById("accAcceptBtn").classList.toggle("hidden", !showAcceptActions);
+      document.getElementById("accImportBtn").classList.toggle("hidden", !showAcceptActions);
     }
 
     function openAcceptanceView(orderNo, tab) {
@@ -9693,7 +9694,6 @@
       const hasRecords = accRecordsOfOrder(order.orderNo).length > 0;
       document.querySelector('.acc-tab[data-acc-tab="settle"]').classList.toggle("hidden", !hasRecords);
       const editable = accEditable(order);
-      document.getElementById("accImportBtn").classList.toggle("hidden", !editable);
       document.getElementById("accGoodsNote").textContent = editable
         ? "勾選後才能填寫實際驗收數（預設帶入實際出貨數，可填 0 或大於出貨數）；按「驗收」後鎖定，不可再修改。"
         : "此訂單已驗收，驗收數與備註已鎖定。";
@@ -10450,9 +10450,6 @@
     });
     document.getElementById("accSettleBtn").addEventListener("click", openSettlementPage);
     document.getElementById("accViewBack").addEventListener("click", () => showPage("acceptance"));
-    document.getElementById("accViewOpenPo").addEventListener("click", () => {
-      if (accViewOrderNo) openPoWorkspace({ po: accViewOrderNo, mode: "view" });
-    });
     document.querySelectorAll(".acc-tab").forEach((el) => {
       el.addEventListener("click", () => setAccTab(el.dataset.accTab));
     });
