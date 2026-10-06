@@ -1064,9 +1064,34 @@
     #page-ship-create.is-readonly [data-acc="settings"] > .po-ship-acc-head { display: none; }
     #poShipSettingsView,
     #poShipRecipientView { display: none; }
+    #page-ship-create.is-readonly #poShipSettingsView.ship-settings-view-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 24px 40px;
+      align-items: start;
+    }
+    @media (max-width: 960px) {
+      #page-ship-create.is-readonly #poShipSettingsView.ship-settings-view-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    #poShipSettingsView .ship-settings-view-col {
+      min-width: 0;
+      padding: 16px 18px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+    }
+    #poShipSettingsView .ship-settings-view-col[data-ship-view-col="basic"] {
+      border-color: #e57373;
+      background: #fff8f8;
+    }
+    #poShipSettingsView .ship-settings-view-col[data-ship-view-col="channel"] {
+      border-color: #64b5f6;
+      background: #f5faff;
+    }
     #poShipSettingsView .form-row,
     #poShipRecipientView .form-row {
-      grid-template-columns: 120px minmax(0, 1fr);
+      grid-template-columns: 140px minmax(0, 1fr);
       justify-items: start;
     }
     #poShipSettingsView .form-row > label,
@@ -2231,50 +2256,117 @@
                   設定
                 </button>
                 <div class="po-ship-acc-body">
-                  <div id="poShipSettingsView">
-                    <div class="form-row">
-                      <label>客戶訂單編號</label>
-                      <div class="form-ctrl"><span class="ship-view-val ship-view-id" id="shipViewPoNo">-</span></div>
+                  <div id="poShipSettingsView" class="ship-settings-view-grid">
+                    <div class="ship-settings-view-col" data-ship-view-col="basic">
+                      <div class="form-row">
+                        <label>客戶訂單編號</label>
+                        <div class="form-ctrl"><span class="ship-view-val ship-view-id" id="shipViewPoNo">-</span></div>
+                      </div>
+                      <div class="form-row">
+                        <label>出貨單編號</label>
+                        <div class="form-ctrl"><span class="ship-view-val ship-view-id" id="shipViewOrderId">-</span></div>
+                      </div>
+                      <div class="form-row">
+                        <label>預計拋單日</label>
+                        <div class="form-ctrl"><span class="ship-view-val" id="shipViewExpectDate">-</span></div>
+                      </div>
+                      <div class="form-row">
+                        <label>預計出貨日</label>
+                        <div class="form-ctrl"><span class="ship-view-val" id="shipViewOutDate">-</span></div>
+                      </div>
+                      <div class="form-row">
+                        <label>預計到貨日</label>
+                        <div class="form-ctrl"><span class="ship-view-val" id="shipViewArriveDate">-</span></div>
+                      </div>
+                      <div class="form-row">
+                        <label>預計到貨時間</label>
+                        <div class="form-ctrl"><span class="ship-view-val" id="shipViewArriveTime">-</span></div>
+                      </div>
+                      <div class="form-row">
+                        <label>通路進貨倉點</label>
+                        <div class="form-ctrl"><span class="ship-view-val" id="shipViewInWarehouse">-</span></div>
+                      </div>
+                      <div class="form-row">
+                        <label>貿易條件</label>
+                        <div class="form-ctrl"><span class="ship-view-val" id="shipViewIncoterm">-</span></div>
+                      </div>
                     </div>
-                    <div class="form-row">
-                      <label>出貨單編號</label>
-                      <div class="form-ctrl"><span class="ship-view-val ship-view-id" id="shipViewOrderId">-</span></div>
-                    </div>
-                    <div class="form-row">
-                      <label>預計拋單日</label>
-                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewExpectDate">-</span></div>
-                    </div>
-                    <div class="form-row">
-                      <label>預計出貨日</label>
-                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewOutDate">-</span></div>
-                    </div>
-                    <div class="form-row">
-                      <label>預計到貨日</label>
-                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewArriveDate">-</span></div>
-                    </div>
-                    <div class="form-row">
-                      <label>預計到貨時間</label>
-                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewArriveTime">-</span></div>
-                    </div>
-                    <div class="form-row">
-                      <label>通路進貨倉點</label>
-                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewInWarehouse">-</span></div>
+                    <div class="ship-settings-view-col" data-ship-view-col="channel">
+                      <div class="form-row">
+                        <label>合作通路類型</label>
+                        <div class="form-ctrl"><span class="ship-view-val" id="shipViewChannelType">-</span></div>
+                      </div>
+                      <div class="form-row">
+                        <label>地區</label>
+                        <div class="form-ctrl"><span class="ship-view-val" id="shipViewChannelArea">-</span></div>
+                      </div>
+                      <div class="form-row">
+                        <label>通路名稱</label>
+                        <div class="form-ctrl"><span class="ship-view-val" id="shipViewChannelName">-</span></div>
+                      </div>
+                      <div class="form-row">
+                        <label>通路電話</label>
+                        <div class="form-ctrl"><span class="ship-view-val" id="shipViewChannelPhone">-</span></div>
+                      </div>
+                      <div class="form-row">
+                        <label>通路窗口</label>
+                        <div class="form-ctrl"><span class="ship-view-val" id="shipViewChannelContact">-</span></div>
+                      </div>
+                      <div class="form-row">
+                        <label>通路電子郵件</label>
+                        <div class="form-ctrl"><span class="ship-view-val" id="shipViewChannelEmail">-</span></div>
+                      </div>
+                      <div class="form-row">
+                        <label>通路出貨倉點</label>
+                        <div class="form-ctrl"><span class="ship-view-val" id="shipViewChannelOutPoint">-</span></div>
+                      </div>
                     </div>
                   </div>
                   <div id="poShipSettingsCreate">
                     <div class="form-row online-ship-hide">
-                      <label>貿易條件</label>
+                      <label class="required">合作通路類型</label>
                       <div class="form-ctrl">
-                        <select id="poShipIncoterm">
+                        <select id="poShipChannelType">
                           <option value="">請選擇</option>
-                          <option>FOB</option>
-                          <option>CIF</option>
-                          <option>EXW</option>
-                          <option>CFR</option>
-                          <option>DAP</option>
-                          <option>DDP</option>
+                          <option>台灣本地通路</option>
+                          <option>台灣實體百貨</option>
+                          <option>台灣線上通路</option>
+                          <option>台灣本地經銷</option>
+                          <option>境外通路</option>
                         </select>
                       </div>
+                    </div>
+                    <div class="form-row online-ship-hide">
+                      <label class="required">地區</label>
+                      <div class="form-ctrl">
+                        <select id="poShipChannelArea">
+                          <option value="">請選擇</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="form-row online-ship-hide">
+                      <label class="required">通路名稱</label>
+                      <div class="form-ctrl">
+                        <select id="poShipChannelName">
+                          <option value="">請選擇</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="form-row online-ship-hide ship-channel-autofill">
+                      <label>通路電話</label>
+                      <div class="form-ctrl"><span class="ship-view-val" id="poShipChannelPhoneText">-</span></div>
+                    </div>
+                    <div class="form-row online-ship-hide ship-channel-autofill">
+                      <label>通路窗口</label>
+                      <div class="form-ctrl"><span class="ship-view-val" id="poShipChannelContactText">-</span></div>
+                    </div>
+                    <div class="form-row online-ship-hide ship-channel-autofill">
+                      <label>通路電子郵件</label>
+                      <div class="form-ctrl"><span class="ship-view-val" id="poShipChannelEmailText">-</span></div>
+                    </div>
+                    <div class="form-row online-ship-hide ship-channel-autofill">
+                      <label>通路出貨倉點</label>
+                      <div class="form-ctrl"><span class="ship-view-val" id="poShipChannelOutPointText">-</span></div>
                     </div>
                     <div class="form-row">
                       <label>預計拋單日</label>
@@ -2309,6 +2401,20 @@
                           <label class="radio-line"><input type="radio" name="poShipPickup" value="hsinchu" /> 訂單非自取 (新竹)</label>
                           <label class="radio-line"><input type="radio" name="poShipPickup" value="blackcat" /> 訂單非自取 (黑貓)</label>
                         </div>
+                      </div>
+                    </div>
+                    <div class="form-row online-ship-hide">
+                      <label class="required">貿易條件</label>
+                      <div class="form-ctrl">
+                        <select id="poShipIncoterm">
+                          <option value="">請選擇</option>
+                          <option>FOB</option>
+                          <option>CIF</option>
+                          <option>EXW</option>
+                          <option>CFR</option>
+                          <option>DAP</option>
+                          <option>DDP</option>
+                        </select>
                       </div>
                     </div>
                     <div class="form-row online-ship-only">
@@ -5423,17 +5529,19 @@
     });
 
     const channelProfiles = {
-      "實體-PW健身工廠": { region: "台灣(通路)", mode: "寄倉", currency: "TWD", phone: "0912000000", contact: "正光廊-營運部主管", email: "XXX@urmart.com", address: "台北市內湖區瑞光路358號1樓（PW健身工廠內湖店）", inWarehouse: "正光廊-營運部主管", taxId: "24567890" },
-      "實體-全聯": { region: "台灣(通路)", mode: "寄倉", currency: "TWD", phone: "02-2531-2345", contact: "全聯採購窗口", email: "pxmart@example.com", address: "桃園市大園區航勤北路8號 全聯物流中心", inWarehouse: "全聯物流中心", taxId: "12345678" },
-      "實體-寶雅": { region: "台灣(通路)", mode: "寄倉", currency: "TWD", phone: "02-2765-8899", contact: "寶雅商品部", email: "poya@example.com", address: "新北市樹林區佳園路二段70號 寶雅倉儲", inWarehouse: "寶雅倉儲", taxId: "23456789" },
-      "實體-迪卡儂": { region: "台灣(通路)", mode: "寄倉", currency: "TWD", phone: "04-2258-0000", contact: "迪卡儂倉儲", email: "decathlon@example.com", address: "台中市西屯區台灣大道四段1018號", inWarehouse: "藍田倉", taxId: "34567891" },
-      "經銷商-絢綻國際企業社": { region: "台灣(經銷)", mode: "經銷", currency: "TWD", phone: "03-392-1177", contact: "絢綻業務", email: "dealer1@example.com", address: "新北市新莊區中正路567號3樓", inWarehouse: "正光廊-營運部主管", taxId: "55667788" },
-      "經銷商-學生營養股份有限公司": { region: "台灣(經銷)", mode: "經銷", currency: "TWD", phone: "07-333-2211", contact: "學生營養窗口", email: "dealer2@example.com", address: "高雄市前鎮區成功二路88號", inWarehouse: "藍田倉", taxId: "66778899" },
-      "線上-轉單": { region: "台灣(通路)", mode: "轉單", currency: "TWD", phone: "02-1111-2222", contact: "線上客服", email: "online@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉", taxId: "45678912" },
-      "線上-蝦皮商城": { region: "台灣(通路)", mode: "轉單", currency: "TWD", phone: "02-3333-4444", contact: "蝦皮窗口", email: "shopee@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉", taxId: "56789123" },
-      "跨境- Cool Cool Trading": { region: "境外", mode: "跨境", currency: "USD", phone: "+852-1234-5678", contact: "Cool Cool Ops", email: "coolcool@example.com", address: "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong", inWarehouse: "藍田倉", taxId: "HK-99887766" },
-      "晨曦公司": { region: "境外", mode: "跨境", currency: "TWD", phone: "02-8787-2360", contact: "晨曦窗口", email: "chenxi@example.com", address: "115臺北市南港區三重里三重路19-9號B棟6樓", inWarehouse: "藍田倉", taxId: "77889900" },
-      "百貨-新光三越": { region: "台灣(通路)", mode: "寄倉", currency: "TWD", phone: "02-2388-5555", contact: "新光三越專櫃", email: "skm@example.com", address: "台北市信義區松高路19號 新光三越A11專櫃", inWarehouse: "正光廊-營運部主管", taxId: "88990011" },
+      "實體-PW健身工廠": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", currency: "TWD", phone: "0912000000", contact: "正光廊-營運部主管", email: "XXX@urmart.com", address: "台北市內湖區瑞光路358號1樓（PW健身工廠內湖店）", inWarehouse: "正光廊-營運部主管", shipOutPoint: "藍田倉(訂單自取)", taxId: "24567890" },
+      "實體-全聯": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", currency: "TWD", phone: "02-2531-2345", contact: "全聯採購窗口", email: "pxmart@example.com", address: "桃園市大園區航勤北路8號 全聯物流中心", inWarehouse: "全聯物流中心", shipOutPoint: "全聯物流中心(專車)", taxId: "12345678" },
+      "實體-寶雅": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", currency: "TWD", phone: "02-2765-8899", contact: "寶雅商品部", email: "poya@example.com", address: "新北市樹林區佳園路二段70號 寶雅倉儲", inWarehouse: "寶雅倉儲", shipOutPoint: "寶雅倉儲(新竹)", taxId: "23456789" },
+      "實體-迪卡儂": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", currency: "TWD", phone: "04-2258-0000", contact: "迪卡儂倉儲", email: "decathlon@example.com", address: "台中市西屯區台灣大道四段1018號", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "34567891" },
+      "經銷商-絢綻國際企業社": { region: "台灣(經銷)", shipArea: "台灣", mode: "經銷", currency: "TWD", phone: "03-392-1177", contact: "絢綻業務", email: "dealer1@example.com", address: "新北市新莊區中正路567號3樓", inWarehouse: "正光廊-營運部主管", shipOutPoint: "藍田倉(訂單自取)", taxId: "55667788" },
+      "經銷商-學生營養股份有限公司": { region: "台灣(經銷)", shipArea: "台灣", mode: "經銷", currency: "TWD", phone: "07-333-2211", contact: "學生營養窗口", email: "dealer2@example.com", address: "高雄市前鎮區成功二路88號", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "66778899" },
+      "線上-轉單": { region: "台灣(通路)", shipArea: "台灣", mode: "轉單", currency: "TWD", phone: "02-1111-2222", contact: "線上客服", email: "online@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(黑貓)", taxId: "45678912" },
+      "線上-蝦皮商城": { region: "台灣(通路)", shipArea: "台灣", mode: "轉單", currency: "TWD", phone: "02-3333-4444", contact: "蝦皮窗口", email: "shopee@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(宅配通)", taxId: "56789123" },
+      "跨境- Cool Cool Trading": { region: "境外", shipArea: "香港", mode: "跨境", currency: "USD", phone: "+852-1234-5678", contact: "Cool Cool Ops", email: "coolcool@example.com", address: "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong", inWarehouse: "藍田倉", shipOutPoint: "藍雀物流股份有限公司(訂單自取)", taxId: "HK-99887766" },
+      "跨境-Sheng Siong": { region: "境外", shipArea: "新加坡", mode: "跨境", currency: "USD", phone: "+6562698265", contact: "Jane Gwee Chee Chin", email: "gwee.cc@shengsiong.com.sg", address: "6 Mandai Link, Singapore 728652", inWarehouse: "藍田倉", shipOutPoint: "藍雀物流股份有限公司(訂單自取)", taxId: "SG-201234567" },
+      "跨境-Aeon Japan": { region: "境外", shipArea: "日本", mode: "跨境", currency: "USD", phone: "+81-3-1234-5678", contact: "Aeon Import Desk", email: "import@aeon-demo.jp", address: "1-5-1 Nakase, Mihama-ku, Chiba, Japan", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "JP-998877" },
+      "晨曦公司": { region: "境外", shipArea: "香港", mode: "跨境", currency: "TWD", phone: "02-8787-2360", contact: "晨曦窗口", email: "chenxi@example.com", address: "115臺北市南港區三重里三重路19-9號B棟6樓", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(訂單自取)", taxId: "77889900" },
+      "百貨-新光三越": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", currency: "TWD", phone: "02-2388-5555", contact: "新光三越專櫃", email: "skm@example.com", address: "台北市信義區松高路19號 新光三越A11專櫃", inWarehouse: "正光廊-營運部主管", shipOutPoint: "正光廊-營運部主管(訂單自取)", taxId: "88990011" },
     };
 
     function channelRebatePercent(channelName) {
@@ -5473,6 +5581,8 @@
         "線上-轉單": [0, 1, 2, 6, 7, 8, 9, 10],
         "線上-蝦皮商城": [0, 1, 2, 3, 5, 7, 9, 11],
         "跨境- Cool Cool Trading": [1, 3, 4, 6, 7, 8, 10, 11],
+        "跨境-Sheng Siong": [0, 1, 2, 5, 7, 8, 9, 10],
+        "跨境-Aeon Japan": [1, 3, 4, 6, 7, 9, 10, 11],
         "晨曦公司": [0, 1, 5, 6, 7, 8, 9, 11],
         "百貨-新光三越": [0, 3, 5, 6, 7, 8, 10, 11],
       };
@@ -5532,8 +5642,9 @@
       "台灣線上通路": ["線上-轉單", "線上-蝦皮商城"],
       "台灣本地通路": localChannelNames,
       "台灣線下通路": localChannelNames,
+      "台灣實體百貨": ["實體-PW健身工廠", "百貨-新光三越"],
       "台灣本地經銷": ["經銷商-絢綻國際企業社", "經銷商-學生營養股份有限公司"],
-      "境外通路": ["跨境- Cool Cool Trading", "晨曦公司"],
+      "境外通路": ["跨境- Cool Cool Trading", "跨境-Sheng Siong", "跨境-Aeon Japan", "晨曦公司"],
     };
 
     function fillChannelNameOptions(selectId, group) {
@@ -6763,12 +6874,14 @@
         remark: item.remark || "",
         pcsPerCarton: Number(item.pcsPerCarton) || 0,
       }));
+      const channelName = cfg.channelName || "線上-轉單";
+      const snap = channelSnapshotFromName(channelName, cfg.channelType || "台灣線上通路");
       return {
         id: String(cfg.id),
         orderId: `TRY${pad(cfg.id, 10)}`,
         salesOrderNo: cfg.salesOrderNo,
         audit: cfg.audit || (status === "已配達" ? "審核通過" : "待審核"),
-        channel: "線上-轉單",
+        channel: channelName,
         status,
         applicant: cfg.applicant || "demo.user",
         created,
@@ -6778,8 +6891,10 @@
         arriveDate: cfg.arriveDate || "",
         arriveTime: cfg.arriveTime || "",
         shipOutDate: cfg.shipOutDate || "",
-        inWarehouse: "藍田倉",
+        inWarehouse: cfg.inWarehouse || "藍田倉",
         pickup: "",
+        incoterm: cfg.incoterm || "",
+        ...snap,
         online: true,
         platform: "線上-轉單",
         platformOrderNo: cfg.platformOrderNo || "",
@@ -9001,6 +9116,9 @@
     });
     document.getElementById("poShipCreateConfirm").addEventListener("click", confirmPoShipCreate);
     document.getElementById("shipCreateBtn").addEventListener("click", openShipCreatePage);
+    document.getElementById("poShipChannelType").addEventListener("change", onPoShipChannelTypeChange);
+    document.getElementById("poShipChannelArea").addEventListener("change", onPoShipChannelAreaChange);
+    document.getElementById("poShipChannelName").addEventListener("change", refreshPoShipChannelAutofill);
     document.getElementById("onlineToggleFilter").addEventListener("click", () => {
       document.getElementById("onlineFilterPanel").classList.toggle("hidden");
     });
@@ -9266,9 +9384,9 @@
         addFeeBtn.classList.remove("hidden");
         addFeeBtn.disabled = !!readonly;
       }
-      // 貿易條件在建立時也一律鎖定
+      // 貿易條件：建立可選；檢視唯讀
       const incoterm = document.getElementById("poShipIncoterm");
-      if (incoterm) incoterm.disabled = true;
+      if (incoterm) incoterm.disabled = !!readonly;
       if (!readonly && shipPoLocked) {
         const input = document.getElementById("shipPoNo");
         if (input) input.disabled = true;
@@ -9320,6 +9438,7 @@
     function clearPoShipCreateFields() {
       document.getElementById("shipPoNo").value = "";
       document.getElementById("shipPoList").classList.add("hidden");
+      resetPoShipChannelCascade();
       syncPoShipIncotermFromOrder(null);
       document.getElementById("poShipExpectDate").value = "";
       document.getElementById("poShipArriveDate").value = "";
@@ -9443,6 +9562,7 @@
           shipOutDate,
           inWarehouse: "",
           pickup: "",
+          ...channelSnapshotFromName(order.channelName || "", order.channelType || ""),
           rebatePercent: 0,
           fees: [],
           items: goods.map((item) => poItemToShipLine(item)),
@@ -9563,12 +9683,109 @@
         sel.appendChild(opt);
       }
       sel.value = terms;
-      sel.disabled = true;
+      sel.disabled = shipFormMode === "view";
     }
 
-    /** 設定欄：貿易條件由客戶訂單帶入；其餘欄位有值才帶，沒有則空。 */
+    function shipChannelAreasForType(channelType) {
+      if (channelType === "境外通路") return ["新加坡", "香港", "日本"];
+      if (channelType) return ["台灣"];
+      return [];
+    }
+
+    function shipChannelNamesForTypeArea(channelType, area) {
+      const names = channelNamesByGroup[channelType] || [];
+      if (!channelType || !area) return [];
+      return names.filter((name) => {
+        const profile = channelProfiles[name] || {};
+        const shipArea = profile.shipArea || (channelType === "境外通路" ? "" : "台灣");
+        return shipArea === area;
+      });
+    }
+
+    function fillPoShipChannelAreaOptions(selected) {
+      const type = document.getElementById("poShipChannelType").value;
+      const sel = document.getElementById("poShipChannelArea");
+      if (!sel) return;
+      const areas = shipChannelAreasForType(type);
+      const value = selected && areas.includes(selected) ? selected : "";
+      sel.innerHTML = `<option value="">請選擇</option>` + areas.map((name) => `<option>${name}</option>`).join("");
+      sel.value = value;
+    }
+
+    function fillPoShipChannelNameOptions(selected) {
+      const type = document.getElementById("poShipChannelType").value;
+      const area = document.getElementById("poShipChannelArea").value;
+      const sel = document.getElementById("poShipChannelName");
+      if (!sel) return;
+      const names = shipChannelNamesForTypeArea(type, area);
+      const value = selected && names.includes(selected) ? selected : "";
+      sel.innerHTML = `<option value="">請選擇</option>` + names.map((name) => `<option>${name}</option>`).join("");
+      sel.value = value;
+    }
+
+    function resetPoShipChannelCascade() {
+      const typeSel = document.getElementById("poShipChannelType");
+      if (typeSel) typeSel.value = "";
+      fillPoShipChannelAreaOptions("");
+      fillPoShipChannelNameOptions("");
+      refreshPoShipChannelAutofill();
+    }
+
+    function refreshPoShipChannelAutofill() {
+      const channelName = (document.getElementById("poShipChannelName") || {}).value || "";
+      const profile = channelProfiles[channelName] || {};
+      const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = shipViewDash(value);
+      };
+      setText("poShipChannelPhoneText", profile.phone || "");
+      setText("poShipChannelContactText", profile.contact || "");
+      setText("poShipChannelEmailText", profile.email || "");
+      setText("poShipChannelOutPointText", profile.shipOutPoint || "");
+    }
+
+    function onPoShipChannelTypeChange() {
+      fillPoShipChannelAreaOptions("");
+      fillPoShipChannelNameOptions("");
+      refreshPoShipChannelAutofill();
+    }
+
+    function onPoShipChannelAreaChange() {
+      fillPoShipChannelNameOptions("");
+      refreshPoShipChannelAutofill();
+    }
+
+    function readPoShipChannelSnapshot() {
+      const channelName = document.getElementById("poShipChannelName").value;
+      const profile = channelProfiles[channelName] || {};
+      return {
+        shipChannelType: document.getElementById("poShipChannelType").value,
+        shipChannelArea: document.getElementById("poShipChannelArea").value,
+        shipChannelName: channelName,
+        shipChannelPhone: profile.phone || "",
+        shipChannelContact: profile.contact || "",
+        shipChannelEmail: profile.email || "",
+        shipChannelOutPoint: profile.shipOutPoint || "",
+      };
+    }
+
+    function channelSnapshotFromName(channelName, channelType) {
+      const profile = channelProfiles[channelName] || {};
+      return {
+        shipChannelType: channelType || channelTypeOfName(channelName) || "",
+        shipChannelArea: profile.shipArea || "",
+        shipChannelName: channelName || "",
+        shipChannelPhone: profile.phone || "",
+        shipChannelContact: profile.contact || "",
+        shipChannelEmail: profile.email || "",
+        shipChannelOutPoint: profile.shipOutPoint || "",
+      };
+    }
+
+    /** 設定欄：其餘欄位有值才帶；通路類型／地區／名稱建立時不從客戶訂單帶入。 */
     function resetPoShipCreateForm(order) {
       initExpectArriveTimeOptions();
+      resetPoShipChannelCascade();
       syncPoShipIncotermFromOrder(order);
       document.getElementById("poShipExpectDate").value = toDateInput(order && order.expectDate) || "";
       document.getElementById("poShipArriveDate").value = toDateInput(order && order.arriveDate) || "";
@@ -9809,6 +10026,22 @@
       let inWarehouse = "";
       let pickup = "";
       let incoterm = "";
+      const channelSnap = readPoShipChannelSnapshot();
+      if (!channelSnap.shipChannelType) {
+        alert("請選擇合作通路類型");
+        document.getElementById("poShipChannelType").focus();
+        return;
+      }
+      if (!channelSnap.shipChannelArea) {
+        alert("請選擇地區");
+        document.getElementById("poShipChannelArea").focus();
+        return;
+      }
+      if (!channelSnap.shipChannelName) {
+        alert("請選擇通路名稱");
+        document.getElementById("poShipChannelName").focus();
+        return;
+      }
       inWarehouse = document.getElementById("poShipInWarehouse").value;
       if (!inWarehouse) {
         alert("請選擇通路進貨倉點");
@@ -9823,7 +10056,8 @@
       pickup = pickupEl.value;
       incoterm = document.getElementById("poShipIncoterm").value;
       if (!incoterm) {
-        alert("請先在客戶訂單基本資料選擇貿易條件");
+        alert("請選擇貿易條件");
+        document.getElementById("poShipIncoterm").focus();
         return;
       }
       if (!poShipGoods.length) {
@@ -9836,7 +10070,7 @@
         orderId: ids.orderId,
         salesOrderNo: order.orderNo,
         audit: "待審核",
-        channel: order.channelName || order.channelType || "—",
+        channel: channelSnap.shipChannelName || order.channelName || order.channelType || "—",
         status: "待拋單",
         applicant: "demo.user",
         created: nowStamp(),
@@ -9849,6 +10083,7 @@
         shipOutDate,
         inWarehouse,
         pickup,
+        ...channelSnap,
         rebatePercent: channelRebatePercent(order.channelName),
         fees: poShipFees.map((fee) => ({ ...fee })),
         items: poShipGoods.map((item) => poItemToShipLine(item)),
@@ -9885,6 +10120,18 @@
       const warehouse = String(
         ship.inWarehouse || (channelProfiles[(po && po.channelName) || ship.channel || ""] || {}).inWarehouse || ""
       ).trim();
+      const fallbackName = ship.shipChannelName || ship.channel || (po && po.channelName) || "";
+      const snap = (ship.shipChannelName || ship.shipChannelType)
+        ? {
+          shipChannelType: ship.shipChannelType || "",
+          shipChannelArea: ship.shipChannelArea || "",
+          shipChannelName: ship.shipChannelName || "",
+          shipChannelPhone: ship.shipChannelPhone || "",
+          shipChannelContact: ship.shipChannelContact || "",
+          shipChannelEmail: ship.shipChannelEmail || "",
+          shipChannelOutPoint: ship.shipChannelOutPoint || "",
+        }
+        : channelSnapshotFromName(fallbackName, (po && po.channelType) || ship.shipChannelType || "");
       const setText = (id, value) => {
         const el = document.getElementById(id);
         if (el) el.textContent = shipViewDash(value);
@@ -9896,6 +10143,14 @@
       setText("shipViewArriveDate", arriveDate);
       setText("shipViewArriveTime", arriveTime);
       setText("shipViewInWarehouse", warehouse);
+      setText("shipViewIncoterm", ship.incoterm || "");
+      setText("shipViewChannelType", snap.shipChannelType);
+      setText("shipViewChannelArea", snap.shipChannelArea);
+      setText("shipViewChannelName", snap.shipChannelName);
+      setText("shipViewChannelPhone", snap.shipChannelPhone);
+      setText("shipViewChannelContact", snap.shipChannelContact);
+      setText("shipViewChannelEmail", snap.shipChannelEmail);
+      setText("shipViewChannelOutPoint", snap.shipChannelOutPoint);
     }
 
     function renderShipRecipientView(ship) {
