@@ -1056,6 +1056,23 @@
     #page-ship-create.is-readonly .radio-group .radio-line input { display: none; }
     #page-ship-create.is-readonly .radio-group .radio-line { cursor: default; gap: 0; }
     #page-ship-create.is-readonly .ship-items-table { min-width: 1400px; }
+    #page-ship-create.is-readonly #shipPoSelectRow,
+    #page-ship-create.is-readonly #poShipSettingsCreate { display: none !important; }
+    #page-ship-create.is-readonly #poShipSettingsView { display: block; }
+    #poShipSettingsView { display: none; }
+    #poShipSettingsView .ship-view-val {
+      display: block;
+      min-height: 32px;
+      line-height: 32px;
+      color: var(--text);
+      font-size: 14px;
+    }
+    #poShipSettingsView .ship-view-id {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.4;
+      min-height: 0;
+    }
     .type-pick-card { width: 480px; max-width: calc(100vw - 32px); }
     .type-pick-card .modal-body { padding-bottom: 12px; }
     .visually-hidden {
@@ -2194,69 +2211,101 @@
                   設定
                 </button>
                 <div class="po-ship-acc-body">
-                  <div class="form-row online-ship-hide">
-                    <label>貿易條件</label>
-                    <div class="form-ctrl">
-                      <select id="poShipIncoterm">
-                        <option value="">請選擇</option>
-                        <option>FOB</option>
-                        <option>CIF</option>
-                        <option>EXW</option>
-                        <option>CFR</option>
-                        <option>DAP</option>
-                        <option>DDP</option>
-                      </select>
+                  <div id="poShipSettingsView">
+                    <div class="form-row">
+                      <label>採購單編號</label>
+                      <div class="form-ctrl"><span class="ship-view-val ship-view-id" id="shipViewPoNo">-</span></div>
+                    </div>
+                    <div class="form-row">
+                      <label>訂單編號</label>
+                      <div class="form-ctrl"><span class="ship-view-val ship-view-id" id="shipViewOrderId">-</span></div>
+                    </div>
+                    <div class="form-row">
+                      <label>預計拋單日</label>
+                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewExpectDate">-</span></div>
+                    </div>
+                    <div class="form-row">
+                      <label>預計出貨日</label>
+                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewOutDate">-</span></div>
+                    </div>
+                    <div class="form-row">
+                      <label>預計到貨日</label>
+                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewArriveDate">-</span></div>
+                    </div>
+                    <div class="form-row">
+                      <label>預計到貨時間</label>
+                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewArriveTime">-</span></div>
+                    </div>
+                    <div class="form-row">
+                      <label>通路進貨倉點</label>
+                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewInWarehouse">-</span></div>
                     </div>
                   </div>
-                  <div class="form-row">
-                    <label>預計拋單日</label>
-                    <div class="form-ctrl"><input type="date" id="poShipExpectDate" /></div>
-                  </div>
-                  <div class="form-row">
-                    <label>預計到貨日期</label>
-                    <div class="form-ctrl"><input type="date" id="poShipArriveDate" /></div>
-                  </div>
-                  <div class="form-row online-ship-hide">
-                    <label>預計到貨時間</label>
-                    <div class="form-ctrl time-24">
-                      <select id="poShipArriveHour" aria-label="預計到貨時"></select>
-                      <span class="time-colon">:</span>
-                      <select id="poShipArriveMinute" aria-label="預計到貨分"></select>
-                      <span class="field-hint">24小時制</span>
-                    </div>
-                  </div>
-                  <div class="form-row">
-                    <label>預計出貨日</label>
-                    <div class="form-ctrl"><input type="date" id="poShipOutDate" /></div>
-                  </div>
-                  <div class="form-row online-ship-hide">
-                    <label class="required">通路進貨倉點</label>
-                    <div class="form-ctrl wide-ctrl">
-                      <select id="poShipInWarehouse">
-                        <option value="">請選擇</option>
-                      </select>
-                      <div class="radio-group">
-                        <label class="radio-line"><input type="radio" name="poShipPickup" value="self" /> 訂單自取</label>
-                        <label class="radio-line"><input type="radio" name="poShipPickup" value="charter" /> 訂單非自取 (專車)</label>
-                        <label class="radio-line"><input type="radio" name="poShipPickup" value="hsinchu" /> 訂單非自取 (新竹)</label>
-                        <label class="radio-line"><input type="radio" name="poShipPickup" value="blackcat" /> 訂單非自取 (黑貓)</label>
+                  <div id="poShipSettingsCreate">
+                    <div class="form-row online-ship-hide">
+                      <label>貿易條件</label>
+                      <div class="form-ctrl">
+                        <select id="poShipIncoterm">
+                          <option value="">請選擇</option>
+                          <option>FOB</option>
+                          <option>CIF</option>
+                          <option>EXW</option>
+                          <option>CFR</option>
+                          <option>DAP</option>
+                          <option>DDP</option>
+                        </select>
                       </div>
                     </div>
-                  </div>
-                  <div class="form-row online-ship-only">
-                    <label>平台訂單編號</label>
-                    <div class="form-ctrl"><input type="text" id="poShipPlatformOrderNo" readonly /></div>
-                  </div>
-                  <div class="form-row online-ship-only">
-                    <label class="required">運送方式</label>
-                    <div class="form-ctrl">
-                      <select id="poShipMethod">
-                        <option value="">請選擇</option>
-                        <option>新竹物流</option>
-                        <option>黑猫</option>
-                        <option>全盛貨運(邱哥)</option>
-                        <option>宅配通</option>
-                      </select>
+                    <div class="form-row">
+                      <label>預計拋單日</label>
+                      <div class="form-ctrl"><input type="date" id="poShipExpectDate" /></div>
+                    </div>
+                    <div class="form-row">
+                      <label>預計到貨日期</label>
+                      <div class="form-ctrl"><input type="date" id="poShipArriveDate" /></div>
+                    </div>
+                    <div class="form-row online-ship-hide">
+                      <label>預計到貨時間</label>
+                      <div class="form-ctrl time-24">
+                        <select id="poShipArriveHour" aria-label="預計到貨時"></select>
+                        <span class="time-colon">:</span>
+                        <select id="poShipArriveMinute" aria-label="預計到貨分"></select>
+                        <span class="field-hint">24小時制</span>
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <label>預計出貨日</label>
+                      <div class="form-ctrl"><input type="date" id="poShipOutDate" /></div>
+                    </div>
+                    <div class="form-row online-ship-hide">
+                      <label class="required">通路進貨倉點</label>
+                      <div class="form-ctrl wide-ctrl">
+                        <select id="poShipInWarehouse">
+                          <option value="">請選擇</option>
+                        </select>
+                        <div class="radio-group">
+                          <label class="radio-line"><input type="radio" name="poShipPickup" value="self" /> 訂單自取</label>
+                          <label class="radio-line"><input type="radio" name="poShipPickup" value="charter" /> 訂單非自取 (專車)</label>
+                          <label class="radio-line"><input type="radio" name="poShipPickup" value="hsinchu" /> 訂單非自取 (新竹)</label>
+                          <label class="radio-line"><input type="radio" name="poShipPickup" value="blackcat" /> 訂單非自取 (黑貓)</label>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-row online-ship-only">
+                      <label>平台訂單編號</label>
+                      <div class="form-ctrl"><input type="text" id="poShipPlatformOrderNo" readonly /></div>
+                    </div>
+                    <div class="form-row online-ship-only">
+                      <label class="required">運送方式</label>
+                      <div class="form-ctrl">
+                        <select id="poShipMethod">
+                          <option value="">請選擇</option>
+                          <option>新竹物流</option>
+                          <option>黑猫</option>
+                          <option>全盛貨運(邱哥)</option>
+                          <option>宅配通</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -9465,6 +9514,32 @@
       alert("已建立出貨單 " + ids.orderId);
     }
 
+    function shipViewDash(value) {
+      const s = String(value == null ? "" : value).trim();
+      return s || "-";
+    }
+
+    function renderShipSettingsView(ship, po) {
+      const expectDate = toDateInput(ship.expectDate) || "";
+      const outDate = toDateInput(ship.shipOutDate || (po && po.shipByTime)) || "";
+      const arriveDate = toDateInput(ship.arriveDate || (po && po.arriveDate)) || "";
+      const arriveTime = toTimeInput(ship.arriveTime || (po && po.arriveTime) || "");
+      const warehouse = String(
+        ship.inWarehouse || (channelProfiles[(po && po.channelName) || ship.channel || ""] || {}).inWarehouse || ""
+      ).trim();
+      const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = shipViewDash(value);
+      };
+      setText("shipViewPoNo", ship.salesOrderNo || "");
+      setText("shipViewOrderId", ship.orderId || "");
+      setText("shipViewExpectDate", expectDate);
+      setText("shipViewOutDate", outDate);
+      setText("shipViewArriveDate", arriveDate);
+      setText("shipViewArriveTime", arriveTime);
+      setText("shipViewInWarehouse", warehouse);
+    }
+
     function fillShipView(ship) {
       const po = salesOrders.find((item) => item.orderNo === ship.salesOrderNo) || null;
       setShipCreateKind(ship.online ? "online" : "normal");
@@ -9485,7 +9560,7 @@
       document.getElementById("poShipArriveDate").value = toDateInput(ship.arriveDate || (po && po.arriveDate)) || "";
       fillHourMinute("poShipArriveHour", "poShipArriveMinute", ship.arriveTime || (po && po.arriveTime) || "");
       document.getElementById("poShipOutDate").value = toDateInput(ship.shipOutDate || (po && po.shipByTime)) || "";
-      fillPoShipWarehouseSelect(ship.inWarehouse || ship.warehouse || (channelProfiles[(po && po.channelName) || ""] || {}).inWarehouse || "");
+      fillPoShipWarehouseSelect(ship.inWarehouse || (channelProfiles[(po && po.channelName) || ""] || {}).inWarehouse || "");
       document.querySelectorAll('input[name="poShipPickup"]').forEach((el) => { el.checked = false; });
       if (ship.pickup) {
         document.querySelectorAll('input[name="poShipPickup"]').forEach((el) => {
@@ -9500,6 +9575,7 @@
         document.getElementById("poShipRecvAddress").value = ship.recvAddress || "";
         document.getElementById("poShipRecvRemark").value = ship.recvRemark || "";
       }
+      renderShipSettingsView(ship, po);
       poShipFees = Array.isArray(ship.fees) ? ship.fees.map((fee) => ({ ...fee })) : [];
       const channel = (po && po.channelName) || ship.channel || "";
       const poItemByKey = {};
