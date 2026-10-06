@@ -1057,31 +1057,39 @@
     #page-ship-create.is-readonly .radio-group .radio-line { cursor: default; gap: 0; }
     #page-ship-create.is-readonly .ship-items-table { min-width: 1400px; }
     #page-ship-create.is-readonly #shipPoSelectRow,
-    #page-ship-create.is-readonly #poShipSettingsCreate { display: none !important; }
+    #page-ship-create.is-readonly #poShipSettingsCreate,
+    #page-ship-create.is-readonly #poShipRecipientCreate { display: none !important; }
     #page-ship-create.is-readonly #poShipSettingsView { display: block; }
+    #page-ship-create.is-readonly.is-online #poShipRecipientView { display: block; }
     #page-ship-create.is-readonly [data-acc="settings"] > .po-ship-acc-head { display: none; }
-    #poShipSettingsView { display: none; }
-    #poShipSettingsView .form-row {
+    #poShipSettingsView,
+    #poShipRecipientView { display: none; }
+    #poShipSettingsView .form-row,
+    #poShipRecipientView .form-row {
       grid-template-columns: 120px minmax(0, 1fr);
       justify-items: start;
     }
-    #poShipSettingsView .form-row > label {
+    #poShipSettingsView .form-row > label,
+    #poShipRecipientView .form-row > label {
       text-align: left;
       padding-top: 0;
       justify-self: start;
     }
-    #poShipSettingsView .form-ctrl {
+    #poShipSettingsView .form-ctrl,
+    #poShipRecipientView .form-ctrl {
       text-align: left;
       justify-self: start;
       width: 100%;
     }
-    #poShipSettingsView .ship-view-val {
+    #poShipSettingsView .ship-view-val,
+    #poShipRecipientView .ship-view-val {
       display: block;
       min-height: 22px;
       line-height: 1.4;
       color: var(--text);
       font-size: 14px;
       text-align: left;
+      white-space: pre-wrap;
     }
     #poShipSettingsView .ship-view-id {
       font-size: 20px;
@@ -2328,21 +2336,49 @@
                   收件人
                 </button>
                 <div class="po-ship-acc-body">
-                  <div class="form-row">
-                    <label>收件人</label>
-                    <div class="form-ctrl"><input type="text" id="poShipRecvName" readonly /></div>
+                  <div id="poShipRecipientView">
+                    <div class="form-row">
+                      <label>平台訂單編號</label>
+                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewPlatformOrderNo">-</span></div>
+                    </div>
+                    <div class="form-row">
+                      <label>運送方式</label>
+                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewShipMethod">-</span></div>
+                    </div>
+                    <div class="form-row">
+                      <label>收件人</label>
+                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewRecvName">-</span></div>
+                    </div>
+                    <div class="form-row">
+                      <label>收件人電話</label>
+                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewRecvTel">-</span></div>
+                    </div>
+                    <div class="form-row">
+                      <label>收件人地址</label>
+                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewRecvAddress">-</span></div>
+                    </div>
+                    <div class="form-row">
+                      <label>備註</label>
+                      <div class="form-ctrl"><span class="ship-view-val" id="shipViewRecvRemark">-</span></div>
+                    </div>
                   </div>
-                  <div class="form-row">
-                    <label>收件人電話</label>
-                    <div class="form-ctrl"><input type="text" id="poShipRecvTel" readonly /></div>
-                  </div>
-                  <div class="form-row">
-                    <label>收件人地址</label>
-                    <div class="form-ctrl"><textarea id="poShipRecvAddress" rows="2" readonly></textarea></div>
-                  </div>
-                  <div class="form-row">
-                    <label>備註</label>
-                    <div class="form-ctrl"><input type="text" id="poShipRecvRemark" readonly /></div>
+                  <div id="poShipRecipientCreate">
+                    <div class="form-row">
+                      <label>收件人</label>
+                      <div class="form-ctrl"><input type="text" id="poShipRecvName" readonly /></div>
+                    </div>
+                    <div class="form-row">
+                      <label>收件人電話</label>
+                      <div class="form-ctrl"><input type="text" id="poShipRecvTel" readonly /></div>
+                    </div>
+                    <div class="form-row">
+                      <label>收件人地址</label>
+                      <div class="form-ctrl"><textarea id="poShipRecvAddress" rows="2" readonly></textarea></div>
+                    </div>
+                    <div class="form-row">
+                      <label>備註</label>
+                      <div class="form-ctrl"><input type="text" id="poShipRecvRemark" readonly /></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3603,10 +3639,7 @@
           <td>${escapeHtml(r.applicant || "—")}</td>
           <td>${escapeHtml(r.created || "—")}</td>
           <td>${escapeHtml(r.submittedAt || "")}</td>
-          <td class="ops">
-            <a class="is-disabled" aria-disabled="true">編輯</a>
-            <a class="is-disabled" aria-disabled="true">取消訂單</a>
-          </td>
+          <td class="ops"><a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=view" target="_blank" rel="noopener" data-ship-view="1">檢視</a></td>
         </tr>`;
       }).join("");
     }
@@ -9868,6 +9901,19 @@
       setText("shipViewInWarehouse", warehouse);
     }
 
+    function renderShipRecipientView(ship) {
+      const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = shipViewDash(value);
+      };
+      setText("shipViewPlatformOrderNo", ship.platformOrderNo || "");
+      setText("shipViewShipMethod", ship.shipMethod || "");
+      setText("shipViewRecvName", ship.recvName || "");
+      setText("shipViewRecvTel", ship.recvTel || "");
+      setText("shipViewRecvAddress", ship.recvAddress || "");
+      setText("shipViewRecvRemark", ship.recvRemark || "");
+    }
+
     function fillShipView(ship) {
       const po = salesOrders.find((item) => item.orderNo === ship.salesOrderNo) || null;
       setShipCreateKind(ship.online ? "online" : "normal");
@@ -9902,6 +9948,7 @@
         document.getElementById("poShipRecvTel").value = ship.recvTel || "";
         document.getElementById("poShipRecvAddress").value = ship.recvAddress || "";
         document.getElementById("poShipRecvRemark").value = ship.recvRemark || "";
+        renderShipRecipientView(ship);
       }
       renderShipSettingsView(ship, po);
       poShipFees = Array.isArray(ship.fees) ? ship.fees.map((fee) => ({ ...fee })) : [];
