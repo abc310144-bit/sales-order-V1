@@ -2201,6 +2201,10 @@
           <section class="filter hidden" id="onlineFilterPanel">
             <div class="filter-grid">
               <div class="field">
+                <label>客戶訂單編號</label>
+                <input type="text" id="onlineFilterSalesOrderNo" placeholder="支援模糊查詢" />
+              </div>
+              <div class="field">
                 <label>出貨單編號</label>
                 <input type="text" id="onlineFilterOrderId" placeholder="支援模糊查詢" />
               </div>
@@ -3730,6 +3734,48 @@
 
     function getOnlineShippingRows() {
       return rows.filter((r) => r.online);
+    }
+
+    /** 客戶訂單「新增出貨單」建完後，暫存本次新建出貨單編號；清除篩選時清空。 */
+    let onlineListFocusShipIds = null;
+
+    function clearOnlineShippingFilterFields() {
+      const so = document.getElementById("onlineFilterSalesOrderNo");
+      const oid = document.getElementById("onlineFilterOrderId");
+      const pno = document.getElementById("onlineFilterPlatformNo");
+      if (so) so.value = "";
+      if (oid) oid.value = "";
+      if (pno) pno.value = "";
+      onlineListFocusShipIds = null;
+    }
+
+    function getOnlineShippingFiltered() {
+      const so = (document.getElementById("onlineFilterSalesOrderNo") || {}).value.trim().toLowerCase();
+      const oid = (document.getElementById("onlineFilterOrderId") || {}).value.trim().toLowerCase();
+      const pno = (document.getElementById("onlineFilterPlatformNo") || {}).value.trim().toLowerCase();
+      const focusIds = Array.isArray(onlineListFocusShipIds) && onlineListFocusShipIds.length
+        ? new Set(onlineListFocusShipIds.map((id) => String(id)))
+        : null;
+      return getOnlineShippingRows().filter((r) => {
+        if (focusIds && !focusIds.has(String(r.orderId || ""))) return false;
+        if (so && !String(r.salesOrderNo || "").toLowerCase().includes(so)) return false;
+        if (oid && !String(r.orderId || "").toLowerCase().includes(oid)) return false;
+        if (pno && !String(r.platformOrderNo || "").toLowerCase().includes(pno)) return false;
+        return true;
+      });
+    }
+
+    function applyOnlineShippingFilterAfterCreate(salesOrderNo, createdOrderIds) {
+      const soEl = document.getElementById("onlineFilterSalesOrderNo");
+      const oidEl = document.getElementById("onlineFilterOrderId");
+      const pnoEl = document.getElementById("onlineFilterPlatformNo");
+      if (oidEl) oidEl.value = "";
+      if (pnoEl) pnoEl.value = "";
+      if (soEl) soEl.value = salesOrderNo || "";
+      onlineListFocusShipIds = (createdOrderIds || []).map((id) => String(id));
+      const panel = document.getElementById("onlineFilterPanel");
+      if (panel) panel.classList.remove("hidden");
+      renderOnlineShippingTable(getOnlineShippingFiltered());
     }
 
     function renderOnlineShippingTable(list) {
@@ -9083,7 +9129,7 @@
       const order = getWorkspaceOrder();
       if (!order || orderFormMode !== "view" || !canCreateShipFromPo(order)) return;
       if (isOnlineTransferPo(order)) {
-        createAllOnlineShipsFromPo(order, {});
+        createAllOnlineShipsFromPo(order, { focusCreated: true });
         return;
       }
       openShipCreateFromPo(order);
@@ -9139,17 +9185,10 @@
       document.getElementById("onlineFilterPanel").classList.toggle("hidden");
     });
     document.getElementById("onlineFilterApply").addEventListener("click", () => {
-      const oid = document.getElementById("onlineFilterOrderId").value.trim().toLowerCase();
-      const pno = document.getElementById("onlineFilterPlatformNo").value.trim().toLowerCase();
-      renderOnlineShippingTable(getOnlineShippingRows().filter((r) => {
-        if (oid && !String(r.orderId || "").toLowerCase().includes(oid)) return false;
-        if (pno && !String(r.platformOrderNo || "").toLowerCase().includes(pno)) return false;
-        return true;
-      }));
+      renderOnlineShippingTable(getOnlineShippingFiltered());
     });
     document.getElementById("onlineFilterClear").addEventListener("click", () => {
-      document.getElementById("onlineFilterOrderId").value = "";
-      document.getElementById("onlineFilterPlatformNo").value = "";
+      clearOnlineShippingFilterFields();
       renderOnlineShippingTable();
     });
     document.getElementById("poShipAddFeeBtn").addEventListener("click", openPoShipFeeModal);
@@ -9499,7 +9538,7 @@
     function openShipCreateFromPo(order) {
       if (!order || !canCreateShipFromPo(order)) return;
       if (isOnlineTransferPo(order)) {
-        createAllOnlineShipsFromPo(order, {});
+        createAllOnlineShipsFromPo(order, { focusCreated: true });
         return;
       }
       closePoShipFeeModal();
@@ -9620,13 +9659,17 @@
         syncPoStatusFromShips(order);
         persistDemoData();
         renderShippingTable();
-        renderOnlineShippingTable();
         renderSalesTable(getSalesFiltered());
         if (typeof fillOrderEdit === "function" && getWorkspaceOrder() && getWorkspaceOrder().orderNo === order.orderNo) {
           fillOrderEdit(order, "view");
         }
         history.replaceState({}, "", location.pathname);
         showPage("online-shipping");
+        if (opts && opts.focusCreated) {
+          applyOnlineShippingFilterAfterCreate(order.orderNo, created);
+        } else {
+          renderOnlineShippingTable();
+        }
         alert(`已建立 ${created.length} 張線上出貨單` + (errors.length ? `\n部分失敗：\n${errors.join("\n")}` : ""));
       } else {
         alert(errors.length ? errors.join("\n") : "沒有建立任何出貨單");
