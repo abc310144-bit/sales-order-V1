@@ -1008,7 +1008,6 @@
     .po-ship-fee-table { margin-top: 12px; }
     .modal-card.fee-dialog-card { width: min(560px, 100%); }
     #page-ship-create .form-title { margin: 0 0 16px; }
-    #page-ship-create.is-readonly #poShipAddFeeBtn,
     #page-ship-create.is-readonly #poShipAddItemBtn,
     #page-ship-create.is-readonly #poShipImportItemBtn,
     #page-ship-create.is-readonly .ship-items-actions,
@@ -8856,7 +8855,10 @@
       const cancelBtn = document.getElementById("poShipCreateCancel");
       if (cancelBtn) cancelBtn.textContent = readonly ? "返回列表" : "取消";
       const addFeeBtn = document.getElementById("poShipAddFeeBtn");
-      if (addFeeBtn) addFeeBtn.classList.toggle("hidden", readonly);
+      if (addFeeBtn) {
+        addFeeBtn.classList.remove("hidden");
+        addFeeBtn.disabled = !!readonly;
+      }
       // 貿易條件在建立時也一律鎖定
       const incoterm = document.getElementById("poShipIncoterm");
       if (incoterm) incoterm.disabled = true;
