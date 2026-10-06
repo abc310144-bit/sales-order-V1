@@ -1060,12 +1060,27 @@
     #page-ship-create.is-readonly #poShipSettingsCreate { display: none !important; }
     #page-ship-create.is-readonly #poShipSettingsView { display: block; }
     #poShipSettingsView { display: none; }
+    #poShipSettingsView .form-row {
+      grid-template-columns: 120px minmax(0, 1fr);
+      justify-items: start;
+    }
+    #poShipSettingsView .form-row > label {
+      text-align: left;
+      padding-top: 0;
+      justify-self: start;
+    }
+    #poShipSettingsView .form-ctrl {
+      text-align: left;
+      justify-self: start;
+      width: 100%;
+    }
     #poShipSettingsView .ship-view-val {
       display: block;
-      min-height: 32px;
-      line-height: 32px;
+      min-height: 22px;
+      line-height: 1.4;
       color: var(--text);
       font-size: 14px;
+      text-align: left;
     }
     #poShipSettingsView .ship-view-id {
       font-size: 20px;
