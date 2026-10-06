@@ -2152,10 +2152,6 @@
 
         <div class="page" id="page-online-shipping">
           <div class="actions">
-            <button class="btn btn-primary" type="button" id="onlineShipCreateBtn">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
-              新增出貨單
-            </button>
             <button class="btn" type="button" id="onlineToggleFilter">
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
                 <path d="M2 3h12l-4.5 5.2V13l-3-1.5V8.2L2 3z"/>
@@ -3756,8 +3752,8 @@
             arriveTime: "18:00",
             shipDate: "2026-08-26",
             items: [
-              { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12 },
-              { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18 }
+              { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12, pcsPerCarton: 12 },
+              { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18, pcsPerCarton: 18 }
             ],
           },
         ],
@@ -3774,10 +3770,14 @@
           arriveDate: "2026-08-27",
           arriveTime: "18:00",
           shipDate: "2026-08-26",
+          items: [
+            { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12, pcsPerCarton: 12 },
+            { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18, pcsPerCarton: 18 }
+          ],
         },
         items: [
-          { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12 },
-          { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18 }
+          { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12, pcsPerCarton: 12 },
+          { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18, pcsPerCarton: 18 }
         ]
       },
       {
@@ -4799,7 +4799,7 @@
     let currentEditOrderNo = "";
     let orderFormMode = "edit";
     let workspaceOrder = null;
-    const DEMO_STORE_KEY = "urmart-sales-demo-v5";
+    const DEMO_STORE_KEY = "urmart-sales-demo-v6";
     let demoReady = false;
     let settlementRecords = [];
     let acceptanceSeeded = false;
@@ -6650,11 +6650,244 @@
       };
     }
 
+    function transferLine(sku, name, qty, unit, expiryAccept, pcsPerCarton) {
+      return { sku, name, qty, unit, expiryAccept, pcsPerCarton: pcsPerCarton || qty };
+    }
+
+    function transferRecipient(cfg) {
+      return {
+        platform: "線上-轉單",
+        platformOrderNo: cfg.platformOrderNo,
+        name: cfg.name,
+        zip: cfg.zip,
+        address: cfg.address,
+        tel: cfg.tel,
+        orderAmount: cfg.orderAmount || "",
+        shipMethod: cfg.shipMethod || "新竹物流",
+        remark: cfg.remark || "",
+        arriveDate: cfg.arriveDate || "",
+        arriveTime: cfg.arriveTime || "",
+        shipDate: cfg.shipDate || "",
+        items: (cfg.items || []).map((item) => ({ ...item })),
+      };
+    }
+
+    function aggregateRecipientItems(recipients) {
+      const map = {};
+      (recipients || []).forEach((rec) => {
+        (rec.items || []).forEach((item) => {
+          const key = String(item.sku || "").toLowerCase();
+          if (!key) return;
+          if (!map[key]) map[key] = { ...item, qty: 0 };
+          map[key].qty += Number(item.qty) || 0;
+        });
+      });
+      return Object.values(map);
+    }
+
+    function extraTransferPo(cfg) {
+      const recipients = (cfg.recipients || []).map((rec) => transferRecipient(rec));
+      const items = aggregateRecipientItems(recipients);
+      const profile = channelProfiles["線上-轉單"] || {};
+      return {
+        orderNo: cfg.orderNo,
+        poDocNo: "",
+        shipNo: "",
+        poKind: "一般通路",
+        channelType: "台灣線上通路",
+        channelName: "線上-轉單",
+        region: profile.region || "台灣(通路)",
+        status: cfg.status,
+        operator: cfg.operator,
+        createdAt: cfg.createdAt,
+        fileName: cfg.fileName || "",
+        fileUrl: "",
+        fileType: "",
+        address: profile.address || "新北市五股區成泰路一段100號 藍田倉",
+        arriveDate: "",
+        arriveTime: "",
+        shipByTime: "",
+        closedBySupervisor: !!cfg.closedBySupervisor,
+        completeNote: cfg.completeNote || "",
+        voidReason: cfg.voidReason || "",
+        voidNote: cfg.voidNote || "",
+        recipients,
+        recipient: recipients[0]
+          ? { ...recipients[0], items: (recipients[0].items || []).map((item) => ({ ...item })) }
+          : null,
+        items,
+      };
+    }
+
+    function extraOnlineShip(cfg) {
+      const status = cfg.status || "待拋單";
+      const created = cfg.created;
+      const inProgress = ["訂單處理中(已拋單)", "缺貨", "揀貨中", "已出貨", "配送異常", "已配達"].includes(status);
+      const items = (cfg.items || []).map((item) => ({
+        sku: item.sku || "",
+        name: item.name || "",
+        productCode: item.productCode || "",
+        qty: Number(item.qty) || 0,
+        remark: item.remark || "",
+        pcsPerCarton: Number(item.pcsPerCarton) || 0,
+      }));
+      return {
+        id: String(cfg.id),
+        orderId: `TRY${pad(cfg.id, 10)}`,
+        salesOrderNo: cfg.salesOrderNo,
+        audit: cfg.audit || (status === "已配達" ? "審核通過" : "待審核"),
+        channel: "線上-轉單",
+        status,
+        applicant: cfg.applicant || "demo.user",
+        created,
+        warehouse: cfg.warehouse ?? (inProgress ? created : ""),
+        shipped: cfg.shipped ?? (status === "已配達" ? addDaysToStamp(created, 1, true) : ""),
+        expectDate: cfg.expectDate || toDateInput(created),
+        arriveDate: cfg.arriveDate || "",
+        arriveTime: cfg.arriveTime || "",
+        shipOutDate: cfg.shipOutDate || "",
+        inWarehouse: "藍田倉",
+        pickup: "",
+        online: true,
+        platform: "線上-轉單",
+        platformOrderNo: cfg.platformOrderNo || "",
+        shipMethod: cfg.shipMethod || "新竹物流",
+        recvName: cfg.recvName || "",
+        recvTel: cfg.recvTel || "",
+        recvAddress: cfg.recvAddress || "",
+        recvRemark: cfg.recvRemark || "",
+        submittedAt: cfg.submittedAt || "",
+        items,
+      };
+    }
+
     function seedExtraDemoData() {
       const byId = Object.fromEntries(rows.map((row) => [row.id, row]));
       const link = (id, po) => {
         if (byId[id]) byId[id].salesOrderNo = po;
       };
+
+      const transferDoneRecipients = [
+        transferRecipient({
+          platformOrderNo: "OL-T-0808-A",
+          name: "陳美玲",
+          zip: "104",
+          address: "台北市中山區南京東路二段100號",
+          tel: "0911-222-333",
+          orderAmount: "2160",
+          shipMethod: "新竹物流",
+          remark: "大樓管理員代收",
+          arriveDate: "2026-08-10",
+          arriveTime: "14:00",
+          shipDate: "2026-08-09",
+          items: [
+            transferLine("UM-1001", "綜合維他命軟糖 60顆", 12, "盒", "2027-03-31", 12),
+            transferLine("UM-2108", "益生菌隨手包", 6, "盒", "2026-11-30", 18),
+          ],
+        }),
+        transferRecipient({
+          platformOrderNo: "OL-T-0808-B",
+          name: "林志偉",
+          zip: "241",
+          address: "新北市三重區重新路三段88號",
+          tel: "0922-334-455",
+          orderAmount: "3360",
+          shipMethod: "黑猫",
+          remark: "",
+          arriveDate: "2026-08-10",
+          arriveTime: "18:00",
+          shipDate: "2026-08-09",
+          items: [
+            transferLine("UM-1002", "乳清蛋白粉 巧克力 1kg", 12, "罐", "2026-12-15", 12),
+          ],
+        }),
+      ];
+      const transferPartialRecipients = [
+        transferRecipient({
+          platformOrderNo: "OL-T-0824-A",
+          name: "黃雅婷",
+          zip: "330",
+          address: "桃園市桃園區中正路200號",
+          tel: "0933-445-566",
+          orderAmount: "1680",
+          shipMethod: "宅配通",
+          remark: "週末配送",
+          arriveDate: "2026-08-26",
+          arriveTime: "12:00",
+          shipDate: "2026-08-25",
+          items: [
+            transferLine("UM-3305", "膠原蛋白胜肽", 6, "袋", "2027-01-20", 12),
+            transferLine("UM-4412", "電解質補給粉", 12, "盒", "2026-09-30", 20),
+          ],
+        }),
+        transferRecipient({
+          platformOrderNo: "OL-T-0824-B",
+          name: "吳俊宏",
+          zip: "407",
+          address: "台中市西屯區台灣大道三段99號",
+          tel: "0955-667-788",
+          orderAmount: "1440",
+          shipMethod: "新竹物流",
+          remark: "請電聯後再送",
+          arriveDate: "2026-08-27",
+          arriveTime: "16:00",
+          shipDate: "2026-08-26",
+          items: [
+            transferLine("UM-1001", "綜合維他命軟糖 60顆", 12, "盒", "2027-03-31", 12),
+          ],
+        }),
+      ];
+      const transferOpenRecipients = [
+        transferRecipient({
+          platformOrderNo: "OL-T-0822-A",
+          name: "張家綺",
+          zip: "800",
+          address: "高雄市新興區中山一路50號",
+          tel: "0966-778-899",
+          orderAmount: "960",
+          shipMethod: "全盛貨運(邱哥)",
+          remark: "",
+          arriveDate: "2026-08-24",
+          arriveTime: "10:00",
+          shipDate: "2026-08-23",
+          items: [
+            transferLine("UM-2108", "益生菌隨手包", 12, "盒", "2026-11-30", 18),
+          ],
+        }),
+        transferRecipient({
+          platformOrderNo: "OL-T-0822-B",
+          name: "劉冠宇",
+          zip: "600",
+          address: "嘉義市西區文化路100號",
+          tel: "0977-889-900",
+          orderAmount: "2800",
+          shipMethod: "新竹物流",
+          remark: "放門口即可",
+          arriveDate: "2026-08-25",
+          arriveTime: "18:00",
+          shipDate: "2026-08-24",
+          items: [
+            transferLine("UM-1002", "乳清蛋白粉 巧克力 1kg", 6, "罐", "2026-12-15", 12),
+            transferLine("UM-6601", "蛋白酥脆脆 起司 30g", 24, "盒", "2027-04-30", 24),
+          ],
+        }),
+        transferRecipient({
+          platformOrderNo: "OL-T-0822-C",
+          name: "鄭佩芬",
+          zip: "970",
+          address: "花蓮市中山路20號",
+          tel: "0988-990-011",
+          orderAmount: "1200",
+          shipMethod: "黑猫",
+          remark: "",
+          arriveDate: "2026-08-26",
+          arriveTime: "15:00",
+          shipDate: "2026-08-25",
+          items: [
+            transferLine("UM-1001", "綜合維他命軟糖 60顆", 10, "盒", "2027-03-31", 12),
+          ],
+        }),
+      ];
 
       salesOrders.push(
         extraPo({ orderNo: "SO20260826008", poDocNo: "PW-PO-20260826-08", channelType: "台灣實體百貨", channelName: "實體-PW健身工廠", status: "部分出貨", operator: "misha.huang", createdAt: "2026-08-26 09:05:22" }),
@@ -6678,7 +6911,27 @@
         extraPo({ orderNo: "SO20260811026", poDocNo: "SHP-VOID-0811", channelType: "台灣線上通路", channelName: "線上-蝦皮商城", status: "已作廢", operator: "demo.user", createdAt: "2026-08-11 15:54:29" }),
         extraPo({ orderNo: "SO20260810027", poDocNo: "PX-0810-027", channelType: "台灣本地通路", channelName: "實體-全聯", status: "部分出貨", operator: "vita.du", createdAt: "2026-08-10 09:11:44" }),
         extraPo({ orderNo: "SO20260809028", poDocNo: "POYA-0809-028", channelType: "台灣本地通路", channelName: "實體-寶雅", status: "部分出貨", operator: "misha.huang", createdAt: "2026-08-09 13:26:17" }),
-        extraPo({ orderNo: "SO20260808029", poDocNo: "OL-TRANSFER-0808", channelType: "台灣線上通路", channelName: "線上-轉單", status: "已開立出貨單", operator: "sarah.lin", createdAt: "2026-08-08 08:40:03", closedBySupervisor: true, completeNote: "以實收為主" })
+        extraTransferPo({
+          orderNo: "SO20260808029",
+          status: "已開立出貨單",
+          operator: "sarah.lin",
+          createdAt: "2026-08-08 08:40:03",
+          recipients: transferDoneRecipients,
+        }),
+        extraTransferPo({
+          orderNo: "SO20260824032",
+          status: "部分出貨",
+          operator: "misha.huang",
+          createdAt: "2026-08-24 11:20:15",
+          recipients: transferPartialRecipients,
+        }),
+        extraTransferPo({
+          orderNo: "SO20260822033",
+          status: "未開立出貨單",
+          operator: "vita.du",
+          createdAt: "2026-08-22 14:05:40",
+          recipients: transferOpenRecipients,
+        })
       );
 
       link("10473", "SO20260826008");
@@ -6709,13 +6962,72 @@
         extraShip(10493, "SO20260810027", "實體-全聯", "訂單處理中(已拋單)", "vita.du", "2026-08-10 10:45:51"),
         extraShip(10494, "SO20260809028", "實體-寶雅", "已配達", "misha.huang", "2026-08-09 14:11:08"),
         extraShip(10495, "SO20260809028", "實體-寶雅", "已出貨", "misha.huang", "2026-08-09 14:38:42", { shipped: "2026-08-10 08:20:00" }),
-        extraShip(10496, "SO20260808029", "線上-轉單", "已配達", "sarah.lin", "2026-08-08 09:15:36")
+        extraOnlineShip({
+          id: 10496,
+          salesOrderNo: "SO20260808029",
+          platformOrderNo: "OL-T-0808-A",
+          status: "已配達",
+          applicant: "sarah.lin",
+          created: "2026-08-08 09:15:36",
+          expectDate: "2026-08-08",
+          arriveDate: "2026-08-10",
+          arriveTime: "14:00",
+          shipOutDate: "2026-08-09",
+          shipMethod: "新竹物流",
+          recvName: "陳美玲",
+          recvTel: "0911-222-333",
+          recvAddress: "台北市中山區南京東路二段100號",
+          recvRemark: "大樓管理員代收",
+          shipped: "2026-08-09 16:20:00",
+          submittedAt: "2026-08-08 09:16:00",
+          items: transferDoneRecipients[0].items,
+        }),
+        extraOnlineShip({
+          id: 10497,
+          salesOrderNo: "SO20260808029",
+          platformOrderNo: "OL-T-0808-B",
+          status: "已配達",
+          applicant: "sarah.lin",
+          created: "2026-08-08 09:18:02",
+          expectDate: "2026-08-08",
+          arriveDate: "2026-08-10",
+          arriveTime: "18:00",
+          shipOutDate: "2026-08-09",
+          shipMethod: "黑猫",
+          recvName: "林志偉",
+          recvTel: "0922-334-455",
+          recvAddress: "新北市三重區重新路三段88號",
+          recvRemark: "",
+          shipped: "2026-08-09 17:05:00",
+          submittedAt: "2026-08-08 09:19:00",
+          items: transferDoneRecipients[1].items,
+        }),
+        extraOnlineShip({
+          id: 10498,
+          salesOrderNo: "SO20260824032",
+          platformOrderNo: "OL-T-0824-A",
+          status: "揀貨中",
+          applicant: "misha.huang",
+          created: "2026-08-24 13:40:22",
+          expectDate: "2026-08-24",
+          arriveDate: "2026-08-26",
+          arriveTime: "12:00",
+          shipOutDate: "2026-08-25",
+          shipMethod: "宅配通",
+          recvName: "黃雅婷",
+          recvTel: "0933-445-566",
+          recvAddress: "桃園市桃園區中正路200號",
+          recvRemark: "週末配送",
+          submittedAt: "2026-08-24 13:41:00",
+          items: transferPartialRecipients[0].items,
+        })
       );
 
       salesOrders.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
       rows.sort((a, b) => String(b.created).localeCompare(String(a.created)) || Number(b.id) - Number(a.id));
       renderSalesTable(getSalesFiltered());
       renderShippingTable();
+      renderOnlineShippingTable();
     }
 
     function ensureSeedShipItems() {
@@ -6740,6 +7052,7 @@
 
     function fillSeedDeliveredToOrdered(order) {
       if (!order || order.status !== "已開立出貨單" || isSupervisorClosed(order)) return;
+      if (isOnlineTransferPo(order)) return;
       const delivered = validShipsOfPo(order.orderNo).filter((ship) => ship.status === "已配達" && Array.isArray(ship.items));
       if (!delivered.length) return;
       const last = delivered[delivered.length - 1];
@@ -8658,7 +8971,6 @@
     });
     document.getElementById("poShipCreateConfirm").addEventListener("click", confirmPoShipCreate);
     document.getElementById("shipCreateBtn").addEventListener("click", openShipCreatePage);
-    document.getElementById("onlineShipCreateBtn").addEventListener("click", openOnlineShipCreatePage);
     document.getElementById("onlineToggleFilter").addEventListener("click", () => {
       document.getElementById("onlineFilterPanel").classList.toggle("hidden");
     });
