@@ -1972,7 +1972,7 @@
 
         <div class="menu-item">製造商</div>
         <div class="menu-item">商品加工</div>
-        <div class="menu-item">採購單</div>
+        <div class="menu-item">客戶訂單</div>
         <div class="menu-item" data-toggle="finance">
           <span>財務</span>
           <svg class="chevron" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
@@ -1998,11 +1998,11 @@
         <section class="filter" id="filterPanel">
           <div class="filter-grid">
             <div class="field">
-              <label>訂單編號</label>
+              <label>出貨單編號</label>
               <input type="text" />
             </div>
             <div class="field">
-              <label>採購單編號</label>
+              <label>客戶訂單編號</label>
               <input id="shipFilterPoNo" type="text" placeholder="支援模糊查詢" />
             </div>
             <div class="field">
@@ -2120,8 +2120,8 @@
             <thead>
               <tr>
                 <th>編號</th>
-                <th>訂單編號</th>
-                <th>採購單編號</th>
+                <th>出貨單編號</th>
+                <th>客戶訂單編號</th>
                 <th>審核狀態</th>
                 <th>合作通路</th>
                 <th>訂單狀態</th>
@@ -2165,7 +2165,7 @@
           <section class="filter hidden" id="onlineFilterPanel">
             <div class="filter-grid">
               <div class="field">
-                <label>訂單編號</label>
+                <label>出貨單編號</label>
                 <input type="text" id="onlineFilterOrderId" placeholder="支援模糊查詢" />
               </div>
               <div class="field">
@@ -2187,7 +2187,7 @@
             <table>
               <thead>
                 <tr>
-                  <th>訂單編號</th>
+                  <th>出貨單編號</th>
                   <th>出貨倉庫</th>
                   <th>通路平台</th>
                   <th>平台訂單編號</th>
@@ -2212,10 +2212,10 @@
           <h2 class="form-title" id="shipPageTitle">建立出貨訂單</h2>
           <div class="po-ship-create" id="poShipCreatePanel">
               <div class="form-row" id="shipPoSelectRow">
-                <label class="required">採購單編號</label>
+                <label class="required">客戶訂單編號</label>
                 <div class="form-ctrl">
                   <div class="combo" id="shipPoCombo">
-                    <input type="text" id="shipPoNo" placeholder="請選擇或模糊搜尋採購單編號" autocomplete="off" />
+                    <input type="text" id="shipPoNo" placeholder="請選擇或模糊搜尋客戶訂單編號" autocomplete="off" />
                     <div class="combo-list hidden" id="shipPoList"></div>
                   </div>
                 </div>
@@ -2228,11 +2228,11 @@
                 <div class="po-ship-acc-body">
                   <div id="poShipSettingsView">
                     <div class="form-row">
-                      <label>採購單編號</label>
+                      <label>客戶訂單編號</label>
                       <div class="form-ctrl"><span class="ship-view-val ship-view-id" id="shipViewPoNo">-</span></div>
                     </div>
                     <div class="form-row">
-                      <label>訂單編號</label>
+                      <label>出貨單編號</label>
                       <div class="form-ctrl"><span class="ship-view-val ship-view-id" id="shipViewOrderId">-</span></div>
                     </div>
                     <div class="form-row">
@@ -2474,15 +2474,15 @@
           <section class="filter" id="salesFilterPanel">
             <div class="filter-grid">
               <div class="field">
-                <label>採購單編號</label>
+                <label>客戶訂單編號</label>
                 <input id="salesOrderNo" type="text" placeholder="支援模糊查詢" />
               </div>
               <div class="field">
-                <label>採購單單號</label>
+                <label>客戶訂單單號</label>
                 <input id="salesPoDocNo" type="text" placeholder="支援模糊查詢" maxlength="30" />
               </div>
               <div class="field">
-                <label>採購單類型</label>
+                <label>客戶訂單類型</label>
                 <select id="salesPoKind">
                   <option value="">請選擇</option>
                   <option>一般通路</option>
@@ -2558,8 +2558,8 @@
               <thead>
                 <tr>
                   <th class="col-check"><input type="checkbox" id="salesBatchCheckAll" aria-label="全選可出貨轉單" /></th>
-                  <th>採購單編號</th>
-                  <th>採購單單號</th>
+                  <th>客戶訂單編號</th>
+                  <th>客戶訂單單號</th>
                   <th>合作通路類型</th>
                   <th>通路名稱</th>
                   <th>狀態</th>
@@ -2594,11 +2594,11 @@
           <section class="filter" id="accFilterPanel">
             <div class="filter-grid">
               <div class="field">
-                <label>採購單編號</label>
+                <label>客戶訂單編號</label>
                 <input id="accFilterOrderNo" type="text" placeholder="支援模糊查詢" />
               </div>
               <div class="field">
-                <label>採購單單號</label>
+                <label>客戶訂單單號</label>
                 <input id="accFilterPoDocNo" type="text" placeholder="支援模糊查詢" />
               </div>
               <div class="field">
@@ -2631,8 +2631,8 @@
             <table>
               <thead>
                 <tr>
-                  <th>採購單編號</th>
-                  <th>採購單單號</th>
+                  <th>客戶訂單編號</th>
+                  <th>客戶訂單單號</th>
                   <th>合作通路類型</th>
                   <th>通路名稱</th>
                   <th>狀態</th>
@@ -2805,7 +2805,7 @@
         <div class="page" id="page-order-edit">
           <div class="edit-page-head">
             <div class="edit-page-head-text">
-              <h2 class="form-title" id="editPageTitle">採購單資料</h2>
+              <h2 class="form-title" id="editPageTitle">客戶訂單資料</h2>
               <div class="po-kind-meta" id="editPoKindMeta"></div>
             </div>
             <div class="edit-footer" id="editFooter">
@@ -2863,9 +2863,9 @@
               </div>
             <div class="po-basic-top">
             <div class="form-row">
-              <label id="editPoDocNoLabel">採購單單號</label>
+              <label id="editPoDocNoLabel">客戶訂單單號</label>
               <div class="form-ctrl">
-                <input type="text" id="editPoDocNo" maxlength="30" placeholder="請輸入採購單單號" />
+                <input type="text" id="editPoDocNo" maxlength="30" placeholder="請輸入客戶訂單單號" />
                 <div class="field-hint-below hidden" id="editPoDocNoHint">(此欄位僅一般通路必填)</div>
               </div>
             </div>
@@ -3203,11 +3203,11 @@
   <div class="modal-mask hidden" id="voidModal">
     <div class="modal-card void-card" role="dialog" aria-labelledby="voidTitle">
       <div class="modal-head">
-        <h2 id="voidTitle">作廢採購單</h2>
+        <h2 id="voidTitle">作廢客戶訂單</h2>
         <button type="button" class="modal-close" id="voidClose" aria-label="關閉">×</button>
       </div>
       <div class="modal-body">
-        <p class="void-msg">作廢採購單將一併取消所有相應出貨單</p>
+        <p class="void-msg">作廢客戶訂單將一併取消所有相應出貨單</p>
         <div class="form-row">
           <label class="required">請輸入作廢原因</label>
           <div class="form-ctrl">
@@ -3236,11 +3236,11 @@
   <div class="modal-mask hidden" id="copyPoModal">
     <div class="modal-card void-card" role="dialog" aria-labelledby="copyPoTitle">
       <div class="modal-head">
-        <h2 id="copyPoTitle">複製採購單</h2>
+        <h2 id="copyPoTitle">複製客戶訂單</h2>
         <button type="button" class="modal-close" id="copyPoClose" aria-label="關閉">×</button>
       </div>
       <div class="modal-body">
-        <p class="void-msg">是否複製成另一採購單草稿</p>
+        <p class="void-msg">是否複製成另一客戶訂單草稿</p>
       </div>
       <div class="modal-foot">
         <button type="button" class="btn" id="copyPoCancel">取消</button>
@@ -3695,7 +3695,7 @@
     }
 
     const sampleFile = new Blob(
-      ["訂單編號,SKU,數量,金額\nSO-DEMO,UM-1001,12,3600\nSO-DEMO,UM-1002,6,1800\n"],
+      ["客戶訂單編號,SKU,數量,金額\nSO-DEMO,UM-1001,12,3600\nSO-DEMO,UM-1002,6,1800\n"],
       { type: "text/csv;charset=utf-8" }
     );
 
@@ -6939,7 +6939,7 @@
       const body = document.getElementById("shipItemsBody");
       if (!shipLineItems.length) {
         const po = getSelectedShipPo();
-        const msg = po ? "此採購單尚無商品" : "請先選擇採購單編號";
+        const msg = po ? "此客戶訂單尚無商品" : "請先選擇客戶訂單編號";
         body.innerHTML = `<tr class="empty-row"><td colspan="8">${msg}</td></tr>`;
         updateShipQtyTotal();
         return;
@@ -7604,7 +7604,7 @@
       const list = currentGoodsList();
       const fresh = items.filter((item) => !poHasCatalogItem(item));
       if (!fresh.length) {
-        alert(isShipGoodsModal() ? "這些商品已在出貨明細中" : "這些商品已在採購明細中");
+        alert(isShipGoodsModal() ? "這些商品已在出貨明細中" : "這些商品已在客戶訂單明細中");
         document.getElementById("addPoItemCode").focus();
         return;
       }
@@ -8466,7 +8466,7 @@
       if (!isGeneralPo(order) || isOnlineTransferPo(order)) return true;
       const value = document.getElementById("editPoDocNo").value.trim();
       if (value) return true;
-      alert("請輸入採購單單號");
+      alert("請輸入客戶訂單單號");
       setPoTab("basic");
       document.getElementById("editPoDocNo").focus();
       return false;
@@ -8483,8 +8483,8 @@
       document.getElementById("editOverseasBlock").classList.remove("hidden");
       document.getElementById("editGeneralGoodsWrap").classList.remove("hidden");
       document.getElementById("editOverseasGoodsWrap").classList.add("hidden");
-      document.getElementById("editPoKindMeta").textContent = `採購單類型：${kind}`;
-      const titles = { view: "檢視採購單", edit: "編輯採購單", create: "建立客戶訂單" };
+      document.getElementById("editPoKindMeta").textContent = `客戶訂單類型：${kind}`;
+      const titles = { view: "檢視客戶訂單", edit: "編輯客戶訂單", create: "建立客戶訂單" };
       document.getElementById("editPageTitle").textContent = currentEditOrderNo === "__new__" ? titles.create : (titles[orderFormMode] || titles.edit);
       document.getElementById("editPoDocNo").value = isOnlineTransferPo(order) ? "" : (order.poDocNo || "");
       syncPoDocNoField(order);
@@ -9223,7 +9223,7 @@
       sel.disabled = true;
     }
 
-    /** 設定欄：貿易條件由採購單帶入；其餘欄位有值才帶，沒有則空。 */
+    /** 設定欄：貿易條件由客戶訂單帶入；其餘欄位有值才帶，沒有則空。 */
     function resetPoShipCreateForm(order) {
       initExpectArriveTimeOptions();
       syncPoShipIncotermFromOrder(order);
@@ -9439,8 +9439,8 @@
       if (!order || !canCreateShipFromPo(order) || !canListShipPo(order)) {
         const reason = shipCreateBlockReason(order);
         if (reason) alert(reason);
-        else if (shipCreateKind === "online") alert("請選擇線上-轉單且可出貨的採購單");
-        else alert("此採購單請改由出貨訂單管理建立出貨單");
+        else if (shipCreateKind === "online") alert("請選擇線上-轉單且可出貨的客戶訂單");
+        else alert("此客戶訂單請改由出貨訂單管理建立出貨單");
         document.getElementById("shipPoNo").focus();
         return;
       }
@@ -9644,12 +9644,12 @@
     }
 
     function shipCreateBlockReason(po) {
-      if (!po) return "請選擇採購單編號";
+      if (!po) return "請選擇客戶訂單編號";
       if (canCreateShipFromPo(po)) return "";
       if (needsStampPo(po) && !hasStampFile(po) && !["草稿", "待審核", "已作廢"].includes(po.status)) {
         return "請先回壓雙方用印文件才能新增出貨單";
       }
-      return po.status === "已開立出貨單" || po.status === "已作廢" ? "此採購單目前無法再建立出貨單" : "此採購單尚未審核通過，無法建立出貨單";
+      return po.status === "已開立出貨單" || po.status === "已作廢" ? "此客戶訂單目前無法再建立出貨單" : "此客戶訂單尚未審核通過，無法建立出貨單";
     }
 
     function shipPoFuzzyMatch(order, keyword) {
@@ -9675,7 +9675,7 @@
         .slice()
         .sort((a, b) => String(b.orderNo).localeCompare(String(a.orderNo)));
       if (!options.length) {
-        list.innerHTML = `<div class="combo-empty">查無採購單編號</div>`;
+        list.innerHTML = `<div class="combo-empty">查無客戶訂單編號</div>`;
       } else {
         list.innerHTML = options.map((item) => `
           <div class="combo-item" data-no="${escapeHtml(item.orderNo)}">
@@ -9796,7 +9796,7 @@
 
     function openVoidModal(order) {
       if (!canVoidOrder(order)) {
-        alert(`此採購單不可取消（藍田狀態為 ${getLantianStatus(order)}）`);
+        alert(`此客戶訂單不可取消（藍田狀態為 ${getLantianStatus(order)}）`);
         return;
       }
       pendingVoidOrderNo = order.orderNo;
@@ -10021,9 +10021,9 @@
       const vendorTel = [party.vendorTel || VENDOR_TEL, party.vendorExt ? `分機 ${party.vendorExt}` : ""].filter(Boolean).join("  ");
       const orderCol = [
         `<h3 class="goods-title">訂單資訊</h3>`,
-        accReadonlyRow("採購單編號", order.orderNo),
-        accReadonlyRow("採購單單號", order.poDocNo || party.poDocNo || ""),
-        accReadonlyRow("採購單類型", poKindOf(order)),
+        accReadonlyRow("客戶訂單編號", order.orderNo),
+        accReadonlyRow("客戶訂單單號", order.poDocNo || party.poDocNo || ""),
+        accReadonlyRow("客戶訂單類型", poKindOf(order)),
         accReadonlyRow("預計到貨日期", toDateInput(order.arriveDate)),
         accReadonlyRow("預計到貨時間", order.arriveTime || ""),
         accReadonlyRow("應出貨時間", toDateInput(order.shipByTime)),
@@ -10092,7 +10092,7 @@
       const status = accStatusOf(order);
       document.getElementById("accViewStatus").innerHTML = statusTag(status);
       document.getElementById("accViewMeta").textContent =
-        `採購單編號：${order.orderNo}｜採購單類型：${poKindOf(order)}｜通路：${order.channelName}`;
+        `客戶訂單編號：${order.orderNo}｜客戶訂單類型：${poKindOf(order)}｜通路：${order.channelName}`;
       renderAccBasic(order);
       renderAccGoods(order);
       renderAccSettleRecords(order);
@@ -10352,7 +10352,7 @@
     }
 
     function settleImportField(key) {
-      if (key.includes("訂單編號") || key.includes("採購單編號")) return "orderNo";
+      if (key.includes("客戶訂單編號") || key.includes("採購單編號") || (key.includes("訂單編號") && !key.includes("平台") && !key.includes("出貨"))) return "orderNo";
       if (/^SKU$/i.test(key) || key === "品號") return "sku";
       if (key.includes("結算數量") || key === "數量" || /^(qty|quantity)$/i.test(key)) return "qty";
       return "";
