@@ -1022,6 +1022,38 @@
     #page-ship-create.is-readonly #shipPoNo,
     #page-ship-create.po-locked #shipPoNo { background: #f5f5f5; cursor: not-allowed; }
     #page-ship-create.po-locked #shipPoList { display: none !important; }
+    #page-ship-create.is-readonly .po-ship-acc-head .acc-arrow,
+    #page-ship-create.is-readonly .po-ship-acc-toggle .acc-arrow,
+    #page-ship-create.is-readonly .th-search,
+    #page-ship-create.is-readonly #poShipStockWarn,
+    #page-ship-create.is-readonly .ship-goods-thead-create,
+    #page-ship-create:not(.is-readonly) .ship-goods-thead-view { display: none !important; }
+    #page-ship-create.is-readonly .po-ship-acc-head,
+    #page-ship-create.is-readonly .po-ship-acc-toggle {
+      cursor: default;
+      pointer-events: none;
+    }
+    #page-ship-create.is-readonly .form-ctrl select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: none !important;
+      padding-right: 11px;
+      pointer-events: none;
+      background-color: #f5f5f5;
+      color: var(--text);
+      cursor: default;
+    }
+    #page-ship-create.is-readonly .form-ctrl input,
+    #page-ship-create.is-readonly .form-ctrl textarea {
+      pointer-events: none;
+      background: #f5f5f5;
+      color: var(--text);
+      cursor: default;
+    }
+    #page-ship-create.is-readonly .radio-group .radio-line:not(:has(input:checked)) { display: none; }
+    #page-ship-create.is-readonly .radio-group .radio-line input { display: none; }
+    #page-ship-create.is-readonly .radio-group .radio-line { cursor: default; gap: 0; }
+    #page-ship-create.is-readonly .ship-items-table { min-width: 1400px; }
     .type-pick-card { width: 480px; max-width: calc(100vw - 32px); }
     .type-pick-card .modal-body { padding-bottom: 12px; }
     .visually-hidden {
@@ -2269,7 +2301,7 @@
                   <div class="table-wrap ship-items-table-wrap goods-h-scroll po-goods-scroll">
                     <table class="ship-items-table po-goods-table po-goods-legacy-table">
                       <thead>
-                        <tr>
+                        <tr class="ship-goods-thead-create">
                           <th class="col-id">編號</th>
                           <th class="col-code">
                             <span class="th-inner">商品品號
@@ -2294,6 +2326,17 @@
                           <th>庫存數</th>
                           <th class="col-qty">總數量(pcs)</th>
                           <th class="ops">操作</th>
+                        </tr>
+                        <tr class="ship-goods-thead-view">
+                          <th class="col-id">編號</th>
+                          <th>SKU</th>
+                          <th>BARCODE</th>
+                          <th>品名</th>
+                          <th class="num">總數量(PCS)</th>
+                          <th class="num">箱入數</th>
+                          <th>效期_批號</th>
+                          <th class="num">實際出貨量</th>
+                          <th>備註</th>
                         </tr>
                       </thead>
                       <tbody id="poShipGoodsBody"></tbody>
@@ -6806,6 +6849,8 @@
         qty: Number(item.qty) || 0,
         remark: item.remark || "",
         stock: item.stock ?? 0,
+        pcsPerCarton: Number(item.pcsPerCarton) || pcsPerCartonOf(item) || 0,
+        barcode: item.barcode || "",
       };
       if (useFifo) applyFifoExpiry(line);
       return line;
@@ -7247,6 +7292,43 @@
           <td class="col-stock">${escapeHtml(row.stock)}</td>
           <td class="col-qty"><input type="number" min="0" data-field="qty" value="${escapeHtml(row.qty)}" /></td>
           <td class="ops"><a data-del="1">刪除</a></td>
+        </tr>`;
+    }
+
+    function demoBarcodeOf(item) {
+      const raw = String((item && item.barcode) || "").trim();
+      if (raw) return raw;
+      const code = String((item && item.productCode) || metaForSku(item && item.sku).productCode || "").trim();
+      const stripped = code.replace(/^SET10-/i, "");
+      if (/^\d{8,}$/.test(stripped)) return stripped;
+      let n = 0;
+      String((item && item.sku) || "0").split("").forEach((ch) => {
+        n = (n * 31 + ch.charCodeAt(0)) >>> 0;
+      });
+      return String(4710000000000 + (n % 100000000000)).padStart(13, "0").slice(0, 13);
+    }
+
+    function demoActualShipQty(shipStatus, qty) {
+      const n = Number(qty) || 0;
+      if (shipStatus === "已配達" || shipStatus === "已出貨") return n;
+      if (shipStatus === "配送異常") return Math.max(0, Math.floor(n * 0.5));
+      return 0;
+    }
+
+    function shipViewGoodsRowHtml(row) {
+      const batch = row.batch || closestFifoLot().batch;
+      const pcs = pcsPerCartonOf(row) || "";
+      return `
+        <tr data-id="${escapeHtml(row.id)}">
+          <td class="col-id">${escapeHtml(row.id)}</td>
+          <td class="col-sku">${escapeHtml(row.sku)}</td>
+          <td>${escapeHtml(row.barcode || demoBarcodeOf(row))}</td>
+          <td class="col-name">${escapeHtml(row.name)}</td>
+          <td class="num">${escapeHtml(row.qty)}</td>
+          <td class="num">${escapeHtml(pcs)}</td>
+          <td>${escapeHtml(batch)}</td>
+          <td class="num">${escapeHtml(row.actualShippedQty != null ? row.actualShippedQty : 0)}</td>
+          <td>${escapeHtml(userFacingRemark(row.remark) || "")}</td>
         </tr>`;
     }
 
@@ -8573,6 +8655,9 @@
         if (input) input.disabled = true;
       }
       if (readonly) setShipPoLocked(false);
+      if (typeof renderPoShipGoodsTable === "function" && Array.isArray(poShipGoods)) {
+        renderPoShipGoodsTable();
+      }
     }
 
     let poShipFees = [];
@@ -8949,12 +9034,15 @@
     function renderPoShipGoodsTable() {
       const body = document.getElementById("poShipGoodsBody");
       if (!body) return;
+      const isView = shipFormMode === "view";
       if (!poShipGoods.length) {
-        body.innerHTML = goodsNoDataHtml(8);
+        body.innerHTML = goodsNoDataHtml(isView ? 9 : 8);
         updatePoShipQtyTotal();
         return;
       }
-      body.innerHTML = poShipGoods.map((row) => legacyGoodsRowHtml(row, "po-ship-expiry")).join("");
+      body.innerHTML = isView
+        ? poShipGoods.map((row) => shipViewGoodsRowHtml(row)).join("")
+        : poShipGoods.map((row) => legacyGoodsRowHtml(row, "po-ship-expiry")).join("");
       updatePoShipQtyTotal();
     }
 
@@ -9202,18 +9290,32 @@
       }
       poShipFees = Array.isArray(ship.fees) ? ship.fees.map((fee) => ({ ...fee })) : [];
       const channel = (po && po.channelName) || ship.channel || "";
-      poShipGoods = (ship.items || []).map((item) => poItemToShipLine({
-        ...item,
-        stock: virtualStockOf(channel, item.sku),
-        useFifo: item.useFifo !== false,
-      }));
+      const poItemByKey = {};
+      ((po && po.items) || []).forEach((item) => {
+        const key = itemKey(item);
+        if (key) poItemByKey[key] = item;
+      });
+      poShipGoods = (ship.items || []).map((item) => {
+        const poItem = poItemByKey[itemKey(item)] || null;
+        const line = poItemToShipLine({
+          ...item,
+          pcsPerCarton: item.pcsPerCarton || (poItem && poItem.pcsPerCarton) || pcsPerCartonOf(item) || pcsPerCartonOf(poItem),
+          remark: item.remark || (poItem && poItem.remark) || "",
+          stock: virtualStockOf(channel, item.sku),
+          useFifo: item.useFifo !== false,
+        });
+        line.barcode = item.barcode || demoBarcodeOf(line);
+        line.actualShippedQty = item.actualShippedQty != null
+          ? Number(item.actualShippedQty) || 0
+          : demoActualShipQty(ship.status, line.qty);
+        return line;
+      });
       poShipShortage = [];
+      setShipFormReadonly(true);
       renderPoShipFees();
-      renderPoShipGoodsTable();
       syncPoShipStockWarn();
       document.getElementById("poShipRebateText").textContent = `後扣項目 ${ship.rebatePercent != null ? ship.rebatePercent : channelRebatePercent(channel)} %`;
       document.querySelectorAll("#poShipCreatePanel .po-ship-acc").forEach((el) => el.classList.remove("collapsed"));
-      setShipFormReadonly(true);
       showPage("ship-create");
     }
 
