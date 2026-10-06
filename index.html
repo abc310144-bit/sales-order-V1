@@ -2356,10 +2356,16 @@
                       </div>
                       <div class="form-row online-ship-hide">
                         <label class="required">通路進貨倉點</label>
-                        <div class="form-ctrl">
+                        <div class="form-ctrl wide-ctrl">
                           <select id="poShipInWarehouse">
                             <option value="">請選擇</option>
                           </select>
+                          <div class="radio-group">
+                            <label class="radio-line"><input type="radio" name="poShipPickup" value="self" /> 訂單自取</label>
+                            <label class="radio-line"><input type="radio" name="poShipPickup" value="charter" /> 訂單非自取 (專車)</label>
+                            <label class="radio-line"><input type="radio" name="poShipPickup" value="hsinchu" /> 訂單非自取 (新竹)</label>
+                            <label class="radio-line"><input type="radio" name="poShipPickup" value="blackcat" /> 訂單非自取 (黑貓)</label>
+                          </div>
                         </div>
                       </div>
                       <div class="form-row online-ship-hide">
@@ -9455,6 +9461,7 @@
       fillHourMinute("poShipArriveHour", "poShipArriveMinute", "");
       document.getElementById("poShipOutDate").value = "";
       fillPoShipWarehouseSelect("");
+      document.querySelectorAll('input[name="poShipPickup"]').forEach((el) => { el.checked = false; });
       clearOnlineShipFields();
       poShipFees = [];
       poShipGoods = [];
@@ -9803,6 +9810,12 @@
       const profile = channelProfiles[(order && order.channelName) || ""] || {};
       const warehouse = (order && order.inWarehouse) || profile.inWarehouse || "";
       fillPoShipWarehouseSelect(warehouse);
+      document.querySelectorAll('input[name="poShipPickup"]').forEach((el) => { el.checked = false; });
+      if (order && order.pickup) {
+        document.querySelectorAll('input[name="poShipPickup"]').forEach((el) => {
+          el.checked = el.value === order.pickup;
+        });
+      }
       poShipFees = [];
       const source = ((order && order.items) || []).map((row) => toPoLineItem(row));
       const plan = poShipFillPlan(order, source);
@@ -10027,6 +10040,7 @@
         return;
       }
       let inWarehouse = "";
+      let pickup = "";
       let incoterm = "";
       const channelSnap = readPoShipChannelSnapshot();
       if (!channelSnap.shipChannelType) {
@@ -10050,6 +10064,12 @@
         document.getElementById("poShipInWarehouse").focus();
         return;
       }
+      const pickupEl = document.querySelector('input[name="poShipPickup"]:checked');
+      if (!pickupEl) {
+        alert("請選擇通路進貨倉點的取貨方式");
+        return;
+      }
+      pickup = pickupEl.value;
       incoterm = document.getElementById("poShipIncoterm").value;
       if (!incoterm) {
         alert("請選擇貿易條件");
@@ -10078,7 +10098,7 @@
         arriveTime: readHourMinute("poShipArriveHour", "poShipArriveMinute"),
         shipOutDate,
         inWarehouse,
-        pickup: "",
+        pickup,
         ...channelSnap,
         rebatePercent: channelRebatePercent(order.channelName),
         fees: poShipFees.map((fee) => ({ ...fee })),
@@ -10183,6 +10203,12 @@
       fillHourMinute("poShipArriveHour", "poShipArriveMinute", ship.arriveTime || (po && po.arriveTime) || "");
       document.getElementById("poShipOutDate").value = toDateInput(ship.shipOutDate || (po && po.shipByTime)) || "";
       fillPoShipWarehouseSelect(ship.inWarehouse || (channelProfiles[(po && po.channelName) || ""] || {}).inWarehouse || "");
+      document.querySelectorAll('input[name="poShipPickup"]').forEach((el) => { el.checked = false; });
+      if (ship.pickup) {
+        document.querySelectorAll('input[name="poShipPickup"]').forEach((el) => {
+          el.checked = el.value === ship.pickup;
+        });
+      }
       if (ship.online) {
         document.getElementById("poShipPlatformOrderNo").value = ship.platformOrderNo || "";
         document.getElementById("poShipMethod").value = ship.shipMethod || "";
