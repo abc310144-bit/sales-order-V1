@@ -961,7 +961,7 @@
       white-space: nowrap;
     }
     .ship-stock-warn.hidden { display: none; }
-    #poShipCreatePanel .po-goods-toolbar { justify-content: flex-end; }
+    #poShipCreatePanel .po-goods-toolbar { justify-content: space-between; }
     .modal-card.stock-dialog-card { width: min(760px, 100%); }
     .stock-shortage-table .num { text-align: right; }
     .stock-shortage-table .ops { white-space: nowrap; width: 1%; }
@@ -1009,6 +1009,9 @@
     .modal-card.fee-dialog-card { width: min(560px, 100%); }
     #page-ship-create .form-title { margin: 0 0 16px; }
     #page-ship-create.is-readonly #poShipAddFeeBtn,
+    #page-ship-create.is-readonly #poShipAddItemBtn,
+    #page-ship-create.is-readonly #poShipImportItemBtn,
+    #page-ship-create.is-readonly .ship-items-actions,
     #page-ship-create.is-readonly #poShipCreateConfirm,
     #page-ship-create.is-readonly .po-ship-fee-table td.ops,
     #page-ship-create.is-readonly .ship-items-table thead th.ops,
@@ -2293,6 +2296,10 @@
                 </div>
                 <div class="po-ship-acc-body">
                   <div class="ship-items-toolbar po-goods-toolbar">
+                    <div class="ship-items-actions">
+                      <button type="button" class="btn" id="poShipAddItemBtn">新增商品</button>
+                      <button type="button" class="btn btn-primary" id="poShipImportItemBtn">匯入商品</button>
+                    </div>
                     <div class="ship-qty-box">
                       <div class="label">出貨總數量(pcs)</div>
                       <div class="value" id="poShipItemsQtyTotal">0</div>
@@ -7498,7 +7505,11 @@
 
     function openAddPoItemModal(target) {
       goodsModalTarget = target || "po";
-      if (!isShipGoodsModal() && !poGoodsEditable()) return;
+      if (isShipGoodsModal()) {
+        if (shipFormMode === "view") return;
+      } else if (!poGoodsEditable()) {
+        return;
+      }
       document.getElementById("addPoItemCode").value = "";
       renderAddPoItemHits();
       document.getElementById("addPoItemModal").classList.remove("hidden");
@@ -7510,7 +7521,11 @@
     }
 
     function confirmAddPoItem() {
-      if (!isShipGoodsModal() && !poGoodsEditable()) return;
+      if (isShipGoodsModal()) {
+        if (shipFormMode === "view") return;
+      } else if (!poGoodsEditable()) {
+        return;
+      }
       const raw = document.getElementById("addPoItemCode").value.trim();
       if (!raw) {
         alert("請輸入商品品號");
@@ -7530,7 +7545,19 @@
         document.getElementById("addPoItemCode").focus();
         return;
       }
-      fresh.forEach((src) => list.push(toPoLineItem({ ...src, qty: 0 })));
+      if (isShipGoodsModal()) {
+        const channel = (getSelectedShipPo() || {}).channelName || "";
+        fresh.forEach((src) => {
+          list.push(poItemToShipLine({
+            ...src,
+            qty: Number(src.qty) || 0,
+            stock: virtualStockOf(channel, src.sku),
+            useFifo: true,
+          }));
+        });
+      } else {
+        fresh.forEach((src) => list.push(toPoLineItem({ ...src, qty: 0 })));
+      }
       closeAddPoItemModal();
       if (isShipGoodsModal()) renderPoShipGoodsTable();
       else renderPoGoodsTable();
@@ -7553,8 +7580,20 @@
       goodsModalTarget = target || "po";
       if (goodsModalTarget === "po-pick") {
         if (!poGoodsEditable()) return;
-      } else if (!isShipGoodsModal() && !poGoodsEditable()) {
+      } else if (isShipGoodsModal()) {
+        if (shipFormMode === "view") return;
+      } else if (!poGoodsEditable()) {
         return;
+      }
+      const tpl = document.getElementById("importPoItemsTemplate");
+      if (tpl) {
+        if (goodsModalTarget === "ship") {
+          tpl.href = "出貨訂單管理匯入商品模板.xlsx";
+          tpl.setAttribute("download", "出貨訂單管理匯入商品模板.xlsx");
+        } else {
+          tpl.href = "下定商品匯入模板.xlsx";
+          tpl.setAttribute("download", "下定商品匯入模板.xlsx");
+        }
       }
       resetImportPoItemsModal();
       document.getElementById("importPoItemsModal").classList.remove("hidden");
@@ -7752,6 +7791,28 @@
       }).filter((rec) => rec.sku || rec.name || rec.qty);
     }
 
+    function recordsFromShipImportMatrix(matrix) {
+      if (!matrix.length) return [];
+      const header = matrix[0];
+      const map = {};
+      Object.keys(header).forEach((col) => {
+        const key = String(header[col] || "").replace(/\*/g, "").replace(/\s+/g, "");
+        if (/^SKU/i.test(key) || key.includes("品號")) map[col] = "sku";
+        else if (key.includes("商品品名") || key.includes("商品名稱") || key === "品名") map[col] = "name";
+        else if (key === "數量" || /qty|quantity/i.test(key)) map[col] = "qty";
+        else if (key === "通路" || key.includes("倉別")) map[col] = "channel";
+        else if (key === "備註") map[col] = "remark";
+      });
+      return matrix.slice(1).map((row) => {
+        const rec = { sku: "", name: "", qty: "", channel: "", remark: "" };
+        Object.keys(map).forEach((col) => {
+          rec[map[col]] = String(row[col] == null ? "" : row[col]).trim();
+        });
+        rec.sku = normalizeSku(rec.sku);
+        return rec;
+      }).filter((rec) => rec.sku || rec.name || rec.qty || rec.channel || rec.remark);
+    }
+
     function parseCsvRecords(text, mapper) {
       const raw = String(text || "").replace(/^\uFEFF/, "");
       const lines = raw.split(/\r?\n/).filter((line) => line.trim());
@@ -7775,6 +7836,10 @@
       return parseCsvRecords(text, recordsFromPickImportMatrix);
     }
 
+    function parseCsvShipImportRecords(text) {
+      return parseCsvRecords(text, recordsFromShipImportMatrix);
+    }
+
     async function parseXlsxMatrix(arrayBuffer, preferSupplier) {
       const files = await unzipArrayBuffer(arrayBuffer);
       const shared = files["xl/sharedStrings.xml"]
@@ -7792,6 +7857,10 @@
 
     async function parseXlsxPickImportRecords(arrayBuffer) {
       return recordsFromPickImportMatrix(await parseXlsxMatrix(arrayBuffer, false));
+    }
+
+    async function parseXlsxShipImportRecords(arrayBuffer) {
+      return recordsFromShipImportMatrix(await parseXlsxMatrix(arrayBuffer, false));
     }
 
     async function loadSheetJs() {
@@ -7822,6 +7891,21 @@
       return recordsFromPickImportMatrix(matrix);
     }
 
+    async function parseXlsShipImportRecords(arrayBuffer) {
+      const XLSX = await loadSheetJs();
+      const wb = XLSX.read(arrayBuffer, { type: "array" });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
+      const matrix = rows.map((row) => {
+        const rec = {};
+        (row || []).forEach((val, i) => {
+          rec[colNameFromIndex(i)] = String(val == null ? "" : val).trim();
+        });
+        return rec;
+      });
+      return recordsFromShipImportMatrix(matrix);
+    }
+
     async function parsePoItemImportFile(file) {
       const name = (file.name || "").toLowerCase();
       if (name.endsWith(".csv") || name.endsWith(".txt")) {
@@ -7850,6 +7934,20 @@
       return parseXlsxPickImportRecords(await file.arrayBuffer());
     }
 
+    async function parseShipImportFile(file) {
+      const name = (file.name || "").toLowerCase();
+      if (name.endsWith(".csv") || name.endsWith(".txt")) {
+        return parseCsvShipImportRecords(await file.text());
+      }
+      if (name.endsWith(".xlsx")) {
+        return parseXlsxShipImportRecords(await file.arrayBuffer());
+      }
+      if (name.endsWith(".xls")) {
+        return parseXlsShipImportRecords(await file.arrayBuffer());
+      }
+      return parseXlsxShipImportRecords(await file.arrayBuffer());
+    }
+
     function poItemFromImportRow(rec) {
       const found = findCatalogItem(rec.sku);
       const src = found
@@ -7876,6 +7974,91 @@
       if (!/^[1-9]\d*$/.test(s)) return false;
       const n = Number(s);
       return Number.isInteger(n) && n > 0;
+    }
+
+    function normalizeImportPositiveIntQty(raw) {
+      const s = String(raw == null ? "" : raw).trim();
+      if (!s) return null;
+      if (/^[1-9]\d*$/.test(s)) return Number(s);
+      const n = Number(s);
+      if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) return null;
+      return n;
+    }
+
+    function applyShipImportRecords(records) {
+      if (shipFormMode === "view") return false;
+      const missingField = [];
+      const invalidQty = [];
+      const longRemark = [];
+      const prepared = [];
+      records.forEach((rec) => {
+        const sku = normalizeSku(rec.sku);
+        const name = String(rec.name || "").trim();
+        const channel = String(rec.channel || "").trim();
+        const remark = String(rec.remark || "").trim();
+        const qty = normalizeImportPositiveIntQty(rec.qty);
+        if (!sku || !name || !channel || !remark) {
+          missingField.push(rec);
+          return;
+        }
+        if (qty == null) {
+          invalidQty.push(rec);
+          return;
+        }
+        if (remark.length > 30) {
+          longRemark.push(rec);
+          return;
+        }
+        prepared.push({ sku, name, channel, remark, qty });
+      });
+      if (missingField.length) {
+        alert("所有欄位皆為必填，請檢查 SKU(品號)、商品品名、數量、通路、備註");
+        return false;
+      }
+      if (invalidQty.length) {
+        alert("數量僅可填寫大於 0 的正整數");
+        return false;
+      }
+      if (longRemark.length) {
+        alert("備註限制 30 字元");
+        return false;
+      }
+      if (prepared.length > 1000) {
+        alert("匯入上限為 1000 筆，已超過上限，整檔不匯入");
+        return false;
+      }
+
+      const poChannel = (getSelectedShipPo() || {}).channelName || "";
+      let added = 0;
+      let skipped = 0;
+      prepared.forEach((rec) => {
+        if (shipGoodsHasSku(rec.sku)) {
+          skipped += 1;
+          return;
+        }
+        const found = findCatalogItem(rec.sku);
+        const src = found
+          ? { ...found, name: found.name || rec.name, qty: rec.qty, remark: rec.remark }
+          : {
+            sku: rec.sku,
+            name: rec.name,
+            productCode: /^SET10-/i.test(rec.sku) ? rec.sku : `SET10-${rec.sku}`,
+            qty: rec.qty,
+            remark: rec.remark,
+          };
+        poShipGoods.push(poItemToShipLine({
+          ...src,
+          stock: virtualStockOf(poChannel, rec.sku),
+          useFifo: true,
+        }));
+        added += 1;
+      });
+      if (!added) {
+        alert(skipped ? "這些商品已在出貨明細中" : "檔案沒有可匯入的商品列");
+        return false;
+      }
+      renderPoShipGoodsTable();
+      return true;
     }
 
     function applyPickImportRecords(records) {
@@ -7969,7 +8152,29 @@
         alert("成功匯入");
         return;
       }
-      if (!isShipGoodsModal() && !poGoodsEditable()) return;
+      if (goodsModalTarget === "ship") {
+        if (shipFormMode === "view") return;
+        let records;
+        try {
+          records = await parseShipImportFile(pendingPoImportFile);
+        } catch (err) {
+          alert(err && err.message ? err.message : "檔案解析失敗");
+          return;
+        }
+        if (!records.length) {
+          alert("檔案沒有可匯入的商品列");
+          return;
+        }
+        if (records.length > 1000) {
+          alert("匯入上限為 1000 筆，已超過上限，整檔不匯入");
+          return;
+        }
+        if (!applyShipImportRecords(records)) return;
+        closeImportPoItemsModal();
+        alert("成功匯入");
+        return;
+      }
+      if (!poGoodsEditable()) return;
       let records;
       try {
         records = await parsePoItemImportFile(pendingPoImportFile);
@@ -7985,8 +8190,7 @@
       records.forEach((rec) => {
         list.push(poItemFromImportRow(rec));
       });
-      if (isShipGoodsModal()) renderPoShipGoodsTable();
-      else renderPoGoodsTable();
+      renderPoGoodsTable();
       closeImportPoItemsModal();
     }
 
@@ -8583,6 +8787,12 @@
     });
     document.getElementById("poPickImportBtn").addEventListener("click", () => {
       openImportPoItemsModal("po-pick");
+    });
+    document.getElementById("poShipAddItemBtn").addEventListener("click", () => {
+      openAddPoItemModal("ship");
+    });
+    document.getElementById("poShipImportItemBtn").addEventListener("click", () => {
+      openImportPoItemsModal("ship");
     });
     document.getElementById("poOversellWarnClose").addEventListener("click", closePoOversellWarnModal);
     document.getElementById("poOversellWarnCancel").addEventListener("click", closePoOversellWarnModal);
