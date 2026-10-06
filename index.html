@@ -1078,6 +1078,13 @@
     #poShipSettingsView .ship-settings-view-col {
       min-width: 0;
     }
+    #poShipSettingsView .ship-settings-col-title {
+      margin: 0 0 14px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.4;
+    }
     #poShipSettingsView .form-row,
     #poShipRecipientView .form-row {
       grid-template-columns: 140px minmax(0, 1fr);
@@ -2247,6 +2254,7 @@
                 <div class="po-ship-acc-body">
                   <div id="poShipSettingsView" class="ship-settings-view-grid">
                     <div class="ship-settings-view-col" data-ship-view-col="basic">
+                      <h3 class="ship-settings-col-title">出貨基本資料</h3>
                       <div class="form-row">
                         <label>客戶訂單編號</label>
                         <div class="form-ctrl"><span class="ship-view-val ship-view-id" id="shipViewPoNo">-</span></div>
@@ -2281,6 +2289,7 @@
                       </div>
                     </div>
                     <div class="ship-settings-view-col" data-ship-view-col="channel">
+                      <h3 class="ship-settings-col-title">通路基本資料</h3>
                       <div class="form-row">
                         <label>合作通路類型</label>
                         <div class="form-ctrl"><span class="ship-view-val" id="shipViewChannelType">-</span></div>
