@@ -154,6 +154,20 @@
       gap: 8px;
       margin-left: auto;
     }
+    .channel-settle-mode {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 14px;
+      padding: 10px 14px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+    }
+    .channel-settle-mode .radio-line {
+      font-size: 14px;
+      font-weight: 500;
+    }
     .demo-hint {
       margin: 0 0 12px;
       padding: 10px 14px;
@@ -2327,76 +2341,161 @@
         </div>
 
         <div class="page" id="page-channel-settle">
-          <div class="sales-toolbar">
-            <button type="button" class="accordion-btn" id="channelSettleAccordionBtn" aria-expanded="true">
-              <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
-              篩選條件
-            </button>
-            <div class="sales-toolbar-actions">
-              <button type="button" class="btn btn-primary" id="channelConsignSettleBtn">寄倉結算</button>
+          <div class="channel-settle-mode" id="channelSettleModeGroup" role="group" aria-label="結算類型">
+            <label class="radio-line"><input type="checkbox" id="channelSettleModeBuyout" data-channel-settle-mode="buyout" checked /> 買斷、轉單結算</label>
+            <label class="radio-line"><input type="checkbox" id="channelSettleModeConsign" data-channel-settle-mode="consign" /> 寄倉結算</label>
+          </div>
+
+          <div id="channelSettleBuyoutPanel">
+            <div class="sales-toolbar">
+              <button type="button" class="accordion-btn" id="channelSettleAccordionBtn" aria-expanded="true">
+                <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+                篩選條件
+              </button>
             </div>
-          </div>
-          <div class="demo-hint">
-            <strong>DEMO 提示｜通路結算</strong><br />
-            本頁篩選／列表<strong>僅含買斷、轉單</strong>客戶訂單；篩出後可由操作「結算／檢視」處理。<br />
-            若要查找／結算<strong>寄倉</strong>，請按右上「寄倉結算」（依 SKU 批次結算），不經本列表。<br />
-            初次進入預設「待結算」。建立時間＝可結算時間（買斷＝驗收完成；轉單＝第一張有效出貨單建立時間）。<br />
-            <strong>月結通路</strong>確認結算時須先選「回壓發票」或「ezpay 開發票」；ezpay 於 DEMO 僅關閉彈窗（正式環境才自動開立發票）。<br />
-            <strong>非月結通路</strong>確認結算不需回壓發票，直接提示「結算成功」。<br />
-            月結：實體-PW健身工廠、實體-全聯、實體-寶雅、實體-迪卡儂、經銷商-絢綻國際企業社、經銷商-學生營養股份有限公司、百貨-新光三越。<br />
-            非月結：線上-轉單、線上-蝦皮商城、跨境- Cool Cool Trading、跨境-Sheng Siong、跨境-Aeon Japan、晨曦公司。
-          </div>
-          <section class="filter" id="channelSettleFilterPanel">
-            <div class="filter-grid">
-              <div class="field">
-                <label>通路</label>
-                <select id="channelSettleFilterChannel">
-                  <option value="">請選擇</option>
-                </select>
-              </div>
-              <div class="field">
-                <label>建立時間</label>
-                <div class="range">
-                  <input id="channelSettleFilterFrom" type="date" />
-                  <span class="sep">→</span>
-                  <input id="channelSettleFilterTo" type="date" />
+            <div class="demo-hint">
+              <strong>DEMO 提示｜買斷、轉單結算</strong><br />
+              本模式篩選／列表<strong>僅含買斷、轉單</strong>客戶訂單；篩出後可由操作「結算／檢視」處理。<br />
+              寄倉請改勾上方「寄倉結算」（依 SKU 批次）。初次進入預設「待結算」。<br />
+              建立時間＝可結算時間（買斷＝驗收完成；轉單＝第一張有效出貨單建立時間）。<br />
+              <strong>月結通路</strong>確認結算時須先選「回壓發票」或「ezpay 開發票」；ezpay 於 DEMO 僅關閉彈窗（正式環境才自動開立發票）。<br />
+              <strong>非月結通路</strong>確認結算不需回壓發票，直接提示「結算成功」。<br />
+              月結：實體-全聯、實體-寶雅、實體-迪卡儂、經銷商-絢綻國際企業社、經銷商-學生營養股份有限公司。<br />
+              非月結：線上-轉單、線上-蝦皮商城、跨境- Cool Cool Trading、跨境-Sheng Siong、跨境-Aeon Japan、晨曦公司。
+            </div>
+            <section class="filter" id="channelSettleFilterPanel">
+              <div class="filter-grid">
+                <div class="field">
+                  <label>通路</label>
+                  <select id="channelSettleFilterChannel">
+                    <option value="">請選擇</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>建立時間</label>
+                  <div class="range">
+                    <input id="channelSettleFilterFrom" type="date" />
+                    <span class="sep">→</span>
+                    <input id="channelSettleFilterTo" type="date" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label>狀態</label>
+                  <select id="channelSettleFilterStatus">
+                    <option value="待結算">待結算</option>
+                    <option value="部分結算">部分結算</option>
+                    <option value="已結算">已結算</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>客戶訂單編號</label>
+                  <input id="channelSettleFilterOrderNo" type="text" placeholder="支援模糊查詢" />
                 </div>
               </div>
-              <div class="field">
-                <label>狀態</label>
-                <select id="channelSettleFilterStatus">
-                  <option value="待結算">待結算</option>
-                  <option value="部分結算">部分結算</option>
-                  <option value="已結算">已結算</option>
-                </select>
+              <div class="filter-actions">
+                <button class="btn" type="button" id="channelSettleFilterClear">清除篩選條件</button>
+                <button class="btn btn-primary" type="button" id="channelSettleFilterApply">套用</button>
               </div>
-              <div class="field">
-                <label>客戶訂單編號</label>
-                <input id="channelSettleFilterOrderNo" type="text" placeholder="支援模糊查詢" />
-              </div>
+            </section>
+            <div class="table-meta">
+              總共 <span id="channelSettleTotal">0</span> 筆
             </div>
-            <div class="filter-actions">
-              <button class="btn" type="button" id="channelSettleFilterClear">清除篩選條件</button>
-              <button class="btn btn-primary" type="button" id="channelSettleFilterApply">套用</button>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>客戶訂單編號</th>
+                    <th>通路</th>
+                    <th>狀態</th>
+                    <th class="num">實際驗收數量</th>
+                    <th class="num">剩餘可結金額</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="channelSettleBody"></tbody>
+              </table>
             </div>
-          </section>
-          <div class="table-meta">
-            總共 <span id="channelSettleTotal">0</span> 筆
           </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>客戶訂單編號</th>
-                  <th>通路</th>
-                  <th>狀態</th>
-                  <th class="num">實際驗收數量</th>
-                  <th class="num">剩餘可結金額</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody id="channelSettleBody"></tbody>
-            </table>
+
+          <div id="channelSettleConsignPanel" class="hidden">
+            <div class="acc-page-head">
+              <div>
+                <h2 class="form-title">寄倉結算</h2>
+                <div class="po-kind-meta">僅寄倉通路、狀態為「待結算／部分結算」且尚有可結數量的 SKU；勾選後設定本次結算數量並確認結算。</div>
+              </div>
+              <div class="acc-head-actions">
+                <button type="button" class="btn btn-primary" id="settleImportBtn">匯入結算商品</button>
+                <button type="button" class="btn btn-primary" id="settleConfirmBtn">確認批次結算</button>
+              </div>
+            </div>
+            <div class="demo-hint">
+              <strong>DEMO 提示｜寄倉結算</strong><br />
+              依 SKU 批次結算；DEMO 寄倉通路：實體-PW健身工廠、百貨-新光三越（皆為月結，確認時選回壓發票／ezpay）。
+            </div>
+            <section class="filter">
+              <div class="filter-grid">
+                <div class="field">
+                  <label>通路</label>
+                  <input id="settleFilterChannel" type="text" list="settleChannelList" placeholder="請選擇或輸入搜尋" autocomplete="off" />
+                  <datalist id="settleChannelList"></datalist>
+                </div>
+                <div class="field">
+                  <label>建立時間</label>
+                  <div class="range">
+                    <input id="settleFilterCreatedFrom" type="date" />
+                    <span class="sep">→</span>
+                    <input id="settleFilterCreatedTo" type="date" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label>實際出貨時間</label>
+                  <div class="range">
+                    <input id="settleFilterShippedFrom" type="date" />
+                    <span class="sep">→</span>
+                    <input id="settleFilterShippedTo" type="date" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label>SKU</label>
+                  <input id="settleFilterSku" type="text" placeholder="支援模糊查詢，多個以 , 分隔" />
+                </div>
+                <div class="field">
+                  <label>客戶訂單編號</label>
+                  <input id="settleFilterOrderNo" type="text" placeholder="支援模糊查詢" />
+                </div>
+              </div>
+              <div class="filter-actions">
+                <button class="btn" type="button" id="settleFilterClear">清除篩選條件</button>
+                <button class="btn btn-primary" type="button" id="settleFilterApply">套用</button>
+              </div>
+            </section>
+            <div class="table-meta sales-table-meta">
+              <div class="settle-summary" id="settleSummary"></div>
+              <div class="sales-table-meta-right">總共 <span id="settleTotal">0</span> 筆</div>
+            </div>
+            <div class="table-wrap">
+              <table class="settle-table">
+                <thead>
+                  <tr>
+                    <th class="col-check"><input type="checkbox" id="settleCheckAll" aria-label="全選" /></th>
+                    <th>客戶訂單編號</th>
+                    <th>通路</th>
+                    <th>SKU</th>
+                    <th>商品名稱</th>
+                    <th class="num">訂購數量(pcs)</th>
+                    <th class="num">合計</th>
+                    <th>建立時間</th>
+                    <th>實際出貨時間</th>
+                    <th class="num">實際驗收數量</th>
+                    <th>本次結算數量</th>
+                    <th class="num">本次結算金額</th>
+                    <th class="num">剩餘可結數量</th>
+                    <th class="num">剩餘可結金額</th>
+                  </tr>
+                </thead>
+                <tbody id="settleTableBody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -3062,86 +3161,6 @@
                 <tbody id="accSettleRecordBody"></tbody>
               </table>
             </div>
-          </div>
-        </div>
-
-        <div class="page" id="page-settlement">
-          <div class="acc-page-head">
-            <div>
-              <a class="link" id="settleBack">← 返回通路結算</a>
-              <h2 class="form-title">寄倉結算</h2>
-              <div class="po-kind-meta">僅寄倉通路、狀態為「待結算／部分結算」且尚有可結數量的 SKU；勾選後設定本次結算數量並確認結算。</div>
-            </div>
-            <div class="acc-head-actions">
-              <button type="button" class="btn btn-primary" id="settleImportBtn">匯入結算商品</button>
-              <button type="button" class="btn btn-primary" id="settleConfirmBtn">確認批次結算</button>
-            </div>
-          </div>
-
-          <section class="filter">
-            <div class="filter-grid">
-              <div class="field">
-                <label>通路</label>
-                <input id="settleFilterChannel" type="text" list="settleChannelList" placeholder="請選擇或輸入搜尋" autocomplete="off" />
-                <datalist id="settleChannelList"></datalist>
-              </div>
-              <div class="field">
-                <label>建立時間</label>
-                <div class="range">
-                  <input id="settleFilterCreatedFrom" type="date" />
-                  <span class="sep">→</span>
-                  <input id="settleFilterCreatedTo" type="date" />
-                </div>
-              </div>
-              <div class="field">
-                <label>實際出貨時間</label>
-                <div class="range">
-                  <input id="settleFilterShippedFrom" type="date" />
-                  <span class="sep">→</span>
-                  <input id="settleFilterShippedTo" type="date" />
-                </div>
-              </div>
-              <div class="field">
-                <label>SKU</label>
-                <input id="settleFilterSku" type="text" placeholder="支援模糊查詢，多個以 , 分隔" />
-              </div>
-              <div class="field">
-                <label>客戶訂單編號</label>
-                <input id="settleFilterOrderNo" type="text" placeholder="支援模糊查詢" />
-              </div>
-            </div>
-            <div class="filter-actions">
-              <button class="btn" type="button" id="settleFilterClear">清除篩選條件</button>
-              <button class="btn btn-primary" type="button" id="settleFilterApply">套用</button>
-            </div>
-          </section>
-
-          <div class="table-meta sales-table-meta">
-            <div class="settle-summary" id="settleSummary"></div>
-            <div class="sales-table-meta-right">總共 <span id="settleTotal">0</span> 筆</div>
-          </div>
-          <div class="table-wrap">
-            <table class="settle-table">
-              <thead>
-                <tr>
-                  <th class="col-check"><input type="checkbox" id="settleCheckAll" aria-label="全選" /></th>
-                  <th>客戶訂單編號</th>
-                  <th>通路</th>
-                  <th>SKU</th>
-                  <th>商品名稱</th>
-                  <th class="num">訂購數量(pcs)</th>
-                  <th class="num">合計</th>
-                  <th>建立時間</th>
-                  <th>實際出貨時間</th>
-                  <th class="num">實際驗收數量</th>
-                  <th>本次結算數量</th>
-                  <th class="num">本次結算金額</th>
-                  <th class="num">剩餘可結數量</th>
-                  <th class="num">剩餘可結金額</th>
-                </tr>
-              </thead>
-              <tbody id="settleTableBody"></tbody>
-            </table>
           </div>
         </div>
 
@@ -4142,8 +4161,12 @@
       else if (page === "ship-create") menuPage = shipCreateKind === "online" ? "online-shipping" : "shipping";
       else if (page === "acceptance-view") menuPage = "acceptance";
       else if (page === "channel-settle-detail" || page === "settlement") menuPage = "channel-settle";
+      if (page === "settlement") page = "channel-settle";
       if (page === "acceptance") renderAcceptanceTable(getAcceptanceFiltered());
-      if (page === "channel-settle") renderChannelSettleTable(getChannelSettleFiltered());
+      if (page === "channel-settle") {
+        if (typeof applyChannelSettleModeUi === "function") applyChannelSettleModeUi();
+        else renderChannelSettleTable(getChannelSettleFiltered());
+      }
       document.querySelectorAll("[data-page]").forEach((item) => {
         item.classList.toggle("active", item.dataset.page === menuPage);
       });
@@ -4151,7 +4174,7 @@
       document.getElementById("page-" + page)?.classList.add("active");
       if (page === "online-shipping" || (page === "ship-create" && shipCreateKind === "online")) {
         document.title = "線上出貨訂單 - UrMart";
-      } else if (page === "channel-settle" || page === "channel-settle-detail" || page === "settlement") {
+      } else if (page === "channel-settle" || page === "channel-settle-detail") {
         document.title = "通路結算 - UrMart";
       } else if (page === "shipping" || page === "ship-create") {
         document.title = "出貨訂單管理 - UrMart";
@@ -4163,7 +4186,14 @@
     }
 
     document.querySelectorAll("[data-page]").forEach((el) => {
-      el.addEventListener("click", () => showPage(el.dataset.page));
+      el.addEventListener("click", () => {
+        if (el.dataset.page === "channel-settle" && typeof setChannelSettleMode === "function") {
+          channelSettleMode = "buyout";
+          if (typeof resetChannelSettleBuyoutFilters === "function") resetChannelSettleBuyoutFilters();
+          if (typeof resetChannelSettleConsignFilters === "function") resetChannelSettleConsignFilters();
+        }
+        showPage(el.dataset.page);
+      });
     });
 
     const pickupLabels = {
@@ -11733,15 +11763,79 @@
       alert("成功匯入");
     }
 
+    let channelSettleMode = "buyout"; // buyout | consign
+
+    function isChannelSettleConsignMode() {
+      return channelSettleMode === "consign";
+    }
+
+    function resetChannelSettleBuyoutFilters() {
+      const channel = document.getElementById("channelSettleFilterChannel");
+      const orderNo = document.getElementById("channelSettleFilterOrderNo");
+      const status = document.getElementById("channelSettleFilterStatus");
+      const from = document.getElementById("channelSettleFilterFrom");
+      const to = document.getElementById("channelSettleFilterTo");
+      if (channel) channel.value = "";
+      if (orderNo) orderNo.value = "";
+      if (status) status.value = "待結算";
+      if (from) from.value = "";
+      if (to) to.value = "";
+    }
+
+    function resetChannelSettleConsignFilters() {
+      ["settleFilterChannel", "settleFilterCreatedFrom", "settleFilterCreatedTo", "settleFilterShippedFrom",
+        "settleFilterShippedTo", "settleFilterSku", "settleFilterOrderNo"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
+      settleRows = [];
+      const all = document.getElementById("settleCheckAll");
+      if (all) {
+        all.checked = false;
+        all.disabled = true;
+      }
+    }
+
+    function applyChannelSettleModeUi() {
+      const buyout = document.getElementById("channelSettleModeBuyout");
+      const consign = document.getElementById("channelSettleModeConsign");
+      if (buyout) buyout.checked = channelSettleMode === "buyout";
+      if (consign) consign.checked = channelSettleMode === "consign";
+      document.getElementById("channelSettleBuyoutPanel")?.classList.toggle("hidden", channelSettleMode !== "buyout");
+      document.getElementById("channelSettleConsignPanel")?.classList.toggle("hidden", channelSettleMode !== "consign");
+      if (channelSettleMode === "buyout") {
+        renderChannelSettleTable(getChannelSettleFiltered());
+      } else {
+        fillAccChannelOptions();
+        renderSettleTable();
+      }
+    }
+
+    function setChannelSettleMode(mode) {
+      const next = mode === "consign" ? "consign" : "buyout";
+      if (next === "consign" && !isFinanceRole()) {
+        alert("僅財務可進行寄倉結算");
+        applyChannelSettleModeUi();
+        return;
+      }
+      if (next !== channelSettleMode) {
+        resetChannelSettleBuyoutFilters();
+        resetChannelSettleConsignFilters();
+      }
+      channelSettleMode = next;
+      applyChannelSettleModeUi();
+    }
+
     function openSettlementPage() {
       if (!isFinanceRole()) {
         alert("僅財務可進行結算");
         return;
       }
-      fillAccChannelOptions();
-      settleRows = [];
-      renderSettleTable();
-      showPage("settlement");
+      channelSettleMode = "consign";
+      resetChannelSettleBuyoutFilters();
+      resetChannelSettleConsignFilters();
+      showPage("channel-settle");
+      applyChannelSettleModeUi();
     }
 
     function nextSettlementNo() {
@@ -11759,8 +11853,9 @@
     }
 
     function settleSelectionIsMonthly() {
-      /* 寄倉結算（SKU 批次頁）確認批次結算：一律同月結通路彈窗（回壓／ezpay） */
-      if (document.getElementById("page-settlement")?.classList.contains("active")) return true;
+      /* 寄倉結算模式確認批次結算：一律同月結通路彈窗（回壓／ezpay） */
+      if (isChannelSettleConsignMode()
+        && document.getElementById("page-channel-settle")?.classList.contains("active")) return true;
       const selected = settleSelectedRows();
       if (!selected.length) return false;
       return selected.every((row) => isMonthlySettleChannel(row.channelName));
@@ -11873,10 +11968,18 @@
       alert(successMessage || "結算成功");
       settleDetailOrderNo = "";
       settleDetailMode = "settle";
+      const keepConsign = isChannelSettleConsignMode();
       settleRows = [];
-      const statusEl = document.getElementById("channelSettleFilterStatus");
-      if (statusEl) statusEl.value = "已結算";
+      if (keepConsign) {
+        resetChannelSettleConsignFilters();
+        channelSettleMode = "consign";
+      } else {
+        const statusEl = document.getElementById("channelSettleFilterStatus");
+        if (statusEl) statusEl.value = "已結算";
+        channelSettleMode = "buyout";
+      }
       showPage("channel-settle");
+      applyChannelSettleModeUi();
     }
 
     function commitSettlementBatch(invoice) {
@@ -11979,8 +12082,10 @@
     }
 
     function onAcceptanceRoleChange() {
-      if (!isFinanceRole() && document.getElementById("page-settlement").classList.contains("active")) {
-        showPage("channel-settle");
+      if (!isFinanceRole()
+        && document.getElementById("page-channel-settle")?.classList.contains("active")
+        && isChannelSettleConsignMode()) {
+        setChannelSettleMode("buyout");
       }
       if (!isFinanceRole()
         && document.getElementById("page-channel-settle-detail").classList.contains("active")
@@ -11988,6 +12093,7 @@
         settleDetailOrderNo = "";
         settleDetailMode = "settle";
         settleRows = [];
+        channelSettleMode = "buyout";
         showPage("channel-settle");
       }
     }
@@ -12543,8 +12649,15 @@
     });
     document.getElementById("accImportConfirm").addEventListener("click", confirmAccImport);
 
-    document.getElementById("channelConsignSettleBtn").addEventListener("click", openSettlementPage);
-    document.getElementById("settleBack").addEventListener("click", () => showPage("channel-settle"));
+    document.getElementById("channelSettleModeGroup").addEventListener("change", (e) => {
+      const picked = e.target.closest("input[data-channel-settle-mode]");
+      if (!picked) return;
+      if (!picked.checked) {
+        picked.checked = true;
+        return;
+      }
+      setChannelSettleMode(picked.dataset.channelSettleMode);
+    });
     document.getElementById("settleFilterApply").addEventListener("click", applySettleFilters);
     document.getElementById("settleFilterClear").addEventListener("click", clearSettleFilters);
     document.getElementById("settleImportBtn").addEventListener("click", () => openAccImportModal("settle"));
