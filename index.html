@@ -2337,7 +2337,8 @@
             所有通路的可結算客戶訂單在此查詢；初次進入預設「待結算」。<br />
             建立時間＝該筆訂單成為可結算的時間（買斷／寄倉＝驗收完成時間；轉單＝第一張有效出貨單建立時間）。<br />
             <strong>寄倉</strong>結算依照 SKU 進行結算；<strong>買斷／轉單</strong>依照客戶訂單進行結算。<br />
-            寄倉通路不可透過操作「結算」進行結算（僅可檢視；SKU 結算入口之後另補）。
+            寄倉通路不可透過操作「結算」進行結算（僅可檢視；SKU 結算入口之後另補）。<br />
+            <strong>月結通路</strong>確認結算時須先選「回壓發票」或「ezpay 開發票」；ezpay 於 DEMO 僅關閉彈窗（正式環境才自動開立發票）。
           </div>
           <section class="filter" id="channelSettleFilterPanel">
             <div class="filter-grid">
@@ -3879,27 +3880,38 @@
       </div>
       <div class="modal-body">
         <div class="acc-invoice-sum" id="settleInvoiceSum"></div>
-        <div class="form-row">
-          <label class="required">發票檔案</label>
+        <div class="form-row hidden" id="settleInvoiceMethodRow">
+          <label class="required">發票方式</label>
           <div class="form-ctrl">
-            <div class="acc-file-row">
-              <button type="button" class="btn" id="settleInvoicePick">選擇檔案</button>
-              <span class="file-name empty" id="settleInvoiceFileName">尚未選擇檔案（PDF／圖片）</span>
+            <div class="radio-group" id="settleInvoiceMethodGroup">
+              <label class="radio-line"><input type="checkbox" id="settleInvoiceMethodStamp" data-settle-invoice-method="stamp" /> 回壓發票</label>
+              <label class="radio-line"><input type="checkbox" id="settleInvoiceMethodEzpay" data-settle-invoice-method="ezpay" /> ezpay 開發票</label>
             </div>
-            <input type="file" id="settleInvoiceFile" class="hidden" accept=".pdf,application/pdf,image/*" />
           </div>
         </div>
-        <div class="form-row">
-          <label class="required">發票號碼</label>
-          <div class="form-ctrl"><input type="text" id="settleInvoiceNo" maxlength="30" placeholder="例：AB-88990012" /></div>
-        </div>
-        <div class="form-row">
-          <label class="required">發票日期</label>
-          <div class="form-ctrl"><input type="date" id="settleInvoiceDate" /></div>
-        </div>
-        <div class="form-row">
-          <label class="required">發票金額</label>
-          <div class="form-ctrl"><input type="number" id="settleInvoiceAmount" min="0" step="0.01" /></div>
+        <div id="settleInvoiceFields">
+          <div class="form-row">
+            <label class="required">發票檔案</label>
+            <div class="form-ctrl">
+              <div class="acc-file-row">
+                <button type="button" class="btn" id="settleInvoicePick">選擇檔案</button>
+                <span class="file-name empty" id="settleInvoiceFileName">尚未選擇檔案（PDF／圖片）</span>
+              </div>
+              <input type="file" id="settleInvoiceFile" class="hidden" accept=".pdf,application/pdf,image/*" />
+            </div>
+          </div>
+          <div class="form-row">
+            <label class="required">發票號碼</label>
+            <div class="form-ctrl"><input type="text" id="settleInvoiceNo" maxlength="30" placeholder="例：AB-88990012" /></div>
+          </div>
+          <div class="form-row">
+            <label class="required">發票日期</label>
+            <div class="form-ctrl"><input type="date" id="settleInvoiceDate" /></div>
+          </div>
+          <div class="form-row">
+            <label class="required">發票金額</label>
+            <div class="form-ctrl"><input type="number" id="settleInvoiceAmount" min="0" step="0.01" /></div>
+          </div>
         </div>
       </div>
       <div class="modal-foot">
@@ -5871,19 +5883,19 @@
     });
 
     const channelProfiles = {
-      "實體-PW健身工廠": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "寄倉", currency: "TWD", phone: "0912000000", contact: "正光廊-營運部主管", email: "XXX@urmart.com", address: "台北市內湖區瑞光路358號1樓（PW健身工廠內湖店）", inWarehouse: "正光廊-營運部主管", shipOutPoint: "藍田倉(訂單自取)", taxId: "24567890" },
-      "實體-全聯": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "買斷", currency: "TWD", phone: "02-2531-2345", contact: "全聯採購窗口", email: "pxmart@example.com", address: "桃園市大園區航勤北路8號 全聯物流中心", inWarehouse: "全聯物流中心", shipOutPoint: "全聯物流中心(專車)", taxId: "12345678" },
-      "實體-寶雅": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "買斷", currency: "TWD", phone: "02-2765-8899", contact: "寶雅商品部", email: "poya@example.com", address: "新北市樹林區佳園路二段70號 寶雅倉儲", inWarehouse: "寶雅倉儲", shipOutPoint: "寶雅倉儲(新竹)", taxId: "23456789" },
-      "實體-迪卡儂": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "買斷", currency: "TWD", phone: "04-2258-0000", contact: "迪卡儂倉儲", email: "decathlon@example.com", address: "台中市西屯區台灣大道四段1018號", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "34567891" },
-      "經銷商-絢綻國際企業社": { region: "台灣(經銷)", shipArea: "台灣", mode: "經銷", acceptFlow: "轉單", currency: "TWD", phone: "03-392-1177", contact: "絢綻業務", email: "dealer1@example.com", address: "新北市新莊區中正路567號3樓", inWarehouse: "正光廊-營運部主管", shipOutPoint: "藍田倉(訂單自取)", taxId: "55667788" },
-      "經銷商-學生營養股份有限公司": { region: "台灣(經銷)", shipArea: "台灣", mode: "經銷", acceptFlow: "轉單", currency: "TWD", phone: "07-333-2211", contact: "學生營養窗口", email: "dealer2@example.com", address: "高雄市前鎮區成功二路88號", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "66778899" },
-      "線上-轉單": { region: "台灣(通路)", shipArea: "台灣", mode: "轉單", acceptFlow: "轉單", currency: "TWD", phone: "02-1111-2222", contact: "線上客服", email: "online@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(黑貓)", taxId: "45678912" },
-      "線上-蝦皮商城": { region: "台灣(通路)", shipArea: "台灣", mode: "轉單", acceptFlow: "轉單", currency: "TWD", phone: "02-3333-4444", contact: "蝦皮窗口", email: "shopee@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(宅配通)", taxId: "56789123" },
-      "跨境- Cool Cool Trading": { region: "境外", shipArea: "香港", mode: "跨境", acceptFlow: "轉單", currency: "USD", phone: "+852-1234-5678", contact: "Cool Cool Ops", email: "coolcool@example.com", address: "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong", inWarehouse: "藍田倉", shipOutPoint: "藍雀物流股份有限公司(訂單自取)", taxId: "HK-99887766" },
-      "跨境-Sheng Siong": { region: "境外", shipArea: "新加坡", mode: "跨境", acceptFlow: "轉單", currency: "USD", phone: "+6562698265", contact: "Jane Gwee Chee Chin", email: "gwee.cc@shengsiong.com.sg", address: "6 Mandai Link, Singapore 728652", inWarehouse: "藍田倉", shipOutPoint: "藍雀物流股份有限公司(訂單自取)", taxId: "SG-201234567" },
-      "跨境-Aeon Japan": { region: "境外", shipArea: "日本", mode: "跨境", acceptFlow: "轉單", currency: "USD", phone: "+81-3-1234-5678", contact: "Aeon Import Desk", email: "import@aeon-demo.jp", address: "1-5-1 Nakase, Mihama-ku, Chiba, Japan", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "JP-998877" },
-      "晨曦公司": { region: "境外", shipArea: "香港", mode: "跨境", acceptFlow: "轉單", currency: "TWD", phone: "02-8787-2360", contact: "晨曦窗口", email: "chenxi@example.com", address: "115臺北市南港區三重里三重路19-9號B棟6樓", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(訂單自取)", taxId: "77889900" },
-      "百貨-新光三越": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "寄倉", currency: "TWD", phone: "02-2388-5555", contact: "新光三越專櫃", email: "skm@example.com", address: "台北市信義區松高路19號 新光三越A11專櫃", inWarehouse: "正光廊-營運部主管", shipOutPoint: "正光廊-營運部主管(訂單自取)", taxId: "88990011" },
+      "實體-PW健身工廠": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "寄倉", monthlySettle: true, currency: "TWD", phone: "0912000000", contact: "正光廊-營運部主管", email: "XXX@urmart.com", address: "台北市內湖區瑞光路358號1樓（PW健身工廠內湖店）", inWarehouse: "正光廊-營運部主管", shipOutPoint: "藍田倉(訂單自取)", taxId: "24567890" },
+      "實體-全聯": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "買斷", monthlySettle: true, currency: "TWD", phone: "02-2531-2345", contact: "全聯採購窗口", email: "pxmart@example.com", address: "桃園市大園區航勤北路8號 全聯物流中心", inWarehouse: "全聯物流中心", shipOutPoint: "全聯物流中心(專車)", taxId: "12345678" },
+      "實體-寶雅": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "買斷", monthlySettle: true, currency: "TWD", phone: "02-2765-8899", contact: "寶雅商品部", email: "poya@example.com", address: "新北市樹林區佳園路二段70號 寶雅倉儲", inWarehouse: "寶雅倉儲", shipOutPoint: "寶雅倉儲(新竹)", taxId: "23456789" },
+      "實體-迪卡儂": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "買斷", monthlySettle: true, currency: "TWD", phone: "04-2258-0000", contact: "迪卡儂倉儲", email: "decathlon@example.com", address: "台中市西屯區台灣大道四段1018號", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "34567891" },
+      "經銷商-絢綻國際企業社": { region: "台灣(經銷)", shipArea: "台灣", mode: "經銷", acceptFlow: "轉單", monthlySettle: true, currency: "TWD", phone: "03-392-1177", contact: "絢綻業務", email: "dealer1@example.com", address: "新北市新莊區中正路567號3樓", inWarehouse: "正光廊-營運部主管", shipOutPoint: "藍田倉(訂單自取)", taxId: "55667788" },
+      "經銷商-學生營養股份有限公司": { region: "台灣(經銷)", shipArea: "台灣", mode: "經銷", acceptFlow: "轉單", monthlySettle: true, currency: "TWD", phone: "07-333-2211", contact: "學生營養窗口", email: "dealer2@example.com", address: "高雄市前鎮區成功二路88號", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "66778899" },
+      "線上-轉單": { region: "台灣(通路)", shipArea: "台灣", mode: "轉單", acceptFlow: "轉單", monthlySettle: false, currency: "TWD", phone: "02-1111-2222", contact: "線上客服", email: "online@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(黑貓)", taxId: "45678912" },
+      "線上-蝦皮商城": { region: "台灣(通路)", shipArea: "台灣", mode: "轉單", acceptFlow: "轉單", monthlySettle: false, currency: "TWD", phone: "02-3333-4444", contact: "蝦皮窗口", email: "shopee@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(宅配通)", taxId: "56789123" },
+      "跨境- Cool Cool Trading": { region: "境外", shipArea: "香港", mode: "跨境", acceptFlow: "轉單", monthlySettle: false, currency: "USD", phone: "+852-1234-5678", contact: "Cool Cool Ops", email: "coolcool@example.com", address: "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong", inWarehouse: "藍田倉", shipOutPoint: "藍雀物流股份有限公司(訂單自取)", taxId: "HK-99887766" },
+      "跨境-Sheng Siong": { region: "境外", shipArea: "新加坡", mode: "跨境", acceptFlow: "轉單", monthlySettle: false, currency: "USD", phone: "+6562698265", contact: "Jane Gwee Chee Chin", email: "gwee.cc@shengsiong.com.sg", address: "6 Mandai Link, Singapore 728652", inWarehouse: "藍田倉", shipOutPoint: "藍雀物流股份有限公司(訂單自取)", taxId: "SG-201234567" },
+      "跨境-Aeon Japan": { region: "境外", shipArea: "日本", mode: "跨境", acceptFlow: "轉單", monthlySettle: false, currency: "USD", phone: "+81-3-1234-5678", contact: "Aeon Import Desk", email: "import@aeon-demo.jp", address: "1-5-1 Nakase, Mihama-ku, Chiba, Japan", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "JP-998877" },
+      "晨曦公司": { region: "境外", shipArea: "香港", mode: "跨境", acceptFlow: "轉單", monthlySettle: false, currency: "TWD", phone: "02-8787-2360", contact: "晨曦窗口", email: "chenxi@example.com", address: "115臺北市南港區三重里三重路19-9號B棟6樓", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(訂單自取)", taxId: "77889900" },
+      "百貨-新光三越": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "寄倉", monthlySettle: true, currency: "TWD", phone: "02-2388-5555", contact: "新光三越專櫃", email: "skm@example.com", address: "台北市信義區松高路19號 新光三越A11專櫃", inWarehouse: "正光廊-營運部主管", shipOutPoint: "正光廊-營運部主管(訂單自取)", taxId: "88990011" },
     };
 
     function channelRebatePercent(channelName) {
@@ -11737,6 +11749,29 @@
       return `${prefix}${pad((used.length ? Math.max(...used) : 0) + 1, 3)}`;
     }
 
+    function isMonthlySettleChannel(channelName) {
+      return !!(channelProfiles[channelName] || {}).monthlySettle;
+    }
+
+    function settleSelectionIsMonthly() {
+      const selected = settleSelectedRows();
+      if (!selected.length) return false;
+      return selected.every((row) => isMonthlySettleChannel(row.channelName));
+    }
+
+    function settleInvoiceMethodOf() {
+      if (document.getElementById("settleInvoiceMethodStamp").checked) return "stamp";
+      if (document.getElementById("settleInvoiceMethodEzpay").checked) return "ezpay";
+      return "";
+    }
+
+    function syncSettleInvoiceMethodUi() {
+      const monthly = !document.getElementById("settleInvoiceMethodRow").classList.contains("hidden");
+      const method = settleInvoiceMethodOf();
+      const showFields = !monthly || method === "stamp";
+      document.getElementById("settleInvoiceFields").classList.toggle("hidden", !showFields);
+    }
+
     function openSettleInvoiceModal() {
       if (!isFinanceRole()) return;
       const selected = settleSelectedRows();
@@ -11756,6 +11791,11 @@
       document.getElementById("settleInvoiceNo").value = "";
       document.getElementById("settleInvoiceDate").value = "";
       document.getElementById("settleInvoiceAmount").value = "";
+      const monthly = settleSelectionIsMonthly();
+      document.getElementById("settleInvoiceMethodRow").classList.toggle("hidden", !monthly);
+      document.getElementById("settleInvoiceMethodStamp").checked = false;
+      document.getElementById("settleInvoiceMethodEzpay").checked = false;
+      syncSettleInvoiceMethodUi();
       document.getElementById("settleInvoiceModal").classList.remove("hidden");
     }
 
@@ -11777,6 +11817,16 @@
       if (!selected.length) {
         closeSettleInvoiceModal();
         return;
+      }
+      const monthly = settleSelectionIsMonthly();
+      if (monthly) {
+        const method = settleInvoiceMethodOf();
+        if (!method) return alert("請選擇發票方式：回壓發票 或 ezpay 開發票");
+        if (method === "ezpay") {
+          /* DEMO：正式環境於此自動開立 ezpay 發票；DEMO 僅關閉彈窗、不寫入結算 */
+          closeSettleInvoiceModal();
+          return;
+        }
       }
       const invoiceNo = document.getElementById("settleInvoiceNo").value.trim();
       const invoiceDate = document.getElementById("settleInvoiceDate").value;
@@ -12443,6 +12493,16 @@
       updateSettleRowCells(tr, row);
     });
 
+    document.getElementById("settleInvoiceMethodGroup").addEventListener("change", (e) => {
+      const picked = e.target.closest("input[data-settle-invoice-method]");
+      if (!picked) return;
+      if (picked.checked) {
+        document.querySelectorAll("#settleInvoiceMethodGroup input[data-settle-invoice-method]").forEach((el) => {
+          if (el !== picked) el.checked = false;
+        });
+      }
+      syncSettleInvoiceMethodUi();
+    });
     document.getElementById("settleInvoiceClose").addEventListener("click", closeSettleInvoiceModal);
     document.getElementById("settleInvoiceCancel").addEventListener("click", closeSettleInvoiceModal);
     document.getElementById("settleInvoiceConfirm").addEventListener("click", confirmSettleInvoice);
