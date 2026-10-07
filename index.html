@@ -11761,6 +11761,8 @@
     }
 
     function settleSelectionIsMonthly() {
+      /* 寄倉結算（SKU 批次頁）確認批次結算：一律同月結通路彈窗（回壓／ezpay） */
+      if (document.getElementById("page-settlement")?.classList.contains("active")) return true;
       const selected = settleSelectedRows();
       if (!selected.length) return false;
       return selected.every((row) => isMonthlySettleChannel(row.channelName));
