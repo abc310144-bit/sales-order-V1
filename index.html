@@ -2338,11 +2338,9 @@
           </div>
           <div class="demo-hint">
             <strong>DEMO 提示｜通路結算</strong><br />
-            所有通路的可結算客戶訂單在此查詢；初次進入預設「待結算」。<br />
-            建立時間＝該筆訂單成為可結算的時間（買斷／寄倉＝驗收完成時間；轉單＝第一張有效出貨單建立時間）。<br />
-            <strong>寄倉</strong>結算依照 SKU 進行結算；右上「寄倉結算」進入原廠商結算（SKU 批次）畫面。<br />
-            <strong>買斷／轉單</strong>依照客戶訂單進行結算（列表操作「結算」）。<br />
-            寄倉通路不可透過列表操作「結算」進行結算（僅可檢視）。<br />
+            本頁篩選／列表<strong>僅含買斷、轉單</strong>客戶訂單；篩出後可由操作「結算／檢視」處理。<br />
+            若要查找／結算<strong>寄倉</strong>，請按右上「寄倉結算」（依 SKU 批次結算），不經本列表。<br />
+            初次進入預設「待結算」。建立時間＝可結算時間（買斷＝驗收完成；轉單＝第一張有效出貨單建立時間）。<br />
             <strong>月結通路</strong>確認結算時須先選「回壓發票」或「ezpay 開發票」；ezpay 於 DEMO 僅關閉彈窗（正式環境才自動開立發票）。<br />
             <strong>非月結通路</strong>確認結算不需回壓發票，直接提示「結算成功」。<br />
             月結：實體-PW健身工廠、實體-全聯、實體-寶雅、實體-迪卡儂、經銷商-絢綻國際企業社、經銷商-學生營養股份有限公司、百貨-新光三越。<br />
@@ -3072,7 +3070,7 @@
             <div>
               <a class="link" id="settleBack">← 返回通路結算</a>
               <h2 class="form-title">寄倉結算</h2>
-              <div class="po-kind-meta">彙總狀態為「待結算」「部分結算」且尚有可結數量的訂單商品，勾選後設定本次結算數量並上傳發票。（DEMO 第一版畫面同原廠商結算）</div>
+              <div class="po-kind-meta">僅寄倉通路、狀態為「待結算／部分結算」且尚有可結數量的 SKU；勾選後設定本次結算數量並確認結算。</div>
             </div>
             <div class="acc-head-actions">
               <button type="button" class="btn btn-primary" id="settleImportBtn">匯入結算商品</button>
@@ -11501,6 +11499,8 @@
     function buildSettlePool() {
       const pool = [];
       settlementSourceOrders().forEach((order) => {
+        /* 寄倉結算頁：只列寄倉通路 SKU */
+        if (channelAcceptFlow(order.channelName) !== "寄倉") return;
         const status = settleStatusOf(order);
         if (status !== "待結算" && status !== "部分結算") return;
         accLinesOf(order).forEach((line) => {
@@ -12002,7 +12002,12 @@
     }
 
     function channelSettleCandidates() {
+      /* 通路結算列表／篩選：僅買斷、轉單；寄倉改走「寄倉結算」 */
       return settlementSourceOrders()
+        .filter((order) => {
+          const flow = channelAcceptFlow(order.channelName);
+          return flow === "買斷" || flow === "轉單";
+        })
         .map(channelSettleRowOf)
         .filter(Boolean);
     }
@@ -12105,12 +12110,17 @@
         alert("找不到可結算的客戶訂單");
         return;
       }
-      const status = settleStatusOf(order);
-      const wantSettle = mode !== "view";
-      if (wantSettle && channelAcceptFlow(order.channelName) === "寄倉") {
-        alert("寄倉通路須依 SKU 結算，不可透過此處操作「結算」");
+      const flow = channelAcceptFlow(order.channelName);
+      if (flow === "寄倉") {
+        alert("寄倉請由「寄倉結算」按鈕查詢與結算，不經本列表");
         return;
       }
+      if (flow !== "買斷" && flow !== "轉單") {
+        alert("本列表僅支援買斷／轉單客戶訂單");
+        return;
+      }
+      const status = settleStatusOf(order);
+      const wantSettle = mode !== "view";
       if (wantSettle && !isFinanceRole()) {
         alert("僅財務可進行結算");
         return;
