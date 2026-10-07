@@ -2468,6 +2468,14 @@
                   <label>客戶訂單編號</label>
                   <input id="settleFilterOrderNo" type="text" placeholder="支援模糊查詢" />
                 </div>
+                <div class="field">
+                  <label>狀態</label>
+                  <select id="settleFilterStatus">
+                    <option value="待結算">待結算</option>
+                    <option value="部分結算">部分結算</option>
+                    <option value="已結算">已結算</option>
+                  </select>
+                </div>
               </div>
               <div class="filter-actions">
                 <button class="btn" type="button" id="settleFilterClear">清除篩選條件</button>
@@ -2489,6 +2497,7 @@
                     <th>商品名稱</th>
                     <th class="num">訂購數量(pcs)</th>
                     <th class="num">合計</th>
+                    <th>狀態</th>
                     <th>建立時間</th>
                     <th>實際出貨時間</th>
                     <th class="num">實際驗收數量</th>
@@ -11544,16 +11553,26 @@
       return target;
     }
 
+    /** 寄倉結算 SKU 列狀態：依該列已結／剩餘 */
+    function settleSkuLineStatus(acceptQty, settledQty) {
+      const accept = Math.max(0, Number(acceptQty) || 0);
+      const settled = Math.max(0, Number(settledQty) || 0);
+      const remain = Math.max(0, accept - settled);
+      if (remain <= 0 && settled > 0) return "已結算";
+      if (settled > 0 && remain > 0) return "部分結算";
+      return "待結算";
+    }
+
     function buildSettlePool() {
       const pool = [];
       settlementSourceOrders().forEach((order) => {
-        /* 寄倉結算頁：只列寄倉通路 SKU */
+        /* 寄倉結算頁：只列寄倉通路 SKU（含已結算列，供狀態篩選） */
         if (channelAcceptFlow(order.channelName) !== "寄倉") return;
-        const status = settleStatusOf(order);
-        if (status !== "待結算" && status !== "部分結算") return;
         accLinesOf(order).forEach((line) => {
-          const remain = Math.max(0, (Number(line.acceptQty) || 0) - line.settledQty);
-          if (remain <= 0) return;
+          const acceptQty = Number(line.acceptQty) || 0;
+          const settledQty = Number(line.settledQty) || 0;
+          if (acceptQty <= 0 && settledQty <= 0) return;
+          const remain = Math.max(0, acceptQty - settledQty);
           pool.push({
             id: settleRowKey(order.orderNo, line.key),
             orderNo: order.orderNo,
@@ -11568,9 +11587,10 @@
             qty: line.qty,
             amount: line.amount,
             shipDates: line.shipDates,
-            acceptQty: line.acceptQty || 0,
-            settledQty: line.settledQty,
+            acceptQty,
+            settledQty,
             remain,
+            status: settleSkuLineStatus(acceptQty, settledQty),
             checked: false,
             settleQty: 0,
           });
@@ -11595,7 +11615,9 @@
       const shippedTo = document.getElementById("settleFilterShippedTo").value;
       const skuQueries = parsePoItemQueries(document.getElementById("settleFilterSku").value);
       const orderNo = document.getElementById("settleFilterOrderNo").value.trim().toLowerCase();
+      const status = (document.getElementById("settleFilterStatus") || {}).value || "待結算";
       settleRows = buildSettlePool().filter((row) => {
+        if (status && row.status !== status) return false;
         if (channel && !row.channelName.toLowerCase().includes(channel)) return false;
         if ((createdFrom || createdTo) && !inDateRange(row.createdAt, createdFrom, createdTo)) return false;
         if ((shippedFrom || shippedTo) && !row.shipDates.some((d) => inDateRange(d, shippedFrom, shippedTo))) return false;
@@ -11605,6 +11627,7 @@
       });
       if (skuQueries.length) {
         settleRows.forEach((row) => {
+          if (row.remain <= 0) return;
           row.checked = true;
           row.settleQty = row.remain;
         });
@@ -11617,6 +11640,8 @@
         "settleFilterShippedTo", "settleFilterSku", "settleFilterOrderNo"].forEach((id) => {
         document.getElementById(id).value = "";
       });
+      const statusEl = document.getElementById("settleFilterStatus");
+      if (statusEl) statusEl.value = "待結算";
       settleRows = [];
       renderSettleTable();
     }
@@ -11637,32 +11662,35 @@
       const body = document.getElementById("settleTableBody");
       document.getElementById("settleTotal").textContent = String(settleRows.length);
       const all = document.getElementById("settleCheckAll");
-      all.disabled = !settleRows.length;
-      all.checked = settleRows.length > 0 && settleRows.every((row) => row.checked);
+      const settleable = settleRows.filter((row) => row.remain > 0);
+      all.disabled = !settleable.length;
+      all.checked = settleable.length > 0 && settleable.every((row) => row.checked);
       if (!settleRows.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="14">請設定篩選條件後按「套用」，或使用「匯入結算商品」</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="15">請設定篩選條件後按「套用」，或使用「匯入結算商品」</td></tr>`;
         renderSettleSummary();
         return;
       }
       body.innerHTML = settleRows.map((row) => {
-        const remainQty = Math.max(0, row.remain - row.settleQty);
+        const canFill = row.remain > 0;
+        const remainQty = Math.max(0, row.remain - (row.checked ? row.settleQty : 0));
         return `
         <tr data-settle-id="${escapeHtml(row.id)}">
-          <td class="col-check"><input type="checkbox" data-settle-check="1"${row.checked ? " checked" : ""} /></td>
+          <td class="col-check"><input type="checkbox" data-settle-check="1"${row.checked ? " checked" : ""}${canFill ? "" : " disabled"} /></td>
           <td>${escapeHtml(row.orderNo)}</td>
           <td>${escapeHtml(row.channelName)}</td>
           <td>${escapeHtml(row.sku)}</td>
           <td>${escapeHtml(row.name)}</td>
           <td class="num">${escapeHtml(row.qty)}</td>
           <td class="num">${escapeHtml(accMoney(row.amount))}</td>
+          <td>${statusTag(row.status || settleSkuLineStatus(row.acceptQty, row.settledQty))}</td>
           <td>${escapeHtml(row.createdAt)}</td>
           <td>${row.shipDates.length ? row.shipDates.map(escapeHtml).join("<br />") : "-"}</td>
           <td class="num">${escapeHtml(row.acceptQty)}${row.settledQty > 0 ? `<span class="acc-sub is-settled">已結：${escapeHtml(row.settledQty)}</span>` : ""}</td>
           <td>
-            <input type="number" min="0" max="${escapeHtml(row.remain)}" step="1" data-settle-qty="1" value="${escapeHtml(row.settleQty)}"${row.checked ? "" : " disabled"} />
-            <span class="acc-sub">可結上限：${escapeHtml(row.remain)}</span>
+            <input type="number" min="0" max="${escapeHtml(row.remain)}" step="1" data-settle-qty="1" value="${escapeHtml(row.settleQty)}"${canFill && row.checked ? "" : " disabled"} />
+            ${canFill ? `<span class="acc-sub">可結上限：${escapeHtml(row.remain)}</span>` : `<span class="acc-sub">無可結數量</span>`}
           </td>
-          <td class="num" data-cell="settleAmt">${escapeHtml(accMoney(row.settleQty * row.price))}</td>
+          <td class="num" data-cell="settleAmt">${escapeHtml(accMoney((row.checked ? row.settleQty : 0) * row.price))}</td>
           <td class="num" data-cell="remainQty">${escapeHtml(remainQty)}</td>
           <td class="num" data-cell="remainAmt">${escapeHtml(accMoney(remainQty * row.price))}</td>
         </tr>`;
@@ -11809,6 +11837,8 @@
         const el = document.getElementById(id);
         if (el) el.value = "";
       });
+      const statusEl = document.getElementById("settleFilterStatus");
+      if (statusEl) statusEl.value = "待結算";
       settleRows = [];
       const all = document.getElementById("settleCheckAll");
       if (all) {
@@ -12790,6 +12820,11 @@
     document.getElementById("settleConfirmBtn").addEventListener("click", startSettleConfirm);
     document.getElementById("settleCheckAll").addEventListener("change", (e) => {
       settleRows.forEach((row) => {
+        if (row.remain <= 0) {
+          row.checked = false;
+          row.settleQty = 0;
+          return;
+        }
         row.checked = e.target.checked;
         row.settleQty = e.target.checked ? (row.settleQty || row.remain) : 0;
       });
@@ -12798,7 +12833,7 @@
     document.getElementById("settleTableBody").addEventListener("change", (e) => {
       if (!e.target.matches("input[data-settle-check]")) return;
       const row = settleRowById(e.target.closest("tr").dataset.settleId);
-      if (!row) return;
+      if (!row || row.remain <= 0) return;
       row.checked = e.target.checked;
       row.settleQty = row.checked ? (row.settleQty || row.remain) : 0;
       renderSettleTable();
