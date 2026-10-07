@@ -609,6 +609,48 @@
     .goods-title-row .goods-title { margin: 0; }
     .po-goods-section + .po-goods-section { margin-top: 28px; }
     #editGoodsPickSection.hidden + .po-goods-section { margin-top: 0; }
+    .po-margin-overview {
+      margin-top: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .po-margin-overview.hidden { display: none; }
+    .po-margin-block .goods-title { margin-bottom: 10px; }
+    .po-margin-bar {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      border: 1px solid #e8e8e8;
+      background: #fafafa;
+    }
+    .po-margin-cell {
+      padding: 12px 16px;
+      min-width: 0;
+      border-right: 1px solid #e8e8e8;
+    }
+    .po-margin-cell:last-child { border-right: 0; }
+    .po-margin-label {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+    .po-margin-value {
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.4;
+      font-variant-numeric: tabular-nums;
+    }
+    @media (max-width: 960px) {
+      .po-margin-bar {
+        grid-template-columns: 1fr;
+      }
+      .po-margin-cell {
+        border-right: 0;
+        border-bottom: 1px solid #e8e8e8;
+      }
+      .po-margin-cell:last-child { border-bottom: 0; }
+    }
     .po-goods-pick-table { min-width: 980px; }
     .po-goods-pick-table .col-expiry { min-width: 180px; }
     .po-goods-pick-table .col-pick-qty input.is-oversell {
@@ -3262,6 +3304,58 @@
                     </thead>
                     <tbody id="editOverseasGoodsBody"></tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+            <div id="poMarginOverview" class="po-margin-overview hidden">
+              <div class="po-margin-block">
+                <h3 class="goods-title">預估訂單營收/成本/毛利總覽</h3>
+                <div class="po-margin-bar">
+                  <div class="po-margin-cell">
+                    <div class="po-margin-label">預估訂單總營收</div>
+                    <div class="po-margin-value" id="poEstRevenue">0</div>
+                  </div>
+                  <div class="po-margin-cell">
+                    <div class="po-margin-label">預估訂單總成本</div>
+                    <div class="po-margin-value" id="poEstCost">0</div>
+                  </div>
+                  <div class="po-margin-cell">
+                    <div class="po-margin-label">預估訂單費用加總</div>
+                    <div class="po-margin-value" id="poEstFee">0</div>
+                  </div>
+                  <div class="po-margin-cell">
+                    <div class="po-margin-label">預估毛利額</div>
+                    <div class="po-margin-value" id="poEstMarginAmt">0</div>
+                  </div>
+                  <div class="po-margin-cell">
+                    <div class="po-margin-label">預估毛利率</div>
+                    <div class="po-margin-value" id="poEstMarginRate">0%</div>
+                  </div>
+                </div>
+              </div>
+              <div class="po-margin-block">
+                <h3 class="goods-title">最終訂單營收/成本/毛利總覽</h3>
+                <div class="po-margin-bar">
+                  <div class="po-margin-cell">
+                    <div class="po-margin-label">訂單總營收</div>
+                    <div class="po-margin-value" id="poFinalRevenue">0</div>
+                  </div>
+                  <div class="po-margin-cell">
+                    <div class="po-margin-label">訂單總成本</div>
+                    <div class="po-margin-value" id="poFinalCost">0</div>
+                  </div>
+                  <div class="po-margin-cell">
+                    <div class="po-margin-label">訂單費用加總</div>
+                    <div class="po-margin-value" id="poFinalFee">0</div>
+                  </div>
+                  <div class="po-margin-cell">
+                    <div class="po-margin-label">毛利額</div>
+                    <div class="po-margin-value" id="poFinalMarginAmt">0</div>
+                  </div>
+                  <div class="po-margin-cell">
+                    <div class="po-margin-label">毛利率</div>
+                    <div class="po-margin-value" id="poFinalMarginRate">0%</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -9126,6 +9220,8 @@
       page.classList.toggle("is-readonly", readonly);
       const pick = document.getElementById("editGoodsPickSection");
       if (pick) pick.classList.toggle("hidden", readonly);
+      const margin = document.getElementById("poMarginOverview");
+      if (margin) margin.classList.toggle("hidden", !readonly);
       page.querySelectorAll("input, select, textarea").forEach((el) => {
         if (el.closest("#poShipCreatePanel")) return;
         el.disabled = readonly || el.hasAttribute("data-lock");
