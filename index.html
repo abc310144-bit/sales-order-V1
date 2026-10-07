@@ -2335,7 +2335,9 @@
           <div class="demo-hint">
             <strong>DEMO 提示｜通路結算</strong><br />
             所有通路的可結算客戶訂單在此查詢；初次進入預設「待結算」。<br />
-            建立時間＝該筆訂單成為可結算的時間（買斷／寄倉＝驗收完成時間；轉單＝第一張有效出貨單建立時間）。
+            建立時間＝該筆訂單成為可結算的時間（買斷／寄倉＝驗收完成時間；轉單＝第一張有效出貨單建立時間）。<br />
+            <strong>寄倉</strong>結算依照 SKU 進行結算；<strong>買斷／轉單</strong>依照客戶訂單進行結算。<br />
+            寄倉通路不可透過操作「結算」進行結算（僅可檢視；SKU 結算入口之後另補）。
           </div>
           <section class="filter" id="channelSettleFilterPanel">
             <div class="filter-grid">
@@ -11939,7 +11941,11 @@
         return;
       }
       body.innerHTML = data.map((row) => {
-        const canEdit = row.status !== "已結算";
+        const isConsign = channelAcceptFlow(row.channelName) === "寄倉";
+        const canSettle = row.status !== "已結算" && !isConsign;
+        const settleDisabledTitle = isConsign
+          ? "寄倉通路須依 SKU 結算，不可由此結算"
+          : "已結算不可結算";
         return `
         <tr>
           <td>${escapeHtml(row.orderNo)}</td>
@@ -11949,9 +11955,9 @@
           <td class="num">${escapeHtml(accMoney(row.remainAmount))}</td>
           <td class="ops">
             <a data-channel-settle-view="${escapeHtml(row.orderNo)}">檢視</a>
-            ${canEdit
+            ${canSettle
               ? `<a data-channel-settle-edit="${escapeHtml(row.orderNo)}">結算</a>`
-              : `<a class="is-disabled" title="已結算不可結算">結算</a>`}
+              : `<a class="is-disabled" title="${escapeHtml(settleDisabledTitle)}">結算</a>`}
           </td>
         </tr>`;
       }).join("");
@@ -11999,6 +12005,10 @@
       }
       const status = settleStatusOf(order);
       const wantSettle = mode !== "view";
+      if (wantSettle && channelAcceptFlow(order.channelName) === "寄倉") {
+        alert("寄倉通路須依 SKU 結算，不可透過此處操作「結算」");
+        return;
+      }
       if (wantSettle && !isFinanceRole()) {
         alert("僅財務可進行結算");
         return;
