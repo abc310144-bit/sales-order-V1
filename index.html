@@ -2029,7 +2029,7 @@
         </div>
         <div id="sales">
           <div class="menu-sub active" data-page="sales">客戶訂單管理</div>
-          <div class="menu-sub" data-page="acceptance">訂單驗收與結算</div>
+          <div class="menu-sub" data-page="acceptance">訂單驗收</div>
         </div>
 
         <div class="menu-item" data-toggle="brand">
@@ -2819,7 +2819,7 @@
             </div>
           </div>
           <div class="demo-hint">
-            <strong>DEMO 提示｜訂單驗收與結算</strong><br />
+            <strong>DEMO 提示｜訂單驗收</strong><br />
             僅<strong>買斷／寄倉</strong>通路且已建立出貨單的客戶訂單會進入驗收列表；已作廢不同步。<br />
             <strong>轉單</strong>通路（經銷／跨境／線上）免驗收，有出貨單即可直接進廠商結算（待結算）。<br />
             驗收由人工判斷，一張訂單驗收一次；「廠商結算」僅<strong>財務</strong>身分可操作。
@@ -2883,8 +2883,8 @@
         <div class="page" id="page-acceptance-view">
           <div class="acc-page-head">
             <div>
-              <a class="link" id="accViewBack">← 返回訂單驗收與結算</a>
-              <h2 class="form-title">檢視驗收與結算 <span id="accViewStatus"></span></h2>
+              <a class="link" id="accViewBack">← 返回訂單驗收</a>
+              <h2 class="form-title">檢視驗收 <span id="accViewStatus"></span></h2>
               <div class="po-kind-meta" id="accViewMeta"></div>
             </div>
             <div class="acc-head-actions">
@@ -2957,7 +2957,7 @@
         <div class="page" id="page-settlement">
           <div class="acc-page-head">
             <div>
-              <a class="link" id="settleBack">← 返回訂單驗收與結算</a>
+              <a class="link" id="settleBack">← 返回訂單驗收</a>
               <h2 class="form-title">廠商結算</h2>
               <div class="po-kind-meta">彙總狀態為「待結算」「部分結算」且尚有可結數量的訂單商品，勾選後設定本次結算數量並上傳發票。</div>
             </div>
@@ -4032,7 +4032,7 @@
       } else if (page === "shipping" || page === "ship-create") {
         document.title = "出貨訂單管理 - UrMart";
       } else if (page === "acceptance" || page === "acceptance-view" || page === "settlement") {
-        document.title = "訂單驗收與結算 - UrMart";
+        document.title = "訂單驗收 - UrMart";
       } else {
         document.title = "客戶訂單管理 - UrMart";
       }
