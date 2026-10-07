@@ -2049,6 +2049,7 @@
             <div class="menu-leaf">通路商品列表</div>
             <div class="menu-leaf" data-page="shipping">出貨訂單管理</div>
             <div class="menu-leaf" data-page="online-shipping">線上出貨訂單</div>
+            <div class="menu-leaf" data-page="channel-settle">通路結算</div>
           </div>
         </div>
 
@@ -2319,6 +2320,81 @@
                 </tr>
               </thead>
               <tbody id="onlineShippingBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="page" id="page-channel-settle">
+          <div class="sales-toolbar">
+            <button type="button" class="accordion-btn" id="chSettleAccordionBtn" aria-expanded="true">
+              <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+              篩選條件
+            </button>
+          </div>
+          <div class="demo-hint">
+            <strong>DEMO 提示｜通路結算</strong><br />
+            每一次結算產出一條結算明細。初次進入可查詢既有明細；檢視／編輯細節之後補齊。
+          </div>
+          <section class="filter" id="chSettleFilterPanel">
+            <div class="filter-grid">
+              <div class="field">
+                <label>通路</label>
+                <input id="chSettleFilterChannel" type="text" list="chSettleChannelList" placeholder="請選擇或輸入搜尋" autocomplete="off" />
+                <datalist id="chSettleChannelList"></datalist>
+              </div>
+              <div class="field">
+                <label>客戶訂單編號</label>
+                <input id="chSettleFilterOrderNo" type="text" placeholder="支援模糊查詢" />
+              </div>
+              <div class="field">
+                <label>狀態</label>
+                <select id="chSettleFilterStatus">
+                  <option value="">請選擇</option>
+                  <option value="已結算">已結算</option>
+                  <option value="部分結算">部分結算</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>建立時間</label>
+                <div class="range">
+                  <input id="chSettleFilterCreatedFrom" type="date" />
+                  <span class="sep">→</span>
+                  <input id="chSettleFilterCreatedTo" type="date" />
+                  <svg class="cal" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 7h12M5 2v2M11 2v2"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="field">
+                <label>操作人</label>
+                <input id="chSettleFilterOperator" type="text" placeholder="支援模糊查詢" />
+              </div>
+            </div>
+            <div class="filter-actions">
+              <button class="btn" type="button" id="chSettleFilterClear">清除篩選條件</button>
+              <button class="btn btn-primary" type="button" id="chSettleFilterApply">套用</button>
+            </div>
+          </section>
+          <div class="table-meta">
+            總共 <span id="chSettleTotal">0</span> 筆
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>客戶訂單編號</th>
+                  <th>通路</th>
+                  <th class="num">實際驗收數量</th>
+                  <th class="num">本次結算數量</th>
+                  <th class="num">本次結算金額</th>
+                  <th class="num">剩餘可結金額</th>
+                  <th>狀態</th>
+                  <th>建立時間</th>
+                  <th>操作人</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="chSettleTableBody"></tbody>
             </table>
           </div>
         </div>
@@ -4022,6 +4098,7 @@
       else if (page === "ship-create") menuPage = shipCreateKind === "online" ? "online-shipping" : "shipping";
       else if (page === "acceptance-view" || page === "settlement") menuPage = "acceptance";
       if (page === "acceptance") renderAcceptanceTable(getAcceptanceFiltered());
+      if (page === "channel-settle") renderChannelSettleTable(getChannelSettleFiltered());
       document.querySelectorAll("[data-page]").forEach((item) => {
         item.classList.toggle("active", item.dataset.page === menuPage);
       });
@@ -4029,6 +4106,8 @@
       document.getElementById("page-" + page)?.classList.add("active");
       if (page === "online-shipping" || (page === "ship-create" && shipCreateKind === "online")) {
         document.title = "線上出貨訂單 - UrMart";
+      } else if (page === "channel-settle") {
+        document.title = "通路結算 - UrMart";
       } else if (page === "shipping" || page === "ship-create") {
         document.title = "出貨訂單管理 - UrMart";
       } else if (page === "acceptance" || page === "acceptance-view" || page === "settlement") {
@@ -11730,6 +11809,113 @@
       }
     }
 
+    /** 通路結算：每一次結算產出一條明細（列表查詢骨架，細節之後補）。 */
+    function buildChannelSettleDetails() {
+      const details = [];
+      (settlementRecords || []).forEach((rec) => {
+        const byOrder = {};
+        (rec.lines || []).forEach((line) => {
+          const orderNo = line.orderNo || "";
+          if (!orderNo) return;
+          const bucket = byOrder[orderNo] || (byOrder[orderNo] = {
+            settleQty: 0,
+            settleAmount: 0,
+            keys: new Set(),
+          });
+          bucket.settleQty += Number(line.qty) || 0;
+          bucket.settleAmount += Number(line.amount) || 0;
+          if (line.key) bucket.keys.add(line.key);
+        });
+        Object.keys(byOrder).forEach((orderNo) => {
+          const order = salesOrders.find((item) => item.orderNo === orderNo);
+          const bucket = byOrder[orderNo];
+          const lines = order ? accLinesOf(order) : [];
+          const acceptQty = lines.reduce((sum, line) => sum + (Number(line.acceptQty) || 0), 0);
+          const remainAmount = lines.reduce((sum, line) => {
+            const remain = Math.max(0, (Number(line.acceptQty) || 0) - (Number(line.settledQty) || 0));
+            return sum + remain * (Number(line.price) || 0);
+          }, 0);
+          const status = order ? accStatusOf(order) : "已結算";
+          const rowStatus = status === "部分結算" ? "部分結算" : "已結算";
+          details.push({
+            id: `${rec.id}|${orderNo}`,
+            recordId: rec.id,
+            orderNo,
+            channel: (order && order.channelName) || "—",
+            acceptQty,
+            settleQty: bucket.settleQty,
+            settleAmount: accRoundMoney(bucket.settleAmount),
+            remainAmount: accRoundMoney(remainAmount),
+            status: rowStatus,
+            createdAt: rec.createdAt || "",
+            operator: rec.operator || "",
+          });
+        });
+      });
+      details.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+      return details;
+    }
+
+    function fillChannelSettleChannelOptions() {
+      const list = document.getElementById("chSettleChannelList");
+      if (!list) return;
+      const names = [...new Set(buildChannelSettleDetails().map((row) => row.channel).filter((n) => n && n !== "—"))];
+      list.innerHTML = names.map((name) => `<option value="${escapeHtml(name)}"></option>`).join("");
+    }
+
+    function getChannelSettleFiltered() {
+      const channel = (document.getElementById("chSettleFilterChannel") || {}).value.trim().toLowerCase();
+      const orderNo = (document.getElementById("chSettleFilterOrderNo") || {}).value.trim().toLowerCase();
+      const status = (document.getElementById("chSettleFilterStatus") || {}).value;
+      const from = (document.getElementById("chSettleFilterCreatedFrom") || {}).value.trim();
+      const to = (document.getElementById("chSettleFilterCreatedTo") || {}).value.trim();
+      const operator = (document.getElementById("chSettleFilterOperator") || {}).value.trim().toLowerCase();
+      return buildChannelSettleDetails().filter((row) => {
+        if (channel && !String(row.channel || "").toLowerCase().includes(channel)) return false;
+        if (orderNo && !String(row.orderNo || "").toLowerCase().includes(orderNo)) return false;
+        if (status && row.status !== status) return false;
+        const created = String(row.createdAt || "").slice(0, 10);
+        if (from && (!created || created < from)) return false;
+        if (to && (!created || created > to)) return false;
+        if (operator && !String(row.operator || "").toLowerCase().includes(operator)) return false;
+        return true;
+      });
+    }
+
+    function renderChannelSettleTable(list) {
+      fillChannelSettleChannelOptions();
+      const data = list || getChannelSettleFiltered();
+      const body = document.getElementById("chSettleTableBody");
+      const total = document.getElementById("chSettleTotal");
+      if (total) total.textContent = String(data.length);
+      if (!body) return;
+      if (!data.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="10">查無結算明細</td></tr>`;
+        return;
+      }
+      body.innerHTML = data.map((row) => {
+        const canEdit = row.status !== "已結算";
+        return `
+        <tr data-ch-settle-id="${escapeHtml(row.id)}">
+          <td>${escapeHtml(row.orderNo)}</td>
+          <td>${escapeHtml(row.channel)}</td>
+          <td class="num">${escapeHtml(row.acceptQty)}</td>
+          <td class="num">${escapeHtml(row.settleQty)}</td>
+          <td class="num">${escapeHtml(accMoney(row.settleAmount))}</td>
+          <td class="num">${escapeHtml(accMoney(row.remainAmount))}</td>
+          <td>${statusTag(row.status)}</td>
+          <td>${escapeHtml(row.createdAt || "—")}</td>
+          <td>${escapeHtml(row.operator || "—")}</td>
+          <td class="ops">
+            <a data-ch-settle-view="${escapeHtml(row.id)}">檢視</a>
+            ${canEdit
+              ? `<a data-ch-settle-edit="${escapeHtml(row.id)}">編輯</a>`
+              : `<span class="acc-sub">編輯</span>`}
+          </td>
+        </tr>`;
+      }).join("");
+    }
+
     function seedAcceptanceDemo() {
       if (acceptanceSeeded) return;
       acceptanceSeeded = true;
@@ -11806,6 +11992,34 @@
     });
     document.getElementById("accSettleBtn").addEventListener("click", openSettlementPage);
     document.getElementById("accViewBack").addEventListener("click", () => showPage("acceptance"));
+    document.getElementById("chSettleAccordionBtn").addEventListener("click", () => {
+      const btn = document.getElementById("chSettleAccordionBtn");
+      const collapsed = document.getElementById("chSettleFilterPanel").classList.toggle("hidden");
+      btn.classList.toggle("collapsed", collapsed);
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    });
+    document.getElementById("chSettleFilterApply").addEventListener("click", () => {
+      renderChannelSettleTable(getChannelSettleFiltered());
+    });
+    document.getElementById("chSettleFilterClear").addEventListener("click", () => {
+      ["chSettleFilterChannel", "chSettleFilterOrderNo", "chSettleFilterStatus",
+        "chSettleFilterCreatedFrom", "chSettleFilterCreatedTo", "chSettleFilterOperator"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
+      renderChannelSettleTable(getChannelSettleFiltered());
+    });
+    document.getElementById("chSettleTableBody").addEventListener("click", (e) => {
+      const viewId = e.target.dataset.chSettleView;
+      const editId = e.target.dataset.chSettleEdit;
+      if (viewId) {
+        alert("結算明細檢視頁之後補齊");
+        return;
+      }
+      if (editId) {
+        alert("結算明細編輯頁之後補齊（已結算不可編輯）");
+      }
+    });
     document.querySelectorAll(".acc-tab").forEach((el) => {
       el.addEventListener("click", () => setAccTab(el.dataset.accTab));
     });
