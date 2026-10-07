@@ -2397,13 +2397,17 @@
                 <button class="btn btn-primary" type="button" id="channelSettleFilterApply">套用</button>
               </div>
             </section>
-            <div class="table-meta">
-              總共 <span id="channelSettleTotal">0</span> 筆
+            <div class="table-meta sales-table-meta">
+              <div class="sales-batch-actions">
+                <button type="button" class="btn btn-primary hidden" id="channelSettleBatchBtn">確認批次結算</button>
+              </div>
+              <div class="sales-table-meta-right">總共 <span id="channelSettleTotal">0</span> 筆</div>
             </div>
             <div class="table-wrap">
               <table>
                 <thead>
                   <tr>
+                    <th class="col-check"><input type="checkbox" id="channelSettleCheckAll" aria-label="全選" /></th>
                     <th>客戶訂單編號</th>
                     <th>通路</th>
                     <th>狀態</th>
@@ -11769,6 +11773,8 @@
       return channelSettleMode === "consign";
     }
 
+    let channelSettleChecked = new Set();
+
     function resetChannelSettleBuyoutFilters() {
       const channel = document.getElementById("channelSettleFilterChannel");
       const orderNo = document.getElementById("channelSettleFilterOrderNo");
@@ -11780,6 +11786,7 @@
       if (status) status.value = "待結算";
       if (from) from.value = "";
       if (to) to.value = "";
+      channelSettleChecked = new Set();
     }
 
     function resetChannelSettleConsignFilters() {
@@ -11974,6 +11981,7 @@
         resetChannelSettleConsignFilters();
         channelSettleMode = "consign";
       } else {
+        channelSettleChecked = new Set();
         const statusEl = document.getElementById("channelSettleFilterStatus");
         if (statusEl) statusEl.value = "已結算";
         channelSettleMode = "buyout";
@@ -12166,14 +12174,27 @@
       });
     }
 
+    function syncChannelSettleBatchUi(data) {
+      const visible = new Set((data || []).map((row) => row.orderNo));
+      channelSettleChecked = new Set([...channelSettleChecked].filter((no) => visible.has(no)));
+      const batchBtn = document.getElementById("channelSettleBatchBtn");
+      if (batchBtn) batchBtn.classList.toggle("hidden", channelSettleChecked.size === 0);
+      const all = document.getElementById("channelSettleCheckAll");
+      if (all) {
+        all.disabled = !(data && data.length);
+        all.checked = !!(data && data.length && data.every((row) => channelSettleChecked.has(row.orderNo)));
+      }
+    }
+
     function renderChannelSettleTable(list) {
       const data = list || getChannelSettleFiltered();
       const body = document.getElementById("channelSettleBody");
       const total = document.getElementById("channelSettleTotal");
       if (total) total.textContent = String(data.length);
+      syncChannelSettleBatchUi(data);
       if (!body) return;
       if (!data.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="6">查無資料</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="7">查無資料</td></tr>`;
         return;
       }
       body.innerHTML = data.map((row) => {
@@ -12182,8 +12203,10 @@
         const settleDisabledTitle = isConsign
           ? "寄倉通路須依 SKU 結算，不可由此結算"
           : "已結算不可結算";
+        const checked = channelSettleChecked.has(row.orderNo);
         return `
-        <tr>
+        <tr data-channel-settle-order="${escapeHtml(row.orderNo)}">
+          <td class="col-check"><input type="checkbox" data-channel-settle-check="1"${checked ? " checked" : ""} /></td>
           <td>${escapeHtml(row.orderNo)}</td>
           <td>${escapeHtml(row.channelName || "—")}</td>
           <td>${statusTag(row.status)}</td>
@@ -12197,6 +12220,39 @@
           </td>
         </tr>`;
       }).join("");
+    }
+
+    function startChannelSettleBatchConfirm() {
+      if (!isFinanceRole()) {
+        alert("僅財務可進行結算");
+        return;
+      }
+      const data = getChannelSettleFiltered();
+      const selected = data.filter((row) => channelSettleChecked.has(row.orderNo));
+      if (!selected.length) {
+        alert("請先勾選要結算的客戶訂單");
+        return;
+      }
+      const blocked = selected.filter((row) => row.status !== "待結算");
+      if (blocked.length) {
+        alert(blocked.map((row) => `${row.orderNo} 已結算完成，不可重複結算`).join("\n"));
+        return;
+      }
+      const rows = [];
+      selected.forEach((row) => {
+        buildOrderSettleRows(row.orderNo).forEach((line) => {
+          if (line.remain <= 0) return;
+          rows.push({ ...line, checked: true, settleQty: line.remain });
+        });
+      });
+      if (!rows.length) {
+        alert("勾選的訂單沒有可結算品項");
+        return;
+      }
+      settleDetailOrderNo = "";
+      settleDetailMode = "settle";
+      settleRows = rows;
+      startSettleConfirm();
     }
 
     function isSettleDetailReadonly() {
@@ -12505,6 +12561,21 @@
       document.getElementById("channelSettleFilterFrom").value = "";
       document.getElementById("channelSettleFilterTo").value = "";
       renderChannelSettleTable(getChannelSettleFiltered());
+    });
+    document.getElementById("channelSettleCheckAll").addEventListener("change", (e) => {
+      const data = getChannelSettleFiltered();
+      if (e.target.checked) data.forEach((row) => channelSettleChecked.add(row.orderNo));
+      else channelSettleChecked = new Set();
+      renderChannelSettleTable(data);
+    });
+    document.getElementById("channelSettleBatchBtn").addEventListener("click", startChannelSettleBatchConfirm);
+    document.getElementById("channelSettleBody").addEventListener("change", (e) => {
+      if (!e.target.matches("input[data-channel-settle-check]")) return;
+      const orderNo = e.target.closest("tr")?.dataset.channelSettleOrder;
+      if (!orderNo) return;
+      if (e.target.checked) channelSettleChecked.add(orderNo);
+      else channelSettleChecked.delete(orderNo);
+      syncChannelSettleBatchUi(getChannelSettleFiltered());
     });
     document.getElementById("channelSettleBody").addEventListener("click", (e) => {
       const viewNo = e.target.dataset.channelSettleView;
