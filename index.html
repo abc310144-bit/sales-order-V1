@@ -2334,7 +2334,7 @@
           <div class="demo-hint">
             <strong>DEMO 提示｜通路結算</strong><br />
             所有通路的可結算客戶訂單在此查詢；初次進入預設「待結算」。<br />
-            建立時間＝該筆訂單成為可結算的時間（買斷／寄倉＝驗收完成時間；轉單＝第一張有效出貨單建立時間）。檢視／編輯之後再補。
+            建立時間＝該筆訂單成為可結算的時間（買斷／寄倉＝驗收完成時間；轉單＝第一張有效出貨單建立時間）。
           </div>
           <section class="filter" id="channelSettleFilterPanel">
             <div class="filter-grid">
@@ -2386,6 +2386,48 @@
                 </tr>
               </thead>
               <tbody id="channelSettleBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="page" id="page-channel-settle-detail">
+          <div class="acc-page-head">
+            <div>
+              <a class="link" id="channelSettleDetailBack">← 返回通路結算</a>
+              <h2 class="form-title" id="channelSettleDetailTitle">結算</h2>
+              <div class="po-kind-meta" id="channelSettleDetailMeta"></div>
+            </div>
+            <div class="acc-head-actions" id="channelSettleDetailActions">
+              <button type="button" class="btn btn-primary" id="channelSettleImportBtn">匯入結算品項</button>
+              <button type="button" class="btn btn-primary" id="channelSettleConfirmBtn">確認批次結算</button>
+            </div>
+          </div>
+          <div class="settle-summary" id="channelSettleDetailSummary"></div>
+          <div class="table-meta">
+            總共 <span id="channelSettleDetailTotal">0</span> 筆
+          </div>
+          <div class="table-wrap">
+            <table class="settle-table">
+              <thead>
+                <tr>
+                  <th class="col-check"><input type="checkbox" id="channelSettleDetailCheckAll" aria-label="全選" /></th>
+                  <th>通路</th>
+                  <th>SKU</th>
+                  <th>商品名稱</th>
+                  <th class="num">單價（不含稅）</th>
+                  <th class="num">單價（含稅）</th>
+                  <th class="num">訂購數量(pcs)</th>
+                  <th class="num">合計</th>
+                  <th>建立時間</th>
+                  <th>實際出貨時間</th>
+                  <th class="num">實際驗收數量</th>
+                  <th>本次結算數量</th>
+                  <th class="num">本次結算金額</th>
+                  <th class="num">剩餘可結數量</th>
+                  <th class="num">剩餘可結金額</th>
+                </tr>
+              </thead>
+              <tbody id="channelSettleDetailBody"></tbody>
             </table>
           </div>
         </div>
@@ -4085,6 +4127,7 @@
       if (page === "order-edit") menuPage = "sales";
       else if (page === "ship-create") menuPage = shipCreateKind === "online" ? "online-shipping" : "shipping";
       else if (page === "acceptance-view" || page === "settlement") menuPage = "acceptance";
+      else if (page === "channel-settle-detail") menuPage = "channel-settle";
       if (page === "acceptance") renderAcceptanceTable(getAcceptanceFiltered());
       if (page === "channel-settle") renderChannelSettleTable(getChannelSettleFiltered());
       document.querySelectorAll("[data-page]").forEach((item) => {
@@ -4094,7 +4137,7 @@
       document.getElementById("page-" + page)?.classList.add("active");
       if (page === "online-shipping" || (page === "ship-create" && shipCreateKind === "online")) {
         document.title = "線上出貨訂單 - UrMart";
-      } else if (page === "channel-settle") {
+      } else if (page === "channel-settle" || page === "channel-settle-detail") {
         document.title = "通路結算 - UrMart";
       } else if (page === "shipping" || page === "ship-create") {
         document.title = "出貨訂單管理 - UrMart";
@@ -10786,7 +10829,7 @@
     });
 
     const ACC_ACCEPT_TEMPLATE_URL = "https://docs.google.com/spreadsheets/d/1P-CNXbcmYNfHWV8wBAU_g13R9PbPTRy62IwnecYE0ak/edit?gid=0#gid=0";
-    const ACC_SETTLE_TEMPLATE_URL = "https://docs.google.com/spreadsheets/d/1MUQ6PmLN6tEzLkBzvfXEkFcQwy-Ayawtp35cc6MJINA/edit?gid=0#gid=0";
+    const ACC_SETTLE_TEMPLATE_URL = "廠商結算範本.xlsx";
     const ACC_DIFF_DEFAULT_NOTE = "依通路端實際點收數量入帳";
     const ACC_IMPORT_LIMIT = 1000;
 
@@ -10798,6 +10841,8 @@
     let accImportFile = null;
     let settleRows = [];
     let settleInvoiceFile = null;
+    let settleDetailOrderNo = "";
+    let settleDetailMode = "settle"; // settle | view
 
     function isFinanceRole() {
       return currentRole === "財務";
@@ -10897,6 +10942,7 @@
             key,
             sku: d.sku,
             name: d.name,
+            productCode: item.productCode || d.productCode || "",
             pcs: d.pcs,
             qty: d.qty,
             carton: d.carton,
@@ -11331,7 +11377,9 @@
 
     function settleImportField(key) {
       if (key.includes("客戶訂單編號") || key.includes("採購單編號") || (key.includes("訂單編號") && !key.includes("平台") && !key.includes("出貨"))) return "orderNo";
+      if (key.includes("通路商品") || key === "商品品號") return "productCode";
       if (/^SKU$/i.test(key) || key === "品號") return "sku";
+      if (key.includes("商品名稱") || key === "品名") return "name";
       if (key.includes("結算數量") || key === "數量" || /^(qty|quantity)$/i.test(key)) return "qty";
       return "";
     }
@@ -11550,11 +11598,16 @@
     }
 
     function updateSettleRowCells(tr, row) {
-      const remainQty = Math.max(0, row.remain - row.settleQty);
-      tr.querySelector('[data-cell="settleAmt"]').textContent = accMoney(row.settleQty * row.price);
-      tr.querySelector('[data-cell="remainQty"]').textContent = String(remainQty);
-      tr.querySelector('[data-cell="remainAmt"]').textContent = accMoney(remainQty * row.price);
+      const qty = row.checked ? row.settleQty : 0;
+      const remainQty = Math.max(0, row.remain - qty);
+      const settleAmt = tr.querySelector('[data-cell="settleAmt"]');
+      const remainQtyEl = tr.querySelector('[data-cell="remainQty"]');
+      const remainAmtEl = tr.querySelector('[data-cell="remainAmt"]');
+      if (settleAmt) settleAmt.textContent = accMoney(qty * row.price);
+      if (remainQtyEl) remainQtyEl.textContent = String(remainQty);
+      if (remainAmtEl) remainAmtEl.textContent = accMoney(remainQty * row.price);
       renderSettleSummary();
+      renderChannelSettleDetailSummary();
     }
 
     function applySettleImport(matrix) {
@@ -11643,7 +11696,9 @@
         alert(err && err.message ? err.message : "檔案解析失敗");
         return;
       }
-      const ok = accImportTarget === "settle" ? applySettleImport(matrix) : applyAcceptImport(matrix);
+      const ok = accImportTarget === "settle"
+        ? (settleDetailOrderNo ? applyChannelSettleImport(matrix) : applySettleImport(matrix))
+        : applyAcceptImport(matrix);
       if (!ok) return;
       closeAccImportModal();
       alert("成功匯入");
@@ -11769,7 +11824,10 @@
       persistDemoData();
       closeSettleInvoiceModal();
       alert(`批次結算成功（${record.id}）`);
-      showPage("acceptance");
+      settleDetailOrderNo = "";
+      settleDetailMode = "settle";
+      settleRows = [];
+      showPage("channel-settle");
     }
 
     function refreshAcceptancePages() {
@@ -11785,6 +11843,14 @@
 
     function onAcceptanceRoleChange() {
       if (!isFinanceRole() && document.getElementById("page-settlement").classList.contains("active")) {
+        showPage("channel-settle");
+      }
+      if (!isFinanceRole()
+        && document.getElementById("page-channel-settle-detail").classList.contains("active")
+        && settleDetailMode === "settle") {
+        settleDetailOrderNo = "";
+        settleDetailMode = "settle";
+        settleRows = [];
         showPage("channel-settle");
       }
     }
@@ -11874,11 +11940,215 @@
           <td class="ops">
             <a data-channel-settle-view="${escapeHtml(row.orderNo)}">檢視</a>
             ${canEdit
-              ? `<a data-channel-settle-edit="${escapeHtml(row.orderNo)}">編輯</a>`
-              : `<a class="is-disabled" title="已結算不可編輯">編輯</a>`}
+              ? `<a data-channel-settle-edit="${escapeHtml(row.orderNo)}">結算</a>`
+              : `<a class="is-disabled" title="已結算不可結算">結算</a>`}
           </td>
         </tr>`;
       }).join("");
+    }
+
+    function isSettleDetailReadonly() {
+      return settleDetailMode === "view";
+    }
+
+    function buildOrderSettleRows(orderNo) {
+      const order = salesOrders.find((item) => item.orderNo === orderNo);
+      if (!order || !isSettlementSourceOrder(order)) return [];
+      const settleableAt = orderSettleableAt(order);
+      return accLinesOf(order).map((line) => {
+        const remain = Math.max(0, (Number(line.acceptQty) || 0) - (Number(line.settledQty) || 0));
+        return {
+          id: settleRowKey(order.orderNo, line.key),
+          orderNo: order.orderNo,
+          channelName: order.channelName,
+          createdAt: settleableAt || order.createdAt,
+          key: line.key,
+          sku: line.sku,
+          name: line.name,
+          productCode: line.productCode || "",
+          priceNo: line.priceNo,
+          priceLabel: line.priceLabel,
+          price: line.price,
+          qty: line.qty,
+          amount: line.amount,
+          shipDates: line.shipDates,
+          acceptQty: Number(line.acceptQty) || 0,
+          settledQty: Number(line.settledQty) || 0,
+          remain,
+          checked: false,
+          settleQty: 0,
+        };
+      });
+    }
+
+    function openChannelSettleDetail(orderNo, mode) {
+      const order = salesOrders.find((item) => item.orderNo === orderNo);
+      if (!order || !isSettlementSourceOrder(order)) {
+        alert("找不到可結算的客戶訂單");
+        return;
+      }
+      const status = accStatusOf(order);
+      const wantSettle = mode !== "view";
+      if (wantSettle && !isFinanceRole()) {
+        alert("僅財務可進行結算");
+        return;
+      }
+      if (wantSettle && status === "已結算") {
+        alert("已結算不可再結算，請改用檢視");
+        return;
+      }
+      settleDetailOrderNo = orderNo;
+      settleDetailMode = wantSettle ? "settle" : "view";
+      settleRows = buildOrderSettleRows(orderNo);
+      const readonly = isSettleDetailReadonly();
+      document.getElementById("channelSettleDetailTitle").textContent = readonly ? "檢視結算" : "結算";
+      document.getElementById("channelSettleDetailMeta").textContent =
+        `客戶訂單編號：${order.orderNo}｜通路：${order.channelName || "—"}｜狀態：${status}`;
+      document.getElementById("channelSettleDetailActions").classList.toggle("hidden", readonly);
+      renderChannelSettleDetailTable();
+      showPage("channel-settle-detail");
+    }
+
+    function renderChannelSettleDetailSummary() {
+      const el = document.getElementById("channelSettleDetailSummary");
+      if (!el) return;
+      if (isSettleDetailReadonly()) {
+        el.innerHTML = "";
+        return;
+      }
+      const selected = settleSelectedRows();
+      const total = selected.reduce((sum, row) => sum + row.settleQty * row.price, 0);
+      el.innerHTML = selected.length
+        ? `已勾選 <strong>${selected.length}</strong> 筆，本次結算金額合計 <strong>${escapeHtml(accMoney(total))}</strong>`
+        : "";
+    }
+
+    function renderChannelSettleDetailTable() {
+      const body = document.getElementById("channelSettleDetailBody");
+      const total = document.getElementById("channelSettleDetailTotal");
+      const all = document.getElementById("channelSettleDetailCheckAll");
+      const readonly = isSettleDetailReadonly();
+      if (total) total.textContent = String(settleRows.length);
+      if (all) {
+        const settleable = settleRows.filter((row) => row.remain > 0);
+        all.disabled = readonly || !settleable.length;
+        all.checked = !readonly && settleable.length > 0 && settleable.every((row) => row.checked);
+      }
+      if (!body) return;
+      if (!settleRows.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="15">此訂單無可結算品項</td></tr>`;
+        renderChannelSettleDetailSummary();
+        return;
+      }
+      body.innerHTML = settleRows.map((row) => {
+        const remainQty = Math.max(0, row.remain - (row.checked ? row.settleQty : 0));
+        const canFill = !readonly && row.remain > 0;
+        return `
+        <tr data-settle-id="${escapeHtml(row.id)}">
+          <td class="col-check"><input type="checkbox" data-settle-check="1"${row.checked ? " checked" : ""}${canFill ? "" : " disabled"} /></td>
+          <td>${escapeHtml(row.channelName || "—")}</td>
+          <td>${escapeHtml(row.sku)}</td>
+          <td>${escapeHtml(row.name)}</td>
+          <td class="num">${escapeHtml(accMoney(row.priceNo))}</td>
+          <td class="num">${row.priceLabel == null ? "-" : escapeHtml(accMoney(row.priceLabel))}</td>
+          <td class="num">${escapeHtml(row.qty)}</td>
+          <td class="num">${escapeHtml(accMoney(row.amount))}</td>
+          <td>${escapeHtml(row.createdAt || "—")}</td>
+          <td>${row.shipDates.length ? row.shipDates.map(escapeHtml).join("<br />") : "-"}</td>
+          <td class="num">${escapeHtml(row.acceptQty)}${row.settledQty > 0 ? `<span class="acc-sub is-settled">已結：${escapeHtml(row.settledQty)}</span>` : ""}</td>
+          <td>
+            <input type="number" min="0" max="${escapeHtml(row.remain)}" step="1" data-settle-qty="1" value="${escapeHtml(row.settleQty)}"${canFill && row.checked ? "" : " disabled"} />
+            ${canFill ? `<span class="acc-sub">可結上限：${escapeHtml(row.remain)}</span>` : (readonly ? "" : `<span class="acc-sub">無可結數量</span>`)}
+          </td>
+          <td class="num" data-cell="settleAmt">${escapeHtml(accMoney((row.checked ? row.settleQty : 0) * row.price))}</td>
+          <td class="num" data-cell="remainQty">${escapeHtml(remainQty)}</td>
+          <td class="num" data-cell="remainAmt">${escapeHtml(accMoney(remainQty * row.price))}</td>
+        </tr>`;
+      }).join("");
+      renderChannelSettleDetailSummary();
+    }
+
+    function applyChannelSettleImport(matrix) {
+      const orderNo = settleDetailOrderNo;
+      const order = salesOrders.find((item) => item.orderNo === orderNo);
+      if (!order || isSettleDetailReadonly()) return false;
+      const { records, found } = recordsFromHeaderMatrix(matrix, settleImportField, ["orderNo", "productCode", "sku", "name", "qty"]);
+      if (!found.sku && !found.productCode) {
+        alert("檔案缺少必要欄位：SKU 或 通路商品編號");
+        return false;
+      }
+      if (!found.qty) {
+        alert("檔案缺少必要欄位：結算數量");
+        return false;
+      }
+      if (!records.length) {
+        alert("檔案沒有可匯入的結算列");
+        return false;
+      }
+      if (records.length > ACC_IMPORT_LIMIT) {
+        alert("匯入上限為 1000 筆，已超過上限，整檔不匯入");
+        return false;
+      }
+      const bySku = Object.fromEntries(settleRows.map((row) => [normalizeSku(row.sku).toLowerCase(), row]));
+      const byCode = Object.fromEntries(
+        settleRows.filter((row) => row.productCode).map((row) => [normalizeSku(row.productCode).toLowerCase(), row])
+      );
+      const errors = [];
+      const seen = new Set();
+      const applied = [];
+      records.forEach((rec, i) => {
+        const rowNo = i + 2;
+        const fileOrder = String(rec.orderNo || "").trim();
+        if (fileOrder && fileOrder.toLowerCase() !== orderNo.toLowerCase()) {
+          errors.push(`第 ${rowNo} 列：客戶訂單編號 ${fileOrder} 與目前訂單 ${orderNo} 不符`);
+          return;
+        }
+        const sku = normalizeSku(rec.sku);
+        const productCode = normalizeSku(rec.productCode);
+        if ((!sku && !productCode) || rec.qty === "") {
+          errors.push(`第 ${rowNo} 列：SKU（或通路商品編號）、結算數量為必填`);
+          return;
+        }
+        if (!isPositiveIntQty(rec.qty)) {
+          errors.push(`第 ${rowNo} 列：結算數量須為大於 0 的正整數`);
+          return;
+        }
+        const row = (sku && bySku[sku.toLowerCase()]) || (productCode && byCode[productCode.toLowerCase()]);
+        if (!row) {
+          errors.push(`第 ${rowNo} 列：${sku || productCode} 不在此訂單品項`);
+          return;
+        }
+        if (seen.has(row.id)) {
+          errors.push(`第 ${rowNo} 列：${row.sku} 重複`);
+          return;
+        }
+        seen.add(row.id);
+        if (row.remain <= 0) {
+          errors.push(`第 ${rowNo} 列：${row.sku} 剩餘可結數量為 0`);
+          return;
+        }
+        if (Number(rec.qty) > row.remain) {
+          errors.push(`第 ${rowNo} 列：${row.sku} 結算數量 ${rec.qty} 超過剩餘可結數量 ${row.remain}`);
+          return;
+        }
+        applied.push({ id: row.id, qty: Number(rec.qty) });
+      });
+      if (errors.length) {
+        alert(`匯入失敗，整檔不匯入：\n${errors.slice(0, 20).join("\n")}${errors.length > 20 ? `\n…共 ${errors.length} 筆錯誤` : ""}`);
+        return false;
+      }
+      settleRows.forEach((row) => {
+        row.checked = false;
+        row.settleQty = 0;
+      });
+      applied.forEach((item) => {
+        const row = settleRowById(item.id);
+        if (!row) return;
+        row.checked = true;
+        row.settleQty = item.qty;
+      });
+      renderChannelSettleDetailTable();
+      return true;
     }
 
     function seedAcceptanceDemo() {
@@ -11974,8 +12244,69 @@
       renderChannelSettleTable(getChannelSettleFiltered());
     });
     document.getElementById("channelSettleBody").addEventListener("click", (e) => {
-      if (e.target.dataset.channelSettleView || e.target.dataset.channelSettleEdit) {
-        /* 檢視／編輯頁之後再補 */
+      const viewNo = e.target.dataset.channelSettleView;
+      const settleNo = e.target.dataset.channelSettleEdit;
+      if (viewNo) openChannelSettleDetail(viewNo, "view");
+      if (settleNo) openChannelSettleDetail(settleNo, "settle");
+    });
+    document.getElementById("channelSettleDetailBack").addEventListener("click", () => {
+      settleDetailOrderNo = "";
+      settleDetailMode = "settle";
+      settleRows = [];
+      showPage("channel-settle");
+    });
+    document.getElementById("channelSettleImportBtn").addEventListener("click", () => {
+      if (isSettleDetailReadonly()) return;
+      if (!isFinanceRole()) {
+        alert("僅財務可進行結算");
+        return;
+      }
+      openAccImportModal("settle");
+    });
+    document.getElementById("channelSettleConfirmBtn").addEventListener("click", () => {
+      if (isSettleDetailReadonly()) return;
+      openSettleInvoiceModal();
+    });
+    document.getElementById("channelSettleDetailCheckAll").addEventListener("change", (e) => {
+      if (isSettleDetailReadonly()) return;
+      settleRows.forEach((row) => {
+        if (row.remain <= 0) {
+          row.checked = false;
+          row.settleQty = 0;
+          return;
+        }
+        row.checked = e.target.checked;
+        row.settleQty = e.target.checked ? (row.settleQty || row.remain) : 0;
+      });
+      renderChannelSettleDetailTable();
+    });
+    document.getElementById("channelSettleDetailBody").addEventListener("change", (e) => {
+      if (!e.target.matches("input[data-settle-check]")) return;
+      if (isSettleDetailReadonly()) return;
+      const row = settleRowById(e.target.closest("tr").dataset.settleId);
+      if (!row || row.remain <= 0) return;
+      row.checked = e.target.checked;
+      row.settleQty = row.checked ? (row.settleQty || row.remain) : 0;
+      renderChannelSettleDetailTable();
+    });
+    document.getElementById("channelSettleDetailBody").addEventListener("input", (e) => {
+      if (!e.target.matches("input[data-settle-qty]")) return;
+      if (isSettleDetailReadonly()) return;
+      const tr = e.target.closest("tr");
+      const row = settleRowById(tr.dataset.settleId);
+      if (!row || !row.checked || row.remain <= 0) return;
+      const raw = String(e.target.value).trim();
+      let qty = /^\d+$/.test(raw) ? Number(raw) : 0;
+      if (qty > row.remain) {
+        qty = row.remain;
+        e.target.value = String(qty);
+      }
+      row.settleQty = qty;
+      updateSettleRowCells(tr, row);
+      const all = document.getElementById("channelSettleDetailCheckAll");
+      if (all) {
+        const settleable = settleRows.filter((r) => r.remain > 0);
+        all.checked = settleable.length > 0 && settleable.every((r) => r.checked);
       }
     });
     document.querySelectorAll(".acc-tab").forEach((el) => {
