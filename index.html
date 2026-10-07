@@ -2434,7 +2434,8 @@
             </div>
             <div class="demo-hint">
               <strong>DEMO 提示｜寄倉結算</strong><br />
-              依 SKU 批次結算；DEMO 寄倉通路：實體-PW健身工廠、百貨-新光三越（皆為月結，確認時選回壓發票／ezpay）。
+              依 SKU 批次結算；進入此模式會帶出可結寄倉品項（按「套用」可再篩）。皆為月結，確認時選回壓發票／ezpay。<br />
+              假資料對照：通路可填「實體-PW健身工廠」或「百貨-新光三越」；客戶訂單編號可試 <code>SO20260826008</code>／<code>SO20260827034</code>／<code>SO20260815022</code>；建立時間可篩 2026-08-15～2026-08-28；實際出貨時間可篩 2026-08-27～2026-08-28；SKU 可試 <code>UM-1002</code>。
             </div>
             <section class="filter">
               <div class="filter-grid">
@@ -5329,10 +5330,11 @@
     let currentEditOrderNo = "";
     let orderFormMode = "edit";
     let workspaceOrder = null;
-    const DEMO_STORE_KEY = "urmart-sales-demo-v6";
+    const DEMO_STORE_KEY = "urmart-sales-demo-v7";
     let demoReady = false;
     let settlementRecords = [];
     let acceptanceSeeded = false;
+    let consignSettleSeeded = false;
     const SETTLE_FILE_STORE_LIMIT = 1500000;
 
     function sanitizeSettlementForStore(record) {
@@ -5348,6 +5350,7 @@
           rows,
           settlementRecords: settlementRecords.map(sanitizeSettlementForStore),
           acceptanceSeeded,
+          consignSettleSeeded,
         };
         localStorage.setItem(DEMO_STORE_KEY, JSON.stringify(payload));
         return true;
@@ -5667,6 +5670,7 @@
         if (Array.isArray(data.rows)) rows = data.rows;
         if (Array.isArray(data.settlementRecords)) settlementRecords = data.settlementRecords;
         acceptanceSeeded = !!data.acceptanceSeeded;
+        consignSettleSeeded = !!data.consignSettleSeeded;
         return true;
       } catch (err) {
         return false;
@@ -7444,6 +7448,7 @@
         extraPo({ orderNo: "SO20260817020", poDocNo: "SHP-0817-020", channelType: "台灣線上通路", channelName: "線上-蝦皮商城", status: "部分出貨", operator: "misha.huang", createdAt: "2026-08-17 09:16:55" }),
         extraPo({ orderNo: "SO20260816021", poDocNo: "CCT-HK-20260816", channelType: "境外通路", channelName: "跨境- Cool Cool Trading", status: "部分出貨", operator: "henry.huang", createdAt: "2026-08-16 18:02:31" }),
         extraPo({ orderNo: "SO20260815022", poDocNo: "SKM-A11-0815", channelType: "台灣實體百貨", channelName: "百貨-新光三越", status: "已開立出貨單", operator: "misha.huang", createdAt: "2026-08-15 14:48:12" }),
+        extraPo({ orderNo: "SO20260827034", poDocNo: "SKM-A11-0827", channelType: "台灣實體百貨", channelName: "百貨-新光三越", status: "部分出貨", operator: "vita.du", createdAt: "2026-08-27 09:40:00" }),
         extraPo({ orderNo: "SO20260814023", poDocNo: "SN-DONE-0814", channelType: "台灣本地經銷", channelName: "經銷商-學生營養股份有限公司", status: "已開立出貨單", operator: "sarah.lin", createdAt: "2026-08-14 10:22:40", closedBySupervisor: true, completeNote: "以實收為主" }),
         extraPo({ orderNo: "SO20260813024", poDocNo: "XZ-PO-0813-024", channelType: "台灣本地經銷", channelName: "經銷商-絢綻國際企業社", status: "已開立出貨單", operator: "john.pan", createdAt: "2026-08-13 16:09:18" }),
         extraPo({ orderNo: "SO20260812025", poDocNo: "DEC-0812-25", channelType: "台灣本地通路", channelName: "實體-迪卡儂", status: "已作廢", operator: "vita.du", createdAt: "2026-08-12 11:37:05" }),
@@ -7489,8 +7494,9 @@
         extraShip(10481, "SO20260817020", "線上-蝦皮商城", "待拋單", "misha.huang", "2026-08-17 10:31:44"),
         extraShip(10482, "SO20260816021", "跨境- Cool Cool Trading", "已配達", "henry.huang", "2026-08-16 18:40:12"),
         extraShip(10483, "SO20260816021", "跨境- Cool Cool Trading", "配送異常", "henry.huang", "2026-08-16 19:05:58"),
-        extraShip(10484, "SO20260815022", "百貨-新光三越", "已配達", "misha.huang", "2026-08-15 15:12:40"),
-        extraShip(10485, "SO20260815022", "百貨-新光三越", "已配達", "misha.huang", "2026-08-15 16:03:18"),
+        extraShip(10484, "SO20260815022", "百貨-新光三越", "已配達", "misha.huang", "2026-08-15 15:12:40", { shipped: "2026-08-17 11:00:00" }),
+        extraShip(10485, "SO20260815022", "百貨-新光三越", "已配達", "misha.huang", "2026-08-15 16:03:18", { shipped: "2026-08-17 16:40:00" }),
+        extraShip(10510, "SO20260827034", "百貨-新光三越", "已配達", "vita.du", "2026-08-27 10:15:00", { shipped: "2026-08-28 14:20:00" }),
         extraShip(10486, "SO20260814023", "經銷商-學生營養股份有限公司", "已配達", "sarah.lin", "2026-08-14 11:08:27"),
         extraShip(10487, "SO20260813024", "經銷商-絢綻國際企業社", "已配達", "john.pan", "2026-08-13 16:44:02"),
         extraShip(10488, "SO20260813024", "經銷商-絢綻國際企業社", "已配達", "john.pan", "2026-08-13 17:21:55"),
@@ -11034,9 +11040,17 @@
       const names = [...new Set(acceptanceOrders().map((order) => order.channelName).filter(Boolean))];
       select.innerHTML = `<option value="">請選擇</option>` + names
         .map((name) => `<option${name === current ? " selected" : ""}>${escapeHtml(name)}</option>`).join("");
-      const settleNames = [...new Set(settlementSourceOrders().map((order) => order.channelName).filter(Boolean))];
-      document.getElementById("settleChannelList").innerHTML = settleNames
-        .map((name) => `<option value="${escapeHtml(name)}"></option>`).join("");
+      const settleNames = [...new Set(
+        settlementSourceOrders()
+          .filter((order) => channelAcceptFlow(order.channelName) === "寄倉")
+          .map((order) => order.channelName)
+          .filter(Boolean)
+      )].sort();
+      const settleList = document.getElementById("settleChannelList");
+      if (settleList) {
+        settleList.innerHTML = settleNames
+          .map((name) => `<option value="${escapeHtml(name)}"></option>`).join("");
+      }
     }
 
     function getAcceptanceFiltered() {
@@ -11814,7 +11828,7 @@
         renderChannelSettleTable(getChannelSettleFiltered());
       } else {
         fillAccChannelOptions();
-        renderSettleTable();
+        applySettleFilters();
       }
     }
 
@@ -12519,8 +12533,49 @@
       const full = accept("SO20260815022", "2026-08-18 10:20:00");
       const part = accept("SO20260813024", "2026-08-16 15:05:00");
       accept("SO20260809028", "2026-08-12 11:30:00");
-      if (full) settle("ST20260820001", "2026-08-20 14:00:00", "SK-20260820", [{ order: full, ratio: 1 }]);
+      /* 寄倉 SO20260815022：先部分結算，保留可結數量給「寄倉結算」假資料 */
+      if (full) settle("ST20260820001", "2026-08-20 14:00:00", "SK-20260820", [{ order: full, ratio: 0.4 }]);
       if (part) settle("ST20260821001", "2026-08-21 10:30:00", "XZ-20260821", [{ order: part, ratio: 0.5 }]);
+    }
+
+    /** 寄倉結算篩選假資料：確保 PW／新光三越有可結 SKU，且通路／單號／日期／SKU 可對上篩選 */
+    function seedConsignSettleDemo() {
+      if (consignSettleSeeded) return;
+      consignSettleSeeded = true;
+      ["10473", "10472"].forEach((id) => {
+        const ship = rows.find((row) => String(row.id) === id);
+        if (ship && !ship.shipped) ship.shipped = id === "10473" ? "2026-08-27 10:30:00" : "2026-08-27 15:45:00";
+      });
+      const ensureConsignAccept = (orderNo, acceptedAt, settledRatio) => {
+        const order = salesOrders.find((item) => item.orderNo === orderNo);
+        if (!order || channelAcceptFlow(order.channelName) !== "寄倉") return;
+        if (!validShipsOfPo(orderNo).length) return;
+        const shipInfo = accShipInfoByKey(orderNo);
+        order.acceptance = {
+          acceptedAt,
+          acceptedBy: "建檔人",
+          items: (order.items || [])
+            .filter((item) => (Number(item.qty) || 0) > 0)
+            .map((item) => {
+              const key = itemKey(item);
+              const shipQty = Number((shipInfo[key] || {}).qty) || 0;
+              const acceptQty = shipQty > 0 ? shipQty : Number(item.qty) || 0;
+              const ratio = Number(settledRatio) || 0;
+              return {
+                key,
+                sku: item.sku || "",
+                name: item.name || "",
+                acceptQty,
+                settledQty: Math.max(0, Math.min(acceptQty, Math.floor(acceptQty * ratio))),
+                remark: "",
+              };
+            })
+            .filter((item) => item.acceptQty > 0),
+        };
+      };
+      ensureConsignAccept("SO20260826008", "2026-08-26 11:20:00", 0);
+      ensureConsignAccept("SO20260827034", "2026-08-27 16:00:00", 0);
+      ensureConsignAccept("SO20260815022", "2026-08-18 10:20:00", 0.4);
     }
 
     document.getElementById("accAccordionBtn").addEventListener("click", () => {
@@ -12796,6 +12851,7 @@
     });
 
     seedAcceptanceDemo();
+    seedConsignSettleDemo();
     persistDemoData();
     renderAcceptanceTable(getAcceptanceFiltered());
 
