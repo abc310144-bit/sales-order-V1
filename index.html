@@ -152,6 +152,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      margin-left: auto;
     }
     .demo-hint {
       margin: 0 0 12px;
@@ -2331,13 +2332,17 @@
               <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
               篩選條件
             </button>
+            <div class="sales-toolbar-actions">
+              <button type="button" class="btn btn-primary" id="channelConsignSettleBtn">寄倉結算</button>
+            </div>
           </div>
           <div class="demo-hint">
             <strong>DEMO 提示｜通路結算</strong><br />
             所有通路的可結算客戶訂單在此查詢；初次進入預設「待結算」。<br />
             建立時間＝該筆訂單成為可結算的時間（買斷／寄倉＝驗收完成時間；轉單＝第一張有效出貨單建立時間）。<br />
-            <strong>寄倉</strong>結算依照 SKU 進行結算；<strong>買斷／轉單</strong>依照客戶訂單進行結算。<br />
-            寄倉通路不可透過操作「結算」進行結算（僅可檢視；SKU 結算入口之後另補）。<br />
+            <strong>寄倉</strong>結算依照 SKU 進行結算；右上「寄倉結算」進入原廠商結算（SKU 批次）畫面。<br />
+            <strong>買斷／轉單</strong>依照客戶訂單進行結算（列表操作「結算」）。<br />
+            寄倉通路不可透過列表操作「結算」進行結算（僅可檢視）。<br />
             <strong>月結通路</strong>確認結算時須先選「回壓發票」或「ezpay 開發票」；ezpay 於 DEMO 僅關閉彈窗（正式環境才自動開立發票）。<br />
             月結：實體-PW健身工廠、實體-全聯、實體-寶雅、實體-迪卡儂、經銷商-絢綻國際企業社、經銷商-學生營養股份有限公司、百貨-新光三越。<br />
             非月結：線上-轉單、線上-蝦皮商城、跨境- Cool Cool Trading、跨境-Sheng Siong、跨境-Aeon Japan、晨曦公司。
@@ -3064,9 +3069,9 @@
         <div class="page" id="page-settlement">
           <div class="acc-page-head">
             <div>
-              <a class="link" id="settleBack">← 返回訂單驗收</a>
-              <h2 class="form-title">廠商結算</h2>
-              <div class="po-kind-meta">彙總狀態為「待結算」「部分結算」且尚有可結數量的訂單商品，勾選後設定本次結算數量並上傳發票。</div>
+              <a class="link" id="settleBack">← 返回通路結算</a>
+              <h2 class="form-title">寄倉結算</h2>
+              <div class="po-kind-meta">彙總狀態為「待結算」「部分結算」且尚有可結數量的訂單商品，勾選後設定本次結算數量並上傳發票。（DEMO 第一版畫面同原廠商結算）</div>
             </div>
             <div class="acc-head-actions">
               <button type="button" class="btn btn-primary" id="settleImportBtn">匯入結算商品</button>
@@ -4138,8 +4143,8 @@
       let menuPage = page;
       if (page === "order-edit") menuPage = "sales";
       else if (page === "ship-create") menuPage = shipCreateKind === "online" ? "online-shipping" : "shipping";
-      else if (page === "acceptance-view" || page === "settlement") menuPage = "acceptance";
-      else if (page === "channel-settle-detail") menuPage = "channel-settle";
+      else if (page === "acceptance-view") menuPage = "acceptance";
+      else if (page === "channel-settle-detail" || page === "settlement") menuPage = "channel-settle";
       if (page === "acceptance") renderAcceptanceTable(getAcceptanceFiltered());
       if (page === "channel-settle") renderChannelSettleTable(getChannelSettleFiltered());
       document.querySelectorAll("[data-page]").forEach((item) => {
@@ -4149,11 +4154,11 @@
       document.getElementById("page-" + page)?.classList.add("active");
       if (page === "online-shipping" || (page === "ship-create" && shipCreateKind === "online")) {
         document.title = "線上出貨訂單 - UrMart";
-      } else if (page === "channel-settle" || page === "channel-settle-detail") {
+      } else if (page === "channel-settle" || page === "channel-settle-detail" || page === "settlement") {
         document.title = "通路結算 - UrMart";
       } else if (page === "shipping" || page === "ship-create") {
         document.title = "出貨訂單管理 - UrMart";
-      } else if (page === "acceptance" || page === "acceptance-view" || page === "settlement") {
+      } else if (page === "acceptance" || page === "acceptance-view") {
         document.title = "訂單驗收 - UrMart";
       } else {
         document.title = "客戶訂單管理 - UrMart";
@@ -12460,7 +12465,8 @@
     });
     document.getElementById("accImportConfirm").addEventListener("click", confirmAccImport);
 
-    document.getElementById("settleBack").addEventListener("click", () => showPage("acceptance"));
+    document.getElementById("channelConsignSettleBtn").addEventListener("click", openSettlementPage);
+    document.getElementById("settleBack").addEventListener("click", () => showPage("channel-settle"));
     document.getElementById("settleFilterApply").addEventListener("click", applySettleFilters);
     document.getElementById("settleFilterClear").addEventListener("click", clearSettleFilters);
     document.getElementById("settleImportBtn").addEventListener("click", () => openAccImportModal("settle"));
