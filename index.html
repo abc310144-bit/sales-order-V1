@@ -11793,7 +11793,7 @@
         openSettleInvoiceModal();
         return;
       }
-      /* 非月結：不回壓發票，直接結算成功 */
+      /* 非月結：不回壓發票，直接結算成功 → 狀態已結算 */
       const record = commitSettlementBatch({
         invoiceNo: "",
         invoiceDate: "",
@@ -11803,12 +11803,7 @@
         fileData: "",
         noInvoice: true,
       });
-      if (!record) return;
-      alert("結算成功");
-      settleDetailOrderNo = "";
-      settleDetailMode = "settle";
-      settleRows = [];
-      showPage("channel-settle");
+      afterSettlementSuccess(record, "結算成功");
     }
 
     function openSettleInvoiceModal() {
@@ -11848,6 +11843,40 @@
         reader.onerror = () => reject(new Error("檔案讀取失敗"));
         reader.readAsDataURL(file);
       });
+    }
+
+    /** 結算成功後：該客戶訂單全部品項 settledQty＝可結基數，狀態＝已結算 */
+    function markOrdersFullySettled(orderNos) {
+      [...new Set((orderNos || []).filter(Boolean))].forEach((orderNo) => {
+        const order = salesOrders.find((item) => item.orderNo === orderNo);
+        if (!order || !isSettlementSourceOrder(order)) return;
+        accLinesOf(order).forEach((line) => {
+          const acceptQty = Math.max(0, Number(line.acceptQty) || 0);
+          const target = ensureSettleLedgerItem(order, {
+            key: line.key,
+            sku: line.sku,
+            name: line.name,
+            acceptQty,
+            qty: line.qty,
+          });
+          target.acceptQty = acceptQty;
+          target.settledQty = acceptQty;
+        });
+      });
+    }
+
+    function afterSettlementSuccess(record, successMessage) {
+      if (!record) return;
+      markOrdersFullySettled((record.lines || []).map((line) => line.orderNo));
+      persistDemoData();
+      closeSettleInvoiceModal();
+      alert(successMessage || "結算成功");
+      settleDetailOrderNo = "";
+      settleDetailMode = "settle";
+      settleRows = [];
+      const statusEl = document.getElementById("channelSettleFilterStatus");
+      if (statusEl) statusEl.value = "已結算";
+      showPage("channel-settle");
     }
 
     function commitSettlementBatch(invoice) {
@@ -11935,13 +11964,7 @@
         fileType: settleInvoiceFile.type || "",
         fileData,
       });
-      if (!record) return;
-      closeSettleInvoiceModal();
-      alert(`批次結算成功（${record.id}）`);
-      settleDetailOrderNo = "";
-      settleDetailMode = "settle";
-      settleRows = [];
-      showPage("channel-settle");
+      afterSettlementSuccess(record, `批次結算成功（${record.id}）`);
     }
 
     function refreshAcceptancePages() {
