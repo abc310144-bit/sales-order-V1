@@ -9272,6 +9272,8 @@
     document.getElementById("poShipFeeClose").addEventListener("click", closePoShipFeeModal);
     document.getElementById("poShipFeeCancel").addEventListener("click", closePoShipFeeModal);
     document.getElementById("poShipFeeConfirm").addEventListener("click", confirmPoShipFee);
+    document.getElementById("poShipFeeRate").addEventListener("input", () => syncPoShipFeeExclusiveFields("poShipFeeRate"));
+    document.getElementById("poShipFeeAmount").addEventListener("input", () => syncPoShipFeeExclusiveFields("poShipFeeAmount"));
     document.getElementById("poShipFeeModal").addEventListener("click", (e) => {
       if (e.target.id === "poShipFeeModal") closePoShipFeeModal();
     });
@@ -10097,6 +10099,25 @@
       `).join("");
     }
 
+    function poShipFeeFieldFilled(el) {
+      if (!el) return false;
+      const raw = String(el.value || "").trim();
+      if (!raw) return false;
+      const num = Number(raw);
+      return Number.isFinite(num);
+    }
+
+    function syncPoShipFeeExclusiveFields(sourceId) {
+      const rateEl = document.getElementById("poShipFeeRate");
+      const amountEl = document.getElementById("poShipFeeAmount");
+      if (!rateEl || !amountEl) return;
+      if (sourceId === "poShipFeeRate" && poShipFeeFieldFilled(rateEl)) {
+        amountEl.value = "";
+      } else if (sourceId === "poShipFeeAmount" && poShipFeeFieldFilled(amountEl)) {
+        rateEl.value = "";
+      }
+    }
+
     function openPoShipFeeModal() {
       if (shipFormMode === "view") return;
       document.getElementById("poShipFeeName").value = "";
@@ -10118,12 +10139,26 @@
         document.getElementById("poShipFeeName").focus();
         return;
       }
+      const rateEl = document.getElementById("poShipFeeRate");
+      const amountEl = document.getElementById("poShipFeeAmount");
+      const hasRate = poShipFeeFieldFilled(rateEl);
+      const hasAmount = poShipFeeFieldFilled(amountEl);
+      if (hasRate && hasAmount) {
+        alert("項目比例與項目金額請擇一填寫，不可同時填寫");
+        rateEl.focus();
+        return;
+      }
+      if (!hasRate && !hasAmount) {
+        alert("請填寫項目比例或項目金額（擇一）");
+        rateEl.focus();
+        return;
+      }
       poShipFees.push({
         id: String(nextPoShipFeeId++),
         name,
         detail: document.getElementById("poShipFeeDetail").value.trim().slice(0, 40),
-        rate: document.getElementById("poShipFeeRate").value,
-        amount: document.getElementById("poShipFeeAmount").value,
+        rate: hasRate ? rateEl.value : "",
+        amount: hasAmount ? amountEl.value : "",
       });
       renderPoShipFees();
       closePoShipFeeModal();
