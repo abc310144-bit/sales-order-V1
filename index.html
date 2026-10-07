@@ -2084,15 +2084,6 @@
               </select>
             </div>
             <div class="field">
-              <label>審核狀態</label>
-              <select>
-                <option value="">請選擇</option>
-                <option>待審核</option>
-                <option>審核通過</option>
-                <option>審核退回</option>
-              </select>
-            </div>
-            <div class="field">
               <label>發票號碼</label>
               <input type="text" />
             </div>
@@ -2162,7 +2153,6 @@
                 <th>編號</th>
                 <th>出貨單編號</th>
                 <th>客戶訂單編號</th>
-                <th>審核狀態</th>
                 <th>合作通路</th>
                 <th>訂單狀態</th>
                 <th>訂單申請人</th>
@@ -3753,7 +3743,6 @@
           <td>${r.id}</td>
           <td>${r.orderId}</td>
           <td>${r.salesOrderNo ? `<a class="link" data-go="po-view" data-no="${r.salesOrderNo}">${r.salesOrderNo}</a>` : ""}</td>
-          <td>${statusTag(r.audit)}</td>
           <td>${r.channel}</td>
           <td>${statusTag(r.status)}</td>
           <td>${r.applicant}</td>
