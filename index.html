@@ -3130,8 +3130,6 @@
                   <th>通路</th>
                   <th>SKU</th>
                   <th>商品名稱</th>
-                  <th class="num">單價（不含標）</th>
-                  <th class="num">單價（含標）</th>
                   <th class="num">訂購數量(pcs)</th>
                   <th class="num">合計</th>
                   <th>建立時間</th>
@@ -11592,7 +11590,7 @@
       all.disabled = !settleRows.length;
       all.checked = settleRows.length > 0 && settleRows.every((row) => row.checked);
       if (!settleRows.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="16">請設定篩選條件後按「套用」，或使用「匯入結算商品」</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="14">請設定篩選條件後按「套用」，或使用「匯入結算商品」</td></tr>`;
         renderSettleSummary();
         return;
       }
@@ -11605,8 +11603,6 @@
           <td>${escapeHtml(row.channelName)}</td>
           <td>${escapeHtml(row.sku)}</td>
           <td>${escapeHtml(row.name)}</td>
-          <td class="num">${escapeHtml(accMoney(row.priceNo))}</td>
-          <td class="num">${row.priceLabel == null ? "-" : escapeHtml(accMoney(row.priceLabel))}</td>
           <td class="num">${escapeHtml(row.qty)}</td>
           <td class="num">${escapeHtml(accMoney(row.amount))}</td>
           <td>${escapeHtml(row.createdAt)}</td>
