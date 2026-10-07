@@ -2348,8 +2348,12 @@
                 </select>
               </div>
               <div class="field">
-                <label>客戶訂單編號</label>
-                <input id="channelSettleFilterOrderNo" type="text" placeholder="支援模糊查詢" />
+                <label>建立時間</label>
+                <div class="range">
+                  <input id="channelSettleFilterFrom" type="date" />
+                  <span class="sep">→</span>
+                  <input id="channelSettleFilterTo" type="date" />
+                </div>
               </div>
               <div class="field">
                 <label>狀態</label>
@@ -2360,12 +2364,8 @@
                 </select>
               </div>
               <div class="field">
-                <label>建立時間</label>
-                <div class="range">
-                  <input id="channelSettleFilterFrom" type="date" />
-                  <span class="sep">→</span>
-                  <input id="channelSettleFilterTo" type="date" />
-                </div>
+                <label>客戶訂單編號</label>
+                <input id="channelSettleFilterOrderNo" type="text" placeholder="支援模糊查詢" />
               </div>
             </div>
             <div class="filter-actions">
