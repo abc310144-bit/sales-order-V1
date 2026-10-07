@@ -2201,16 +2201,59 @@
           <section class="filter hidden" id="onlineFilterPanel">
             <div class="filter-grid">
               <div class="field">
-                <label>客戶訂單編號</label>
-                <input type="text" id="onlineFilterSalesOrderNo" placeholder="支援模糊查詢" />
-              </div>
-              <div class="field">
                 <label>出貨單編號</label>
                 <input type="text" id="onlineFilterOrderId" placeholder="支援模糊查詢" />
               </div>
               <div class="field">
-                <label>平台訂單編號</label>
-                <input type="text" id="onlineFilterPlatformNo" placeholder="支援模糊查詢" />
+                <label>通路平台</label>
+                <select id="onlineFilterPlatform">
+                  <option value="">請選擇</option>
+                  <option value="線上轉單">線上轉單</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>SKU</label>
+                <input type="text" id="onlineFilterSku" placeholder="精準搜尋" />
+              </div>
+              <div class="field">
+                <label>客戶訂單編號</label>
+                <input type="text" id="onlineFilterSalesOrderNo" placeholder="支援模糊查詢" />
+              </div>
+              <div class="field">
+                <label>訂單狀態</label>
+                <select id="onlineFilterStatus">
+                  <option value="">請選擇</option>
+                  <option value="取消訂單">取消訂單</option>
+                  <option value="待拋單">待拋單</option>
+                  <option value="已拋單/待處理">已拋單/待處理</option>
+                  <option value="撿貨處理中">撿貨處理中</option>
+                  <option value="庫存不足">庫存不足</option>
+                  <option value="配送中">配送中</option>
+                  <option value="配送異常">配送異常</option>
+                  <option value="已送達">已送達</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>預計出貨時間</label>
+                <div class="range">
+                  <input id="onlineFilterShipOutFrom" type="date" />
+                  <span class="sep">→</span>
+                  <input id="onlineFilterShipOutTo" type="date" />
+                  <svg class="cal" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 7h12M5 2v2M11 2v2"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="field">
+                <label>實際出貨時間</label>
+                <div class="range">
+                  <input id="onlineFilterShippedFrom" type="date" />
+                  <span class="sep">→</span>
+                  <input id="onlineFilterShippedTo" type="date" />
+                  <svg class="cal" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 7h12M5 2v2M11 2v2"/>
+                  </svg>
+                </div>
               </div>
             </div>
             <div class="filter-actions">
@@ -3739,38 +3782,83 @@
     /** 客戶訂單「新增出貨單」建完後，暫存本次新建出貨單編號；清除篩選時清空。 */
     let onlineListFocusShipIds = null;
 
+    /** 線上出貨篩選「訂單狀態」文案 → 系統內部出貨單狀態 */
+    const onlineFilterStatusToInternal = {
+      "取消訂單": "訂單取消",
+      "待拋單": "待拋單",
+      "已拋單/待處理": "訂單處理中(已拋單)",
+      "撿貨處理中": "揀貨中",
+      "庫存不足": "缺貨",
+      "配送中": "已出貨",
+      "配送異常": "配送異常",
+      "已送達": "已配達",
+    };
+
     function clearOnlineShippingFilterFields() {
-      const so = document.getElementById("onlineFilterSalesOrderNo");
-      const oid = document.getElementById("onlineFilterOrderId");
-      const pno = document.getElementById("onlineFilterPlatformNo");
-      if (so) so.value = "";
-      if (oid) oid.value = "";
-      if (pno) pno.value = "";
+      const ids = [
+        "onlineFilterOrderId",
+        "onlineFilterPlatform",
+        "onlineFilterSku",
+        "onlineFilterSalesOrderNo",
+        "onlineFilterStatus",
+        "onlineFilterShipOutFrom",
+        "onlineFilterShipOutTo",
+        "onlineFilterShippedFrom",
+        "onlineFilterShippedTo",
+      ];
+      ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
       onlineListFocusShipIds = null;
     }
 
+    function onlineShipHasExactSku(ship, sku) {
+      const key = String(sku || "").trim().toLowerCase();
+      if (!key) return true;
+      return (ship.items || []).some((item) => String(item.sku || "").trim().toLowerCase() === key);
+    }
+
+    function onlinePlatformMatchesFilter(platform, filterValue) {
+      if (!filterValue) return true;
+      const norm = (s) => String(s || "").replace(/[-\s]/g, "").toLowerCase();
+      return norm(platform).includes(norm(filterValue));
+    }
+
     function getOnlineShippingFiltered() {
-      const so = (document.getElementById("onlineFilterSalesOrderNo") || {}).value.trim().toLowerCase();
       const oid = (document.getElementById("onlineFilterOrderId") || {}).value.trim().toLowerCase();
-      const pno = (document.getElementById("onlineFilterPlatformNo") || {}).value.trim().toLowerCase();
+      const platform = (document.getElementById("onlineFilterPlatform") || {}).value.trim();
+      const sku = (document.getElementById("onlineFilterSku") || {}).value.trim();
+      const so = (document.getElementById("onlineFilterSalesOrderNo") || {}).value.trim().toLowerCase();
+      const statusLabel = (document.getElementById("onlineFilterStatus") || {}).value.trim();
+      const status = onlineFilterStatusToInternal[statusLabel] || statusLabel;
+      const shipOutFrom = (document.getElementById("onlineFilterShipOutFrom") || {}).value.trim();
+      const shipOutTo = (document.getElementById("onlineFilterShipOutTo") || {}).value.trim();
+      const shippedFrom = (document.getElementById("onlineFilterShippedFrom") || {}).value.trim();
+      const shippedTo = (document.getElementById("onlineFilterShippedTo") || {}).value.trim();
       const focusIds = Array.isArray(onlineListFocusShipIds) && onlineListFocusShipIds.length
         ? new Set(onlineListFocusShipIds.map((id) => String(id)))
         : null;
       return getOnlineShippingRows().filter((r) => {
         if (focusIds && !focusIds.has(String(r.orderId || ""))) return false;
-        if (so && !String(r.salesOrderNo || "").toLowerCase().includes(so)) return false;
         if (oid && !String(r.orderId || "").toLowerCase().includes(oid)) return false;
-        if (pno && !String(r.platformOrderNo || "").toLowerCase().includes(pno)) return false;
+        if (!onlinePlatformMatchesFilter(r.platform || r.channel || "", platform)) return false;
+        if (sku && !onlineShipHasExactSku(r, sku)) return false;
+        if (so && !String(r.salesOrderNo || "").toLowerCase().includes(so)) return false;
+        if (status && String(r.status || "") !== status) return false;
+        const shipOut = toDateInput(r.shipOutDate);
+        if (shipOutFrom && (!shipOut || shipOut < shipOutFrom)) return false;
+        if (shipOutTo && (!shipOut || shipOut > shipOutTo)) return false;
+        const shipped = toDateInput(r.shipped);
+        if (shippedFrom && (!shipped || shipped < shippedFrom)) return false;
+        if (shippedTo && (!shipped || shipped > shippedTo)) return false;
         return true;
       });
     }
 
     function applyOnlineShippingFilterAfterCreate(salesOrderNo, createdOrderIds) {
+      clearOnlineShippingFilterFields();
       const soEl = document.getElementById("onlineFilterSalesOrderNo");
-      const oidEl = document.getElementById("onlineFilterOrderId");
-      const pnoEl = document.getElementById("onlineFilterPlatformNo");
-      if (oidEl) oidEl.value = "";
-      if (pnoEl) pnoEl.value = "";
       if (soEl) soEl.value = salesOrderNo || "";
       onlineListFocusShipIds = (createdOrderIds || []).map((id) => String(id));
       const panel = document.getElementById("onlineFilterPanel");
