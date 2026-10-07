@@ -2820,7 +2820,8 @@
           </div>
           <div class="demo-hint">
             <strong>DEMO 提示｜訂單驗收與結算</strong><br />
-            已建立出貨單（含待拋單）的客戶訂單會自動同步到此；已作廢訂單不同步，線上-轉單另行規劃。<br />
+            僅<strong>買斷／寄倉</strong>通路且已建立出貨單的客戶訂單會進入驗收列表；已作廢不同步。<br />
+            <strong>轉單</strong>通路（經銷／跨境／線上）免驗收，有出貨單即可直接進廠商結算（待結算）。<br />
             驗收由人工判斷，一張訂單驗收一次；「廠商結算」僅<strong>財務</strong>身分可操作。
           </div>
 
@@ -5762,19 +5763,19 @@
     });
 
     const channelProfiles = {
-      "實體-PW健身工廠": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", currency: "TWD", phone: "0912000000", contact: "正光廊-營運部主管", email: "XXX@urmart.com", address: "台北市內湖區瑞光路358號1樓（PW健身工廠內湖店）", inWarehouse: "正光廊-營運部主管", shipOutPoint: "藍田倉(訂單自取)", taxId: "24567890" },
-      "實體-全聯": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", currency: "TWD", phone: "02-2531-2345", contact: "全聯採購窗口", email: "pxmart@example.com", address: "桃園市大園區航勤北路8號 全聯物流中心", inWarehouse: "全聯物流中心", shipOutPoint: "全聯物流中心(專車)", taxId: "12345678" },
-      "實體-寶雅": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", currency: "TWD", phone: "02-2765-8899", contact: "寶雅商品部", email: "poya@example.com", address: "新北市樹林區佳園路二段70號 寶雅倉儲", inWarehouse: "寶雅倉儲", shipOutPoint: "寶雅倉儲(新竹)", taxId: "23456789" },
-      "實體-迪卡儂": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", currency: "TWD", phone: "04-2258-0000", contact: "迪卡儂倉儲", email: "decathlon@example.com", address: "台中市西屯區台灣大道四段1018號", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "34567891" },
-      "經銷商-絢綻國際企業社": { region: "台灣(經銷)", shipArea: "台灣", mode: "經銷", currency: "TWD", phone: "03-392-1177", contact: "絢綻業務", email: "dealer1@example.com", address: "新北市新莊區中正路567號3樓", inWarehouse: "正光廊-營運部主管", shipOutPoint: "藍田倉(訂單自取)", taxId: "55667788" },
-      "經銷商-學生營養股份有限公司": { region: "台灣(經銷)", shipArea: "台灣", mode: "經銷", currency: "TWD", phone: "07-333-2211", contact: "學生營養窗口", email: "dealer2@example.com", address: "高雄市前鎮區成功二路88號", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "66778899" },
-      "線上-轉單": { region: "台灣(通路)", shipArea: "台灣", mode: "轉單", currency: "TWD", phone: "02-1111-2222", contact: "線上客服", email: "online@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(黑貓)", taxId: "45678912" },
-      "線上-蝦皮商城": { region: "台灣(通路)", shipArea: "台灣", mode: "轉單", currency: "TWD", phone: "02-3333-4444", contact: "蝦皮窗口", email: "shopee@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(宅配通)", taxId: "56789123" },
-      "跨境- Cool Cool Trading": { region: "境外", shipArea: "香港", mode: "跨境", currency: "USD", phone: "+852-1234-5678", contact: "Cool Cool Ops", email: "coolcool@example.com", address: "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong", inWarehouse: "藍田倉", shipOutPoint: "藍雀物流股份有限公司(訂單自取)", taxId: "HK-99887766" },
-      "跨境-Sheng Siong": { region: "境外", shipArea: "新加坡", mode: "跨境", currency: "USD", phone: "+6562698265", contact: "Jane Gwee Chee Chin", email: "gwee.cc@shengsiong.com.sg", address: "6 Mandai Link, Singapore 728652", inWarehouse: "藍田倉", shipOutPoint: "藍雀物流股份有限公司(訂單自取)", taxId: "SG-201234567" },
-      "跨境-Aeon Japan": { region: "境外", shipArea: "日本", mode: "跨境", currency: "USD", phone: "+81-3-1234-5678", contact: "Aeon Import Desk", email: "import@aeon-demo.jp", address: "1-5-1 Nakase, Mihama-ku, Chiba, Japan", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "JP-998877" },
-      "晨曦公司": { region: "境外", shipArea: "香港", mode: "跨境", currency: "TWD", phone: "02-8787-2360", contact: "晨曦窗口", email: "chenxi@example.com", address: "115臺北市南港區三重里三重路19-9號B棟6樓", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(訂單自取)", taxId: "77889900" },
-      "百貨-新光三越": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", currency: "TWD", phone: "02-2388-5555", contact: "新光三越專櫃", email: "skm@example.com", address: "台北市信義區松高路19號 新光三越A11專櫃", inWarehouse: "正光廊-營運部主管", shipOutPoint: "正光廊-營運部主管(訂單自取)", taxId: "88990011" },
+      "實體-PW健身工廠": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "寄倉", currency: "TWD", phone: "0912000000", contact: "正光廊-營運部主管", email: "XXX@urmart.com", address: "台北市內湖區瑞光路358號1樓（PW健身工廠內湖店）", inWarehouse: "正光廊-營運部主管", shipOutPoint: "藍田倉(訂單自取)", taxId: "24567890" },
+      "實體-全聯": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "買斷", currency: "TWD", phone: "02-2531-2345", contact: "全聯採購窗口", email: "pxmart@example.com", address: "桃園市大園區航勤北路8號 全聯物流中心", inWarehouse: "全聯物流中心", shipOutPoint: "全聯物流中心(專車)", taxId: "12345678" },
+      "實體-寶雅": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "買斷", currency: "TWD", phone: "02-2765-8899", contact: "寶雅商品部", email: "poya@example.com", address: "新北市樹林區佳園路二段70號 寶雅倉儲", inWarehouse: "寶雅倉儲", shipOutPoint: "寶雅倉儲(新竹)", taxId: "23456789" },
+      "實體-迪卡儂": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "買斷", currency: "TWD", phone: "04-2258-0000", contact: "迪卡儂倉儲", email: "decathlon@example.com", address: "台中市西屯區台灣大道四段1018號", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "34567891" },
+      "經銷商-絢綻國際企業社": { region: "台灣(經銷)", shipArea: "台灣", mode: "經銷", acceptFlow: "轉單", currency: "TWD", phone: "03-392-1177", contact: "絢綻業務", email: "dealer1@example.com", address: "新北市新莊區中正路567號3樓", inWarehouse: "正光廊-營運部主管", shipOutPoint: "藍田倉(訂單自取)", taxId: "55667788" },
+      "經銷商-學生營養股份有限公司": { region: "台灣(經銷)", shipArea: "台灣", mode: "經銷", acceptFlow: "轉單", currency: "TWD", phone: "07-333-2211", contact: "學生營養窗口", email: "dealer2@example.com", address: "高雄市前鎮區成功二路88號", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "66778899" },
+      "線上-轉單": { region: "台灣(通路)", shipArea: "台灣", mode: "轉單", acceptFlow: "轉單", currency: "TWD", phone: "02-1111-2222", contact: "線上客服", email: "online@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(黑貓)", taxId: "45678912" },
+      "線上-蝦皮商城": { region: "台灣(通路)", shipArea: "台灣", mode: "轉單", acceptFlow: "轉單", currency: "TWD", phone: "02-3333-4444", contact: "蝦皮窗口", email: "shopee@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(宅配通)", taxId: "56789123" },
+      "跨境- Cool Cool Trading": { region: "境外", shipArea: "香港", mode: "跨境", acceptFlow: "轉單", currency: "USD", phone: "+852-1234-5678", contact: "Cool Cool Ops", email: "coolcool@example.com", address: "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong", inWarehouse: "藍田倉", shipOutPoint: "藍雀物流股份有限公司(訂單自取)", taxId: "HK-99887766" },
+      "跨境-Sheng Siong": { region: "境外", shipArea: "新加坡", mode: "跨境", acceptFlow: "轉單", currency: "USD", phone: "+6562698265", contact: "Jane Gwee Chee Chin", email: "gwee.cc@shengsiong.com.sg", address: "6 Mandai Link, Singapore 728652", inWarehouse: "藍田倉", shipOutPoint: "藍雀物流股份有限公司(訂單自取)", taxId: "SG-201234567" },
+      "跨境-Aeon Japan": { region: "境外", shipArea: "日本", mode: "跨境", acceptFlow: "轉單", currency: "USD", phone: "+81-3-1234-5678", contact: "Aeon Import Desk", email: "import@aeon-demo.jp", address: "1-5-1 Nakase, Mihama-ku, Chiba, Japan", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "JP-998877" },
+      "晨曦公司": { region: "境外", shipArea: "香港", mode: "跨境", acceptFlow: "轉單", currency: "TWD", phone: "02-8787-2360", contact: "晨曦窗口", email: "chenxi@example.com", address: "115臺北市南港區三重里三重路19-9號B棟6樓", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(訂單自取)", taxId: "77889900" },
+      "百貨-新光三越": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "寄倉", currency: "TWD", phone: "02-2388-5555", contact: "新光三越專櫃", email: "skm@example.com", address: "台北市信義區松高路19號 新光三越A11專櫃", inWarehouse: "正光廊-營運部主管", shipOutPoint: "正光廊-營運部主管(訂單自取)", taxId: "88990011" },
     };
 
     function channelRebatePercent(channelName) {
@@ -10735,15 +10736,47 @@
       return currentRole === "財務";
     }
 
+    /** 驗收分流：買斷／寄倉進驗收；轉單免驗收可直接結算。 */
+    function channelAcceptFlow(channelName) {
+      const profile = channelProfiles[channelName] || {};
+      if (profile.acceptFlow === "買斷" || profile.acceptFlow === "寄倉" || profile.acceptFlow === "轉單") {
+        return profile.acceptFlow;
+      }
+      if (profile.mode === "經銷" || profile.mode === "轉單" || profile.mode === "跨境") return "轉單";
+      if (profile.mode === "寄倉") return "寄倉";
+      return "買斷";
+    }
+
+    function isTransferAcceptFlow(orderOrName) {
+      const name = typeof orderOrName === "string" ? orderOrName : (orderOrName && orderOrName.channelName) || "";
+      return channelAcceptFlow(name) === "轉單";
+    }
+
+    function needsAcceptanceFlow(order) {
+      return !!order && !isTransferAcceptFlow(order);
+    }
+
     function isAcceptanceOrder(order) {
       return !!order
         && order.status !== "已作廢"
-        && !isOnlineTransferPo(order)
+        && needsAcceptanceFlow(order)
         && validShipsOfPo(order.orderNo).length > 0;
     }
 
     function acceptanceOrders() {
       return salesOrders.filter(isAcceptanceOrder);
+    }
+
+    /** 可進結算來源：轉單（免驗收）或已驗收的買斷／寄倉。 */
+    function isSettlementSourceOrder(order) {
+      return !!order
+        && order.status !== "已作廢"
+        && validShipsOfPo(order.orderNo).length > 0
+        && (isTransferAcceptFlow(order) || isOrderAccepted(order));
+    }
+
+    function settlementSourceOrders() {
+      return salesOrders.filter(isSettlementSourceOrder);
     }
 
     function accRoundMoney(value) {
@@ -10789,6 +10822,10 @@
           const price = accUnitPrice(item);
           const ship = shipInfo[key] || { qty: 0, dates: [] };
           const s = saved[key] || {};
+          const transfer = isTransferAcceptFlow(order);
+          const acceptQty = s.acceptQty == null
+            ? (transfer ? ship.qty : null)
+            : Number(s.acceptQty) || 0;
           return {
             key,
             sku: d.sku,
@@ -10802,7 +10839,7 @@
             amount: accRoundMoney(d.qty * price),
             shippedQty: ship.qty,
             shipDates: ship.dates,
-            acceptQty: s.acceptQty == null ? null : Number(s.acceptQty) || 0,
+            acceptQty,
             settledQty: Number(s.settledQty) || 0,
             remark: s.remark != null ? String(s.remark) : d.remark,
           };
@@ -10810,13 +10847,14 @@
     }
 
     function isOrderAccepted(order) {
+      if (isTransferAcceptFlow(order)) return true;
       return !!(order && order.acceptance && order.acceptance.acceptedAt);
     }
 
     function accStatusOf(order) {
-      if (!isOrderAccepted(order)) return "待驗收";
+      if (!isTransferAcceptFlow(order) && !(order.acceptance && order.acceptance.acceptedAt)) return "待驗收";
       const lines = accLinesOf(order);
-      const remain = lines.reduce((sum, line) => sum + Math.max(0, (line.acceptQty || 0) - line.settledQty), 0);
+      const remain = lines.reduce((sum, line) => sum + Math.max(0, (Number(line.acceptQty) || 0) - line.settledQty), 0);
       const settled = lines.reduce((sum, line) => sum + line.settledQty, 0);
       if (remain <= 0) return "已結算";
       if (settled > 0) return "部分結算";
@@ -10829,7 +10867,8 @@
       const names = [...new Set(acceptanceOrders().map((order) => order.channelName).filter(Boolean))];
       select.innerHTML = `<option value="">請選擇</option>` + names
         .map((name) => `<option${name === current ? " selected" : ""}>${escapeHtml(name)}</option>`).join("");
-      document.getElementById("settleChannelList").innerHTML = names
+      const settleNames = [...new Set(settlementSourceOrders().map((order) => order.channelName).filter(Boolean))];
+      document.getElementById("settleChannelList").innerHTML = settleNames
         .map((name) => `<option value="${escapeHtml(name)}"></option>`).join("");
     }
 
@@ -11295,13 +11334,38 @@
       return `${orderNo}|${key}`;
     }
 
+    function ensureSettleLedgerItem(order, line) {
+      if (!order.acceptance) {
+        order.acceptance = {
+          acceptedAt: isTransferAcceptFlow(order) ? "" : (order.acceptance && order.acceptance.acceptedAt) || "",
+          acceptedBy: isTransferAcceptFlow(order) ? "系統(轉單免驗收)" : "",
+          transferSkip: isTransferAcceptFlow(order),
+          items: [],
+        };
+      }
+      if (!Array.isArray(order.acceptance.items)) order.acceptance.items = [];
+      let target = order.acceptance.items.find((item) => item.key === line.key);
+      if (!target) {
+        target = {
+          key: line.key,
+          sku: line.sku,
+          name: line.name,
+          acceptQty: Number(line.acceptQty) || Number(line.qty) || 0,
+          settledQty: 0,
+          remark: "",
+        };
+        order.acceptance.items.push(target);
+      }
+      return target;
+    }
+
     function buildSettlePool() {
       const pool = [];
-      acceptanceOrders().forEach((order) => {
+      settlementSourceOrders().forEach((order) => {
         const status = accStatusOf(order);
         if (status !== "待結算" && status !== "部分結算") return;
         accLinesOf(order).forEach((line) => {
-          const remain = Math.max(0, (line.acceptQty || 0) - line.settledQty);
+          const remain = Math.max(0, (Number(line.acceptQty) || 0) - line.settledQty);
           if (remain <= 0) return;
           pool.push({
             id: settleRowKey(order.orderNo, line.key),
@@ -11630,8 +11694,16 @@
       };
       record.lines.forEach((line) => {
         const order = salesOrders.find((item) => item.orderNo === line.orderNo);
-        const target = order && order.acceptance && (order.acceptance.items || []).find((item) => item.key === line.key);
-        if (target) target.settledQty = (Number(target.settledQty) || 0) + line.qty;
+        if (!order) return;
+        const src = accLinesOf(order).find((row) => row.key === line.key) || line;
+        const target = ensureSettleLedgerItem(order, {
+          key: line.key,
+          sku: line.sku,
+          name: line.name,
+          acceptQty: src.acceptQty,
+          qty: src.qty || line.qty,
+        });
+        target.settledQty = (Number(target.settledQty) || 0) + line.qty;
       });
       settlementRecords.push(record);
       persistDemoData();
