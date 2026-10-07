@@ -2344,6 +2344,7 @@
             <strong>買斷／轉單</strong>依照客戶訂單進行結算（列表操作「結算」）。<br />
             寄倉通路不可透過列表操作「結算」進行結算（僅可檢視）。<br />
             <strong>月結通路</strong>確認結算時須先選「回壓發票」或「ezpay 開發票」；ezpay 於 DEMO 僅關閉彈窗（正式環境才自動開立發票）。<br />
+            <strong>非月結通路</strong>確認結算不需回壓發票，直接提示「結算成功」。<br />
             月結：實體-PW健身工廠、實體-全聯、實體-寶雅、實體-迪卡儂、經銷商-絢綻國際企業社、經銷商-學生營養股份有限公司、百貨-新光三越。<br />
             非月結：線上-轉單、線上-蝦皮商城、跨境- Cool Cool Trading、跨境-Sheng Siong、跨境-Aeon Japan、晨曦公司。
           </div>
@@ -11239,12 +11240,13 @@
           <td>${escapeHtml(rec.operator || "")}</td>
           <td style="white-space:normal">${detail}</td>
           <td class="num">${escapeHtml(accMoney(amount))}</td>
-          <td>${escapeHtml(rec.invoiceNo)}</td>
-          <td>${escapeHtml(rec.invoiceDate)}</td>
-          <td class="num">${escapeHtml(accMoney(rec.invoiceAmount))}</td>
+          <td>${escapeHtml(rec.invoiceNo || "—")}</td>
+          <td>${escapeHtml(rec.invoiceDate || "—")}</td>
+          <td class="num">${rec.invoiceAmount != null && rec.invoiceAmount !== "" ? escapeHtml(accMoney(rec.invoiceAmount)) : "—"}</td>
           <td class="ops acc-file-ops">
-            <span>${escapeHtml(rec.fileName || "")}</span><br />
-            <a data-invoice-preview="${escapeHtml(rec.id)}">預覽</a><a data-invoice-download="${escapeHtml(rec.id)}">下載</a>
+            ${rec.fileData
+              ? `<span>${escapeHtml(rec.fileName || "")}</span><br /><a data-invoice-preview="${escapeHtml(rec.id)}">預覽</a><a data-invoice-download="${escapeHtml(rec.id)}">下載</a>`
+              : "—"}
           </td>
         </tr>`;
       }).join("");
@@ -11777,6 +11779,38 @@
       document.getElementById("settleInvoiceFields").classList.toggle("hidden", !showFields);
     }
 
+    function startSettleConfirm() {
+      if (!isFinanceRole()) {
+        alert("僅財務可進行結算");
+        return;
+      }
+      const selected = settleSelectedRows();
+      if (!selected.length) {
+        alert("請先勾選並設定本次結算數量");
+        return;
+      }
+      if (settleSelectionIsMonthly()) {
+        openSettleInvoiceModal();
+        return;
+      }
+      /* 非月結：不回壓發票，直接結算成功 */
+      const record = commitSettlementBatch({
+        invoiceNo: "",
+        invoiceDate: "",
+        invoiceAmount: null,
+        fileName: "",
+        fileType: "",
+        fileData: "",
+        noInvoice: true,
+      });
+      if (!record) return;
+      alert("結算成功");
+      settleDetailOrderNo = "";
+      settleDetailMode = "settle";
+      settleRows = [];
+      showPage("channel-settle");
+    }
+
     function openSettleInvoiceModal() {
       if (!isFinanceRole()) return;
       const selected = settleSelectedRows();
@@ -11796,8 +11830,7 @@
       document.getElementById("settleInvoiceNo").value = "";
       document.getElementById("settleInvoiceDate").value = "";
       document.getElementById("settleInvoiceAmount").value = "";
-      const monthly = settleSelectionIsMonthly();
-      document.getElementById("settleInvoiceMethodRow").classList.toggle("hidden", !monthly);
+      document.getElementById("settleInvoiceMethodRow").classList.remove("hidden");
       document.getElementById("settleInvoiceMethodStamp").checked = false;
       document.getElementById("settleInvoiceMethodEzpay").checked = false;
       syncSettleInvoiceMethodUi();
@@ -11817,52 +11850,21 @@
       });
     }
 
-    async function confirmSettleInvoice() {
+    function commitSettlementBatch(invoice) {
       const selected = settleSelectedRows();
-      if (!selected.length) {
-        closeSettleInvoiceModal();
-        return;
-      }
-      const monthly = settleSelectionIsMonthly();
-      if (monthly) {
-        const method = settleInvoiceMethodOf();
-        if (!method) return alert("請選擇發票方式：回壓發票 或 ezpay 開發票");
-        if (method === "ezpay") {
-          /* DEMO：正式環境於此自動開立 ezpay 發票；DEMO 僅關閉彈窗、不寫入結算 */
-          closeSettleInvoiceModal();
-          return;
-        }
-      }
-      const invoiceNo = document.getElementById("settleInvoiceNo").value.trim();
-      const invoiceDate = document.getElementById("settleInvoiceDate").value;
-      const amountRaw = document.getElementById("settleInvoiceAmount").value.trim();
-      const invoiceAmount = Number(amountRaw);
-      if (!settleInvoiceFile) return alert("請上傳發票檔案");
-      if (!invoiceNo) return alert("請填寫發票號碼");
-      if (!invoiceDate) return alert("請選擇發票日期");
-      if (!amountRaw || !Number.isFinite(invoiceAmount) || invoiceAmount <= 0) return alert("請輸入大於 0 的發票金額");
+      if (!selected.length) return null;
       const total = accRoundMoney(selected.reduce((sum, row) => sum + row.settleQty * row.price, 0));
-      if (accRoundMoney(invoiceAmount) !== total
-        && !confirm(`發票金額 ${accMoney(invoiceAmount)} 與本次結算金額 ${accMoney(total)} 不一致，確定送出？`)) {
-        return;
-      }
-      let fileData = "";
-      try {
-        fileData = await readFileAsDataUrl(settleInvoiceFile);
-      } catch (err) {
-        alert(err.message);
-        return;
-      }
       const record = {
         id: nextSettlementNo(),
         createdAt: nowStamp(),
         operator: currentRole,
-        invoiceNo,
-        invoiceDate,
-        invoiceAmount: accRoundMoney(invoiceAmount),
-        fileName: settleInvoiceFile.name,
-        fileType: settleInvoiceFile.type || "",
-        fileData,
+        invoiceNo: invoice.invoiceNo || "",
+        invoiceDate: invoice.invoiceDate || "",
+        invoiceAmount: invoice.invoiceAmount == null ? null : accRoundMoney(invoice.invoiceAmount),
+        fileName: invoice.fileName || "",
+        fileType: invoice.fileType || "",
+        fileData: invoice.fileData || "",
+        noInvoice: !!invoice.noInvoice,
         total,
         lines: selected.map((row) => ({
           orderNo: row.orderNo,
@@ -11889,6 +11891,51 @@
       });
       settlementRecords.push(record);
       persistDemoData();
+      return record;
+    }
+
+    async function confirmSettleInvoice() {
+      const selected = settleSelectedRows();
+      if (!selected.length) {
+        closeSettleInvoiceModal();
+        return;
+      }
+      const method = settleInvoiceMethodOf();
+      if (!method) return alert("請選擇發票方式：回壓發票 或 ezpay 開發票");
+      if (method === "ezpay") {
+        /* DEMO：正式環境於此自動開立 ezpay 發票；DEMO 僅關閉彈窗、不寫入結算 */
+        closeSettleInvoiceModal();
+        return;
+      }
+      const invoiceNo = document.getElementById("settleInvoiceNo").value.trim();
+      const invoiceDate = document.getElementById("settleInvoiceDate").value;
+      const amountRaw = document.getElementById("settleInvoiceAmount").value.trim();
+      const invoiceAmount = Number(amountRaw);
+      if (!settleInvoiceFile) return alert("請上傳發票檔案");
+      if (!invoiceNo) return alert("請填寫發票號碼");
+      if (!invoiceDate) return alert("請選擇發票日期");
+      if (!amountRaw || !Number.isFinite(invoiceAmount) || invoiceAmount <= 0) return alert("請輸入大於 0 的發票金額");
+      const total = accRoundMoney(selected.reduce((sum, row) => sum + row.settleQty * row.price, 0));
+      if (accRoundMoney(invoiceAmount) !== total
+        && !confirm(`發票金額 ${accMoney(invoiceAmount)} 與本次結算金額 ${accMoney(total)} 不一致，確定送出？`)) {
+        return;
+      }
+      let fileData = "";
+      try {
+        fileData = await readFileAsDataUrl(settleInvoiceFile);
+      } catch (err) {
+        alert(err.message);
+        return;
+      }
+      const record = commitSettlementBatch({
+        invoiceNo,
+        invoiceDate,
+        invoiceAmount,
+        fileName: settleInvoiceFile.name,
+        fileType: settleInvoiceFile.type || "",
+        fileData,
+      });
+      if (!record) return;
       closeSettleInvoiceModal();
       alert(`批次結算成功（${record.id}）`);
       settleDetailOrderNo = "";
@@ -12342,7 +12389,7 @@
     });
     document.getElementById("channelSettleConfirmBtn").addEventListener("click", () => {
       if (isSettleDetailReadonly()) return;
-      openSettleInvoiceModal();
+      startSettleConfirm();
     });
     document.getElementById("channelSettleDetailCheckAll").addEventListener("change", (e) => {
       if (isSettleDetailReadonly()) return;
@@ -12468,7 +12515,7 @@
     document.getElementById("settleFilterApply").addEventListener("click", applySettleFilters);
     document.getElementById("settleFilterClear").addEventListener("click", clearSettleFilters);
     document.getElementById("settleImportBtn").addEventListener("click", () => openAccImportModal("settle"));
-    document.getElementById("settleConfirmBtn").addEventListener("click", openSettleInvoiceModal);
+    document.getElementById("settleConfirmBtn").addEventListener("click", startSettleConfirm);
     document.getElementById("settleCheckAll").addEventListener("change", (e) => {
       settleRows.forEach((row) => {
         row.checked = e.target.checked;
