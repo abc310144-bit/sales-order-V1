@@ -1861,7 +1861,8 @@
     .status-tag[data-status="待驗收"] { color: #d48806; background: #fff7e6; border-color: #ffd591; }
     .status-tag[data-status="待結算"] { color: #096dd9; background: #e6f7ff; border-color: #91d5ff; }
     .status-tag[data-status="部分結算"] { color: #531dab; background: #f9f0ff; border-color: #d3adf7; }
-    .status-tag[data-status="已結算"] { color: #389e0d; background: #f6ffed; border-color: #b7eb8f; }
+    .status-tag[data-status="已結算"],
+    .status-tag[data-status="已驗收"] { color: #389e0d; background: #f6ffed; border-color: #b7eb8f; }
     .acc-page-head {
       display: flex;
       align-items: flex-start;
@@ -2952,9 +2953,7 @@
                 <select id="accFilterStatus">
                   <option value="">請選擇</option>
                   <option>待驗收</option>
-                  <option>待結算</option>
-                  <option>部分結算</option>
-                  <option>已結算</option>
+                  <option>已驗收</option>
                 </select>
               </div>
             </div>
@@ -3026,10 +3025,7 @@
                     <th class="num">箱入數</th>
                     <th class="num">訂購數量(pcs)</th>
                     <th class="num">訂購總箱數</th>
-                    <th class="num">單價（不含標）</th>
-                    <th class="num">單價（含標）</th>
                     <th class="num">實際出貨數</th>
-                    <th class="num">合計</th>
                     <th>實際驗收數</th>
                     <th>備註</th>
                   </tr>
@@ -10964,8 +10960,14 @@
       return !!(order && order.acceptance && order.acceptance.acceptedAt);
     }
 
+    /** 訂單驗收列表／詳情狀態：待驗收｜已驗收（結算狀態見 settleStatusOf） */
     function accStatusOf(order) {
-      if (!isTransferAcceptFlow(order) && !(order.acceptance && order.acceptance.acceptedAt)) return "待驗收";
+      return isOrderAccepted(order) ? "已驗收" : "待驗收";
+    }
+
+    /** 通路結算狀態：待結算｜部分結算｜已結算 */
+    function settleStatusOf(order) {
+      if (!isSettlementSourceOrder(order)) return "";
       const lines = accLinesOf(order);
       const remain = lines.reduce((sum, line) => sum + Math.max(0, (Number(line.acceptQty) || 0) - line.settledQty), 0);
       const settled = lines.reduce((sum, line) => sum + line.settledQty, 0);
@@ -11007,17 +11009,23 @@
         body.innerHTML = `<tr class="empty-row"><td colspan="8">查無資料</td></tr>`;
         return;
       }
-      body.innerHTML = list.map((order) => `
+      body.innerHTML = list.map((order) => {
+        const status = accStatusOf(order);
+        const canAccept = status === "待驗收";
+        return `
         <tr>
           <td>${escapeHtml(order.orderNo)}</td>
           <td>${escapeHtml(order.poDocNo || "—")}</td>
           <td>${escapeHtml(order.channelType || "")}</td>
           <td>${escapeHtml(order.channelName || "")}</td>
-          <td>${statusTag(accStatusOf(order))}</td>
+          <td>${statusTag(status)}</td>
           <td>${escapeHtml(order.operator || "")}</td>
           <td>${escapeHtml(order.createdAt || "")}</td>
-          <td class="ops"><a data-acc-view="${escapeHtml(order.orderNo)}">檢視</a></td>
-        </tr>`).join("");
+          <td class="ops">${canAccept
+            ? `<a data-acc-accept="${escapeHtml(order.orderNo)}">驗收</a>`
+            : `<a data-acc-view="${escapeHtml(order.orderNo)}">檢視</a>`}</td>
+        </tr>`;
+      }).join("");
     }
 
     function accOrderOf(orderNo) {
@@ -11108,13 +11116,19 @@
         inputQty: line.acceptQty == null ? "" : String(line.acceptQty),
       }));
       renderAccView(order);
-      setAccTab(tab || "basic");
+      setAccTab(tab || (editable ? "goods" : "basic"));
       showPage("acceptance-view");
     }
 
     function renderAccView(order) {
       const status = accStatusOf(order);
-      document.getElementById("accViewStatus").innerHTML = statusTag(status);
+      const editable = accEditable(order);
+      const titleEl = document.querySelector("#page-acceptance-view .form-title");
+      if (titleEl) {
+        titleEl.innerHTML = `${editable ? "驗收" : "檢視驗收"} <span id="accViewStatus">${statusTag(status)}</span>`;
+      } else {
+        document.getElementById("accViewStatus").innerHTML = statusTag(status);
+      }
       document.getElementById("accViewMeta").textContent =
         `客戶訂單編號：${order.orderNo}｜客戶訂單類型：${poKindOf(order)}｜通路：${order.channelName}`;
       renderAccBasic(order);
@@ -11122,7 +11136,6 @@
       renderAccSettleRecords(order);
       const hasRecords = accRecordsOfOrder(order.orderNo).length > 0;
       document.querySelector('.acc-tab[data-acc-tab="settle"]').classList.toggle("hidden", !hasRecords);
-      const editable = accEditable(order);
       document.getElementById("accGoodsNote").textContent = editable
         ? "勾選後才能填寫實際驗收數（預設帶入實際出貨數，可填 0 或大於出貨數）；按「驗收」後鎖定，不可再修改。"
         : "此訂單已驗收，驗收數與備註已鎖定。";
@@ -11152,7 +11165,7 @@
       all.disabled = !editable || !lines.length;
       all.checked = lines.length > 0 && lines.every((line) => line.checked);
       if (!lines.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="12">查無商品</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="9">查無商品</td></tr>`;
         return;
       }
       body.innerHTML = lines.map((line) => {
@@ -11169,10 +11182,7 @@
           <td class="num">${escapeHtml(line.pcs)}</td>
           <td class="num">${escapeHtml(line.qty)}</td>
           <td class="num">${escapeHtml(line.carton)}</td>
-          <td class="num">${escapeHtml(accMoney(line.priceNo))}</td>
-          <td class="num">${line.priceLabel == null ? "-" : escapeHtml(accMoney(line.priceLabel))}</td>
           <td class="num">${escapeHtml(line.shippedQty)}</td>
-          <td class="num">${escapeHtml(accMoney(line.amount))}</td>
           <td>
             <input type="number" min="0" step="1" data-acc-field="qty" value="${escapeHtml(line.inputQty)}"${qtyDisabled ? " disabled" : ""}${diff ? ' class="is-diff"' : ""} />
             ${settledHint}
@@ -11470,7 +11480,7 @@
     function buildSettlePool() {
       const pool = [];
       settlementSourceOrders().forEach((order) => {
-        const status = accStatusOf(order);
+        const status = settleStatusOf(order);
         if (status !== "待結算" && status !== "部分結算") return;
         accLinesOf(order).forEach((line) => {
           const remain = Math.max(0, (Number(line.acceptQty) || 0) - line.settledQty);
@@ -11869,7 +11879,7 @@
     }
 
     function channelSettleRowOf(order) {
-      const status = accStatusOf(order);
+      const status = settleStatusOf(order);
       if (status !== "待結算" && status !== "部分結算" && status !== "已結算") return null;
       const lines = accLinesOf(order);
       const acceptQty = lines.reduce((sum, line) => sum + (Number(line.acceptQty) || 0), 0);
@@ -11987,7 +11997,7 @@
         alert("找不到可結算的客戶訂單");
         return;
       }
-      const status = accStatusOf(order);
+      const status = settleStatusOf(order);
       const wantSettle = mode !== "view";
       if (wantSettle && !isFinanceRole()) {
         alert("僅財務可進行結算");
@@ -12222,8 +12232,10 @@
       renderAcceptanceTable(getAcceptanceFiltered());
     });
     document.getElementById("accTableBody").addEventListener("click", (e) => {
-      const no = e.target.dataset.accView;
-      if (no) openAcceptanceView(no, "basic");
+      const acceptNo = e.target.dataset.accAccept;
+      const viewNo = e.target.dataset.accView;
+      if (acceptNo) openAcceptanceView(acceptNo, "goods");
+      if (viewNo) openAcceptanceView(viewNo, "goods");
     });
     document.getElementById("accViewBack").addEventListener("click", () => showPage("acceptance"));
     document.getElementById("channelSettleAccordionBtn").addEventListener("click", () => {
