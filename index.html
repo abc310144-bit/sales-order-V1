@@ -1975,6 +1975,18 @@
       font-size: 14px;
     }
     .settle-summary strong { color: var(--primary); }
+    .monthly-bill-invoice {
+      margin-top: 24px;
+      max-width: 640px;
+    }
+    .monthly-bill-invoice .ship-settings-col-title { margin: 0 0 12px; }
+    .monthly-bill-invoice .form-ctrl {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .monthly-bill-invoice .form-ctrl input[readonly] { flex: 1; min-width: 180px; }
     .acc-file-ops a { margin-right: 12px; }
     .acc-diff-list {
       margin: 0 0 16px;
@@ -2666,6 +2678,28 @@
               </thead>
               <tbody id="monthlyBillDetailBody"></tbody>
             </table>
+          </div>
+          <div class="monthly-bill-invoice hidden" id="monthlyBillInvoiceSection">
+            <h3 class="ship-settings-col-title">發票基本資料</h3>
+            <div class="form-row">
+              <label>發票號碼</label>
+              <div class="form-ctrl"><input type="text" id="monthlyBillInvNo" readonly /></div>
+            </div>
+            <div class="form-row">
+              <label>發票日期</label>
+              <div class="form-ctrl"><input type="text" id="monthlyBillInvDate" readonly /></div>
+            </div>
+            <div class="form-row">
+              <label>發票金額</label>
+              <div class="form-ctrl"><input type="text" id="monthlyBillInvAmount" readonly /></div>
+            </div>
+            <div class="form-row">
+              <label>發票檔案</label>
+              <div class="form-ctrl">
+                <span class="file-name" id="monthlyBillInvFileName">-</span>
+                <button type="button" class="btn" id="monthlyBillPreviewInvoiceBtn">檢視發票</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -12364,10 +12398,8 @@
         return;
       }
       monthlyBillViewId = String(bill.id);
-      const invoiceNo = bill.invoiceNo || "-";
-      const invoiceDate = bill.invoiceDate || "-";
       document.getElementById("monthlyBillDetailMeta").textContent =
-        `id：${bill.id}｜類型：${bill.type || "—"}｜通路：${bill.channelName || "—"}｜狀態：${bill.status || "待開票"}｜月結：${bill.monthly ? "是" : "否"}｜發票：${invoiceNo}／${invoiceDate}`;
+        `id：${bill.id}｜類型：${bill.type || "—"}｜通路：${bill.channelName || "—"}｜狀態：${bill.status || "待開票"}｜月結：${bill.monthly ? "是" : "否"}`;
       document.getElementById("monthlyBillDetailSummary").innerHTML =
         `訂單總金額(含稅) <strong>${escapeHtml(accMoney(bill.total))}</strong>｜建立人 ${escapeHtml(bill.operator || "—")}｜建立時間 ${escapeHtml(bill.createdAt || "—")}`;
       const canInvoice = isFinanceRole() && bill.monthly && bill.status === "待開票";
@@ -12388,6 +12420,21 @@
             <td class="num">${escapeHtml(accMoney(line.price))}</td>
             <td class="num">${escapeHtml(accMoney(line.amount))}</td>
           </tr>`).join("");
+      }
+      const invSection = document.getElementById("monthlyBillInvoiceSection");
+      const issued = bill.status === "已開票";
+      invSection.classList.toggle("hidden", !issued);
+      if (issued) {
+        document.getElementById("monthlyBillInvNo").value = bill.invoiceNo || "-";
+        document.getElementById("monthlyBillInvDate").value = bill.invoiceDate || "-";
+        document.getElementById("monthlyBillInvAmount").value =
+          bill.invoiceAmount != null && bill.invoiceAmount !== "" ? accMoney(bill.invoiceAmount) : "-";
+        const fileEl = document.getElementById("monthlyBillInvFileName");
+        fileEl.textContent = bill.fileName || (bill.fileData ? "發票檔案" : "無檔案（ezpay 自動開立）");
+        fileEl.classList.toggle("empty", !bill.fileData);
+        const previewBtn = document.getElementById("monthlyBillPreviewInvoiceBtn");
+        previewBtn.disabled = !bill.fileData;
+        previewBtn.title = bill.fileData ? "預覽發票" : "此筆無發票檔案可檢視";
       }
       showPage("monthly-bill-detail");
     }
@@ -13161,6 +13208,15 @@
     document.getElementById("monthlyBillInvoiceBtn").addEventListener("click", () => {
       if (!monthlyBillViewId) return;
       openSettleInvoiceModalForBill(monthlyBillViewId);
+    });
+    document.getElementById("monthlyBillPreviewInvoiceBtn").addEventListener("click", () => {
+      if (!monthlyBillViewId) return;
+      const bill = settlementRecords.find((rec) => String(rec.id) === String(monthlyBillViewId));
+      if (!bill || !bill.fileData) {
+        alert("此筆無發票檔案可檢視");
+        return;
+      }
+      previewInvoice(monthlyBillViewId);
     });
 
     seedAcceptanceDemo();
