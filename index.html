@@ -3414,8 +3414,9 @@
                         <th>SKU</th>
                         <th>商品名稱</th>
                         <th>箱入數</th>
-                        <th>訂購數量(pcs)</th>
+                        <th>預計出貨數量(下定數量)</th>
                         <th>訂購總箱數</th>
+                        <th class="num">實際出貨數</th>
                         <th>單價（不含標）</th>
                         <th>單價（含標）</th>
                         <th>合計</th>
@@ -8173,6 +8174,9 @@
         ? `<input type="number" min="0" data-field="qty" value="${escapeHtml(d.qty)}" />`
         : escapeHtml(d.qty);
       const priceLabelCell = goodsPriceWithLabelCellHtml(item, !!(opts && opts.priceLabelEditable));
+      const orderNo = (opts && opts.orderNo) || currentEditOrderNo;
+      const shippedMap = orderNo && orderNo !== "__new__" ? shippedQtyByKey(orderNo) : {};
+      const shippedQty = shippedMap[itemKey(item)] || 0;
       return `
         <tr data-id="${escapeHtml(item.id)}">
           <td>${escapeHtml(d.sku)}</td>
@@ -8180,6 +8184,7 @@
           <td class="num">${escapeHtml(d.pcs)}</td>
           <td class="col-qty">${qtyCell}</td>
           <td class="num">${escapeHtml(d.carton)}</td>
+          <td class="num">${escapeHtml(shippedQty)}</td>
           <td class="num">${escapeHtml(pdfMoney(d.priceNo, 2))}</td>
           <td class="num col-price-label">${priceLabelCell}</td>
           <td class="num">${escapeHtml(pdfMoney(d.amount, 2))}</td>
@@ -8271,13 +8276,15 @@
     function renderPoGoodsTable() {
       const body = document.getElementById("editGoodsBody");
       if (!poLineItems.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="9">尚無商品明細</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="10">尚無商品明細</td></tr>`;
         updatePoQtyTotal();
         return;
       }
+      const orderNo = (workspaceOrder && workspaceOrder.orderNo) || currentEditOrderNo;
       body.innerHTML = poLineItems.map((row) => goodsPdfRowHtml(row, {
         qtyEditable: false,
         priceLabelEditable: poGoodsEditable(),
+        orderNo,
       })).join("");
       updatePoQtyTotal();
     }
