@@ -2394,10 +2394,9 @@
             </div>
             <div class="demo-hint">
               <strong>DEMO 提示｜買斷、轉單結算</strong><br />
-              本模式篩選／列表<strong>僅含買斷、轉單</strong>客戶訂單；品運勾選品項後「送出結算」會扣可結數量，並產生一包資料到財務「財務結算」。<br />
-              寄倉請改勾上方「寄倉結算」（依 SKU 批次）。初次進入預設「待結算」。一包須為<strong>同一通路</strong>。<br />
-              建立時間＝可結算時間（買斷＝驗收完成；轉單＝第一張有效出貨單建立時間）。<br />
-              發票回壓／ezpay 改由財務在「財務結算」處理；非月結包僅供財務核對金額（不顯示開票按鈕）。
+              本模式篩選／列表<strong>僅含買斷、轉單</strong>客戶訂單（含線上-轉單）。品運勾選後「送出結算」扣可結數量，並產生一包到財務「財務結算」。<br />
+              <strong>線上出貨</strong>屬轉單：出貨單狀態<strong>已配達</strong>後，對應客戶訂單即出現於此列表（可結基數＝已配達出貨量）。寄倉請改勾「寄倉結算」。<br />
+              初次進入預設「待結算」。一包須為<strong>同一通路</strong>。發票回壓／ezpay 由財務在「財務結算」處理。
             </div>
             <section class="filter" id="channelSettleFilterPanel">
               <div class="filter-grid">
@@ -2470,8 +2469,9 @@
             </div>
             <div class="demo-hint">
               <strong>DEMO 提示｜寄倉結算</strong><br />
-              依 SKU 批次結算；送出後扣可結數量並產生一包到財務「財務結算」（寄倉皆月結，開票由財務處理）。一包僅限同一通路。<br />
-              假資料對照：通路可填「實體-PW健身工廠」或「百貨-新光三越」；客戶訂單編號可試 <code>SO20260826008</code>／<code>SO20260827034</code>／<code>SO20260815022</code>；建立時間可篩 2026-08-15～2026-08-28；實際出貨時間可篩 2026-08-27～2026-08-28；SKU 可試 <code>UM-1002</code>。
+              僅<strong>寄倉通路</strong>；與「出貨訂單管理」對應——出貨單<strong>驗收完成（已驗收）</strong>後，SKU 才進本列表。線上出貨屬轉單，不在此模式。<br />
+              依 SKU 批次結算；送出後扣可結數量並產生一包到財務「財務結算」。一包僅限同一通路。<br />
+              假資料：通路下拉可選「實體-PW健身工廠」「百貨-新光三越」；單號 <code>SO20260826008</code>／<code>SO20260827034</code>／<code>SO20260815022</code>（對應出貨 VN10473／10472、10510、10484／10485）。
             </div>
             <section class="filter">
               <div class="filter-grid">
@@ -5639,7 +5639,7 @@
     let currentEditOrderNo = "";
     let orderFormMode = "edit";
     let workspaceOrder = null;
-    const DEMO_STORE_KEY = "urmart-sales-demo-v11";
+    const DEMO_STORE_KEY = "urmart-sales-demo-v12";
     let demoReady = false;
     let settlementRecords = [];
     let acceptanceSeeded = false;
@@ -7886,7 +7886,7 @@
           submittedAt: "2026-08-24 13:41:00",
           items: transferPartialRecipients[0].items,
         }),
-        /* 部分出貨：第二收件人尚未出貨，對應通路結算「線上-轉單」可結僅 A 組 SKU */
+        /* 部分出貨：第二收件人尚未出貨 → 買斷／轉單結算僅計 A（已配達）可結量 */
         extraOnlineShip({
           id: 10499,
           salesOrderNo: "SO20260824032",
@@ -11570,12 +11570,22 @@
       return salesOrders.filter(isAcceptanceOrder);
     }
 
-    /** 可進結算：轉單＝任一有效出貨單有實際出貨時間；買斷／寄倉＝任一出貨單已驗收。 */
+    /**
+     * 轉單可結出貨單：線上出貨＝狀態已配達；其餘轉單＝有實際出貨時間。
+     * 買斷／寄倉可結出貨單：狀態已驗收（出貨訂單管理驗收完成）。
+     */
+    function isTransferSettleShip(ship) {
+      if (!ship) return false;
+      if (ship.online) return ship.status === "已配達";
+      return !!String(ship.shipped || "").trim();
+    }
+
+    /** 可進結算：轉單＝有可結出貨單；買斷／寄倉＝任一出貨單已驗收。 */
     function isSettlementSourceOrder(order) {
       return !!order
         && order.status !== "已作廢"
         && (isTransferAcceptFlow(order)
-          ? validShipsOfPo(order.orderNo).some((ship) => String(ship.shipped || "").trim())
+          ? validShipsOfPo(order.orderNo).some(isTransferSettleShip)
           : validShipsOfPo(order.orderNo).some((ship) => ship.status === "已驗收"));
     }
 
@@ -11612,13 +11622,13 @@
       return map;
     }
 
-    /** 可結基數：轉單＝有實際出貨時間的出貨量；買斷／寄倉＝已驗收出貨單的驗收數加總。 */
+    /** 可結基數：轉單＝可結出貨單數量加總；買斷／寄倉＝已驗收出貨單的驗收數加總。 */
     function settleBaseQtyByKey(order) {
       const map = {};
       const transfer = isTransferAcceptFlow(order);
       validShipsOfPo(order.orderNo).forEach((ship) => {
         if (transfer) {
-          if (!String(ship.shipped || "").trim()) return;
+          if (!isTransferSettleShip(ship)) return;
           (ship.items || []).forEach((line) => {
             const key = itemKey(line);
             if (!key) return;
@@ -13400,7 +13410,7 @@
       };
     }
 
-    /** 寄倉結算假資料：PW／新光三越出貨單已驗收，SKU 可結數量與出貨單對應 */
+    /** 寄倉結算假資料：對應出貨訂單管理寄倉出貨單（已驗收）→ SKU 可結 */
     function seedConsignSettleDemo() {
       if (consignSettleSeeded) return;
       consignSettleSeeded = true;
@@ -13412,7 +13422,7 @@
       const ensureConsignSettledQty = (orderNo, acceptedAt, settledRatio) => {
         const order = salesOrders.find((item) => item.orderNo === orderNo);
         if (!order || channelAcceptFlow(order.channelName) !== "寄倉") return;
-        if (!validShipsOfPo(orderNo).some((ship) => ship.status === "已驗收")) return;
+        if (!validShipsOfPo(orderNo).some((ship) => ship.status === "已驗收" && !ship.online)) return;
         const baseMap = settleBaseQtyByKey(order);
         order.acceptance = {
           acceptedAt,
@@ -13441,26 +13451,26 @@
     }
 
     /**
-     * 線上出貨訂單 ↔ 通路結算「買斷、轉單結算」假資料對應：
-     * SO20260808029 已配達兩張 → 部分結算；SO20260824032／SO20260822033 有實際出貨時間 → 待結算
+     * 線上出貨（轉單）↔ 買斷／轉單結算：已配達出貨單才進可結。
+     * SO20260808029 兩張已配達 → 部分結算；SO20260824032／22033 僅部分已配達 → 待結算
      */
     function seedOnlineTransferSettleDemo() {
       if (onlineSettleSeeded) return;
       onlineSettleSeeded = true;
-      const ensureOnlineShipShipped = (id, shipped) => {
+      const ensureOnlineDelivered = (id, shipped) => {
         const ship = rows.find((row) => String(row.id) === id);
         if (!ship || !ship.online) return;
+        if (ship.status !== "已配達") return;
         if (!String(ship.shipped || "").trim()) ship.shipped = shipped;
       };
-      ensureOnlineShipShipped("10496", "2026-08-09 16:20:00");
-      ensureOnlineShipShipped("10497", "2026-08-09 17:05:00");
-      ensureOnlineShipShipped("10498", "2026-08-25 16:40:00");
-      ensureOnlineShipShipped("10520", "2026-08-23 11:30:00");
-      ensureOnlineShipShipped("10521", "2026-08-24 09:10:00");
+      ensureOnlineDelivered("10496", "2026-08-09 16:20:00");
+      ensureOnlineDelivered("10497", "2026-08-09 17:05:00");
+      ensureOnlineDelivered("10498", "2026-08-25 16:40:00");
+      ensureOnlineDelivered("10520", "2026-08-23 11:30:00");
       const ensureTransferSettledQty = (orderNo, acceptedAt, settledRatio) => {
         const order = salesOrders.find((item) => item.orderNo === orderNo);
         if (!order || !isOnlineTransferPo(order)) return;
-        if (!validShipsOfPo(orderNo).some((ship) => String(ship.shipped || "").trim())) return;
+        if (!validShipsOfPo(orderNo).some((ship) => ship.online && ship.status === "已配達")) return;
         const baseMap = settleBaseQtyByKey(order);
         order.acceptance = {
           acceptedAt,
@@ -13480,9 +13490,7 @@
           }).filter((item) => item.acceptQty > 0 || item.settledQty > 0),
         };
       };
-      /* 已開立出貨單＋已配達：示範部分結算 */
       ensureTransferSettledQty("SO20260808029", "2026-08-10 12:00:00", 0.5);
-      /* 部分出貨：僅已出貨收件人可結，待結算 */
       ensureTransferSettledQty("SO20260824032", "2026-08-26 09:00:00", 0);
       ensureTransferSettledQty("SO20260822033", "2026-08-24 12:00:00", 0);
     }
