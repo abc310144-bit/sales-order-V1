@@ -2057,7 +2057,6 @@
         </div>
         <div id="sales">
           <div class="menu-sub active" data-page="sales">客戶訂單管理</div>
-          <div class="menu-sub" data-page="acceptance">訂單驗收</div>
         </div>
 
         <div class="menu-item" data-toggle="brand">
@@ -2154,7 +2153,8 @@
                 <option>揀貨中</option>
                 <option>已出貨</option>
                 <option>配送異常</option>
-                <option>已配達</option>
+                <option>待驗收</option>
+                <option>已驗收</option>
               </select>
             </div>
             <div class="field">
@@ -2233,6 +2233,7 @@
                 <th>訂單建立時間</th>
                 <th>倉庫建立時間</th>
                 <th>實際出貨時間</th>
+                <th>驗收說明</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -2251,6 +2252,46 @@
           <button type="button">302</button>
           <button type="button">›</button>
         </div>
+        </div>
+
+        <div class="page" id="page-ship-accept">
+          <div class="acc-page-head">
+            <div>
+              <a class="link" id="shipAcceptBack">← 返回出貨訂單管理</a>
+              <h2 class="form-title" id="shipAcceptTitle">驗收 <span id="shipAcceptStatus"></span></h2>
+              <div class="po-kind-meta" id="shipAcceptMeta"></div>
+            </div>
+            <div class="acc-head-actions" id="shipAcceptActions">
+              <button type="button" class="btn btn-primary" id="shipAcceptSubmitBtn">驗收</button>
+            </div>
+          </div>
+          <div class="ship-accept-basic" id="shipAcceptBasic">
+            <div class="form-row"><label>客戶訂單編號</label><div class="form-ctrl"><input type="text" id="shipAcceptPoNo" readonly /></div></div>
+            <div class="form-row"><label>出貨單編號</label><div class="form-ctrl"><input type="text" id="shipAcceptShipNo" readonly /></div></div>
+            <div class="form-row"><label>合作通路類型</label><div class="form-ctrl"><input type="text" id="shipAcceptChannelType" readonly /></div></div>
+            <div class="form-row"><label>通路名稱</label><div class="form-ctrl"><input type="text" id="shipAcceptChannelName" readonly /></div></div>
+          </div>
+          <div class="po-goods-section" style="margin-top:20px">
+            <h3 class="goods-title">驗收商品</h3>
+            <div class="field-hint-below" id="shipAcceptHint">勾選後帶入實際出貨數為本次驗收數；驗收一次即鎖定。</div>
+            <div class="table-wrap">
+              <table class="settle-table">
+                <thead>
+                  <tr>
+                    <th class="col-check"></th>
+                    <th>SKU</th>
+                    <th>商品名稱</th>
+                    <th>箱入數</th>
+                    <th class="num">實際出貨數</th>
+                    <th>本次驗收數</th>
+                    <th class="num">剩餘驗收數</th>
+                    <th>備註</th>
+                  </tr>
+                </thead>
+                <tbody id="shipAcceptBody"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <div class="page" id="page-online-shipping">
@@ -4035,6 +4076,26 @@
     </div>
   </div>
 
+  <div class="modal-mask hidden" id="shipAcceptDiffModal">
+    <div class="modal-card void-card" role="dialog" aria-labelledby="shipAcceptDiffTitle">
+      <div class="modal-head">
+        <h2 id="shipAcceptDiffTitle">驗收確認</h2>
+        <button type="button" class="modal-close" id="shipAcceptDiffClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="void-msg">實際出貨數與本次驗收數不相等，請確認原因</p>
+        <div class="form-row">
+          <label class="required">驗收說明</label>
+          <div class="form-ctrl"><input type="text" id="shipAcceptDiffNote" maxlength="20" value="已實收為主" /></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="shipAcceptDiffCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="shipAcceptDiffConfirm">確認</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-mask hidden" id="accImportModal">
     <div class="modal-card upload-dialog-card" role="dialog" aria-labelledby="accImportTitle">
       <div class="modal-head">
@@ -4118,12 +4179,12 @@
       { id: "10473", orderId: "VN00010473", salesOrderNo: "", audit: "待審核", channel: "實體-PW健身工廠", status: "訂單處理中(已拋單)", applicant: "", created: "2026-08-26 14:18:05", warehouse: "2026-08-26 14:18:05", shipped: "" },
       { id: "10472", orderId: "VN00010472", salesOrderNo: "", audit: "待審核", channel: "實體-PW健身工廠", status: "揀貨中", applicant: "", created: "2026-08-26 14:12:31", warehouse: "2026-08-26 14:12:31", shipped: "" },
       { id: "10471", orderId: "VN00010471", salesOrderNo: "SO20260824006", audit: "待審核", channel: "實體-寶雅", status: "待拋單", applicant: "misha.huang", created: "2026-08-26 13:51:08", warehouse: "", shipped: "" },
-      { id: "10470", orderId: "VN00010470", salesOrderNo: "SO20260826002", audit: "待審核", channel: "實體-全聯", status: "已出貨", applicant: "misha.huang", created: "2026-08-26 13:44:22", warehouse: "", shipped: "2026-08-27 10:20:00" },
+      { id: "10470", orderId: "VN00010470", salesOrderNo: "SO20260826002", audit: "待審核", channel: "實體-全聯", status: "待驗收", applicant: "misha.huang", created: "2026-08-26 13:44:22", warehouse: "", shipped: "2026-08-27 10:20:00", acceptNote: "" },
       { id: "10469", orderId: "VN00010469", salesOrderNo: "", audit: "審核通過", channel: "實體-迪卡儂", status: "缺貨", applicant: "vita.du", created: "2026-08-26 11:20:15", warehouse: "2026-08-26 11:25:40", shipped: "" },
       { id: "10468", orderId: "VN00010468", salesOrderNo: "", audit: "待審核", channel: "經銷商-絢綻國際企業社", status: "配送異常", applicant: "john.pan", created: "2026-08-26 10:08:19", warehouse: "", shipped: "" },
-      { id: "10467", orderId: "VN00010467", salesOrderNo: "SO20260824006", audit: "待審核", channel: "實體-寶雅", status: "已配達", applicant: "misha.huang", created: "2026-08-25 18:33:02", warehouse: "", shipped: "2026-08-26 09:40:00" },
+      { id: "10467", orderId: "VN00010467", salesOrderNo: "SO20260824006", audit: "待審核", channel: "實體-寶雅", status: "待驗收", applicant: "misha.huang", created: "2026-08-25 18:33:02", warehouse: "", shipped: "2026-08-26 09:40:00", acceptNote: "" },
       { id: "10466", orderId: "VN00010466", salesOrderNo: "SO20260824005", audit: "待審核", channel: "跨境- Cool Cool Trading", status: "訂單取消", applicant: "vita.du", created: "2026-08-25 16:12:47", warehouse: "", shipped: "" },
-      { id: "10465", orderId: "VN00010465", salesOrderNo: "SO20260823007", audit: "待審核", channel: "實體-全聯", status: "已配達", applicant: "vita.du", created: "2026-08-23 17:02:11", warehouse: "", shipped: "2026-08-25 09:10:00" }
+      { id: "10465", orderId: "VN00010465", salesOrderNo: "SO20260823007", audit: "待審核", channel: "實體-全聯", status: "已驗收", applicant: "vita.du", created: "2026-08-23 17:02:11", warehouse: "", shipped: "2026-08-25 09:10:00", acceptNote: "已實收為主" }
     ];
 
     function getShippingFiltered() {
@@ -4135,10 +4196,27 @@
       });
     }
 
+    function shipAcceptNoteCellHtml(ship) {
+      const full = String((ship && ship.acceptNote) || "").trim();
+      if (!full) return "—";
+      if (full.length <= 15) return escapeHtml(full);
+      return `<span class="void-note-tip" data-tip="${escapeHtml(full)}">${escapeHtml(full.slice(0, 15))}...</span>`;
+    }
+
     function renderShippingTable(list) {
       const data = (list || rows).filter((r) => !r.online);
       document.getElementById("shippingTotal").textContent = String(data.length);
-      document.getElementById("tableBody").innerHTML = data.map((r) => `
+      document.getElementById("tableBody").innerHTML = data.map((r) => {
+        const canAccept = r.status === "待驗收";
+        const ops = [
+          `<a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=view" target="_blank" rel="noopener" data-ship-view="1">檢視</a>`,
+        ];
+        if (canAccept) {
+          ops.push(`<a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=accept" target="_blank" rel="noopener" data-ship-accept="1">驗收</a>`);
+        } else if (r.status === "已驗收") {
+          ops.push(`<a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=accept" target="_blank" rel="noopener" data-ship-accept="1">檢視驗收</a>`);
+        }
+        return `
         <tr data-order-id="${r.orderId}">
           <td>${r.id}</td>
           <td>${r.orderId}</td>
@@ -4149,9 +4227,10 @@
           <td>${r.created}</td>
           <td>${r.warehouse}</td>
           <td>${r.shipped}</td>
-          <td class="ops"><a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=view" target="_blank" rel="noopener" data-ship-view="1">檢視</a></td>
-        </tr>
-      `).join("");
+          <td>${shipAcceptNoteCellHtml(r)}</td>
+          <td class="ops">${ops.join(" ")}</td>
+        </tr>`;
+      }).join("");
     }
 
     function maskRecvName(name) {
@@ -4328,8 +4407,12 @@
       else if (page === "acceptance-view") menuPage = "acceptance";
       else if (page === "channel-settle-detail" || page === "settlement") menuPage = "channel-settle";
       else if (page === "monthly-bill-detail") menuPage = "monthly-bill";
+      else if (page === "ship-accept") menuPage = "shipping";
       if (page === "settlement") page = "channel-settle";
-      if (page === "acceptance") renderAcceptanceTable(getAcceptanceFiltered());
+      if (page === "acceptance" || page === "acceptance-view") {
+        page = "shipping";
+        menuPage = "shipping";
+      }
       if (page === "channel-settle") {
         if (typeof applyChannelSettleModeUi === "function") applyChannelSettleModeUi();
         else renderChannelSettleTable(getChannelSettleFiltered());
@@ -4348,10 +4431,8 @@
         document.title = "通路結算 - UrMart";
       } else if (page === "monthly-bill" || page === "monthly-bill-detail") {
         document.title = "月結對帳 - UrMart";
-      } else if (page === "shipping" || page === "ship-create") {
-        document.title = "出貨訂單管理 - UrMart";
-      } else if (page === "acceptance" || page === "acceptance-view") {
-        document.title = "訂單驗收 - UrMart";
+      } else if (page === "shipping" || page === "ship-create" || page === "ship-accept") {
+        document.title = page === "ship-accept" ? "出貨驗收 - UrMart" : "出貨訂單管理 - UrMart";
       } else {
         document.title = "客戶訂單管理 - UrMart";
       }
@@ -5497,7 +5578,7 @@
     let currentEditOrderNo = "";
     let orderFormMode = "edit";
     let workspaceOrder = null;
-    const DEMO_STORE_KEY = "urmart-sales-demo-v9";
+    const DEMO_STORE_KEY = "urmart-sales-demo-v10";
     let demoReady = false;
     let settlementRecords = [];
     let acceptanceSeeded = false;
@@ -6054,8 +6135,12 @@
       const mode = params.get("mode") || "view";
       if (shipNo) {
         const ship = rows.find((row) => row.orderId === shipNo);
-        if (ship) fillShipView(ship);
-        else showPage("shipping");
+        if (!ship) {
+          showPage("shipping");
+          return;
+        }
+        if (mode === "accept") openShipAcceptPage(ship.orderId);
+        else fillShipView(ship);
         return;
       }
       if (params.get("create") === "1" && kind) {
@@ -7341,18 +7426,21 @@
 
     function extraShip(id, po, channel, status, applicant, created, extra) {
       const more = extra || {};
-      const inProgress = ["訂單處理中(已拋單)", "缺貨", "揀貨中", "已出貨", "配送異常", "已配達"].includes(status);
+      const doneLike = status === "待驗收" || status === "已驗收" || status === "已配達";
+      const inProgress = ["訂單處理中(已拋單)", "缺貨", "揀貨中", "已出貨", "配送異常", "待驗收", "已驗收", "已配達"].includes(status);
       return {
         id: String(id),
         orderId: `VN${pad(id, 8)}`,
         salesOrderNo: po,
-        audit: more.audit || (status === "已配達" ? "審核通過" : "待審核"),
+        audit: more.audit || (doneLike ? "審核通過" : "待審核"),
         channel,
         status,
         applicant,
         created,
         warehouse: more.warehouse ?? (inProgress ? created : ""),
-        shipped: more.shipped ?? (status === "已配達" ? addDaysToStamp(created, 2, true) : ""),
+        shipped: more.shipped ?? (doneLike ? addDaysToStamp(created, 2, true) : ""),
+        acceptNote: more.acceptNote || "",
+        acceptance: more.acceptance || null,
       };
     }
 
@@ -7654,26 +7742,26 @@
         extraShip(10474, "SO20260819017", "線上-蝦皮商城", "待拋單", "sarah.lin", "2026-08-19 18:02:11"),
         extraShip(10475, "SO20260819017", "線上-蝦皮商城", "揀貨中", "sarah.lin", "2026-08-19 18:40:26"),
         extraShip(10476, "SO20260818018", "經銷商-學生營養股份有限公司", "已出貨", "john.pan", "2026-08-18 14:22:08", { shipped: "2026-08-19 09:15:00" }),
-        extraShip(10477, "SO20260817019", "實體-迪卡儂", "已配達", "vita.du", "2026-08-17 12:05:33"),
+        extraShip(10477, "SO20260817019", "實體-迪卡儂", "待驗收", "vita.du", "2026-08-17 12:05:33"),
         extraShip(10478, "SO20260817019", "實體-迪卡儂", "缺貨", "vita.du", "2026-08-17 12:18:47"),
         extraShip(10479, "SO20260817020", "線上-蝦皮商城", "已配達", "misha.huang", "2026-08-17 10:01:22"),
         extraShip(10480, "SO20260817020", "線上-蝦皮商城", "揀貨中", "misha.huang", "2026-08-17 10:16:09"),
         extraShip(10481, "SO20260817020", "線上-蝦皮商城", "待拋單", "misha.huang", "2026-08-17 10:31:44"),
         extraShip(10482, "SO20260816021", "跨境- Cool Cool Trading", "已配達", "henry.huang", "2026-08-16 18:40:12"),
         extraShip(10483, "SO20260816021", "跨境- Cool Cool Trading", "配送異常", "henry.huang", "2026-08-16 19:05:58"),
-        extraShip(10484, "SO20260815022", "百貨-新光三越", "已配達", "misha.huang", "2026-08-15 15:12:40", { shipped: "2026-08-17 11:00:00" }),
-        extraShip(10485, "SO20260815022", "百貨-新光三越", "已配達", "misha.huang", "2026-08-15 16:03:18", { shipped: "2026-08-17 16:40:00" }),
-        extraShip(10510, "SO20260827034", "百貨-新光三越", "已配達", "vita.du", "2026-08-27 10:15:00", { shipped: "2026-08-28 14:20:00" }),
-        extraShip(10486, "SO20260814023", "經銷商-學生營養股份有限公司", "已配達", "sarah.lin", "2026-08-14 11:08:27"),
-        extraShip(10487, "SO20260813024", "經銷商-絢綻國際企業社", "已配達", "john.pan", "2026-08-13 16:44:02"),
-        extraShip(10488, "SO20260813024", "經銷商-絢綻國際企業社", "已配達", "john.pan", "2026-08-13 17:21:55"),
+        extraShip(10484, "SO20260815022", "百貨-新光三越", "已驗收", "misha.huang", "2026-08-15 15:12:40", { shipped: "2026-08-17 11:00:00", acceptNote: "" }),
+        extraShip(10485, "SO20260815022", "百貨-新光三越", "已驗收", "misha.huang", "2026-08-15 16:03:18", { shipped: "2026-08-17 16:40:00", acceptNote: "已實收為主" }),
+        extraShip(10510, "SO20260827034", "百貨-新光三越", "待驗收", "vita.du", "2026-08-27 10:15:00", { shipped: "2026-08-28 14:20:00" }),
+        extraShip(10486, "SO20260814023", "經銷商-學生營養股份有限公司", "已出貨", "sarah.lin", "2026-08-14 11:08:27", { shipped: "2026-08-16 10:00:00" }),
+        extraShip(10487, "SO20260813024", "經銷商-絢綻國際企業社", "已出貨", "john.pan", "2026-08-13 16:44:02", { shipped: "2026-08-15 09:30:00" }),
+        extraShip(10488, "SO20260813024", "經銷商-絢綻國際企業社", "已出貨", "john.pan", "2026-08-13 17:21:55", { shipped: "2026-08-15 14:00:00" }),
         extraShip(10489, "SO20260812025", "實體-迪卡儂", "訂單取消", "vita.du", "2026-08-12 12:10:33"),
         extraShip(10490, "SO20260812025", "實體-迪卡儂", "訂單取消", "vita.du", "2026-08-12 12:28:19"),
         extraShip(10491, "SO20260811026", "線上-蝦皮商城", "訂單取消", "demo.user", "2026-08-11 16:20:07"),
         extraShip(10492, "SO20260810027", "實體-全聯", "待拋單", "vita.du", "2026-08-10 10:02:16"),
         extraShip(10493, "SO20260810027", "實體-全聯", "訂單處理中(已拋單)", "vita.du", "2026-08-10 10:45:51"),
-        extraShip(10494, "SO20260809028", "實體-寶雅", "已配達", "misha.huang", "2026-08-09 14:11:08"),
-        extraShip(10495, "SO20260809028", "實體-寶雅", "已出貨", "misha.huang", "2026-08-09 14:38:42", { shipped: "2026-08-10 08:20:00" }),
+        extraShip(10494, "SO20260809028", "實體-寶雅", "待驗收", "misha.huang", "2026-08-09 14:11:08"),
+        extraShip(10495, "SO20260809028", "實體-寶雅", "待驗收", "misha.huang", "2026-08-09 14:38:42", { shipped: "2026-08-10 08:20:00" }),
         extraOnlineShip({
           id: 10496,
           salesOrderNo: "SO20260808029",
@@ -7750,8 +7838,8 @@
           ship.items = [];
           return;
         }
-        const factor = ship.status === "訂單取消" ? 0 : ship.status === "已配達" ? 0.5 : 0.25;
-        const fullQty = po.orderNo === "SO20260823007" && ship.status === "已配達";
+        const factor = ship.status === "訂單取消" ? 0 : (ship.status === "已配達" || ship.status === "待驗收" || ship.status === "已驗收") ? 0.5 : 0.25;
+        const fullQty = po.orderNo === "SO20260823007" && (ship.status === "已配達" || ship.status === "已驗收" || ship.status === "待驗收");
         ship.items = po.items.map((item) => ({
           sku: item.sku || "",
           name: item.name || "",
@@ -7765,7 +7853,7 @@
     function fillSeedDeliveredToOrdered(order) {
       if (!order || order.status !== "已開立出貨單" || isSupervisorClosed(order)) return;
       if (isOnlineTransferPo(order)) return;
-      const delivered = validShipsOfPo(order.orderNo).filter((ship) => ship.status === "已配達" && Array.isArray(ship.items));
+      const delivered = validShipsOfPo(order.orderNo).filter((ship) => ["已配達", "待驗收", "已驗收"].includes(ship.status) && Array.isArray(ship.items));
       if (!delivered.length) return;
       const last = delivered[delivered.length - 1];
       const othersMap = {};
@@ -8410,7 +8498,7 @@
 
     function demoActualShipQty(shipStatus, qty) {
       const n = Number(qty) || 0;
-      if (shipStatus === "已配達" || shipStatus === "已出貨") return n;
+      if (shipStatus === "已配達" || shipStatus === "已出貨" || shipStatus === "待驗收" || shipStatus === "已驗收") return n;
       if (shipStatus === "配送異常") return Math.max(0, Math.floor(n * 0.5));
       return 0;
     }
@@ -10814,6 +10902,183 @@
       setText("shipViewRecvRemark", ship.recvRemark || "");
     }
 
+    let shipAcceptDraft = null; // { orderId, readonly, lines: [...] }
+
+    function normalizeNonOnlineShipStatuses() {
+      rows.forEach((ship) => {
+        if (ship.online) return;
+        const flow = channelAcceptFlow(ship.channel || "");
+        if (ship.status === "已配達") {
+          if (flow === "轉單") {
+            ship.status = "已出貨";
+            if (!String(ship.shipped || "").trim()) ship.shipped = ship.created || nowStamp();
+          } else {
+            ship.status = ship.acceptance ? "已驗收" : "待驗收";
+            if (!String(ship.shipped || "").trim()) ship.shipped = ship.created || nowStamp();
+          }
+        }
+        if ((ship.status === "待驗收" || ship.status === "已驗收") && flow === "轉單") {
+          ship.status = "已出貨";
+        }
+        if (ship.status === "已驗收" && !ship.acceptance && Array.isArray(ship.items)) {
+          ship.acceptance = {
+            acceptedAt: ship.shipped || ship.created || nowStamp(),
+            acceptedBy: ship.applicant || "建檔人",
+            items: ship.items.map((line) => ({
+              key: itemKey(line),
+              sku: line.sku || "",
+              name: line.name || "",
+              acceptQty: Number(line.qty) || 0,
+              remark: line.remark || "",
+            })),
+          };
+        }
+      });
+    }
+
+    function openShipAcceptPage(orderId) {
+      const ship = rows.find((row) => row.orderId === orderId);
+      if (!ship || ship.online) {
+        alert("找不到可驗收的出貨單");
+        showPage("shipping");
+        return;
+      }
+      const flow = channelAcceptFlow(ship.channel || "");
+      if (flow === "轉單") {
+        alert("轉單出貨單不需驗收");
+        showPage("shipping");
+        return;
+      }
+      if (ship.status !== "待驗收" && ship.status !== "已驗收") {
+        alert("僅待驗收／已驗收出貨單可開啟驗收頁");
+        showPage("shipping");
+        return;
+      }
+      const po = salesOrders.find((item) => item.orderNo === ship.salesOrderNo) || null;
+      const readonly = ship.status === "已驗收";
+      const saved = {};
+      ((ship.acceptance && ship.acceptance.items) || []).forEach((row) => {
+        saved[row.key || itemKey(row)] = row;
+      });
+      const lines = (ship.items || []).map((item) => {
+        const key = itemKey(item);
+        const shipQty = Number(item.qty) || 0;
+        const s = saved[key] || {};
+        const acceptQty = readonly
+          ? (s.acceptQty != null ? Number(s.acceptQty) || 0 : shipQty)
+          : 0;
+        return {
+          key,
+          sku: item.sku || "",
+          name: item.name || "",
+          pcs: pcsPerCartonOf(item) || pcsPerCartonOf((po && (po.items || []).find((row) => itemKey(row) === key)) || {}) || "-",
+          shipQty,
+          checked: readonly ? acceptQty > 0 : false,
+          acceptQty: readonly ? acceptQty : 0,
+          remark: s.remark != null ? String(s.remark) : (item.remark || ""),
+        };
+      }).filter((line) => line.shipQty > 0 || readonly);
+      shipAcceptDraft = { orderId: ship.orderId, readonly, lines };
+      document.getElementById("shipAcceptPoNo").value = ship.salesOrderNo || "-";
+      document.getElementById("shipAcceptShipNo").value = ship.orderId || "-";
+      document.getElementById("shipAcceptChannelType").value = (po && po.channelType) || "-";
+      document.getElementById("shipAcceptChannelName").value = ship.channel || (po && po.channelName) || "-";
+      document.getElementById("shipAcceptStatus").innerHTML = statusTag(ship.status);
+      document.getElementById("shipAcceptMeta").textContent = ship.acceptNote
+        ? `驗收說明：${ship.acceptNote}`
+        : "";
+      document.getElementById("shipAcceptActions").classList.toggle("hidden", readonly);
+      document.getElementById("shipAcceptHint").classList.toggle("hidden", readonly);
+      document.getElementById("shipAcceptTitle").firstChild.textContent = readonly ? "檢視驗收 " : "驗收 ";
+      renderShipAcceptTable();
+      showPage("ship-accept");
+    }
+
+    function renderShipAcceptTable() {
+      const body = document.getElementById("shipAcceptBody");
+      if (!body || !shipAcceptDraft) return;
+      const { lines, readonly } = shipAcceptDraft;
+      if (!lines.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="8">此出貨單無商品</td></tr>`;
+        return;
+      }
+      body.innerHTML = lines.map((line) => {
+        const remain = Math.max(0, line.shipQty - (line.checked ? line.acceptQty : 0));
+        return `
+        <tr data-accept-key="${escapeHtml(line.key)}">
+          <td class="col-check"><input type="checkbox" data-ship-accept-check="1"${line.checked ? " checked" : ""}${readonly ? " disabled" : ""} /></td>
+          <td>${escapeHtml(line.sku)}</td>
+          <td>${escapeHtml(line.name)}</td>
+          <td>${escapeHtml(line.pcs)}</td>
+          <td class="num">${escapeHtml(line.shipQty)}</td>
+          <td><input type="number" min="0" max="${escapeHtml(line.shipQty)}" step="1" data-ship-accept-qty="1" value="${escapeHtml(line.checked || readonly ? line.acceptQty : "")}"${readonly || !line.checked ? " disabled" : ""} /></td>
+          <td class="num" data-cell="remain">${escapeHtml(remain)}</td>
+          <td><input type="text" data-ship-accept-remark="1" maxlength="100" value="${escapeHtml(line.remark || "")}"${readonly ? " disabled" : ""} placeholder="${readonly ? "" : "請輸入備註"}" /></td>
+        </tr>`;
+      }).join("");
+    }
+
+    function shipAcceptLineByKey(key) {
+      return (shipAcceptDraft && shipAcceptDraft.lines || []).find((line) => line.key === key);
+    }
+
+    function shipAcceptHasMismatch() {
+      return (shipAcceptDraft.lines || []).some((line) => {
+        const qty = line.checked ? (Number(line.acceptQty) || 0) : 0;
+        return qty !== (Number(line.shipQty) || 0);
+      });
+    }
+
+    function commitShipAcceptance(acceptNote) {
+      if (!shipAcceptDraft || shipAcceptDraft.readonly) return;
+      const ship = rows.find((row) => row.orderId === shipAcceptDraft.orderId);
+      if (!ship || ship.status !== "待驗收") return;
+      const note = String(acceptNote || "").trim().slice(0, 20);
+      ship.acceptance = {
+        acceptedAt: nowStamp(),
+        acceptedBy: currentRole,
+        items: shipAcceptDraft.lines.map((line) => ({
+          key: line.key,
+          sku: line.sku,
+          name: line.name,
+          acceptQty: line.checked ? (Number(line.acceptQty) || 0) : 0,
+          remark: line.remark || "",
+        })),
+      };
+      ship.acceptNote = note;
+      ship.status = "已驗收";
+      persistDemoData();
+      renderShippingTable(getShippingFiltered ? getShippingFiltered() : undefined);
+      alert("驗收完成");
+      openShipAcceptPage(ship.orderId);
+    }
+
+    function startShipAcceptSubmit() {
+      if (!shipAcceptDraft || shipAcceptDraft.readonly) return;
+      const checked = shipAcceptDraft.lines.filter((line) => line.checked);
+      if (!checked.length) {
+        alert("請至少勾選一筆商品進行驗收");
+        return;
+      }
+      for (const line of checked) {
+        const qty = Number(line.acceptQty);
+        if (!Number.isInteger(qty) || qty < 0) {
+          alert(`${line.sku} 本次驗收數須為 0 以上整數`);
+          return;
+        }
+        if (qty > line.shipQty) {
+          alert(`${line.sku} 本次驗收數不可大於實際出貨數`);
+          return;
+        }
+      }
+      if (shipAcceptHasMismatch()) {
+        document.getElementById("shipAcceptDiffNote").value = "已實收為主";
+        document.getElementById("shipAcceptDiffModal").classList.remove("hidden");
+        return;
+      }
+      commitShipAcceptance("");
+    }
+
     function fillShipView(ship) {
       const po = salesOrders.find((item) => item.orderNo === ship.salesOrderNo) || null;
       setShipCreateKind(ship.online ? "online" : "normal");
@@ -11151,12 +11416,13 @@
       return salesOrders.filter(isAcceptanceOrder);
     }
 
-    /** 可進結算來源：轉單（免驗收）或已驗收的買斷／寄倉。 */
+    /** 可進結算：轉單＝任一有效出貨單有實際出貨時間；買斷／寄倉＝任一出貨單已驗收。 */
     function isSettlementSourceOrder(order) {
       return !!order
         && order.status !== "已作廢"
-        && validShipsOfPo(order.orderNo).length > 0
-        && (isTransferAcceptFlow(order) || isOrderAccepted(order));
+        && (isTransferAcceptFlow(order)
+          ? validShipsOfPo(order.orderNo).some((ship) => String(ship.shipped || "").trim())
+          : validShipsOfPo(order.orderNo).some((ship) => ship.status === "已驗收"));
     }
 
     function settlementSourceOrders() {
@@ -11192,12 +11458,46 @@
       return map;
     }
 
+    /** 可結基數：轉單＝有實際出貨時間的出貨量；買斷／寄倉＝已驗收出貨單的驗收數加總。 */
+    function settleBaseQtyByKey(order) {
+      const map = {};
+      const transfer = isTransferAcceptFlow(order);
+      validShipsOfPo(order.orderNo).forEach((ship) => {
+        if (transfer) {
+          if (!String(ship.shipped || "").trim()) return;
+          (ship.items || []).forEach((line) => {
+            const key = itemKey(line);
+            if (!key) return;
+            map[key] = (map[key] || 0) + (Number(line.qty) || 0);
+          });
+          return;
+        }
+        if (ship.status !== "已驗收") return;
+        const accepted = (ship.acceptance && ship.acceptance.items) || [];
+        if (accepted.length) {
+          accepted.forEach((line) => {
+            const key = line.key || itemKey(line);
+            if (!key) return;
+            map[key] = (map[key] || 0) + (Number(line.acceptQty) || 0);
+          });
+        } else {
+          (ship.items || []).forEach((line) => {
+            const key = itemKey(line);
+            if (!key) return;
+            map[key] = (map[key] || 0) + (Number(line.qty) || 0);
+          });
+        }
+      });
+      return map;
+    }
+
     function accLinesOf(order) {
       const saved = {};
       ((order.acceptance && order.acceptance.items) || []).forEach((row) => {
         saved[row.key] = row;
       });
       const shipInfo = accShipInfoByKey(order.orderNo);
+      const baseMap = settleBaseQtyByKey(order);
       return (order.items || [])
         .filter((item) => (Number(item.qty) || 0) > 0)
         .map((item) => {
@@ -11206,10 +11506,9 @@
           const price = accUnitPrice(item);
           const ship = shipInfo[key] || { qty: 0, dates: [] };
           const s = saved[key] || {};
-          const transfer = isTransferAcceptFlow(order);
-          const acceptQty = s.acceptQty == null
-            ? (transfer ? ship.qty : null)
-            : Number(s.acceptQty) || 0;
+          const acceptQty = Object.prototype.hasOwnProperty.call(baseMap, key)
+            ? (Number(baseMap[key]) || 0)
+            : (isTransferAcceptFlow(order) ? (Number(ship.qty) || 0) : 0);
           return {
             key,
             sku: d.sku,
@@ -11232,8 +11531,10 @@
     }
 
     function isOrderAccepted(order) {
-      if (isTransferAcceptFlow(order)) return true;
-      return !!(order && order.acceptance && order.acceptance.acceptedAt);
+      if (isTransferAcceptFlow(order)) {
+        return validShipsOfPo(order.orderNo).some((ship) => String(ship.shipped || "").trim());
+      }
+      return validShipsOfPo(order.orderNo).some((ship) => ship.status === "已驗收");
     }
 
     /** 訂單驗收列表／詳情狀態：待驗收｜已驗收（結算狀態見 settleStatusOf） */
@@ -13265,11 +13566,64 @@
       previewInvoice(monthlyBillViewId);
     });
 
+    document.getElementById("shipAcceptBack").addEventListener("click", (e) => {
+      e.preventDefault();
+      shipAcceptDraft = null;
+      showPage("shipping");
+      history.replaceState({}, "", location.pathname);
+    });
+    document.getElementById("shipAcceptSubmitBtn").addEventListener("click", startShipAcceptSubmit);
+    document.getElementById("shipAcceptBody").addEventListener("change", (e) => {
+      if (!shipAcceptDraft || shipAcceptDraft.readonly) return;
+      if (!e.target.matches("input[data-ship-accept-check]")) return;
+      const key = e.target.closest("tr")?.dataset.acceptKey;
+      const line = shipAcceptLineByKey(key);
+      if (!line) return;
+      line.checked = e.target.checked;
+      line.acceptQty = line.checked ? (line.acceptQty || line.shipQty) : 0;
+      renderShipAcceptTable();
+    });
+    document.getElementById("shipAcceptBody").addEventListener("input", (e) => {
+      if (!shipAcceptDraft || shipAcceptDraft.readonly) return;
+      const tr = e.target.closest("tr");
+      const line = shipAcceptLineByKey(tr?.dataset.acceptKey);
+      if (!line) return;
+      if (e.target.matches("input[data-ship-accept-qty]")) {
+        let qty = /^\d+$/.test(String(e.target.value).trim()) ? Number(e.target.value) : 0;
+        if (qty > line.shipQty) {
+          qty = line.shipQty;
+          e.target.value = String(qty);
+        }
+        line.acceptQty = qty;
+        const remainCell = tr.querySelector('[data-cell="remain"]');
+        if (remainCell) remainCell.textContent = String(Math.max(0, line.shipQty - qty));
+      }
+      if (e.target.matches("input[data-ship-accept-remark]")) {
+        line.remark = e.target.value;
+      }
+    });
+    document.getElementById("shipAcceptDiffClose").addEventListener("click", () => {
+      document.getElementById("shipAcceptDiffModal").classList.add("hidden");
+    });
+    document.getElementById("shipAcceptDiffCancel").addEventListener("click", () => {
+      document.getElementById("shipAcceptDiffModal").classList.add("hidden");
+    });
+    document.getElementById("shipAcceptDiffConfirm").addEventListener("click", () => {
+      const note = document.getElementById("shipAcceptDiffNote").value.trim().slice(0, 20);
+      if (!note) {
+        alert("請填寫驗收說明");
+        return;
+      }
+      document.getElementById("shipAcceptDiffModal").classList.add("hidden");
+      commitShipAcceptance(note);
+    });
+
+    normalizeNonOnlineShipStatuses();
     seedAcceptanceDemo();
     seedConsignSettleDemo();
     settlementRecords = settlementRecords.map(normalizeSettlementRecord);
     persistDemoData();
-    renderAcceptanceTable(getAcceptanceFiltered());
+    renderShippingTable();
 
     bootFromQuery();
   </script>
