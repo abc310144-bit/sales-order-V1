@@ -41,4 +41,4 @@ alwaysApply: true
 
 ## 通路結算
 
-見 channel-settle／既有雙模式。結算進場改吃上述可結基數。財務開票仍在「月結對帳」。
+見 channel-settle／既有雙模式。結算進場改吃上述可結基數。財務開票仍在「財務結算」。

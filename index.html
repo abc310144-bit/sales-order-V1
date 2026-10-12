@@ -2088,7 +2088,7 @@
           <svg class="chevron" viewBox="0 0 12 12"><path fill="currentColor" d="M9.5 7.5 6 4 2.5 7.5"/></svg>
         </div>
         <div id="finance" class="hidden">
-          <div class="menu-sub" data-page="monthly-bill">月結對帳</div>
+          <div class="menu-sub" data-page="monthly-bill">財務結算</div>
         </div>
       </aside>
 
@@ -2394,10 +2394,10 @@
             </div>
             <div class="demo-hint">
               <strong>DEMO 提示｜買斷、轉單結算</strong><br />
-              本模式篩選／列表<strong>僅含買斷、轉單</strong>客戶訂單；品運勾選品項後「送出結算」會扣可結數量，並產生一包資料到財務「月結對帳」。<br />
+              本模式篩選／列表<strong>僅含買斷、轉單</strong>客戶訂單；品運勾選品項後「送出結算」會扣可結數量，並產生一包資料到財務「財務結算」。<br />
               寄倉請改勾上方「寄倉結算」（依 SKU 批次）。初次進入預設「待結算」。一包須為<strong>同一通路</strong>。<br />
               建立時間＝可結算時間（買斷＝驗收完成；轉單＝第一張有效出貨單建立時間）。<br />
-              發票回壓／ezpay 改由財務在「月結對帳」處理；非月結包僅供財務核對金額（不顯示開票按鈕）。
+              發票回壓／ezpay 改由財務在「財務結算」處理；非月結包僅供財務核對金額（不顯示開票按鈕）。
             </div>
             <section class="filter" id="channelSettleFilterPanel">
               <div class="filter-grid">
@@ -2470,7 +2470,7 @@
             </div>
             <div class="demo-hint">
               <strong>DEMO 提示｜寄倉結算</strong><br />
-              依 SKU 批次結算；送出後扣可結數量並產生一包到財務「月結對帳」（寄倉皆月結，開票由財務處理）。一包僅限同一通路。<br />
+              依 SKU 批次結算；送出後扣可結數量並產生一包到財務「財務結算」（寄倉皆月結，開票由財務處理）。一包僅限同一通路。<br />
               假資料對照：通路可填「實體-PW健身工廠」或「百貨-新光三越」；客戶訂單編號可試 <code>SO20260826008</code>／<code>SO20260827034</code>／<code>SO20260815022</code>；建立時間可篩 2026-08-15～2026-08-28；實際出貨時間可篩 2026-08-27～2026-08-28；SKU 可試 <code>UM-1002</code>。
             </div>
             <section class="filter">
@@ -2599,7 +2599,7 @@
             </button>
           </div>
           <div class="demo-hint">
-            <strong>DEMO 提示｜月結對帳</strong><br />
+            <strong>DEMO 提示｜財務結算</strong><br />
             品運於「通路結算」送出的結算包會出現於此。財務檢視核對金額；<strong>月結</strong>且待開票時可於檢視頁右上選擇回壓發票或 ezpay 開發票。<br />
             <strong>非月結</strong>僅供核對金額，不顯示開票按鈕，狀態維持待開票。開票後不可作廢、不可再開第二張發票。
           </div>
@@ -2676,8 +2676,8 @@
         <div class="page" id="page-monthly-bill-detail">
           <div class="acc-page-head">
             <div>
-              <a class="link" id="monthlyBillDetailBack">← 返回月結對帳</a>
-              <h2 class="form-title">月結對帳檢視</h2>
+              <a class="link" id="monthlyBillDetailBack">← 返回財務結算</a>
+              <h2 class="form-title">財務結算檢視</h2>
               <div class="po-kind-meta" id="monthlyBillDetailMeta"></div>
             </div>
             <div class="acc-head-actions hidden" id="monthlyBillDetailActions">
@@ -4490,7 +4490,7 @@
       } else if (page === "channel-settle" || page === "channel-settle-detail") {
         document.title = "通路結算 - UrMart";
       } else if (page === "monthly-bill" || page === "monthly-bill-detail") {
-        document.title = "月結對帳 - UrMart";
+        document.title = "財務結算 - UrMart";
       } else if (page === "shipping" || page === "ship-create" || page === "ship-accept") {
         document.title = page === "ship-accept" ? "出貨驗收 - UrMart" : "出貨訂單管理 - UrMart";
       } else {
@@ -12586,7 +12586,7 @@
     function afterOpsPackageSuccess(record) {
       if (!record) return;
       persistDemoData();
-      alert(`已送出結算（${record.id}），請至財務「月結對帳」核對`);
+      alert(`已送出結算（${record.id}），請至財務「財務結算」核對`);
       settleDetailOrderNo = "";
       settleDetailMode = "settle";
       const keepConsign = isChannelSettleConsignMode();
