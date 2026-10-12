@@ -2477,8 +2477,9 @@
               <div class="filter-grid">
                 <div class="field">
                   <label>通路</label>
-                  <input id="settleFilterChannel" type="text" list="settleChannelList" placeholder="請選擇或輸入搜尋" autocomplete="off" />
-                  <datalist id="settleChannelList"></datalist>
+                  <select id="settleFilterChannel">
+                    <option value="">請選擇</option>
+                  </select>
                 </div>
                 <div class="field">
                   <label>建立時間</label>
@@ -11708,21 +11709,26 @@
 
     function fillAccChannelOptions() {
       const select = document.getElementById("accFilterChannel");
+      if (!select) return;
       const current = select.value;
       const names = [...new Set(acceptanceOrders().map((order) => order.channelName).filter(Boolean))];
       select.innerHTML = `<option value="">請選擇</option>` + names
         .map((name) => `<option${name === current ? " selected" : ""}>${escapeHtml(name)}</option>`).join("");
-      const settleNames = [...new Set(
+    }
+
+    /** 寄倉結算篩選：通路下拉（僅寄倉可結來源） */
+    function fillSettleConsignChannelOptions() {
+      const select = document.getElementById("settleFilterChannel");
+      if (!select) return;
+      const current = select.value;
+      const names = [...new Set(
         settlementSourceOrders()
           .filter((order) => channelAcceptFlow(order.channelName) === "寄倉")
           .map((order) => order.channelName)
           .filter(Boolean)
       )].sort();
-      const settleList = document.getElementById("settleChannelList");
-      if (settleList) {
-        settleList.innerHTML = settleNames
-          .map((name) => `<option value="${escapeHtml(name)}"></option>`).join("");
-      }
+      select.innerHTML = `<option value="">請選擇</option>` + names
+        .map((name) => `<option${name === current ? " selected" : ""}>${escapeHtml(name)}</option>`).join("");
     }
 
     function getAcceptanceFiltered() {
@@ -12271,7 +12277,8 @@
     }
 
     function applySettleFilters() {
-      const channel = document.getElementById("settleFilterChannel").value.trim().toLowerCase();
+      fillSettleConsignChannelOptions();
+      const channel = (document.getElementById("settleFilterChannel") || {}).value || "";
       const createdFrom = document.getElementById("settleFilterCreatedFrom").value;
       const createdTo = document.getElementById("settleFilterCreatedTo").value;
       const shippedFrom = document.getElementById("settleFilterShippedFrom").value;
@@ -12281,7 +12288,7 @@
       const status = (document.getElementById("settleFilterStatus") || {}).value || "待結算";
       settleRows = buildSettlePool().filter((row) => {
         if (status && row.status !== status) return false;
-        if (channel && !row.channelName.toLowerCase().includes(channel)) return false;
+        if (channel && row.channelName !== channel) return false;
         if ((createdFrom || createdTo) && !inDateRange(row.createdAt, createdFrom, createdTo)) return false;
         if ((shippedFrom || shippedTo) && !row.shipDates.some((d) => inDateRange(d, shippedFrom, shippedTo))) return false;
         if (skuQueries.length && !skuQueries.some((q) => normalizeSku(row.sku).toLowerCase().includes(q))) return false;
@@ -12520,7 +12527,6 @@
       if (channelSettleMode === "buyout") {
         renderChannelSettleTable(getChannelSettleFiltered());
       } else {
-        fillAccChannelOptions();
         applySettleFilters();
       }
     }
