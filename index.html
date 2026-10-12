@@ -3044,6 +3044,7 @@
                           <th>品名</th>
                           <th class="num">預計出貨總數</th>
                           <th class="num">實際出貨量</th>
+                          <th class="num">驗收數量</th>
                           <th>備註</th>
                         </tr>
                       </thead>
@@ -4260,8 +4261,6 @@
         ];
         if (canAccept) {
           ops.push(`<a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=accept" target="_blank" rel="noopener" data-ship-accept="1">驗收</a>`);
-        } else if (r.status === "已驗收") {
-          ops.push(`<a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=accept" target="_blank" rel="noopener" data-ship-accept="1">檢視驗收</a>`);
         }
         return `
         <tr data-order-id="${r.orderId}">
@@ -8566,6 +8565,8 @@
 
     function shipViewGoodsRowHtml(row) {
       const batch = row.batch || closestFifoLot().batch;
+      const acceptQty = row.acceptQty;
+      const acceptText = acceptQty == null || acceptQty === "" ? "-" : String(acceptQty);
       return `
         <tr data-id="${escapeHtml(row.id)}">
           <td class="col-id">${escapeHtml(row.id)}</td>
@@ -8575,6 +8576,7 @@
           <td class="col-name">${escapeHtml(row.name)}</td>
           <td class="num">${escapeHtml(row.qty)}</td>
           <td class="num">${escapeHtml(row.actualShippedQty != null ? row.actualShippedQty : 0)}</td>
+          <td class="num">${escapeHtml(acceptText)}</td>
           <td>${escapeHtml(userFacingRemark(row.remark) || "")}</td>
         </tr>`;
     }
@@ -10636,7 +10638,7 @@
       if (!body) return;
       const isView = shipFormMode === "view";
       if (!poShipGoods.length) {
-        body.innerHTML = goodsNoDataHtml(8);
+        body.innerHTML = goodsNoDataHtml(isView ? 9 : 8);
         updatePoShipQtyTotal();
         return;
       }
@@ -11184,8 +11186,14 @@
         const key = itemKey(item);
         if (key) poItemByKey[key] = item;
       });
+      const acceptByKey = {};
+      ((ship.acceptance && ship.acceptance.items) || []).forEach((row) => {
+        const key = row.key || itemKey(row);
+        if (key) acceptByKey[key] = Number(row.acceptQty);
+      });
       poShipGoods = (ship.items || []).map((item) => {
-        const poItem = poItemByKey[itemKey(item)] || null;
+        const key = itemKey(item);
+        const poItem = poItemByKey[key] || null;
         const line = poItemToShipLine({
           ...item,
           pcsPerCarton: item.pcsPerCarton || (poItem && poItem.pcsPerCarton) || pcsPerCartonOf(item) || pcsPerCartonOf(poItem),
@@ -11197,6 +11205,7 @@
         line.actualShippedQty = item.actualShippedQty != null
           ? Number(item.actualShippedQty) || 0
           : demoActualShipQty(ship.status, line.qty);
+        line.acceptQty = Object.prototype.hasOwnProperty.call(acceptByKey, key) ? acceptByKey[key] : null;
         return line;
       });
       poShipShortage = [];
