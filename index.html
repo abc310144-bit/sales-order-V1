@@ -2112,7 +2112,7 @@
           <div class="filter-grid">
             <div class="field">
               <label>出貨單編號</label>
-              <input type="text" />
+              <input id="shipFilterOrderId" type="text" placeholder="支援模糊查詢" />
             </div>
             <div class="field">
               <label>客戶訂單編號</label>
@@ -2120,31 +2120,23 @@
             </div>
             <div class="field">
               <label>合作通路</label>
-              <select>
+              <select id="shipFilterChannel">
                 <option value="">請選擇</option>
-                <option>實體-PW健身工廠</option>
-                <option>實體-寶雅</option>
-                <option>實體-全聯</option>
-                <option>實體-迪卡儂</option>
-                <option>經銷商-絢綻國際企業社</option>
               </select>
             </div>
             <div class="field">
               <label>SKU(品號)</label>
-              <input type="text" />
+              <input id="shipFilterSku" type="text" placeholder="支援模糊查詢" />
             </div>
             <div class="field">
               <label>訂單申請人</label>
-              <select>
+              <select id="shipFilterApplicant">
                 <option value="">請選擇</option>
-                <option>misha.huang</option>
-                <option>vita.du</option>
-                <option>henry.huang</option>
               </select>
             </div>
             <div class="field">
               <label>訂單狀態</label>
-              <select>
+              <select id="shipFilterStatus">
                 <option value="">請選擇</option>
                 <option>訂單取消</option>
                 <option>待拋單</option>
@@ -2159,11 +2151,11 @@
             </div>
             <div class="field">
               <label>發票號碼</label>
-              <input type="text" />
+              <input id="shipFilterInvoiceNo" type="text" placeholder="支援模糊查詢" />
             </div>
             <div class="field">
               <label>發票狀態</label>
-              <select>
+              <select id="shipFilterInvoiceStatus">
                 <option value="">請選擇</option>
                 <option>未開立</option>
                 <option>已開立</option>
@@ -2173,34 +2165,25 @@
             <div class="field">
               <label>訂單建立時間</label>
               <div class="range">
-                <input placeholder="開始日期" />
+                <input id="shipFilterCreatedFrom" type="date" />
                 <span class="sep">→</span>
-                <input placeholder="結束日期" />
-                <svg class="cal" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
-                  <rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 7h12M5 2v2M11 2v2"/>
-                </svg>
+                <input id="shipFilterCreatedTo" type="date" />
               </div>
             </div>
             <div class="field">
               <label>倉庫建立時間</label>
               <div class="range">
-                <input placeholder="開始日期" />
+                <input id="shipFilterWarehouseFrom" type="date" />
                 <span class="sep">→</span>
-                <input placeholder="結束日期" />
-                <svg class="cal" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
-                  <rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 7h12M5 2v2M11 2v2"/>
-                </svg>
+                <input id="shipFilterWarehouseTo" type="date" />
               </div>
             </div>
             <div class="field">
               <label>實際出貨時間</label>
               <div class="range">
-                <input placeholder="開始日期" />
+                <input id="shipFilterShippedFrom" type="date" />
                 <span class="sep">→</span>
-                <input placeholder="結束日期" />
-                <svg class="cal" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
-                  <rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 7h12M5 2v2M11 2v2"/>
-                </svg>
+                <input id="shipFilterShippedTo" type="date" />
               </div>
             </div>
           </div>
@@ -2303,7 +2286,7 @@
               篩選
             </button>
           </div>
-          <section class="filter hidden" id="onlineFilterPanel">
+          <section class="filter" id="onlineFilterPanel">
             <div class="filter-grid">
               <div class="field">
                 <label>出貨單編號</label>
@@ -4187,12 +4170,76 @@
       { id: "10465", orderId: "VN00010465", salesOrderNo: "SO20260823007", audit: "待審核", channel: "實體-全聯", status: "已驗收", applicant: "vita.du", created: "2026-08-23 17:02:11", warehouse: "", shipped: "2026-08-25 09:10:00", acceptNote: "已實收為主" }
     ];
 
+    function fillShipFilterOptions() {
+      const channelEl = document.getElementById("shipFilterChannel");
+      const applicantEl = document.getElementById("shipFilterApplicant");
+      const ships = rows.filter((r) => !r.online);
+      const fill = (el, values) => {
+        if (!el) return;
+        const current = el.value;
+        el.innerHTML = `<option value="">請選擇</option>` + values
+          .map((v) => `<option value="${escapeHtml(v)}"${v === current ? " selected" : ""}>${escapeHtml(v)}</option>`).join("");
+      };
+      fill(channelEl, [...new Set(ships.map((r) => r.channel).filter(Boolean))].sort());
+      fill(applicantEl, [...new Set(ships.map((r) => r.applicant).filter(Boolean))].sort());
+    }
+
+    function shipHasSku(ship, query) {
+      const q = String(query || "").trim().toLowerCase();
+      if (!q) return true;
+      return (ship.items || []).some((item) => {
+        const sku = String(item.sku || "").toLowerCase();
+        const code = String(item.productCode || "").toLowerCase();
+        return sku.includes(q) || code.includes(q);
+      });
+    }
+
+    function shipInvoiceStatusOf(ship) {
+      return String((ship && ship.invoiceNo) || "").trim() ? "已開立" : "未開立";
+    }
+
     function getShippingFiltered() {
-      const po = document.getElementById("shipFilterPoNo").value.trim().toLowerCase();
+      fillShipFilterOptions();
+      const orderId = ((document.getElementById("shipFilterOrderId") || {}).value || "").trim().toLowerCase();
+      const po = ((document.getElementById("shipFilterPoNo") || {}).value || "").trim().toLowerCase();
+      const channel = ((document.getElementById("shipFilterChannel") || {}).value || "").trim();
+      const sku = ((document.getElementById("shipFilterSku") || {}).value || "").trim();
+      const applicant = ((document.getElementById("shipFilterApplicant") || {}).value || "").trim();
+      const status = ((document.getElementById("shipFilterStatus") || {}).value || "").trim();
+      const invoiceNo = ((document.getElementById("shipFilterInvoiceNo") || {}).value || "").trim().toLowerCase();
+      const invoiceStatus = ((document.getElementById("shipFilterInvoiceStatus") || {}).value || "").trim();
+      const createdFrom = ((document.getElementById("shipFilterCreatedFrom") || {}).value || "").trim();
+      const createdTo = ((document.getElementById("shipFilterCreatedTo") || {}).value || "").trim();
+      const warehouseFrom = ((document.getElementById("shipFilterWarehouseFrom") || {}).value || "").trim();
+      const warehouseTo = ((document.getElementById("shipFilterWarehouseTo") || {}).value || "").trim();
+      const shippedFrom = ((document.getElementById("shipFilterShippedFrom") || {}).value || "").trim();
+      const shippedTo = ((document.getElementById("shipFilterShippedTo") || {}).value || "").trim();
       return rows.filter((r) => {
         if (r.online) return false;
-        if (po && !(r.salesOrderNo || "").toLowerCase().includes(po)) return false;
+        if (orderId && !String(r.orderId || "").toLowerCase().includes(orderId)) return false;
+        if (po && !String(r.salesOrderNo || "").toLowerCase().includes(po)) return false;
+        if (channel && r.channel !== channel) return false;
+        if (sku && !shipHasSku(r, sku)) return false;
+        if (applicant && r.applicant !== applicant) return false;
+        if (status && r.status !== status) return false;
+        if (invoiceNo && !String(r.invoiceNo || "").toLowerCase().includes(invoiceNo)) return false;
+        if (invoiceStatus && shipInvoiceStatusOf(r) !== invoiceStatus) return false;
+        if ((createdFrom || createdTo) && !inDateRange(r.created, createdFrom, createdTo)) return false;
+        if ((warehouseFrom || warehouseTo) && !inDateRange(r.warehouse, warehouseFrom, warehouseTo)) return false;
+        if ((shippedFrom || shippedTo) && !inDateRange(r.shipped, shippedFrom, shippedTo)) return false;
         return true;
+      });
+    }
+
+    function clearShippingFilters() {
+      [
+        "shipFilterOrderId", "shipFilterPoNo", "shipFilterChannel", "shipFilterSku", "shipFilterApplicant",
+        "shipFilterStatus", "shipFilterInvoiceNo", "shipFilterInvoiceStatus", "shipFilterCreatedFrom",
+        "shipFilterCreatedTo", "shipFilterWarehouseFrom", "shipFilterWarehouseTo", "shipFilterShippedFrom",
+        "shipFilterShippedTo",
+      ].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
       });
     }
 
@@ -4204,7 +4251,7 @@
     }
 
     function renderShippingTable(list) {
-      const data = (list || rows).filter((r) => !r.online);
+      const data = list || getShippingFiltered();
       document.getElementById("shippingTotal").textContent = String(data.length);
       document.getElementById("tableBody").innerHTML = data.map((r) => {
         const canAccept = r.status === "待驗收";
@@ -4335,7 +4382,7 @@
     }
 
     function renderOnlineShippingTable(list) {
-      const data = list || getOnlineShippingRows();
+      const data = list || getOnlineShippingFiltered();
       const body = document.getElementById("onlineShippingBody");
       const total = document.getElementById("onlineShippingTotal");
       if (total) total.textContent = String(data.length);
@@ -4376,8 +4423,8 @@
       renderShippingTable(getShippingFiltered());
     });
     document.getElementById("shipFilterClear").addEventListener("click", () => {
-      document.getElementById("shipFilterPoNo").value = "";
-      renderShippingTable(rows);
+      clearShippingFilters();
+      renderShippingTable(getShippingFiltered());
     });
 
     document.querySelectorAll("[data-toggle]").forEach((el) => {
@@ -4413,12 +4460,26 @@
         page = "shipping";
         menuPage = "shipping";
       }
-      if (page === "channel-settle") {
-        if (typeof applyChannelSettleModeUi === "function") applyChannelSettleModeUi();
-        else renderChannelSettleTable(getChannelSettleFiltered());
+      if (page === "shipping") {
+        document.getElementById("filterPanel")?.classList.remove("hidden");
+        if (typeof renderShippingTable === "function") renderShippingTable(getShippingFiltered());
       }
-      if (page === "monthly-bill" && typeof renderMonthlyBillTable === "function") {
-        renderMonthlyBillTable(getMonthlyBillFiltered());
+      if (page === "online-shipping") {
+        document.getElementById("onlineFilterPanel")?.classList.remove("hidden");
+        if (typeof renderOnlineShippingTable === "function") renderOnlineShippingTable(getOnlineShippingFiltered());
+      }
+      if (page === "channel-settle") {
+        document.getElementById("channelSettleFilterPanel")?.classList.remove("hidden");
+        document.getElementById("channelSettleAccordionBtn")?.classList.remove("collapsed");
+        document.getElementById("channelSettleAccordionBtn")?.setAttribute("aria-expanded", "true");
+        if (typeof applyChannelSettleModeUi === "function") applyChannelSettleModeUi();
+        else if (typeof renderChannelSettleTable === "function") renderChannelSettleTable(getChannelSettleFiltered());
+      }
+      if (page === "monthly-bill") {
+        document.getElementById("monthlyBillFilterPanel")?.classList.remove("hidden");
+        document.getElementById("monthlyBillAccordionBtn")?.classList.remove("collapsed");
+        document.getElementById("monthlyBillAccordionBtn")?.setAttribute("aria-expanded", "true");
+        if (typeof renderMonthlyBillTable === "function") renderMonthlyBillTable(getMonthlyBillFiltered());
       }
       document.querySelectorAll("[data-page]").forEach((item) => {
         item.classList.toggle("active", item.dataset.page === menuPage);
@@ -9831,7 +9892,7 @@
     });
     document.getElementById("onlineFilterClear").addEventListener("click", () => {
       clearOnlineShippingFilterFields();
-      renderOnlineShippingTable();
+      renderOnlineShippingTable(getOnlineShippingFiltered());
     });
     document.getElementById("poShipAddFeeBtn").addEventListener("click", openPoShipFeeModal);
     document.getElementById("poShipFeeClose").addEventListener("click", closePoShipFeeModal);
@@ -12786,7 +12847,7 @@
       showPage("monthly-bill-detail");
     }
 
-    /** PRD：成為可結算時間＝買斷／寄倉驗收完成時間；轉單＝第一張有效出貨單建立時間。DEMO 不另存欄位，查詢時即時推算。 */
+    /** PRD：成為可結算時間＝買斷／寄倉最早已驗收時間；轉單＝第一張有效出貨單建立時間。DEMO 不另存欄位，查詢時即時推算。 */
     function orderSettleableAt(order) {
       if (!order) return "";
       if (isTransferAcceptFlow(order)) {
@@ -12796,6 +12857,12 @@
           .sort();
         return ships[0] || "";
       }
+      const acceptedAt = validShipsOfPo(order.orderNo)
+        .filter((ship) => ship.status === "已驗收")
+        .map((ship) => String((ship.acceptance && ship.acceptance.acceptedAt) || ship.shipped || ship.created || "").trim())
+        .filter(Boolean)
+        .sort();
+      if (acceptedAt[0]) return acceptedAt[0];
       return String((order.acceptance && order.acceptance.acceptedAt) || "").trim();
     }
 
