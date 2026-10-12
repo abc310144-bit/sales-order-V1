@@ -2698,7 +2698,9 @@
                   <th>SKU</th>
                   <th>商品名稱</th>
                   <th class="num">結算數量</th>
-                  <th class="num">單價</th>
+                  <th class="num">未稅單價</th>
+                  <th class="num">含稅單價</th>
+                  <th class="num">稅額</th>
                   <th class="num">結算金額</th>
                 </tr>
               </thead>
@@ -5639,7 +5641,7 @@
     let currentEditOrderNo = "";
     let orderFormMode = "edit";
     let workspaceOrder = null;
-    const DEMO_STORE_KEY = "urmart-sales-demo-v12";
+    const DEMO_STORE_KEY = "urmart-sales-demo-v13";
     let demoReady = false;
     let settlementRecords = [];
     let acceptanceSeeded = false;
@@ -11601,6 +11603,31 @@
       return pdfMoney(accRoundMoney(value), 2);
     }
 
+    /** 財務結算 DEMO 稅率 5%（含境外） */
+    const SETTLE_TAX_RATE = 0.05;
+
+    /** 結算明細：未稅單價／含稅單價／稅額（單價差）／結算金額（含稅×數量） */
+    function settleLineTaxFields(line) {
+      const qty = Number(line && line.qty) || 0;
+      const untaxed = accRoundMoney(Number(line && line.price) || 0);
+      const taxed = line && line.priceTaxed != null && line.priceTaxed !== ""
+        ? accRoundMoney(line.priceTaxed)
+        : accRoundMoney(untaxed * (1 + SETTLE_TAX_RATE));
+      const tax = line && line.tax != null && line.tax !== ""
+        ? accRoundMoney(line.tax)
+        : accRoundMoney(taxed - untaxed);
+      const amount = line && line.amount != null && line.amount !== "" && line.priceTaxed != null
+        ? accRoundMoney(line.amount)
+        : accRoundMoney(taxed * qty);
+      return { untaxed, taxed, tax, amount };
+    }
+
+    function settleBillTaxedTotal(bill) {
+      const lines = (bill && bill.lines) || [];
+      if (!lines.length) return accRoundMoney(bill && bill.total);
+      return accRoundMoney(lines.reduce((sum, line) => sum + settleLineTaxFields(line).amount, 0));
+    }
+
     function accUnitPrice(item) {
       return hasPriceWithLabel(item) ? parsePriceWithLabel(item.priceWithLabel) : goodsPriceNoLabel(item);
     }
@@ -12651,8 +12678,9 @@
       }
       invoiceTargetBillId = String(bill.id);
       const orderCount = new Set((bill.lines || []).map((line) => line.orderNo)).size;
+      const taxedTotal = settleBillTaxedTotal(bill);
       document.getElementById("settleInvoiceSum").innerHTML =
-        `結算包 <strong>${escapeHtml(bill.id)}</strong>：<strong>${orderCount}</strong> 張訂單、<strong>${(bill.lines || []).length}</strong> 筆商品，金額合計 <strong>${escapeHtml(accMoney(bill.total))}</strong>`;
+        `結算包 <strong>${escapeHtml(bill.id)}</strong>：<strong>${orderCount}</strong> 張訂單、<strong>${(bill.lines || []).length}</strong> 筆商品，金額合計 <strong>${escapeHtml(accMoney(taxedTotal))}</strong>`;
       settleInvoiceFile = null;
       document.getElementById("settleInvoiceFile").value = "";
       const nameEl = document.getElementById("settleInvoiceFileName");
@@ -12660,7 +12688,7 @@
       nameEl.classList.add("empty");
       document.getElementById("settleInvoiceNo").value = "";
       document.getElementById("settleInvoiceDate").value = "";
-      document.getElementById("settleInvoiceAmount").value = bill.total != null ? String(bill.total) : "";
+      document.getElementById("settleInvoiceAmount").value = taxedTotal != null ? String(taxedTotal) : "";
       document.getElementById("settleInvoiceMethodRow").classList.remove("hidden");
       document.getElementById("settleInvoiceMethodStamp").checked = false;
       document.getElementById("settleInvoiceMethodEzpay").checked = false;
@@ -12707,7 +12735,24 @@
       const selected = settleSelectedRows();
       if (!selected.length) return null;
       if (!assertSettleSameChannel(selected)) return null;
-      const total = accRoundMoney(selected.reduce((sum, row) => sum + row.settleQty * row.price, 0));
+      const lines = selected.map((row) => {
+        const untaxed = accRoundMoney(row.price);
+        const taxed = accRoundMoney(untaxed * (1 + SETTLE_TAX_RATE));
+        const qty = Number(row.settleQty) || 0;
+        return {
+          orderNo: row.orderNo,
+          channelName: row.channelName,
+          key: row.key,
+          sku: row.sku,
+          name: row.name,
+          qty,
+          price: untaxed,
+          priceTaxed: taxed,
+          tax: accRoundMoney(taxed - untaxed),
+          amount: accRoundMoney(taxed * qty),
+        };
+      });
+      const total = accRoundMoney(lines.reduce((sum, line) => sum + line.amount, 0));
       const channelName = selected[0].channelName || "";
       const order = salesOrders.find((item) => item.orderNo === selected[0].orderNo);
       const channelType = (order && order.channelType) || "";
@@ -12730,16 +12775,7 @@
         fileType: "",
         fileData: "",
         total,
-        lines: selected.map((row) => ({
-          orderNo: row.orderNo,
-          channelName: row.channelName,
-          key: row.key,
-          sku: row.sku,
-          name: row.name,
-          qty: row.settleQty,
-          price: row.price,
-          amount: accRoundMoney(row.settleQty * row.price),
-        })),
+        lines,
       });
       record.lines.forEach((line) => {
         const lineOrder = salesOrders.find((item) => item.orderNo === line.orderNo);
@@ -12780,7 +12816,8 @@
         /* DEMO：正式環境自動開立 ezpay；此處寫入示範發票號並標記已開票 */
         bill.invoiceNo = nextSettlementNo().slice(-10);
         bill.invoiceDate = nowStamp().slice(0, 10);
-        bill.invoiceAmount = accRoundMoney(bill.total);
+        bill.invoiceAmount = settleBillTaxedTotal(bill);
+        bill.total = bill.invoiceAmount;
         bill.fileName = "";
         bill.fileType = "";
         bill.fileData = "";
@@ -12799,7 +12836,7 @@
       if (!invoiceNo) return alert("請填寫發票號碼");
       if (!invoiceDate) return alert("請選擇發票日期");
       if (!amountRaw || !Number.isFinite(invoiceAmount) || invoiceAmount <= 0) return alert("請輸入大於 0 的發票金額");
-      const total = accRoundMoney(bill.total);
+      const total = settleBillTaxedTotal(bill);
       if (accRoundMoney(invoiceAmount) !== total
         && !confirm(`發票金額 ${accMoney(invoiceAmount)} 與系統結算金額 ${accMoney(total)} 不一致，確定送出？`)) {
         return;
@@ -12898,7 +12935,7 @@
           <td>${escapeHtml(rec.channelName || "—")}</td>
           <td>${escapeHtml(rec.invoiceNo || "-")}</td>
           <td>${escapeHtml(rec.invoiceDate || "-")}</td>
-          <td class="num">${escapeHtml(accMoney(rec.total))}</td>
+          <td class="num">${escapeHtml(accMoney(settleBillTaxedTotal(rec)))}</td>
           <td>${escapeHtml(rec.operator || "—")}</td>
           <td>${escapeHtml(rec.createdAt || "—")}</td>
           <td>${statusTag(rec.status || "待開票")}</td>
@@ -12916,26 +12953,32 @@
       monthlyBillViewId = String(bill.id);
       document.getElementById("monthlyBillDetailMeta").textContent =
         `id：${bill.id}｜類型：${bill.type || "—"}｜通路：${bill.channelName || "—"}｜狀態：${bill.status || "待開票"}｜月結：${bill.monthly ? "是" : "否"}`;
+      const billTaxedTotal = settleBillTaxedTotal(bill);
       document.getElementById("monthlyBillDetailSummary").innerHTML =
-        `訂單總金額(含稅) <strong>${escapeHtml(accMoney(bill.total))}</strong>｜建立人 ${escapeHtml(bill.operator || "—")}｜建立時間 ${escapeHtml(bill.createdAt || "—")}`;
+        `訂單總金額(含稅) <strong>${escapeHtml(accMoney(billTaxedTotal))}</strong>｜建立人 ${escapeHtml(bill.operator || "—")}｜建立時間 ${escapeHtml(bill.createdAt || "—")}`;
       const canInvoice = isFinanceRole() && bill.monthly && bill.status === "待開票";
       document.getElementById("monthlyBillDetailActions").classList.toggle("hidden", !canInvoice);
       const body = document.getElementById("monthlyBillDetailBody");
       const lines = bill.lines || [];
       document.getElementById("monthlyBillDetailTotal").textContent = String(lines.length);
       if (!lines.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="7">無明細</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="9">無明細</td></tr>`;
       } else {
-        body.innerHTML = lines.map((line) => `
+        body.innerHTML = lines.map((line) => {
+          const tax = settleLineTaxFields(line);
+          return `
           <tr>
             <td>${escapeHtml(line.orderNo || "—")}</td>
             <td>${escapeHtml(line.channelName || bill.channelName || "—")}</td>
             <td>${escapeHtml(line.sku || "—")}</td>
             <td>${escapeHtml(line.name || "—")}</td>
             <td class="num">${escapeHtml(line.qty)}</td>
-            <td class="num">${escapeHtml(accMoney(line.price))}</td>
-            <td class="num">${escapeHtml(accMoney(line.amount))}</td>
-          </tr>`).join("");
+            <td class="num">${escapeHtml(accMoney(tax.untaxed))}</td>
+            <td class="num">${escapeHtml(accMoney(tax.taxed))}</td>
+            <td class="num">${escapeHtml(accMoney(tax.tax))}</td>
+            <td class="num">${escapeHtml(accMoney(tax.amount))}</td>
+          </tr>`;
+        }).join("");
       }
       const invSection = document.getElementById("monthlyBillInvoiceSection");
       const issued = bill.status === "已開票";
@@ -13345,6 +13388,8 @@
             const src = (order.items || []).find((row) => itemKey(row) === item.key);
             const price = src ? accUnitPrice(src) : 0;
             item.settledQty = (Number(item.settledQty) || 0) + qty;
+            const untaxed = accRoundMoney(price);
+            const taxed = accRoundMoney(untaxed * (1 + SETTLE_TAX_RATE));
             lines.push({
               orderNo: order.orderNo,
               channelName: order.channelName,
@@ -13352,8 +13397,10 @@
               sku: item.sku,
               name: item.name,
               qty,
-              price,
-              amount: accRoundMoney(qty * price),
+              price: untaxed,
+              priceTaxed: taxed,
+              tax: accRoundMoney(taxed - untaxed),
+              amount: accRoundMoney(taxed * qty),
             });
           });
         });
