@@ -630,6 +630,7 @@
       flex-direction: column;
       gap: 24px;
     }
+    [data-po-pane="ships"] #poFinalMarginOverview { margin-top: 28px; }
     .po-margin-overview.hidden { display: none; }
     .po-margin-block .goods-title { margin-bottom: 10px; }
     .po-margin-bar {
@@ -3625,6 +3626,26 @@
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div class="po-pane hidden" data-po-pane="ships">
+            <div class="goods-block" style="margin-top:0">
+              <h3 class="goods-title">相關出貨單</h3>
+              <div class="table-wrap">
+                <table class="related-table">
+                  <thead>
+                    <tr>
+                      <th>出貨單編號</th>
+                      <th>訂單狀態</th>
+                      <th>建立時間</th>
+                    </tr>
+                  </thead>
+                  <tbody id="relatedShipBody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div id="poFinalMarginOverview" class="po-margin-overview hidden">
               <div class="po-margin-block">
                 <h3 class="goods-title">最終訂單營收/成本/毛利總覽</h3>
                 <div class="po-margin-bar">
@@ -3649,24 +3670,6 @@
                     <div class="po-margin-value" id="poFinalMarginRate">0%</div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="po-pane hidden" data-po-pane="ships">
-            <div class="goods-block" style="margin-top:0">
-              <h3 class="goods-title">相關出貨單</h3>
-              <div class="table-wrap">
-                <table class="related-table">
-                  <thead>
-                    <tr>
-                      <th>出貨單編號</th>
-                      <th>訂單狀態</th>
-                      <th>建立時間</th>
-                    </tr>
-                  </thead>
-                  <tbody id="relatedShipBody"></tbody>
-                </table>
               </div>
             </div>
           </div>          </div>
@@ -4115,10 +4118,10 @@
       { id: "10473", orderId: "VN00010473", salesOrderNo: "", audit: "待審核", channel: "實體-PW健身工廠", status: "訂單處理中(已拋單)", applicant: "", created: "2026-08-26 14:18:05", warehouse: "2026-08-26 14:18:05", shipped: "" },
       { id: "10472", orderId: "VN00010472", salesOrderNo: "", audit: "待審核", channel: "實體-PW健身工廠", status: "揀貨中", applicant: "", created: "2026-08-26 14:12:31", warehouse: "2026-08-26 14:12:31", shipped: "" },
       { id: "10471", orderId: "VN00010471", salesOrderNo: "SO20260824006", audit: "待審核", channel: "實體-寶雅", status: "待拋單", applicant: "misha.huang", created: "2026-08-26 13:51:08", warehouse: "", shipped: "" },
-      { id: "10470", orderId: "VN00010470", salesOrderNo: "SO20260826002", audit: "待審核", channel: "實體-全聯", status: "已出貨", applicant: "misha.huang", created: "2026-08-26 13:44:22", warehouse: "", shipped: "" },
+      { id: "10470", orderId: "VN00010470", salesOrderNo: "SO20260826002", audit: "待審核", channel: "實體-全聯", status: "已出貨", applicant: "misha.huang", created: "2026-08-26 13:44:22", warehouse: "", shipped: "2026-08-27 10:20:00" },
       { id: "10469", orderId: "VN00010469", salesOrderNo: "", audit: "審核通過", channel: "實體-迪卡儂", status: "缺貨", applicant: "vita.du", created: "2026-08-26 11:20:15", warehouse: "2026-08-26 11:25:40", shipped: "" },
       { id: "10468", orderId: "VN00010468", salesOrderNo: "", audit: "待審核", channel: "經銷商-絢綻國際企業社", status: "配送異常", applicant: "john.pan", created: "2026-08-26 10:08:19", warehouse: "", shipped: "" },
-      { id: "10467", orderId: "VN00010467", salesOrderNo: "SO20260824006", audit: "待審核", channel: "實體-寶雅", status: "已配達", applicant: "misha.huang", created: "2026-08-25 18:33:02", warehouse: "", shipped: "" },
+      { id: "10467", orderId: "VN00010467", salesOrderNo: "SO20260824006", audit: "待審核", channel: "實體-寶雅", status: "已配達", applicant: "misha.huang", created: "2026-08-25 18:33:02", warehouse: "", shipped: "2026-08-26 09:40:00" },
       { id: "10466", orderId: "VN00010466", salesOrderNo: "SO20260824005", audit: "待審核", channel: "跨境- Cool Cool Trading", status: "訂單取消", applicant: "vita.du", created: "2026-08-25 16:12:47", warehouse: "", shipped: "" },
       { id: "10465", orderId: "VN00010465", salesOrderNo: "SO20260823007", audit: "待審核", channel: "實體-全聯", status: "已配達", applicant: "vita.du", created: "2026-08-23 17:02:11", warehouse: "", shipped: "2026-08-25 09:10:00" }
     ];
@@ -9356,6 +9359,47 @@
       if (field === "qty") updatePoShipQtyTotal();
     }
 
+    function orderHasActualShipTime(order) {
+      if (!order || !order.orderNo) return false;
+      return validShipsOfPo(order.orderNo).some((ship) => String(ship.shipped || "").trim());
+    }
+
+    /** DEMO：最終毛利總覽假數字（正式環境改接實際營收／成本） */
+    function demoFinalMarginOf(order) {
+      const items = (order && order.items) || [];
+      let revenue = 0;
+      items.forEach((item) => {
+        const qty = Math.max(0, Number(item.qty) || 0);
+        const price = typeof accUnitPrice === "function" ? accUnitPrice(item) : (Number(item.price) || 120);
+        revenue += qty * (price > 0 ? price : 120);
+      });
+      if (revenue <= 0) {
+        const seed = String((order && order.orderNo) || "0").replace(/\D/g, "") || "1";
+        revenue = (Number(seed.slice(-5)) || 10000) + 8600;
+      }
+      revenue = Math.round(revenue * 100) / 100;
+      const cost = Math.round(revenue * 0.62 * 100) / 100;
+      const fee = Math.round(revenue * 0.04 * 100) / 100;
+      const marginAmt = Math.round((revenue - cost - fee) * 100) / 100;
+      const marginRate = revenue > 0 ? `${((marginAmt / revenue) * 100).toFixed(1)}%` : "0%";
+      return { revenue, cost, fee, marginAmt, marginRate };
+    }
+
+    function renderPoFinalMargin(order) {
+      const el = document.getElementById("poFinalMarginOverview");
+      if (!el) return;
+      const show = orderHasActualShipTime(order);
+      el.classList.toggle("hidden", !show);
+      if (!show) return;
+      const m = demoFinalMarginOf(order);
+      const money = (n) => (typeof accMoney === "function" ? accMoney(n) : String(n));
+      document.getElementById("poFinalRevenue").textContent = money(m.revenue);
+      document.getElementById("poFinalCost").textContent = money(m.cost);
+      document.getElementById("poFinalFee").textContent = money(m.fee);
+      document.getElementById("poFinalMarginAmt").textContent = money(m.marginAmt);
+      document.getElementById("poFinalMarginRate").textContent = m.marginRate;
+    }
+
     function renderRelatedShips(order) {
       const body = document.getElementById("relatedShipBody");
       const list = !order ? [] : rows.filter((r) => r.salesOrderNo === order.orderNo)
@@ -9363,6 +9407,7 @@
         .sort((a, b) => String(b.created).localeCompare(String(a.created)) || Number(b.id) - Number(a.id));
       if (!list.length) {
         body.innerHTML = `<tr class="empty-row"><td class="related-empty" colspan="3">尚未開立出貨單</td></tr>`;
+        renderPoFinalMargin(order);
         return;
       }
       body.innerHTML = list.map((r) => `
@@ -9372,6 +9417,7 @@
           <td>${escapeHtml(r.created)}</td>
         </tr>
       `).join("");
+      renderPoFinalMargin(order);
     }
 
     function applyEditFormToOrder(order) {
