@@ -4160,8 +4160,8 @@
 
   <script>
     let rows = [
-      { id: "10473", orderId: "VN00010473", salesOrderNo: "", audit: "待審核", channel: "實體-PW健身工廠", status: "訂單處理中(已拋單)", applicant: "", created: "2026-08-26 14:18:05", warehouse: "2026-08-26 14:18:05", shipped: "" },
-      { id: "10472", orderId: "VN00010472", salesOrderNo: "", audit: "待審核", channel: "實體-PW健身工廠", status: "揀貨中", applicant: "", created: "2026-08-26 14:12:31", warehouse: "2026-08-26 14:12:31", shipped: "" },
+      { id: "10473", orderId: "VN00010473", salesOrderNo: "", audit: "審核通過", channel: "實體-PW健身工廠", status: "已驗收", applicant: "misha.huang", created: "2026-08-26 14:18:05", warehouse: "2026-08-26 14:18:05", shipped: "2026-08-27 10:30:00", acceptNote: "" },
+      { id: "10472", orderId: "VN00010472", salesOrderNo: "", audit: "審核通過", channel: "實體-PW健身工廠", status: "已驗收", applicant: "misha.huang", created: "2026-08-26 14:12:31", warehouse: "2026-08-26 14:12:31", shipped: "2026-08-27 15:45:00", acceptNote: "" },
       { id: "10471", orderId: "VN00010471", salesOrderNo: "SO20260824006", audit: "待審核", channel: "實體-寶雅", status: "待拋單", applicant: "misha.huang", created: "2026-08-26 13:51:08", warehouse: "", shipped: "" },
       { id: "10470", orderId: "VN00010470", salesOrderNo: "SO20260826002", audit: "待審核", channel: "實體-全聯", status: "待驗收", applicant: "misha.huang", created: "2026-08-26 13:44:22", warehouse: "", shipped: "2026-08-27 10:20:00", acceptNote: "" },
       { id: "10469", orderId: "VN00010469", salesOrderNo: "", audit: "審核通過", channel: "實體-迪卡儂", status: "缺貨", applicant: "vita.du", created: "2026-08-26 11:20:15", warehouse: "2026-08-26 11:25:40", shipped: "" },
@@ -5638,11 +5638,12 @@
     let currentEditOrderNo = "";
     let orderFormMode = "edit";
     let workspaceOrder = null;
-    const DEMO_STORE_KEY = "urmart-sales-demo-v10";
+    const DEMO_STORE_KEY = "urmart-sales-demo-v11";
     let demoReady = false;
     let settlementRecords = [];
     let acceptanceSeeded = false;
     let consignSettleSeeded = false;
+    let onlineSettleSeeded = false;
     const SETTLE_FILE_STORE_LIMIT = 1500000;
 
     function sanitizeSettlementForStore(record) {
@@ -5659,6 +5660,7 @@
           settlementRecords: settlementRecords.map(sanitizeSettlementForStore),
           acceptanceSeeded,
           consignSettleSeeded,
+          onlineSettleSeeded,
         };
         localStorage.setItem(DEMO_STORE_KEY, JSON.stringify(payload));
         return true;
@@ -5979,6 +5981,7 @@
         if (Array.isArray(data.settlementRecords)) settlementRecords = data.settlementRecords;
         acceptanceSeeded = !!data.acceptanceSeeded;
         consignSettleSeeded = !!data.consignSettleSeeded;
+        onlineSettleSeeded = !!data.onlineSettleSeeded;
         return true;
       } catch (err) {
         return false;
@@ -7786,7 +7789,7 @@
         }),
         extraTransferPo({
           orderNo: "SO20260822033",
-          status: "未開立出貨單",
+          status: "部分出貨",
           operator: "vita.du",
           createdAt: "2026-08-22 14:05:40",
           recipients: transferOpenRecipients,
@@ -7811,7 +7814,7 @@
         extraShip(10483, "SO20260816021", "跨境- Cool Cool Trading", "配送異常", "henry.huang", "2026-08-16 19:05:58"),
         extraShip(10484, "SO20260815022", "百貨-新光三越", "已驗收", "misha.huang", "2026-08-15 15:12:40", { shipped: "2026-08-17 11:00:00", acceptNote: "" }),
         extraShip(10485, "SO20260815022", "百貨-新光三越", "已驗收", "misha.huang", "2026-08-15 16:03:18", { shipped: "2026-08-17 16:40:00", acceptNote: "已實收為主" }),
-        extraShip(10510, "SO20260827034", "百貨-新光三越", "待驗收", "vita.du", "2026-08-27 10:15:00", { shipped: "2026-08-28 14:20:00" }),
+        extraShip(10510, "SO20260827034", "百貨-新光三越", "已驗收", "vita.du", "2026-08-27 10:15:00", { shipped: "2026-08-28 14:20:00", acceptNote: "" }),
         extraShip(10486, "SO20260814023", "經銷商-學生營養股份有限公司", "已出貨", "sarah.lin", "2026-08-14 11:08:27", { shipped: "2026-08-16 10:00:00" }),
         extraShip(10487, "SO20260813024", "經銷商-絢綻國際企業社", "已出貨", "john.pan", "2026-08-13 16:44:02", { shipped: "2026-08-15 09:30:00" }),
         extraShip(10488, "SO20260813024", "經銷商-絢綻國際企業社", "已出貨", "john.pan", "2026-08-13 17:21:55", { shipped: "2026-08-15 14:00:00" }),
@@ -7866,7 +7869,7 @@
           id: 10498,
           salesOrderNo: "SO20260824032",
           platformOrderNo: "OL-T-0824-A",
-          status: "揀貨中",
+          status: "已配達",
           applicant: "misha.huang",
           created: "2026-08-24 13:40:22",
           expectDate: "2026-08-24",
@@ -7878,11 +7881,91 @@
           recvTel: "0933-445-566",
           recvAddress: "桃園市桃園區中正路200號",
           recvRemark: "週末配送",
+          shipped: "2026-08-25 16:40:00",
           submittedAt: "2026-08-24 13:41:00",
           items: transferPartialRecipients[0].items,
+        }),
+        /* 部分出貨：第二收件人尚未出貨，對應通路結算「線上-轉單」可結僅 A 組 SKU */
+        extraOnlineShip({
+          id: 10499,
+          salesOrderNo: "SO20260824032",
+          platformOrderNo: "OL-T-0824-B",
+          status: "待拋單",
+          applicant: "misha.huang",
+          created: "2026-08-24 13:45:10",
+          expectDate: "2026-08-24",
+          arriveDate: "2026-08-27",
+          arriveTime: "16:00",
+          shipOutDate: "2026-08-26",
+          shipMethod: "新竹物流",
+          recvName: "吳俊宏",
+          recvTel: "0955-667-788",
+          recvAddress: "台中市西屯區台灣大道三段99號",
+          recvRemark: "請電聯後再送",
+          submittedAt: "2026-08-24 13:46:00",
+          items: transferPartialRecipients[1].items,
+        }),
+        /* 篩選狀態假資料：配送異常／缺貨／已出貨／揀貨中 */
+        extraOnlineShip({
+          id: 10520,
+          salesOrderNo: "SO20260822033",
+          platformOrderNo: "OL-T-0822-A",
+          status: "已配達",
+          applicant: "vita.du",
+          created: "2026-08-22 15:10:00",
+          expectDate: "2026-08-22",
+          arriveDate: "2026-08-24",
+          arriveTime: "10:00",
+          shipOutDate: "2026-08-23",
+          shipMethod: "全盛貨運(邱哥)",
+          recvName: "張家綺",
+          recvTel: "0966-778-899",
+          recvAddress: "高雄市新興區中山一路50號",
+          recvRemark: "",
+          shipped: "2026-08-23 11:30:00",
+          submittedAt: "2026-08-22 15:11:00",
+          items: transferOpenRecipients[0].items,
+        }),
+        extraOnlineShip({
+          id: 10521,
+          salesOrderNo: "SO20260822033",
+          platformOrderNo: "OL-T-0822-B",
+          status: "配送異常",
+          applicant: "vita.du",
+          created: "2026-08-22 15:20:00",
+          expectDate: "2026-08-22",
+          arriveDate: "2026-08-25",
+          arriveTime: "18:00",
+          shipOutDate: "2026-08-24",
+          shipMethod: "新竹物流",
+          recvName: "劉冠宇",
+          recvTel: "0977-889-900",
+          recvAddress: "嘉義市西區文化路100號",
+          recvRemark: "放門口即可",
+          shipped: "2026-08-24 09:10:00",
+          submittedAt: "2026-08-22 15:21:00",
+          items: transferOpenRecipients[1].items,
+        }),
+        extraOnlineShip({
+          id: 10522,
+          salesOrderNo: "SO20260822033",
+          platformOrderNo: "OL-T-0822-C",
+          status: "缺貨",
+          applicant: "vita.du",
+          created: "2026-08-22 15:30:00",
+          expectDate: "2026-08-22",
+          arriveDate: "2026-08-26",
+          arriveTime: "15:00",
+          shipOutDate: "2026-08-25",
+          shipMethod: "黑猫",
+          recvName: "鄭佩芬",
+          recvTel: "0988-990-011",
+          recvAddress: "花蓮市中山路20號",
+          recvRemark: "",
+          submittedAt: "2026-08-22 15:31:00",
+          items: transferOpenRecipients[2].items,
         })
       );
-
       salesOrders.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
       rows.sort((a, b) => String(b.created).localeCompare(String(a.created)) || Number(b.id) - Number(a.id));
       renderSalesTable(getSalesFiltered());
@@ -13288,19 +13371,43 @@
       if (part) settle("20260821001", "2026-08-21 10:30:00", "20260821001", [{ order: part, ratio: 0.5 }], { type: "買斷", operator: "建檔人" });
     }
 
-    /** 寄倉結算篩選假資料：確保 PW／新光三越有可結 SKU，且通路／單號／日期／SKU 可對上篩選 */
+    /** 寄倉出貨單 → 已驗收＋驗收明細（可結基數吃 ship.acceptance／已驗收數量） */
+    function ensureConsignShipAccepted(shipId, shipped, acceptedAt) {
+      const ship = rows.find((row) => String(row.id) === shipId);
+      if (!ship) return;
+      ship.status = "已驗收";
+      ship.audit = ship.audit || "審核通過";
+      if (!String(ship.shipped || "").trim()) ship.shipped = shipped;
+      if (!ship.applicant) ship.applicant = "建檔人";
+      const lines = (ship.items || []).filter((item) => (Number(item.qty) || 0) > 0);
+      if (!lines.length) return;
+      ship.acceptance = {
+        acceptedAt,
+        acceptedBy: "建檔人",
+        items: lines.map((item) => ({
+          key: itemKey(item),
+          sku: item.sku || "",
+          name: item.name || "",
+          acceptQty: Number(item.qty) || 0,
+          remark: "",
+        })),
+      };
+    }
+
+    /** 寄倉結算假資料：PW／新光三越出貨單已驗收，SKU 可結數量與出貨單對應 */
     function seedConsignSettleDemo() {
       if (consignSettleSeeded) return;
       consignSettleSeeded = true;
-      ["10473", "10472"].forEach((id) => {
-        const ship = rows.find((row) => String(row.id) === id);
-        if (ship && !ship.shipped) ship.shipped = id === "10473" ? "2026-08-27 10:30:00" : "2026-08-27 15:45:00";
-      });
-      const ensureConsignAccept = (orderNo, acceptedAt, settledRatio) => {
+      ensureConsignShipAccepted("10473", "2026-08-27 10:30:00", "2026-08-28 09:00:00");
+      ensureConsignShipAccepted("10472", "2026-08-27 15:45:00", "2026-08-28 09:30:00");
+      ensureConsignShipAccepted("10510", "2026-08-28 14:20:00", "2026-08-29 11:00:00");
+      ensureConsignShipAccepted("10484", "2026-08-17 11:00:00", "2026-08-18 10:20:00");
+      ensureConsignShipAccepted("10485", "2026-08-17 16:40:00", "2026-08-18 10:20:00");
+      const ensureConsignSettledQty = (orderNo, acceptedAt, settledRatio) => {
         const order = salesOrders.find((item) => item.orderNo === orderNo);
         if (!order || channelAcceptFlow(order.channelName) !== "寄倉") return;
-        if (!validShipsOfPo(orderNo).length) return;
-        const shipInfo = accShipInfoByKey(orderNo);
+        if (!validShipsOfPo(orderNo).some((ship) => ship.status === "已驗收")) return;
+        const baseMap = settleBaseQtyByKey(order);
         order.acceptance = {
           acceptedAt,
           acceptedBy: "建檔人",
@@ -13308,8 +13415,7 @@
             .filter((item) => (Number(item.qty) || 0) > 0)
             .map((item) => {
               const key = itemKey(item);
-              const shipQty = Number((shipInfo[key] || {}).qty) || 0;
-              const acceptQty = shipQty > 0 ? shipQty : Number(item.qty) || 0;
+              const acceptQty = Number(baseMap[key]) || 0;
               const ratio = Number(settledRatio) || 0;
               return {
                 key,
@@ -13320,12 +13426,59 @@
                 remark: "",
               };
             })
-            .filter((item) => item.acceptQty > 0),
+            .filter((item) => item.acceptQty > 0 || item.settledQty > 0),
         };
       };
-      ensureConsignAccept("SO20260826008", "2026-08-26 11:20:00", 0);
-      ensureConsignAccept("SO20260827034", "2026-08-27 16:00:00", 0);
-      ensureConsignAccept("SO20260815022", "2026-08-18 10:20:00", 0.4);
+      ensureConsignSettledQty("SO20260826008", "2026-08-28 09:30:00", 0);
+      ensureConsignSettledQty("SO20260827034", "2026-08-29 11:00:00", 0);
+      ensureConsignSettledQty("SO20260815022", "2026-08-18 10:20:00", 0.4);
+    }
+
+    /**
+     * 線上出貨訂單 ↔ 通路結算「買斷、轉單結算」假資料對應：
+     * SO20260808029 已配達兩張 → 部分結算；SO20260824032／SO20260822033 有實際出貨時間 → 待結算
+     */
+    function seedOnlineTransferSettleDemo() {
+      if (onlineSettleSeeded) return;
+      onlineSettleSeeded = true;
+      const ensureOnlineShipShipped = (id, shipped) => {
+        const ship = rows.find((row) => String(row.id) === id);
+        if (!ship || !ship.online) return;
+        if (!String(ship.shipped || "").trim()) ship.shipped = shipped;
+      };
+      ensureOnlineShipShipped("10496", "2026-08-09 16:20:00");
+      ensureOnlineShipShipped("10497", "2026-08-09 17:05:00");
+      ensureOnlineShipShipped("10498", "2026-08-25 16:40:00");
+      ensureOnlineShipShipped("10520", "2026-08-23 11:30:00");
+      ensureOnlineShipShipped("10521", "2026-08-24 09:10:00");
+      const ensureTransferSettledQty = (orderNo, acceptedAt, settledRatio) => {
+        const order = salesOrders.find((item) => item.orderNo === orderNo);
+        if (!order || !isOnlineTransferPo(order)) return;
+        if (!validShipsOfPo(orderNo).some((ship) => String(ship.shipped || "").trim())) return;
+        const baseMap = settleBaseQtyByKey(order);
+        order.acceptance = {
+          acceptedAt,
+          acceptedBy: "建檔人",
+          items: Object.keys(baseMap).map((key) => {
+            const item = (order.items || []).find((row) => itemKey(row) === key) || {};
+            const acceptQty = Number(baseMap[key]) || 0;
+            const ratio = Number(settledRatio) || 0;
+            return {
+              key,
+              sku: item.sku || "",
+              name: item.name || "",
+              acceptQty,
+              settledQty: Math.max(0, Math.min(acceptQty, Math.floor(acceptQty * ratio))),
+              remark: "",
+            };
+          }).filter((item) => item.acceptQty > 0 || item.settledQty > 0),
+        };
+      };
+      /* 已開立出貨單＋已配達：示範部分結算 */
+      ensureTransferSettledQty("SO20260808029", "2026-08-10 12:00:00", 0.5);
+      /* 部分出貨：僅已出貨收件人可結，待結算 */
+      ensureTransferSettledQty("SO20260824032", "2026-08-26 09:00:00", 0);
+      ensureTransferSettledQty("SO20260822033", "2026-08-24 12:00:00", 0);
     }
 
     document.getElementById("accAccordionBtn").addEventListener("click", () => {
@@ -13697,6 +13850,7 @@
     normalizeNonOnlineShipStatuses();
     seedAcceptanceDemo();
     seedConsignSettleDemo();
+    seedOnlineTransferSettleDemo();
     settlementRecords = settlementRecords.map(normalizeSettlementRecord);
     persistDemoData();
     renderShippingTable();
