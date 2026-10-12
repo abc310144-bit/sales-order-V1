@@ -6016,6 +6016,7 @@
       document.querySelectorAll(".po-pane").forEach((el) => el.classList.toggle("hidden", el.dataset.poPane !== name));
       const footer = document.getElementById("editFooter");
       if (footer) footer.classList.toggle("hidden", name === "ships");
+      if (name === "goods") renderPoEstMargin(getWorkspaceOrder());
     }
 
     function syncPoShipTab(order) {
@@ -8462,6 +8463,7 @@
       })));
       if (target) target.items = collectEditGoods();
       renderPoGoodsTable();
+      renderPoEstMargin(target);
     }
 
     function loadPoGoodsWorkspace(order) {
@@ -8672,6 +8674,7 @@
       if (!poLineItems.length) {
         body.innerHTML = `<tr class="empty-row"><td colspan="10">尚無商品明細</td></tr>`;
         updatePoQtyTotal();
+        renderPoEstMargin(getWorkspaceOrder());
         return;
       }
       const orderNo = (workspaceOrder && workspaceOrder.orderNo) || currentEditOrderNo;
@@ -8681,6 +8684,7 @@
         orderNo,
       })).join("");
       updatePoQtyTotal();
+      renderPoEstMargin(getWorkspaceOrder());
     }
 
     function poGoodsEditable() {
@@ -9601,25 +9605,61 @@
       return validShipsOfPo(order.orderNo).some((ship) => String(ship.shipped || "").trim());
     }
 
-    /** DEMO：最終毛利總覽假數字（正式環境改接實際營收／成本） */
-    function demoFinalMarginOf(order) {
-      const items = (order && order.items) || [];
+    /** DEMO：由商品列推估營收／成本／毛利（成本≈62%、費用≈4%） */
+    function demoMarginFromItems(items) {
       let revenue = 0;
-      items.forEach((item) => {
+      (items || []).forEach((item) => {
         const qty = Math.max(0, Number(item.qty) || 0);
-        const price = typeof accUnitPrice === "function" ? accUnitPrice(item) : (Number(item.price) || 120);
-        revenue += qty * (price > 0 ? price : 120);
+        if (qty <= 0) return;
+        const price = goodsPriceNoLabel(item);
+        revenue += qty * (price > 0 ? price : 0);
       });
-      if (revenue <= 0) {
-        const seed = String((order && order.orderNo) || "0").replace(/\D/g, "") || "1";
-        revenue = (Number(seed.slice(-5)) || 10000) + 8600;
-      }
       revenue = Math.round(revenue * 100) / 100;
       const cost = Math.round(revenue * 0.62 * 100) / 100;
       const fee = Math.round(revenue * 0.04 * 100) / 100;
       const marginAmt = Math.round((revenue - cost - fee) * 100) / 100;
       const marginRate = revenue > 0 ? `${((marginAmt / revenue) * 100).toFixed(1)}%` : "0%";
       return { revenue, cost, fee, marginAmt, marginRate };
+    }
+
+    /** DEMO：預估毛利（下定商品即時） */
+    function demoEstMarginOf(order) {
+      const items = (poLineItems && poLineItems.length)
+        ? poLineItems
+        : ((order && order.items) || []);
+      return demoMarginFromItems(items);
+    }
+
+    /** DEMO：最終毛利總覽（有實際出貨後；正式環境改接實際營收／成本） */
+    function demoFinalMarginOf(order) {
+      const items = (order && order.items) || [];
+      const base = demoMarginFromItems(items);
+      if (base.revenue > 0) return base;
+      const seed = String((order && order.orderNo) || "0").replace(/\D/g, "") || "1";
+      const revenue = Math.round(((Number(seed.slice(-5)) || 10000) + 8600) * 100) / 100;
+      const cost = Math.round(revenue * 0.62 * 100) / 100;
+      const fee = Math.round(revenue * 0.04 * 100) / 100;
+      const marginAmt = Math.round((revenue - cost - fee) * 100) / 100;
+      const marginRate = revenue > 0 ? `${((marginAmt / revenue) * 100).toFixed(1)}%` : "0%";
+      return { revenue, cost, fee, marginAmt, marginRate };
+    }
+
+    function renderPoEstMargin(order) {
+      const el = document.getElementById("poMarginOverview");
+      if (!el) return;
+      el.classList.remove("hidden");
+      const m = demoEstMarginOf(order || getWorkspaceOrder());
+      const money = (n) => (typeof accMoney === "function" ? accMoney(n) : String(n));
+      const rev = document.getElementById("poEstRevenue");
+      const cost = document.getElementById("poEstCost");
+      const fee = document.getElementById("poEstFee");
+      const amt = document.getElementById("poEstMarginAmt");
+      const rate = document.getElementById("poEstMarginRate");
+      if (rev) rev.textContent = money(m.revenue);
+      if (cost) cost.textContent = money(m.cost);
+      if (fee) fee.textContent = money(m.fee);
+      if (amt) amt.textContent = money(m.marginAmt);
+      if (rate) rate.textContent = m.marginRate;
     }
 
     function renderPoFinalMargin(order) {
@@ -9838,8 +9878,8 @@
       page.classList.toggle("is-readonly", readonly);
       const pick = document.getElementById("editGoodsPickSection");
       if (pick) pick.classList.toggle("hidden", readonly);
-      const margin = document.getElementById("poMarginOverview");
-      if (margin) margin.classList.toggle("hidden", !readonly);
+      /* 預估毛利總覽：建立／編輯／檢視皆顯示，數字隨下定商品同步 */
+      renderPoEstMargin(getWorkspaceOrder());
       page.querySelectorAll("input, select, textarea").forEach((el) => {
         if (el.closest("#poShipCreatePanel")) return;
         el.disabled = readonly || el.hasAttribute("data-lock");
