@@ -2604,6 +2604,7 @@
           <div class="demo-hint">
             <strong>DEMO 提示｜財務結算</strong><br />
             品運於「通路結算」送出的結算包會出現於此。財務檢視核對金額；<strong>月結</strong>且待開票時可於檢視頁右上選擇回壓發票或 ezpay 開發票。<br />
+            <strong>待開票</strong>可由財務於檢視頁「駁回」（必填原因≤20字）→ 狀態改「已駁回」、整包數量加回路徑結算，已駁回僅供檢視、開票按鈕置灰。<br />
             <strong>非月結</strong>僅供核對金額，不顯示開票按鈕，狀態維持待開票。開票後不可作廢、不可再開第二張發票。
           </div>
           <section class="filter" id="monthlyBillFilterPanel">
@@ -2643,6 +2644,7 @@
                 <select id="monthlyBillFilterStatus">
                   <option value="待開票">待開票</option>
                   <option value="已開票">已開票</option>
+                  <option value="已駁回">已駁回</option>
                   <option value="">全部</option>
                 </select>
               </div>
@@ -2684,10 +2686,12 @@
               <div class="po-kind-meta" id="monthlyBillDetailMeta"></div>
             </div>
             <div class="acc-head-actions hidden" id="monthlyBillDetailActions">
+              <button type="button" class="btn" id="monthlyBillRejectBtn">駁回</button>
               <button type="button" class="btn btn-primary" id="monthlyBillInvoiceBtn">回壓／開立發票</button>
             </div>
           </div>
           <div class="settle-summary" id="monthlyBillDetailSummary"></div>
+          <div class="settle-summary hidden" id="monthlyBillRejectInfo"></div>
           <div class="table-meta">
             總共 <span id="monthlyBillDetailTotal">0</span> 筆
           </div>
@@ -4096,6 +4100,28 @@
       <div class="modal-foot">
         <span class="upload-limit-note">註：匯入上限為 1000 筆</span>
         <button type="button" class="btn btn-primary" id="accImportConfirm" disabled>匯入</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask hidden" id="settleRejectModal">
+    <div class="modal-card void-card" role="dialog" aria-labelledby="settleRejectTitle">
+      <div class="modal-head">
+        <h2 id="settleRejectTitle">駁回結算</h2>
+        <button type="button" class="modal-close" id="settleRejectClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="void-msg">請輸入駁回原因</p>
+        <div class="form-row">
+          <label class="required">駁回原因</label>
+          <div class="form-ctrl">
+            <input type="text" id="settleRejectReason" maxlength="20" placeholder="最多 20 字" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="settleRejectCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="settleRejectConfirm">確認</button>
       </div>
     </div>
   </div>
@@ -5632,7 +5658,7 @@
     let currentEditOrderNo = "";
     let orderFormMode = "edit";
     let workspaceOrder = null;
-    const DEMO_STORE_KEY = "urmart-sales-demo-v13";
+    const DEMO_STORE_KEY = "urmart-sales-demo-v15";
     let demoReady = false;
     let settlementRecords = [];
     let acceptanceSeeded = false;
@@ -12747,6 +12773,9 @@
         status,
         monthly: rec.monthly != null ? !!rec.monthly : isMonthlySettleChannel(channelName),
         operator: rec.operator || "",
+        rejectReason: rec.rejectReason || "",
+        rejectedBy: rec.rejectedBy || "",
+        rejectedAt: rec.rejectedAt || "",
       };
     }
 
@@ -12768,8 +12797,16 @@
       }
       const bill = settlementRecords.find((rec) => String(rec.id) === String(billId));
       if (!bill) return;
+      if (bill.status === "已駁回") {
+        alert("此結算包已駁回，不可開立發票");
+        return;
+      }
       if (bill.status === "已開票") {
         alert("此結算包已開票，不可再開立");
+        return;
+      }
+      if (bill.status !== "待開票") {
+        alert("僅待開票結算包可開立發票");
         return;
       }
       if (!bill.monthly) {
@@ -13052,13 +13089,34 @@
         return;
       }
       monthlyBillViewId = String(bill.id);
+      const status = bill.status || "待開票";
       document.getElementById("monthlyBillDetailMeta").textContent =
-        `id：${bill.id}｜類型：${bill.type || "—"}｜通路：${bill.channelName || "—"}｜狀態：${bill.status || "待開票"}｜月結：${bill.monthly ? "是" : "否"}`;
+        `id：${bill.id}｜類型：${bill.type || "—"}｜通路：${bill.channelName || "—"}｜狀態：${status}｜月結：${bill.monthly ? "是" : "否"}`;
       const billTaxedTotal = settleBillTaxedTotal(bill);
       document.getElementById("monthlyBillDetailSummary").innerHTML =
         `訂單總金額(含稅) <strong>${escapeHtml(accMoney(billTaxedTotal))}</strong>｜建立人 ${escapeHtml(bill.operator || "—")}｜建立時間 ${escapeHtml(bill.createdAt || "—")}`;
-      const canInvoice = isFinanceRole() && bill.monthly && bill.status === "待開票";
-      document.getElementById("monthlyBillDetailActions").classList.toggle("hidden", !canInvoice);
+      const rejectInfo = document.getElementById("monthlyBillRejectInfo");
+      if (rejectInfo) {
+        const showReject = status === "已駁回";
+        rejectInfo.classList.toggle("hidden", !showReject);
+        rejectInfo.innerHTML = showReject
+          ? `駁回原因 <strong>${escapeHtml(bill.rejectReason || "—")}</strong>｜駁回人 ${escapeHtml(bill.rejectedBy || "—")}｜駁回時間 ${escapeHtml(bill.rejectedAt || "—")}`
+          : "";
+      }
+      const isFinance = isFinanceRole();
+      const canReject = isFinance && status === "待開票";
+      const canInvoice = isFinance && bill.monthly && status === "待開票";
+      const actions = document.getElementById("monthlyBillDetailActions");
+      if (actions) actions.classList.toggle("hidden", !isFinance);
+      const rejectBtn = document.getElementById("monthlyBillRejectBtn");
+      if (rejectBtn) rejectBtn.classList.toggle("hidden", !canReject);
+      const invoiceBtn = document.getElementById("monthlyBillInvoiceBtn");
+      if (invoiceBtn) {
+        invoiceBtn.disabled = !canInvoice;
+        invoiceBtn.title = status === "已駁回"
+          ? "已駁回不可開立發票"
+          : (status === "已開票" ? "已開票" : (canInvoice ? "回壓／開立發票" : "僅待開票且月結可開立"));
+      }
       const body = document.getElementById("monthlyBillDetailBody");
       const lines = bill.lines || [];
       document.getElementById("monthlyBillDetailTotal").textContent = String(lines.length);
@@ -13084,7 +13142,7 @@
         }).join("");
       }
       const invSection = document.getElementById("monthlyBillInvoiceSection");
-      const issued = bill.status === "已開票";
+      const issued = status === "已開票";
       invSection.classList.toggle("hidden", !issued);
       if (issued) {
         document.getElementById("monthlyBillInvNo").value = bill.invoiceNo || "-";
@@ -13099,6 +13157,78 @@
         previewBtn.title = bill.fileData ? "預覽發票" : "此筆無發票檔案可檢視";
       }
       showPage("monthly-bill-detail");
+    }
+
+    /** 駁回結算包：整包加回該包扣掉的可結數量，狀態改已駁回（僅待開票、僅財務） */
+    function restoreSettlementPackageQty(bill) {
+      ((bill && bill.lines) || []).forEach((line) => {
+        const lineOrder = salesOrders.find((item) => item.orderNo === line.orderNo);
+        if (!lineOrder) return;
+        const src = accLinesOf(lineOrder).find((row) => row.key === line.key) || line;
+        const target = ensureSettleLedgerItem(lineOrder, {
+          key: line.key,
+          sku: line.sku,
+          name: line.name,
+          acceptQty: src.acceptQty,
+          qty: src.qty || line.qty,
+        });
+        const deduct = Number(line.qty) || 0;
+        target.settledQty = Math.max(0, (Number(target.settledQty) || 0) - deduct);
+      });
+    }
+
+    function openSettleRejectModal() {
+      if (!isFinanceRole()) {
+        alert("僅財務可駁回");
+        return;
+      }
+      const bill = settlementRecords.find((rec) => String(rec.id) === String(monthlyBillViewId));
+      if (!bill) return;
+      if (bill.status !== "待開票") {
+        alert("僅待開票結算包可駁回");
+        return;
+      }
+      document.getElementById("settleRejectReason").value = "";
+      document.getElementById("settleRejectModal").classList.remove("hidden");
+    }
+
+    function closeSettleRejectModal() {
+      document.getElementById("settleRejectModal").classList.add("hidden");
+    }
+
+    function confirmSettleReject() {
+      if (!isFinanceRole()) {
+        alert("僅財務可駁回");
+        return;
+      }
+      const bill = settlementRecords.find((rec) => String(rec.id) === String(monthlyBillViewId));
+      if (!bill) {
+        closeSettleRejectModal();
+        return;
+      }
+      if (bill.status !== "待開票") {
+        alert("僅待開票結算包可駁回");
+        closeSettleRejectModal();
+        return;
+      }
+      const reason = String(document.getElementById("settleRejectReason").value || "").trim();
+      if (!reason) {
+        alert("請輸入駁回原因");
+        return;
+      }
+      if (reason.length > 20) {
+        alert("駁回原因最多 20 字");
+        return;
+      }
+      restoreSettlementPackageQty(bill);
+      bill.status = "已駁回";
+      bill.rejectReason = reason.slice(0, 20);
+      bill.rejectedBy = currentRole || "財務";
+      bill.rejectedAt = nowStamp();
+      persistDemoData();
+      closeSettleRejectModal();
+      alert("駁回成功");
+      openMonthlyBillDetail(bill.id);
     }
 
     /** PRD：成為可結算時間＝買斷／寄倉最早已驗收時間；轉單＝第一張有效出貨單建立時間。DEMO 不另存欄位，查詢時即時推算。 */
@@ -13490,13 +13620,14 @@
       };
       const settle = (id, createdAt, invoiceNo, picks, meta) => {
         const lines = [];
+        const applySettled = meta.applySettled !== false;
         picks.forEach(({ order, ratio }) => {
           (order.acceptance.items || []).forEach((item) => {
             const qty = Math.floor((Number(item.acceptQty) || 0) * ratio);
             if (qty <= 0) return;
             const src = (order.items || []).find((row) => itemKey(row) === item.key);
             const price = src ? accUnitPrice(src) : 0;
-            item.settledQty = (Number(item.settledQty) || 0) + qty;
+            if (applySettled) item.settledQty = (Number(item.settledQty) || 0) + qty;
             const untaxed = accRoundMoney(price);
             const taxed = accRoundMoney(untaxed * (1 + SETTLE_TAX_RATE));
             lines.push({
@@ -13510,37 +13641,63 @@
               priceTaxed: taxed,
               tax: accRoundMoney(taxed - untaxed),
               amount: accRoundMoney(taxed * qty),
+              remark: "",
             });
           });
         });
-        if (!lines.length) return;
+        if (!lines.length) return null;
         const total = accRoundMoney(lines.reduce((sum, line) => sum + line.amount, 0));
         const channelName = (picks[0] && picks[0].order && picks[0].order.channelName) || "";
-        settlementRecords.push(normalizeSettlementRecord({
+        const status = meta.status || "已開票";
+        const issued = status === "已開票";
+        const record = normalizeSettlementRecord({
           id,
           createdAt,
           operator: meta.operator || "建檔人",
           type: meta.type,
           channelName,
           channelType: (picks[0] && picks[0].order && picks[0].order.channelType) || "",
-          status: "已開票",
+          status,
           monthly: true,
-          invoiceNo,
-          invoiceDate: createdAt.slice(0, 10),
-          invoiceAmount: total,
-          fileName: `${invoiceNo}.png`,
-          fileType: "image/png",
-          fileData: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+          invoiceNo: issued ? invoiceNo : "",
+          invoiceDate: issued ? createdAt.slice(0, 10) : "",
+          invoiceAmount: issued ? total : null,
+          fileName: issued ? `${invoiceNo}.png` : "",
+          fileType: issued ? "image/png" : "",
+          fileData: issued
+            ? "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+            : "",
           total,
           lines,
-        }));
+          rejectReason: meta.rejectReason || "",
+          rejectedBy: meta.rejectedBy || "",
+          rejectedAt: meta.rejectedAt || "",
+        });
+        settlementRecords.push(record);
+        return record;
       };
       const full = accept("SO20260815022", "2026-08-18 10:20:00");
       const part = accept("SO20260813024", "2026-08-16 15:05:00");
-      accept("SO20260809028", "2026-08-12 11:30:00");
+      const poya = accept("SO20260809028", "2026-08-12 11:30:00");
       /* 寄倉 SO20260815022：先部分結算，保留可結數量給「寄倉結算」假資料 */
       if (full) settle("20260820001", "2026-08-20 14:00:00", "20260820001", [{ order: full, ratio: 0.4 }], { type: "寄倉", operator: "建檔人" });
       if (part) settle("20260821001", "2026-08-21 10:30:00", "20260821001", [{ order: part, ratio: 0.5 }], { type: "買斷", operator: "建檔人" });
+      /* 待開票：財務可試駁回／開票 */
+      if (poya) settle("20260822002", "2026-08-22 09:30:00", "", [{ order: poya, ratio: 0.3 }], {
+        type: "買斷",
+        operator: "建檔人",
+        status: "待開票",
+      });
+      /* 已駁回示範：數量已加回（applySettled=false），僅供檢視 */
+      if (poya) settle("20260822001", "2026-08-22 10:15:00", "", [{ order: poya, ratio: 0.2 }], {
+        type: "買斷",
+        operator: "建檔人",
+        status: "已駁回",
+        applySettled: false,
+        rejectReason: "金額有誤請重送",
+        rejectedBy: "財務",
+        rejectedAt: "2026-08-22 11:20:00",
+      });
     }
 
     /** 寄倉出貨單 → 已驗收＋驗收明細（可結基數吃 ship.acceptance／已驗收數量） */
@@ -13969,7 +14126,18 @@
     });
     document.getElementById("monthlyBillInvoiceBtn").addEventListener("click", () => {
       if (!monthlyBillViewId) return;
+      const bill = settlementRecords.find((rec) => String(rec.id) === String(monthlyBillViewId));
+      if (!bill || bill.status !== "待開票" || !bill.monthly) return;
       openSettleInvoiceModalForBill(monthlyBillViewId);
+    });
+    document.getElementById("monthlyBillRejectBtn").addEventListener("click", () => {
+      openSettleRejectModal();
+    });
+    document.getElementById("settleRejectClose").addEventListener("click", closeSettleRejectModal);
+    document.getElementById("settleRejectCancel").addEventListener("click", closeSettleRejectModal);
+    document.getElementById("settleRejectConfirm").addEventListener("click", confirmSettleReject);
+    document.getElementById("settleRejectModal").addEventListener("click", (e) => {
+      if (e.target.id === "settleRejectModal") closeSettleRejectModal();
     });
     document.getElementById("monthlyBillPreviewInvoiceBtn").addEventListener("click", () => {
       if (!monthlyBillViewId) return;
