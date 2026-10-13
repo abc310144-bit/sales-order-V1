@@ -3557,40 +3557,24 @@
 
           <div class="po-pane hidden" data-po-pane="goods">
             <div id="editGeneralGoodsWrap">
-              <div class="po-goods-section" id="editGoodsPickSection">
-                <div class="goods-title-row">
-                  <h3 class="goods-title">選擇商品</h3>
+              <div class="po-goods-section" id="editGoodsOverviewSection">
+                <div class="goods-title-row" id="editGoodsToolbar">
+                  <h3 class="goods-title">訂單商品總攬</h3>
                   <button type="button" class="btn btn-primary" id="poPickImportBtn">匯入商品</button>
                 </div>
-                <div class="po-pick-filter">
+                <div class="po-pick-filter" id="editGoodsFilterBar">
                   <input id="poPickFilterInput" type="text" placeholder="支援模糊查詢，多個以 , 分隔" autocomplete="off" />
                   <button type="button" class="btn btn-primary" id="poPickFilterSearch">搜尋</button>
                   <button type="button" class="btn" id="poPickFilterClear">清除篩選條件</button>
                 </div>
                 <div class="table-wrap ship-items-table-wrap goods-h-scroll po-goods-scroll">
-                  <table class="ship-items-table po-goods-table po-goods-pick-table">
-                    <thead>
-                      <tr>
-                        <th class="col-check"></th>
-                        <th>SKU</th>
-                        <th>商品名稱</th>
-                        <th class="num col-alloc">當前可賣量</th>
-                        <th class="col-pick-qty">數量設定</th>
-                      </tr>
-                    </thead>
-                    <tbody id="editGoodsPickBody"></tbody>
-                  </table>
-                </div>
-              </div>
-              <div class="po-goods-section">
-                <h3 class="goods-title">訂單商品總攬</h3>
-                <div class="table-wrap ship-items-table-wrap goods-h-scroll po-goods-scroll">
-                  <table class="ship-items-table po-goods-table goods-pdf-table">
+                  <table class="ship-items-table po-goods-table goods-pdf-table" id="editGoodsOverviewTable">
                     <thead>
                       <tr>
                         <th>SKU</th>
                         <th>商品名稱</th>
                         <th>箱入數</th>
+                        <th class="num col-alloc">當前可賣量</th>
                         <th>預計出貨數量(下定數量)</th>
                         <th>訂購總箱數</th>
                         <th class="num">實際出貨數</th>
@@ -3598,10 +3582,14 @@
                         <th>單價（含標）</th>
                         <th>合計</th>
                         <th>備註</th>
+                        <th class="ops" id="editGoodsOpsHead">操作</th>
                       </tr>
                     </thead>
                     <tbody id="editGoodsBody"></tbody>
                   </table>
+                </div>
+                <div class="filter-actions" id="editGoodsConfirmBar" style="justify-content:flex-end;margin-top:12px">
+                  <button type="button" class="btn btn-primary" id="poConfirmGoodsBtn">確認下定商品</button>
                 </div>
               </div>
             </div>
@@ -8069,6 +8057,8 @@
     let poPickRows = [];
     let poPickFilterQueries = [];
     let poPickImportSkus = null;
+    /** 預估毛利：僅按「確認下定商品」後更新（檢視模式直接顯示） */
+    let poEstMarginConfirmed = false;
 
     const virtualAllocDefaults = {
       "UM-1001": 120,
@@ -8298,7 +8288,9 @@
     }
 
     function collectEditGoods() {
-      return poLineItems.map((row) => ({ ...row }));
+      return poLineItems
+        .filter((row) => (Number(row.qty) || 0) > 0)
+        .map((row) => ({ ...row }));
     }
 
     function toPoLineItem(item) {
@@ -8339,21 +8331,8 @@
       return n;
     }
 
-    function isPickQtyOversell(row) {
-      return !!row && row.checked && (Number(row.qty) || 0) > (Number(row.sellableQty) || 0);
-    }
-
-    function syncPoPickQtyEnabled() {
-      const readonly = !poGoodsEditable();
-      document.querySelectorAll("#editGoodsPickBody tr[data-sku]").forEach((tr) => {
-        const check = tr.querySelector('[data-pick="check"]');
-        const qty = tr.querySelector('[data-pick="qty"]');
-        if (!check || !qty) return;
-        check.disabled = readonly;
-        qty.disabled = readonly || !check.checked;
-        const row = poPickRows.find((item) => item.sku === tr.dataset.sku);
-        qty.classList.toggle("is-oversell", isPickQtyOversell(row));
-      });
+    function isOverviewQtyOversell(row) {
+      return !!row && (Number(row.qty) || 0) > (Number(row.sellableQty) || 0);
     }
 
     function poPickRowMatchesFilter(row, queries) {
@@ -8363,161 +8342,127 @@
       return queries.some((q) => sku.includes(q) || name.includes(q));
     }
 
-    function basePoPickRows() {
-      if (poPickImportSkus && poPickImportSkus.size) {
-        return poPickRows.filter((row) => poPickImportSkus.has(normalizeSku(row.sku).toLowerCase()));
-      }
-      return poPickRows;
+    function syncPoGoodsToolbar() {
+      const editable = poGoodsEditable();
+      const filterBar = document.getElementById("editGoodsFilterBar");
+      const confirmBar = document.getElementById("editGoodsConfirmBar");
+      const importBtn = document.getElementById("poPickImportBtn");
+      const opsHead = document.getElementById("editGoodsOpsHead");
+      if (filterBar) filterBar.classList.toggle("hidden", !editable);
+      if (confirmBar) confirmBar.classList.toggle("hidden", !editable);
+      if (importBtn) importBtn.classList.toggle("hidden", !editable);
+      if (opsHead) opsHead.classList.toggle("hidden", !editable);
     }
 
-    function visiblePoPickRows() {
-      return basePoPickRows().filter((row) => poPickRowMatchesFilter(row, poPickFilterQueries));
+    function resetPoEstMarginDisplay() {
+      poEstMarginConfirmed = false;
+      const money = (n) => (typeof accMoney === "function" ? accMoney(n) : String(n));
+      const rev = document.getElementById("poEstRevenue");
+      const cost = document.getElementById("poEstCost");
+      const fee = document.getElementById("poEstFee");
+      const amt = document.getElementById("poEstMarginAmt");
+      const rate = document.getElementById("poEstMarginRate");
+      if (rev) rev.textContent = money(0);
+      if (cost) cost.textContent = money(0);
+      if (fee) fee.textContent = money(0);
+      if (amt) amt.textContent = money(0);
+      if (rate) rate.textContent = "0%";
     }
 
+    /** 搜尋：將命中通路商品展開進總攬（已存在列保留數量） */
     function applyPoPickFilter() {
+      if (!poGoodsEditable()) return;
       const input = document.getElementById("poPickFilterInput");
       poPickFilterQueries = parsePoItemQueries(input ? input.value : "");
-      if (poGoodsEditable() && poPickFilterQueries.length) {
-        basePoPickRows().forEach((row) => {
-          if (poPickRowMatchesFilter(row, poPickFilterQueries)) row.checked = true;
-        });
+      if (!poPickFilterQueries.length) {
+        alert("請輸入 SKU 或商品名稱後再搜尋");
+        return;
       }
-      renderPoGoodsPick();
-      syncPoOverviewFromPick();
+      const order = getWorkspaceOrder();
+      const channelName = (order && order.channelName) || "";
+      const bySku = {};
+      poLineItems.forEach((item) => {
+        bySku[normalizeSku(item.sku).toLowerCase()] = item;
+      });
+      let added = 0;
+      poPickRows.forEach((row) => {
+        if (!poPickRowMatchesFilter(row, poPickFilterQueries)) return;
+        const key = normalizeSku(row.sku).toLowerCase();
+        if (bySku[key]) {
+          bySku[key].sellableQty = row.sellableQty != null
+            ? Number(row.sellableQty)
+            : virtualAllocOf(channelName, row.sku);
+          return;
+        }
+        const line = toPoLineItem({
+          ...row,
+          qty: 0,
+          sellableQty: row.sellableQty != null ? Number(row.sellableQty) : virtualAllocOf(channelName, row.sku),
+          priceWithLabel: "",
+        });
+        poLineItems.push(line);
+        bySku[key] = line;
+        added += 1;
+      });
+      if (!added && !poLineItems.some((item) => poPickRowMatchesFilter(item, poPickFilterQueries))) {
+        alert("查無符合的通路商品");
+      }
+      if (order) order.items = collectEditGoods();
+      poEstMarginConfirmed = false;
+      resetPoEstMarginDisplay();
+      renderPoGoodsTable();
     }
 
     function clearPoPickFilter() {
       const input = document.getElementById("poPickFilterInput");
       if (input) input.value = "";
       poPickFilterQueries = [];
-      if (poPickImportSkus) {
-        poPickImportSkus = null;
-        poPickRows.forEach((row) => {
-          row.checked = false;
-          row.qty = 0;
-        });
-        syncPoOverviewFromPick();
-      }
-      renderPoGoodsPick();
-    }
-
-    function renderPoGoodsPick() {
-      const body = document.getElementById("editGoodsPickBody");
-      if (!body) return;
-      if (!poPickRows.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="5">此通路虛擬倉目前沒有可配商品</td></tr>`;
-        return;
-      }
-      const visible = visiblePoPickRows();
-      if (!visible.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="5">查無資料</td></tr>`;
-        return;
-      }
-      body.innerHTML = visible.map((row) => {
-        const step = 1;
-        const checked = !!row.checked;
-        const qtyVal = checked ? (Number(row.qty) || 0) : "";
-        const oversell = isPickQtyOversell(row);
-        return `
-        <tr data-sku="${escapeHtml(row.sku)}">
-          <td class="col-check"><input type="checkbox" data-pick="check"${checked ? " checked" : ""} /></td>
-          <td>${escapeHtml(row.sku)}</td>
-          <td class="col-name">${escapeHtml(row.name)}</td>
-          <td class="num col-alloc">${escapeHtml(row.sellableQty)}</td>
-          <td class="col-pick-qty">
-            <input type="number" min="0" step="${escapeHtml(step)}" data-pick="qty" value="${escapeHtml(qtyVal)}"${oversell ? ' class="is-oversell"' : ""} />
-          </td>
-        </tr>`;
-      }).join("");
-      syncPoPickQtyEnabled();
-    }
-
-    function syncPoOverviewFromPick(order) {
-      const target = order || getWorkspaceOrder();
-      const labelBySku = {};
-      poLineItems.forEach((item) => {
-        if (item && item.sku && hasPriceWithLabel(item)) labelBySku[item.sku] = item.priceWithLabel;
-      });
-      ((target && target.items) || []).forEach((item) => {
-        if (item && item.sku && hasPriceWithLabel(item) && labelBySku[item.sku] == null) {
-          labelBySku[item.sku] = item.priceWithLabel;
-        }
-      });
-      const pickSkus = new Set(poPickRows.map((row) => row.sku));
-      const leftover = ((target && target.items) || []).filter((item) => {
-        const sku = item && item.sku;
-        return sku && !pickSkus.has(sku) && (Number(item.qty) || 0) > 0;
-      });
-      const picked = poPickRows.filter((row) => row.checked && (Number(row.qty) || 0) > 0).map((row) => toPoLineItem({
-        ...row,
-        qty: Number(row.qty) || 0,
-        sellableQty: row.sellableQty,
-        priceNoLabel: row.priceNoLabel,
-        quote: row.quote,
-        orderQuote: row.priceNoLabel || row.orderQuote,
-        priceWithLabel: labelBySku[row.sku] || "",
-      }));
-      poLineItems = picked.concat(leftover.map((item) => toPoLineItem({
-        ...item,
-        priceWithLabel: labelBySku[item.sku] || item.priceWithLabel || "",
-      })));
-      if (target) target.items = collectEditGoods();
-      renderPoGoodsTable();
-      renderPoEstMargin(target);
+      poPickImportSkus = null;
     }
 
     function loadPoGoodsWorkspace(order) {
-      const selected = {};
-      (order && order.items || []).forEach((item) => {
-        if (!item || !item.sku) return;
-        selected[item.sku] = Number(item.qty) || 0;
-      });
-      poPickRows = channelPickCatalog(order && order.channelName).map((row) => {
-        const qty = snapPickQty(row, selected[row.sku] || 0);
-        return { ...row, checked: qty > 0, qty };
-      });
+      const channelName = (order && order.channelName) || "";
+      poPickRows = channelPickCatalog(channelName);
       const filterInput = document.getElementById("poPickFilterInput");
       if (filterInput) filterInput.value = "";
       poPickFilterQueries = [];
       poPickImportSkus = null;
-      syncPoOverviewFromPick(order);
-      renderPoGoodsPick();
+      const items = ((order && order.items) || []).filter((item) => item && item.sku && (Number(item.qty) || 0) > 0);
+      poLineItems = items.map((item) => toPoLineItem({
+        ...item,
+        sellableQty: item.sellableQty != null
+          ? Number(item.sellableQty)
+          : virtualAllocOf(channelName, item.sku),
+      }));
+      syncPoGoodsToolbar();
+      const marginEl = document.getElementById("poMarginOverview");
+      if (marginEl) marginEl.classList.remove("hidden");
+      if (poGoodsEditable()) {
+        resetPoEstMarginDisplay();
+      } else {
+        poEstMarginConfirmed = true;
+        renderPoEstMargin(order);
+      }
+      renderPoGoodsTable();
     }
 
-    function onPoPickField(e) {
+    function confirmPoOrderedGoods() {
       if (!poGoodsEditable()) return;
-      const tr = e.target.closest("tr[data-sku]");
-      if (!tr) return;
-      const row = poPickRows.find((item) => item.sku === tr.dataset.sku);
-      if (!row) return;
-      const pick = e.target.dataset.pick;
-      if (pick === "check") {
-        row.checked = e.target.checked;
-        if (!row.checked) row.qty = 0;
-        const qtyInput = tr.querySelector('[data-pick="qty"]');
-        if (qtyInput) qtyInput.value = row.checked ? (row.qty || "") : "";
-        syncPoPickQtyEnabled();
-        syncPoOverviewFromPick();
+      const order = getWorkspaceOrder();
+      const lines = collectEditGoods();
+      if (!lines.length) {
+        alert("請先搜尋並填寫預計出貨數量（正整數）");
         return;
       }
-      if (pick === "qty") {
-        if (!row.checked) {
-          e.target.value = "";
-          return;
-        }
-        let n = Math.floor(Number(e.target.value) || 0);
-        if (n < 0) n = 0;
-        if (e.type === "change") {
-          row.qty = snapPickQty(row, n);
-          e.target.value = row.qty || "";
-          e.target.classList.toggle("is-oversell", isPickQtyOversell(row));
-          syncPoOverviewFromPick();
-          return;
-        }
-        row.qty = n;
-        e.target.classList.toggle("is-oversell", isPickQtyOversell(row));
-        syncPoOverviewFromPick();
+      const bad = lines.find((row) => !Number.isInteger(Number(row.qty)) || Number(row.qty) <= 0);
+      if (bad) {
+        alert("預計出貨數量僅可填寫大於 0 的正整數");
+        return;
       }
+      if (order) order.items = lines;
+      poEstMarginConfirmed = true;
+      renderPoEstMargin(order);
+      alert("已確認下定商品，並試算預估營收／成本／毛利");
     }
 
     function updatePoQtyTotal() {
@@ -8563,25 +8508,36 @@
 
     function goodsPdfRowHtml(item, opts) {
       const d = goodsDisplayFields(item);
-      const qtyCell = opts && opts.qtyEditable
-        ? `<input type="number" min="0" data-field="qty" value="${escapeHtml(d.qty)}" />`
-        : escapeHtml(d.qty);
+      const editable = !!(opts && opts.qtyEditable);
+      const oversell = isOverviewQtyOversell(item);
+      const qtyVal = d.qty > 0 ? d.qty : "";
+      const qtyCell = editable
+        ? `<input type="number" min="1" step="1" data-field="qty" value="${escapeHtml(qtyVal)}"${oversell ? ' class="is-oversell"' : ""} />`
+        : escapeHtml(d.qty > 0 ? d.qty : "-");
       const priceLabelCell = goodsPriceWithLabelCellHtml(item, !!(opts && opts.priceLabelEditable));
       const orderNo = (opts && opts.orderNo) || currentEditOrderNo;
       const shippedMap = orderNo && orderNo !== "__new__" ? shippedQtyByKey(orderNo) : {};
       const shippedQty = shippedMap[itemKey(item)] || 0;
+      const sellable = item.sellableQty != null
+        ? Number(item.sellableQty)
+        : virtualAllocOf((getWorkspaceOrder() || {}).channelName || "", item.sku);
+      const opsCell = editable
+        ? `<td class="ops"><a data-del="1">刪除</a></td>`
+        : "";
       return `
-        <tr data-id="${escapeHtml(item.id)}">
+        <tr data-id="${escapeHtml(item.id)}" data-sku="${escapeHtml(d.sku)}">
           <td>${escapeHtml(d.sku)}</td>
           <td class="col-name">${escapeHtml(d.name)}</td>
-          <td class="num">${escapeHtml(d.pcs)}</td>
+          <td class="num" data-sync="pcs">${escapeHtml(d.pcs)}</td>
+          <td class="num col-alloc">${escapeHtml(sellable)}</td>
           <td class="col-qty">${qtyCell}</td>
-          <td class="num">${escapeHtml(d.carton)}</td>
+          <td class="num" data-sync="carton">${escapeHtml(d.carton)}</td>
           <td class="num">${escapeHtml(shippedQty)}</td>
-          <td class="num">${escapeHtml(pdfMoney(d.priceNo, 2))}</td>
+          <td class="num" data-sync="priceNo">${escapeHtml(pdfMoney(d.priceNo, 2))}</td>
           <td class="num col-price-label">${priceLabelCell}</td>
-          <td class="num">${escapeHtml(pdfMoney(d.amount, 2))}</td>
+          <td class="num" data-sync="amount">${escapeHtml(pdfMoney(d.amount, 2))}</td>
           <td>${escapeHtml(d.remark)}</td>
+          ${opsCell}
         </tr>`;
     }
 
@@ -8671,20 +8627,22 @@
 
     function renderPoGoodsTable() {
       const body = document.getElementById("editGoodsBody");
+      const editable = poGoodsEditable();
+      const cols = editable ? 12 : 11;
+      if (!body) return;
       if (!poLineItems.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="10">尚無商品明細</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="${cols}">${editable ? "請搜尋商品後展開至總攬" : "尚無商品明細"}</td></tr>`;
         updatePoQtyTotal();
-        renderPoEstMargin(getWorkspaceOrder());
         return;
       }
       const orderNo = (workspaceOrder && workspaceOrder.orderNo) || currentEditOrderNo;
       body.innerHTML = poLineItems.map((row) => goodsPdfRowHtml(row, {
-        qtyEditable: false,
-        priceLabelEditable: poGoodsEditable(),
+        qtyEditable: editable,
+        priceLabelEditable: editable,
         orderNo,
       })).join("");
       updatePoQtyTotal();
-      renderPoEstMargin(getWorkspaceOrder());
+      if (poEstMarginConfirmed || !editable) renderPoEstMargin(getWorkspaceOrder());
     }
 
     function poGoodsEditable() {
@@ -9397,7 +9355,7 @@
 
     function applyPickImportRecords(records) {
       const order = getWorkspaceOrder();
-      if (!order || !poGoodsEditable()) return;
+      if (!order || !poGoodsEditable()) return false;
       const bound = channelBoundSkuMap(order.channelName);
       const unbound = [];
       const invalidQty = [];
@@ -9435,27 +9393,43 @@
         return false;
       }
 
-      poPickRows.forEach((row) => {
-        row.checked = false;
-        row.qty = 0;
+      const channelName = order.channelName || "";
+      const bySku = {};
+      poLineItems.forEach((item) => {
+        bySku[normalizeSku(item.sku).toLowerCase()] = item;
       });
-      const importKeys = new Set();
       records.forEach((rec) => {
         const key = normalizeSku(rec.sku).toLowerCase();
-        const row = bound[key];
-        if (!row) return;
-        const target = poPickRows.find((item) => normalizeSku(item.sku).toLowerCase() === key);
-        if (!target) return;
-        target.checked = true;
-        target.qty = Number(rec.qty);
-        importKeys.add(key);
+        const catalog = bound[key] || poPickRows.find((item) => normalizeSku(item.sku).toLowerCase() === key);
+        if (!catalog) return;
+        const qty = Number(rec.qty) || 0;
+        const existing = bySku[key];
+        if (existing) {
+          existing.qty = qty;
+          existing.sellableQty = catalog.sellableQty != null
+            ? Number(catalog.sellableQty)
+            : virtualAllocOf(channelName, catalog.sku);
+          return;
+        }
+        const line = toPoLineItem({
+          ...catalog,
+          qty,
+          sellableQty: catalog.sellableQty != null
+            ? Number(catalog.sellableQty)
+            : virtualAllocOf(channelName, catalog.sku),
+          priceWithLabel: "",
+        });
+        poLineItems.push(line);
+        bySku[key] = line;
       });
-      poPickImportSkus = importKeys;
+      poPickImportSkus = null;
       poPickFilterQueries = [];
       const filterInput = document.getElementById("poPickFilterInput");
       if (filterInput) filterInput.value = "";
-      renderPoGoodsPick();
-      syncPoOverviewFromPick();
+      order.items = collectEditGoods();
+      poEstMarginConfirmed = false;
+      resetPoEstMarginDisplay();
+      renderPoGoodsTable();
       return true;
     }
 
@@ -9528,10 +9502,22 @@
       closeImportPoItemsModal();
     }
 
+    function refreshOverviewRowDerived(tr, item) {
+      if (!tr || !item) return;
+      const d = goodsDisplayFields(item);
+      const carton = tr.querySelector('[data-sync="carton"]');
+      const amount = tr.querySelector('[data-sync="amount"]');
+      if (carton) carton.textContent = d.carton;
+      if (amount) amount.textContent = pdfMoney(d.amount, 2);
+      const qtyInput = tr.querySelector('[data-field="qty"]');
+      if (qtyInput) qtyInput.classList.toggle("is-oversell", isOverviewQtyOversell(item));
+    }
+
     function onPoItemField(e) {
+      if (!poGoodsEditable()) return;
       const field = e.target.dataset.field;
       if (!field) return;
-      const tr = e.target.closest("tr");
+      const tr = e.target.closest("#editGoodsBody tr");
       if (!tr) return;
       const item = poLineItems.find((row) => row.id === tr.dataset.id);
       if (!item) return;
@@ -9550,15 +9536,44 @@
         e.target.value = normalized;
         return;
       }
+      if (field === "qty") {
+        const raw = String(e.target.value || "").trim();
+        if (e.type === "input") {
+          if (raw === "") {
+            item.qty = 0;
+            refreshOverviewRowDerived(tr, item);
+            updatePoQtyTotal();
+            poEstMarginConfirmed = false;
+            return;
+          }
+          const n = Math.floor(Number(raw));
+          if (!Number.isFinite(n) || n < 0) return;
+          item.qty = n;
+          refreshOverviewRowDerived(tr, item);
+          updatePoQtyTotal();
+          poEstMarginConfirmed = false;
+          return;
+        }
+        /* change：僅允許正整數 */
+        const n = Math.floor(Number(raw));
+        if (!Number.isInteger(n) || n <= 0) {
+          alert("預計出貨數量僅可填寫大於 0 的正整數");
+          e.target.value = item.qty > 0 ? String(item.qty) : "";
+          return;
+        }
+        item.qty = n;
+        e.target.value = String(n);
+        refreshOverviewRowDerived(tr, item);
+        updatePoQtyTotal();
+        const order = getWorkspaceOrder();
+        if (order) order.items = collectEditGoods();
+        poEstMarginConfirmed = false;
+        return;
+      }
       item[field] = e.target.value;
       if (field === "expiryType") {
         item.batch = batchesFor(item.expiryType)[0];
         renderPoGoodsTable();
-        return;
-      }
-      if (field === "qty") updatePoQtyTotal();
-      if (field === "orderQuote") {
-        e.target.closest(".quote-input-wrap")?.classList.toggle("has-warn", Number(item.orderQuote) === 0);
       }
     }
 
@@ -9622,11 +9637,12 @@
       return { revenue, cost, fee, marginAmt, marginRate };
     }
 
-    /** DEMO：預估毛利（下定商品即時） */
+    /** DEMO：預估毛利（確認下定後試算） */
     function demoEstMarginOf(order) {
-      const items = (poLineItems && poLineItems.length)
-        ? poLineItems
-        : ((order && order.items) || []);
+      const fromLines = (poLineItems || []).filter((item) => (Number(item.qty) || 0) > 0);
+      const items = fromLines.length
+        ? fromLines
+        : ((order && order.items) || []).filter((item) => (Number(item.qty) || 0) > 0);
       return demoMarginFromItems(items);
     }
 
@@ -9648,6 +9664,10 @@
       const el = document.getElementById("poMarginOverview");
       if (!el) return;
       el.classList.remove("hidden");
+      if (poGoodsEditable() && !poEstMarginConfirmed) {
+        resetPoEstMarginDisplay();
+        return;
+      }
       const m = demoEstMarginOf(order || getWorkspaceOrder());
       const money = (n) => (typeof accMoney === "function" ? accMoney(n) : String(n));
       const rev = document.getElementById("poEstRevenue");
@@ -9858,7 +9878,7 @@
       renderRelatedShips(order);
       setPoTab("basic");
       setOrderFormReadonly(orderFormMode === "view");
-      syncPoPickQtyEnabled();
+      syncPoGoodsToolbar();
       syncEditFooter(order, orderFormMode);
       showPage("order-edit");
     }
@@ -9876,10 +9896,13 @@
     function setOrderFormReadonly(readonly) {
       const page = document.getElementById("page-order-edit");
       page.classList.toggle("is-readonly", readonly);
-      const pick = document.getElementById("editGoodsPickSection");
-      if (pick) pick.classList.toggle("hidden", readonly);
-      /* 預估毛利總覽：建立／編輯／檢視皆顯示，數字隨下定商品同步 */
-      renderPoEstMargin(getWorkspaceOrder());
+      syncPoGoodsToolbar();
+      if (readonly) {
+        poEstMarginConfirmed = true;
+        renderPoEstMargin(getWorkspaceOrder());
+      } else {
+        resetPoEstMarginDisplay();
+      }
       page.querySelectorAll("input, select, textarea").forEach((el) => {
         if (el.closest("#poShipCreatePanel")) return;
         el.disabled = readonly || el.hasAttribute("data-lock");
@@ -10212,8 +10235,6 @@
     document.getElementById("poOversellWarnModal").addEventListener("click", (e) => {
       if (e.target.id === "poOversellWarnModal") closePoOversellWarnModal();
     });
-    document.getElementById("editGoodsPickBody").addEventListener("change", onPoPickField);
-    document.getElementById("editGoodsPickBody").addEventListener("input", onPoPickField);
     document.getElementById("poPickFilterSearch").addEventListener("click", applyPoPickFilter);
     document.getElementById("poPickFilterClear").addEventListener("click", clearPoPickFilter);
     document.getElementById("poPickFilterInput").addEventListener("keydown", (e) => {
@@ -10222,6 +10243,7 @@
         applyPoPickFilter();
       }
     });
+    document.getElementById("poConfirmGoodsBtn").addEventListener("click", confirmPoOrderedGoods);
     document.getElementById("editGoodsBody").addEventListener("input", onPoItemField);
     document.getElementById("editGoodsBody").addEventListener("change", onPoItemField);
     document.getElementById("editGoodsBody").addEventListener("click", (e) => {
@@ -10231,6 +10253,10 @@
       const tr = e.target.closest("tr");
       if (!tr) return;
       poLineItems = poLineItems.filter((row) => row.id !== tr.dataset.id);
+      const order = getWorkspaceOrder();
+      if (order) order.items = collectEditGoods();
+      poEstMarginConfirmed = false;
+      resetPoEstMarginDisplay();
       renderPoGoodsTable();
     });
 
