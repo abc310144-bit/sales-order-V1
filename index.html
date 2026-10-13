@@ -2542,6 +2542,7 @@
                     <th class="num">本次結算金額</th>
                     <th class="num">剩餘可結數量</th>
                     <th class="num">剩餘可結金額</th>
+                    <th>備註</th>
                   </tr>
                 </thead>
                 <tbody id="settleTableBody"></tbody>
@@ -2585,6 +2586,7 @@
                   <th class="num">本次結算金額</th>
                   <th class="num">剩餘可結數量</th>
                   <th class="num">剩餘可結金額</th>
+                  <th>備註</th>
                 </tr>
               </thead>
               <tbody id="channelSettleDetailBody"></tbody>
@@ -2702,6 +2704,7 @@
                   <th class="num">含稅單價</th>
                   <th class="num">稅額</th>
                   <th class="num">結算金額</th>
+                  <th>備註</th>
                 </tr>
               </thead>
               <tbody id="monthlyBillDetailBody"></tbody>
@@ -12386,10 +12389,17 @@
             status: settleSkuLineStatus(acceptQty, settledQty),
             checked: false,
             settleQty: 0,
+            remark: "",
           });
         });
       });
       return pool;
+    }
+
+    const SETTLE_REMARK_MAX = 20;
+
+    function normalizeSettleRemark(raw) {
+      return String(raw == null ? "" : raw).trim().slice(0, SETTLE_REMARK_MAX);
     }
 
     function inDateRange(dateStr, from, to) {
@@ -12461,13 +12471,14 @@
       all.disabled = !settleable.length;
       all.checked = settleable.length > 0 && settleable.every((row) => row.checked);
       if (!settleRows.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="15">請設定篩選條件後按「套用」，或使用「匯入結算商品」</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="16">請設定篩選條件後按「套用」，或使用「匯入結算商品」</td></tr>`;
         renderSettleSummary();
         return;
       }
       body.innerHTML = settleRows.map((row) => {
         const canFill = row.remain > 0;
         const remainQty = Math.max(0, row.remain - (row.checked ? row.settleQty : 0));
+        const remark = normalizeSettleRemark(row.remark);
         return `
         <tr data-settle-id="${escapeHtml(row.id)}">
           <td class="col-check"><input type="checkbox" data-settle-check="1"${row.checked ? " checked" : ""}${canFill ? "" : " disabled"} /></td>
@@ -12488,6 +12499,7 @@
           <td class="num" data-cell="settleAmt">${escapeHtml(accMoney((row.checked ? row.settleQty : 0) * row.price))}</td>
           <td class="num" data-cell="remainQty">${escapeHtml(remainQty)}</td>
           <td class="num" data-cell="remainAmt">${escapeHtml(accMoney(remainQty * row.price))}</td>
+          <td><input type="text" maxlength="${SETTLE_REMARK_MAX}" data-settle-remark="1" value="${escapeHtml(remark)}" placeholder="最多 ${SETTLE_REMARK_MAX} 字"${canFill ? "" : " disabled"} /></td>
         </tr>`;
       }).join("");
       renderSettleSummary();
@@ -12838,6 +12850,7 @@
           priceTaxed: taxed,
           tax: accRoundMoney(taxed - untaxed),
           amount: accRoundMoney(taxed * qty),
+          remark: normalizeSettleRemark(row.remark),
         };
       });
       const total = accRoundMoney(lines.reduce((sum, line) => sum + line.amount, 0));
@@ -13050,10 +13063,11 @@
       const lines = bill.lines || [];
       document.getElementById("monthlyBillDetailTotal").textContent = String(lines.length);
       if (!lines.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="9">無明細</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="10">無明細</td></tr>`;
       } else {
         body.innerHTML = lines.map((line) => {
           const tax = settleLineTaxFields(line);
+          const remark = normalizeSettleRemark(line.remark);
           return `
           <tr>
             <td>${escapeHtml(line.orderNo || "—")}</td>
@@ -13065,6 +13079,7 @@
             <td class="num">${escapeHtml(accMoney(tax.taxed))}</td>
             <td class="num">${escapeHtml(accMoney(tax.tax))}</td>
             <td class="num">${escapeHtml(accMoney(tax.amount))}</td>
+            <td>${remark ? escapeHtml(remark) : "-"}</td>
           </tr>`;
         }).join("");
       }
@@ -13268,6 +13283,7 @@
           remain,
           checked: false,
           settleQty: 0,
+          remark: "",
         };
       });
     }
@@ -13332,13 +13348,17 @@
       }
       if (!body) return;
       if (!settleRows.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="15">此訂單無可結算品項</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="16">此訂單無可結算品項</td></tr>`;
         renderChannelSettleDetailSummary();
         return;
       }
       body.innerHTML = settleRows.map((row) => {
         const remainQty = Math.max(0, row.remain - (row.checked ? row.settleQty : 0));
         const canFill = !readonly && row.remain > 0;
+        const remark = normalizeSettleRemark(row.remark);
+        const remarkCell = readonly
+          ? `<td>${remark ? escapeHtml(remark) : "-"}</td>`
+          : `<td><input type="text" maxlength="${SETTLE_REMARK_MAX}" data-settle-remark="1" value="${escapeHtml(remark)}" placeholder="最多 ${SETTLE_REMARK_MAX} 字"${canFill ? "" : " disabled"} /></td>`;
         return `
         <tr data-settle-id="${escapeHtml(row.id)}">
           <td class="col-check"><input type="checkbox" data-settle-check="1"${row.checked ? " checked" : ""}${canFill ? "" : " disabled"} /></td>
@@ -13359,6 +13379,7 @@
           <td class="num" data-cell="settleAmt">${escapeHtml(accMoney((row.checked ? row.settleQty : 0) * row.price))}</td>
           <td class="num" data-cell="remainQty">${escapeHtml(remainQty)}</td>
           <td class="num" data-cell="remainAmt">${escapeHtml(accMoney(remainQty * row.price))}</td>
+          ${remarkCell}
         </tr>`;
       }).join("");
       renderChannelSettleDetailSummary();
@@ -13727,8 +13748,16 @@
       renderChannelSettleDetailTable();
     });
     document.getElementById("channelSettleDetailBody").addEventListener("input", (e) => {
-      if (!e.target.matches("input[data-settle-qty]")) return;
       if (isSettleDetailReadonly()) return;
+      if (e.target.matches("input[data-settle-remark]")) {
+        const row = settleRowById(e.target.closest("tr").dataset.settleId);
+        if (!row) return;
+        const next = String(e.target.value || "").slice(0, SETTLE_REMARK_MAX);
+        if (next !== e.target.value) e.target.value = next;
+        row.remark = next;
+        return;
+      }
+      if (!e.target.matches("input[data-settle-qty]")) return;
       const tr = e.target.closest("tr");
       const row = settleRowById(tr.dataset.settleId);
       if (!row || !row.checked || row.remain <= 0) return;
@@ -13857,6 +13886,14 @@
       renderSettleTable();
     });
     document.getElementById("settleTableBody").addEventListener("input", (e) => {
+      if (e.target.matches("input[data-settle-remark]")) {
+        const row = settleRowById(e.target.closest("tr").dataset.settleId);
+        if (!row) return;
+        const next = String(e.target.value || "").slice(0, SETTLE_REMARK_MAX);
+        if (next !== e.target.value) e.target.value = next;
+        row.remark = next;
+        return;
+      }
       if (!e.target.matches("input[data-settle-qty]")) return;
       const tr = e.target.closest("tr");
       const row = settleRowById(tr.dataset.settleId);
