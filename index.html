@@ -2483,6 +2483,81 @@
           </div>
         </div>
 
+        <div class="page" id="page-channel-supply">
+          <div class="acc-page-head">
+            <div>
+              <a class="link" id="channelSupplyBack">← 返回通路商品列表</a>
+              <h2 class="form-title">供應商品列表</h2>
+              <div class="po-kind-meta" id="channelSupplyMeta"></div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" type="button" id="channelSupplyCreateBtn">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
+              新增商品
+            </button>
+            <button class="btn" type="button" id="channelSupplyToggleFilter">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M2 3h12l-4.5 5.2V13l-3-1.5V8.2L2 3z"/>
+              </svg>
+              篩選
+            </button>
+            <button class="btn" type="button" id="channelSupplyImportBtn">批次匯入</button>
+            <button class="btn" type="button" id="channelSupplyExportBtn">批次匯出</button>
+          </div>
+          <div class="demo-hint">
+            <strong>DEMO 提示｜供應商品列表</strong><br />
+            由「通路商品列表 → 供應商品列表」進入；顯示該通路綁定商品（假資料）。新增／編輯／刪除／匯入匯出功能待補。
+          </div>
+          <section class="filter hidden" id="channelSupplyFilterPanel">
+            <div class="filter-grid">
+              <div class="field">
+                <label>SKU(品號)</label>
+                <input id="channelSupplyFilterSku" type="text" placeholder="支援模糊查詢" />
+              </div>
+              <div class="field">
+                <label>品名</label>
+                <input id="channelSupplyFilterName" type="text" placeholder="支援模糊查詢" />
+              </div>
+              <div class="field">
+                <label>barcode</label>
+                <input id="channelSupplyFilterBarcode" type="text" placeholder="支援模糊查詢" />
+              </div>
+            </div>
+            <div class="filter-actions">
+              <button class="btn" type="button" id="channelSupplyFilterClear">清除篩選條件</button>
+              <button class="btn btn-primary" type="button" id="channelSupplyFilterApply">套用</button>
+            </div>
+          </section>
+          <div class="table-meta">
+            總共 <span id="channelSupplyTotal">0</span> 筆，每頁顯示
+            <select id="channelSupplyPageSize" disabled><option>20</option></select>
+            筆
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="col-check"><input type="checkbox" id="channelSupplyCheckAll" aria-label="全選" /></th>
+                  <th>編號</th>
+                  <th>SKU(品號)</th>
+                  <th>barcode</th>
+                  <th>品名</th>
+                  <th class="num">商品售價(TWD)</th>
+                  <th class="num">商品前抽(%)</th>
+                  <th class="num">商品報價(TWD)(含稅)</th>
+                  <th class="num">商品後扣(%)</th>
+                  <th class="num">箱入數</th>
+                  <th class="num">允收天數</th>
+                  <th>通路商品編號</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="channelSupplyBody"></tbody>
+            </table>
+          </div>
+        </div>
+
         <div class="page" id="page-channel-settle">
           <div class="channel-settle-mode" id="channelSettleModeGroup" role="group" aria-label="結算類型">
             <label class="radio-line"><input type="checkbox" id="channelSettleModeBuyout" data-channel-settle-mode="buyout" checked /> 買斷、轉單結算</label>
@@ -4610,6 +4685,7 @@
       else if (page === "acceptance-view") menuPage = "acceptance";
       else if (page === "channel-settle-detail" || page === "settlement") menuPage = "channel-settle";
       else if (page === "monthly-bill-detail") menuPage = "monthly-bill";
+      else if (page === "channel-supply") menuPage = "channel-products";
       else if (page === "ship-accept") menuPage = "shipping";
       if (page === "settlement") page = "channel-settle";
       if (page === "acceptance" || page === "acceptance-view") {
@@ -4627,6 +4703,9 @@
       if (page === "channel-products") {
         document.getElementById("channelProductFilterPanel")?.classList.remove("hidden");
         if (typeof renderChannelProductTable === "function") renderChannelProductTable();
+      }
+      if (page === "channel-supply") {
+        if (typeof renderChannelSupplyTable === "function") renderChannelSupplyTable();
       }
       if (page === "channel-settle") {
         document.getElementById("channelSettleFilterPanel")?.classList.remove("hidden");
@@ -4650,6 +4729,8 @@
         document.title = "線上出貨單管理 - UrMart";
       } else if (page === "channel-products") {
         document.title = "通路商品列表 - UrMart";
+      } else if (page === "channel-supply") {
+        document.title = "供應商品列表 - UrMart";
       } else if (page === "channel-settle" || page === "channel-settle-detail") {
         document.title = "通路結算 - UrMart";
       } else if (page === "monthly-bill" || page === "monthly-bill-detail") {
@@ -6638,6 +6719,102 @@
       document.querySelectorAll("[data-channel-product-pane]").forEach((pane) => {
         pane.classList.toggle("hidden", pane.dataset.channelProductPane !== name);
       });
+    }
+
+    let channelSupplyChannelName = "";
+    let channelSupplyRows = [];
+
+    function demoBarcodeOf(sku, productCode) {
+      const fromCode = String(productCode || "").replace(/\D/g, "");
+      if (fromCode.length >= 8) return fromCode.slice(-13);
+      const digits = String(sku || "").replace(/\D/g, "") || "1001";
+      return (`47130256${digits}000000`).slice(0, 13);
+    }
+
+    function buildChannelSupplyRows(channelName) {
+      const catalog = typeof channelPickCatalog === "function"
+        ? channelPickCatalog(channelName)
+        : (typeof mockItemsFor === "function" ? mockItemsFor(channelName) : []);
+      return catalog.map((item, idx) => {
+        const quote = Number(item.quote) || Number(String(item.quote || "").replace(/,/g, "")) || 0;
+        const sell = quote > 0 ? Math.round(quote * 1.35) : null;
+        return {
+          id: 14500 - idx,
+          sku: item.sku || "",
+          barcode: demoBarcodeOf(item.sku, item.productCode),
+          name: item.name || "",
+          sellPrice: sell,
+          frontRate: "0.000",
+          quoteTax: quote > 0 ? quote : null,
+          backRate: "0.000",
+          pcsPerCarton: Number(item.pcsPerCarton) || 0,
+          acceptDays: 1,
+          channelProductNo: "",
+        };
+      });
+    }
+
+    function getChannelSupplyFiltered() {
+      const skuQ = ((document.getElementById("channelSupplyFilterSku") || {}).value || "").trim().toLowerCase();
+      const nameQ = ((document.getElementById("channelSupplyFilterName") || {}).value || "").trim().toLowerCase();
+      const bcQ = ((document.getElementById("channelSupplyFilterBarcode") || {}).value || "").trim().toLowerCase();
+      return channelSupplyRows.filter((row) => {
+        if (skuQ && !String(row.sku || "").toLowerCase().includes(skuQ)) return false;
+        if (nameQ && !String(row.name || "").toLowerCase().includes(nameQ)) return false;
+        if (bcQ && !String(row.barcode || "").toLowerCase().includes(bcQ)) return false;
+        return true;
+      });
+    }
+
+    function renderChannelSupplyTable(list) {
+      const data = list || getChannelSupplyFiltered();
+      const body = document.getElementById("channelSupplyBody");
+      const total = document.getElementById("channelSupplyTotal");
+      const all = document.getElementById("channelSupplyCheckAll");
+      if (total) total.textContent = String(data.length);
+      if (all) {
+        all.checked = false;
+        all.disabled = !data.length;
+      }
+      if (!body) return;
+      if (!data.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="13">查無資料</td></tr>`;
+        return;
+      }
+      body.innerHTML = data.map((row) => `
+        <tr data-channel-supply-id="${escapeHtml(row.id)}">
+          <td class="col-check"><input type="checkbox" data-channel-supply-check="1" /></td>
+          <td>${escapeHtml(row.id)}</td>
+          <td>${escapeHtml(row.sku || "—")}</td>
+          <td>${escapeHtml(row.barcode || "—")}</td>
+          <td>${escapeHtml(row.name || "—")}</td>
+          <td class="num">${row.sellPrice == null ? "N/A" : escapeHtml(row.sellPrice)}</td>
+          <td class="num">${escapeHtml(row.frontRate)}</td>
+          <td class="num">${row.quoteTax == null ? "N/A" : escapeHtml(row.quoteTax)}</td>
+          <td class="num">${escapeHtml(row.backRate)}</td>
+          <td class="num">${escapeHtml(row.pcsPerCarton || "—")}</td>
+          <td class="num">${escapeHtml(row.acceptDays)}</td>
+          <td>${escapeHtml(row.channelProductNo || "N/A")}</td>
+          <td class="ops channel-product-ops">
+            <a data-channel-supply-edit="${escapeHtml(row.id)}">編輯</a>
+            <a data-channel-supply-del="${escapeHtml(row.id)}">刪除</a>
+          </td>
+        </tr>`).join("");
+    }
+
+    function openChannelSupplyList(channelName) {
+      channelSupplyChannelName = channelName || "";
+      channelSupplyRows = buildChannelSupplyRows(channelSupplyChannelName);
+      const meta = document.getElementById("channelSupplyMeta");
+      if (meta) meta.textContent = channelSupplyChannelName
+        ? `通路：${channelSupplyChannelName}｜共 ${channelSupplyRows.length} 項供應商品`
+        : "";
+      document.getElementById("channelSupplyFilterSku").value = "";
+      document.getElementById("channelSupplyFilterName").value = "";
+      document.getElementById("channelSupplyFilterBarcode").value = "";
+      document.getElementById("channelSupplyFilterPanel")?.classList.add("hidden");
+      renderChannelSupplyTable(channelSupplyRows);
+      showPage("channel-supply");
     }
 
     const VENDOR_COMPANY = "饌元股份有限公司";
@@ -14120,12 +14297,54 @@
       }
       const supplyName = e.target.dataset.channelProductSupply;
       if (supplyName) {
-        alert(`DEMO：「${supplyName}」供應商品列表功能待補`);
+        openChannelSupplyList(supplyName);
         return;
       }
       const contractName = e.target.dataset.channelProductContract;
       if (contractName) {
         alert(`DEMO：檢視「${contractName}」合約功能待補`);
+      }
+    });
+
+    document.getElementById("channelSupplyBack")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      channelSupplyChannelName = "";
+      channelSupplyRows = [];
+      showPage("channel-products");
+    });
+    document.getElementById("channelSupplyToggleFilter")?.addEventListener("click", () => {
+      document.getElementById("channelSupplyFilterPanel")?.classList.toggle("hidden");
+    });
+    document.getElementById("channelSupplyFilterApply")?.addEventListener("click", () => {
+      renderChannelSupplyTable();
+    });
+    document.getElementById("channelSupplyFilterClear")?.addEventListener("click", () => {
+      document.getElementById("channelSupplyFilterSku").value = "";
+      document.getElementById("channelSupplyFilterName").value = "";
+      document.getElementById("channelSupplyFilterBarcode").value = "";
+      renderChannelSupplyTable();
+    });
+    document.getElementById("channelSupplyCreateBtn")?.addEventListener("click", () => {
+      alert("DEMO：新增商品功能待補");
+    });
+    document.getElementById("channelSupplyImportBtn")?.addEventListener("click", () => {
+      alert("DEMO：批次匯入功能待補");
+    });
+    document.getElementById("channelSupplyExportBtn")?.addEventListener("click", () => {
+      alert("DEMO：批次匯出功能待補");
+    });
+    document.getElementById("channelSupplyCheckAll")?.addEventListener("change", (e) => {
+      document.querySelectorAll("#channelSupplyBody input[data-channel-supply-check]").forEach((el) => {
+        el.checked = e.target.checked;
+      });
+    });
+    document.getElementById("channelSupplyBody")?.addEventListener("click", (e) => {
+      if (e.target.dataset.channelSupplyEdit) {
+        alert("DEMO：編輯商品功能待補");
+        return;
+      }
+      if (e.target.dataset.channelSupplyDel) {
+        alert("DEMO：刪除商品功能待補");
       }
     });
 
