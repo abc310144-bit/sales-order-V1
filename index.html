@@ -1929,6 +1929,19 @@
       font-size: 14px;
     }
     .channel-product-ops a + a { margin-left: 12px; }
+    .modal-card.channel-supply-edit-card { width: min(560px, 100%); }
+    .channel-supply-edit-card .modal-body .form-row {
+      grid-template-columns: 140px minmax(0, 1fr);
+      margin-bottom: 12px;
+    }
+    .channel-supply-sku-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+    .channel-supply-sku-row input { flex: 1; min-width: 0; }
+    .channel-supply-sku-row .btn { flex: 0 0 auto; white-space: nowrap; }
     .acc-basic-layout {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
@@ -4312,6 +4325,84 @@
       <div class="modal-foot">
         <span class="upload-limit-note">註：匯入上限為 1000 筆</span>
         <button type="button" class="btn btn-primary" id="accImportConfirm" disabled>匯入</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask hidden" id="channelSupplyEditModal">
+    <div class="modal-card channel-supply-edit-card" role="dialog" aria-labelledby="channelSupplyEditTitle">
+      <div class="modal-head">
+        <h2 id="channelSupplyEditTitle">編輯商品</h2>
+        <button type="button" class="modal-close" id="channelSupplyEditClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label class="required" for="channelSupplyEditSku">SKU(品號)</label>
+          <div class="form-ctrl">
+            <div class="channel-supply-sku-row">
+              <input type="text" id="channelSupplyEditSku" readonly disabled />
+              <button type="button" class="btn" id="channelSupplyEditVerifySku" disabled>驗證SKU(品號)</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="required" for="channelSupplyEditName">品名</label>
+          <div class="form-ctrl">
+            <input type="text" id="channelSupplyEditName" readonly disabled />
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="required" for="channelSupplyEditSellPrice">商品售價(TWD)</label>
+          <div class="form-ctrl">
+            <input type="number" id="channelSupplyEditSellPrice" min="0" step="1" />
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="required" for="channelSupplyEditFrontRate">商品前抽(%)</label>
+          <div class="form-ctrl">
+            <div class="fee-suffix-field">
+              <input type="number" id="channelSupplyEditFrontRate" min="0" step="0.001" />
+              <span class="suffix">%</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="required" for="channelSupplyEditQuote">商品報價(TWD)</label>
+          <div class="form-ctrl">
+            <input type="number" id="channelSupplyEditQuote" min="0" step="1" />
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="channelSupplyEditBackRate">商品後扣(%)</label>
+          <div class="form-ctrl">
+            <div class="fee-suffix-field">
+              <input type="number" id="channelSupplyEditBackRate" min="0" step="0.001" disabled />
+              <span class="suffix">%</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="channelSupplyEditPcs">箱入數</label>
+          <div class="form-ctrl">
+            <input type="number" id="channelSupplyEditPcs" min="0" step="1" />
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="channelSupplyEditAcceptDays">允收天數</label>
+          <div class="form-ctrl">
+            <input type="number" id="channelSupplyEditAcceptDays" min="0" step="1" />
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="channelSupplyEditChannelSku">通路商品編號</label>
+          <div class="form-ctrl">
+            <input type="text" id="channelSupplyEditChannelSku" disabled placeholder="驗證完成 SKU(品號)後才能輸入" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="channelSupplyEditCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="channelSupplyEditConfirm">確定</button>
       </div>
     </div>
   </div>
@@ -6815,6 +6906,67 @@
       document.getElementById("channelSupplyFilterPanel")?.classList.add("hidden");
       renderChannelSupplyTable(channelSupplyRows);
       showPage("channel-supply");
+    }
+
+    let channelSupplyEditId = "";
+
+    function closeChannelSupplyEditModal() {
+      channelSupplyEditId = "";
+      document.getElementById("channelSupplyEditModal")?.classList.add("hidden");
+    }
+
+    function openChannelSupplyEditModal(rowId) {
+      const row = channelSupplyRows.find((item) => String(item.id) === String(rowId));
+      if (!row) {
+        alert("找不到商品");
+        return;
+      }
+      channelSupplyEditId = String(row.id);
+      document.getElementById("channelSupplyEditSku").value = row.sku || "";
+      document.getElementById("channelSupplyEditName").value = row.name || "";
+      document.getElementById("channelSupplyEditSellPrice").value =
+        row.sellPrice == null || row.sellPrice === "" ? "" : row.sellPrice;
+      document.getElementById("channelSupplyEditFrontRate").value = row.frontRate ?? "0.000";
+      document.getElementById("channelSupplyEditQuote").value =
+        row.quoteTax == null || row.quoteTax === "" ? "" : row.quoteTax;
+      document.getElementById("channelSupplyEditBackRate").value = row.backRate ?? "0.000";
+      document.getElementById("channelSupplyEditPcs").value = row.pcsPerCarton || "";
+      document.getElementById("channelSupplyEditAcceptDays").value = row.acceptDays ?? 1;
+      document.getElementById("channelSupplyEditChannelSku").value = row.channelProductNo || "";
+      document.getElementById("channelSupplyEditChannelSku").placeholder = "驗證完成 SKU(品號)後才能輸入";
+      document.getElementById("channelSupplyEditModal")?.classList.remove("hidden");
+    }
+
+    function confirmChannelSupplyEdit() {
+      const row = channelSupplyRows.find((item) => String(item.id) === String(channelSupplyEditId));
+      if (!row) {
+        closeChannelSupplyEditModal();
+        return;
+      }
+      const sellRaw = document.getElementById("channelSupplyEditSellPrice").value.trim();
+      const frontRaw = document.getElementById("channelSupplyEditFrontRate").value.trim();
+      const quoteRaw = document.getElementById("channelSupplyEditQuote").value.trim();
+      const pcsRaw = document.getElementById("channelSupplyEditPcs").value.trim();
+      const daysRaw = document.getElementById("channelSupplyEditAcceptDays").value.trim();
+      if (sellRaw === "" || !Number.isFinite(Number(sellRaw)) || Number(sellRaw) < 0) {
+        alert("請填寫商品售價(TWD)");
+        return;
+      }
+      if (frontRaw === "" || !Number.isFinite(Number(frontRaw)) || Number(frontRaw) < 0) {
+        alert("請填寫商品前抽(%)");
+        return;
+      }
+      if (quoteRaw === "" || !Number.isFinite(Number(quoteRaw)) || Number(quoteRaw) < 0) {
+        alert("請填寫商品報價(TWD)");
+        return;
+      }
+      row.sellPrice = Number(sellRaw);
+      row.frontRate = Number(frontRaw).toFixed(3);
+      row.quoteTax = Number(quoteRaw);
+      row.pcsPerCarton = pcsRaw === "" ? 0 : Math.max(0, Math.floor(Number(pcsRaw) || 0));
+      row.acceptDays = daysRaw === "" ? 0 : Math.max(0, Math.floor(Number(daysRaw) || 0));
+      closeChannelSupplyEditModal();
+      renderChannelSupplyTable();
     }
 
     const VENDOR_COMPANY = "饌元股份有限公司";
@@ -14339,13 +14491,20 @@
       });
     });
     document.getElementById("channelSupplyBody")?.addEventListener("click", (e) => {
-      if (e.target.dataset.channelSupplyEdit) {
-        alert("DEMO：編輯商品功能待補");
+      const editId = e.target.dataset.channelSupplyEdit;
+      if (editId) {
+        openChannelSupplyEditModal(editId);
         return;
       }
       if (e.target.dataset.channelSupplyDel) {
         alert("DEMO：刪除商品功能待補");
       }
+    });
+    document.getElementById("channelSupplyEditClose")?.addEventListener("click", closeChannelSupplyEditModal);
+    document.getElementById("channelSupplyEditCancel")?.addEventListener("click", closeChannelSupplyEditModal);
+    document.getElementById("channelSupplyEditConfirm")?.addEventListener("click", confirmChannelSupplyEdit);
+    document.getElementById("channelSupplyEditModal")?.addEventListener("click", (e) => {
+      if (e.target.id === "channelSupplyEditModal") closeChannelSupplyEditModal();
     });
 
     document.getElementById("channelSettleAccordionBtn").addEventListener("click", () => {
