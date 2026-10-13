@@ -2410,7 +2410,7 @@
                   </select>
                 </div>
                 <div class="field">
-                  <label>建立時間</label>
+                  <label>驗收時間</label>
                   <div class="range">
                     <input id="channelSettleFilterFrom" type="date" />
                     <span class="sep">→</span>
@@ -2451,6 +2451,7 @@
                     <th>狀態</th>
                     <th class="num">實際驗收數量</th>
                     <th class="num">剩餘可結金額</th>
+                    <th>驗收時間</th>
                     <th>操作</th>
                   </tr>
                 </thead>
@@ -13362,7 +13363,7 @@
       syncChannelSettleBatchUi(data);
       if (!body) return;
       if (!data.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="7">查無資料</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="8">查無資料</td></tr>`;
         return;
       }
       body.innerHTML = data.map((row) => {
@@ -13380,6 +13381,7 @@
           <td>${statusTag(row.status)}</td>
           <td class="num">${escapeHtml(row.acceptQty)}</td>
           <td class="num">${escapeHtml(accMoney(row.remainAmount))}</td>
+          <td>${escapeHtml(row.settleableAt || "—")}</td>
           <td class="ops">
             <a data-channel-settle-view="${escapeHtml(row.orderNo)}">檢視</a>
             ${canSettle
