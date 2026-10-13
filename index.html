@@ -6961,6 +6961,8 @@
     }
 
     let channelSupplyEditId = "";
+    let channelSupplyFormMode = "edit"; // edit | create
+    let channelSupplySkuVerified = false;
 
     function channelSupplyEditTaxMode() {
       const untaxed = document.getElementById("channelSupplyEditTaxModeUntaxed");
@@ -6996,9 +6998,138 @@
       return parts;
     }
 
+    function setChannelSupplySkuLock(locked) {
+      const skuEl = document.getElementById("channelSupplyEditSku");
+      const verifyBtn = document.getElementById("channelSupplyEditVerifySku");
+      const nameEl = document.getElementById("channelSupplyEditName");
+      const channelSkuEl = document.getElementById("channelSupplyEditChannelSku");
+      if (skuEl) {
+        skuEl.readOnly = locked;
+        skuEl.disabled = locked;
+      }
+      if (verifyBtn) verifyBtn.disabled = locked;
+      if (nameEl) {
+        nameEl.readOnly = true;
+        nameEl.disabled = true;
+      }
+      if (channelSkuEl) {
+        channelSkuEl.disabled = locked || !channelSupplySkuVerified;
+        if (channelSkuEl.disabled && !channelSkuEl.value) {
+          channelSkuEl.placeholder = "驗證完成 SKU(品號)後才能輸入";
+        }
+      }
+    }
+
+    function findChannelSupplySkuMeta(skuInput) {
+      const key = normalizeSku(skuInput).toLowerCase();
+      if (!key) return null;
+      const fromPool = (typeof mockItemPool !== "undefined" ? mockItemPool : [])
+        .find((item) => normalizeSku(item.sku).toLowerCase() === key);
+      if (fromPool) {
+        const meta = typeof metaForSku === "function" ? metaForSku(fromPool.sku) : {};
+        return {
+          sku: fromPool.sku,
+          name: fromPool.name || "",
+          barcode: demoBarcodeOf(fromPool.sku, meta.productCode),
+          pcsPerCarton: Number(fromPool.pcsPerCarton) || 0,
+          quote: Number(meta.quote) || 0,
+          productCode: meta.productCode || "",
+        };
+      }
+      const catalog = typeof channelPickCatalog === "function"
+        ? channelPickCatalog(channelSupplyChannelName)
+        : [];
+      const hit = catalog.find((item) => normalizeSku(item.sku).toLowerCase() === key);
+      if (!hit) return null;
+      return {
+        sku: hit.sku,
+        name: hit.name || "",
+        barcode: demoBarcodeOf(hit.sku, hit.productCode),
+        pcsPerCarton: Number(hit.pcsPerCarton) || 0,
+        quote: Number(hit.quote) || 0,
+        productCode: hit.productCode || "",
+      };
+    }
+
+    function verifyChannelSupplySku() {
+      if (channelSupplyFormMode !== "create") return;
+      const skuRaw = document.getElementById("channelSupplyEditSku").value.trim();
+      if (!skuRaw) {
+        alert("請輸入 SKU(品號)");
+        return;
+      }
+      const meta = findChannelSupplySkuMeta(skuRaw);
+      if (!meta) {
+        channelSupplySkuVerified = false;
+        document.getElementById("channelSupplyEditName").value = "";
+        setChannelSupplySkuLock(false);
+        alert("查無此 SKU(品號)");
+        return;
+      }
+      if (channelSupplyRows.some((row) => normalizeSku(row.sku).toLowerCase() === normalizeSku(meta.sku).toLowerCase())) {
+        alert("此 SKU(品號) 已在供應商品列表中");
+        return;
+      }
+      channelSupplySkuVerified = true;
+      document.getElementById("channelSupplyEditSku").value = meta.sku;
+      document.getElementById("channelSupplyEditName").value = meta.name || "";
+      if (meta.pcsPerCarton) document.getElementById("channelSupplyEditPcs").value = meta.pcsPerCarton;
+      if (meta.quote > 0 && !document.getElementById("channelSupplyEditQuote").value) {
+        setChannelSupplyEditTaxMode("taxed");
+        document.getElementById("channelSupplyEditQuote").value = meta.quote;
+        refreshChannelSupplyEditQuoteCalc();
+      }
+      setChannelSupplySkuLock(false);
+      document.getElementById("channelSupplyEditChannelSku").disabled = false;
+      alert("SKU(品號) 驗證成功");
+    }
+
+    function syncChannelSupplyMetaCount() {
+      const meta = document.getElementById("channelSupplyMeta");
+      if (meta && channelSupplyChannelName) {
+        meta.textContent = `通路：${channelSupplyChannelName}｜共 ${channelSupplyRows.length} 項供應商品`;
+      }
+    }
+
+    function nextChannelSupplyId() {
+      const maxId = channelSupplyRows.reduce((max, row) => Math.max(max, Number(row.id) || 0), 14500);
+      return maxId + 1;
+    }
+
     function closeChannelSupplyEditModal() {
       channelSupplyEditId = "";
+      channelSupplyFormMode = "edit";
+      channelSupplySkuVerified = false;
       document.getElementById("channelSupplyEditModal")?.classList.add("hidden");
+    }
+
+    function fillChannelSupplyFormDefaults() {
+      document.getElementById("channelSupplyEditSku").value = "";
+      document.getElementById("channelSupplyEditName").value = "";
+      document.getElementById("channelSupplyEditSellPrice").value = "";
+      document.getElementById("channelSupplyEditFrontRate").value = "0.000";
+      setChannelSupplyEditTaxMode("taxed");
+      document.getElementById("channelSupplyEditQuote").value = "";
+      document.getElementById("channelSupplyEditBackRate").value = "0.000";
+      document.getElementById("channelSupplyEditPcs").value = "";
+      document.getElementById("channelSupplyEditAcceptDays").value = "1";
+      document.getElementById("channelSupplyEditChannelSku").value = "";
+      document.getElementById("channelSupplyEditChannelSku").placeholder = "驗證完成 SKU(品號)後才能輸入";
+      refreshChannelSupplyEditQuoteCalc();
+    }
+
+    function openChannelSupplyCreateModal() {
+      if (!channelSupplyChannelName) {
+        alert("請先選擇通路");
+        return;
+      }
+      channelSupplyFormMode = "create";
+      channelSupplyEditId = "";
+      channelSupplySkuVerified = false;
+      document.getElementById("channelSupplyEditTitle").textContent = "新增商品";
+      fillChannelSupplyFormDefaults();
+      setChannelSupplySkuLock(false);
+      document.getElementById("channelSupplyEditModal")?.classList.remove("hidden");
     }
 
     function openChannelSupplyEditModal(rowId) {
@@ -7007,8 +7138,11 @@
         alert("找不到商品");
         return;
       }
+      channelSupplyFormMode = "edit";
+      channelSupplySkuVerified = true;
       channelSupplyEditId = String(row.id);
       const mode = row.quoteTaxMode === "untaxed" ? "untaxed" : "taxed";
+      document.getElementById("channelSupplyEditTitle").textContent = "編輯商品";
       document.getElementById("channelSupplyEditSku").value = row.sku || "";
       document.getElementById("channelSupplyEditName").value = row.name || "";
       document.getElementById("channelSupplyEditSellPrice").value =
@@ -7023,22 +7157,33 @@
       document.getElementById("channelSupplyEditAcceptDays").value = row.acceptDays ?? 1;
       document.getElementById("channelSupplyEditChannelSku").value = row.channelProductNo || "";
       document.getElementById("channelSupplyEditChannelSku").placeholder = "驗證完成 SKU(品號)後才能輸入";
+      setChannelSupplySkuLock(true);
       refreshChannelSupplyEditQuoteCalc();
       document.getElementById("channelSupplyEditModal")?.classList.remove("hidden");
     }
 
     function confirmChannelSupplyEdit() {
-      const row = channelSupplyRows.find((item) => String(item.id) === String(channelSupplyEditId));
-      if (!row) {
-        closeChannelSupplyEditModal();
-        return;
-      }
       const sellRaw = document.getElementById("channelSupplyEditSellPrice").value.trim();
       const frontRaw = document.getElementById("channelSupplyEditFrontRate").value.trim();
       const quoteRaw = document.getElementById("channelSupplyEditQuote").value.trim();
       const pcsRaw = document.getElementById("channelSupplyEditPcs").value.trim();
       const daysRaw = document.getElementById("channelSupplyEditAcceptDays").value.trim();
+      const skuRaw = document.getElementById("channelSupplyEditSku").value.trim();
+      const nameRaw = document.getElementById("channelSupplyEditName").value.trim();
+      const channelSkuRaw = document.getElementById("channelSupplyEditChannelSku").value.trim();
       const mode = channelSupplyEditTaxMode();
+      if (channelSupplyFormMode === "create" && !channelSupplySkuVerified) {
+        alert("請先驗證 SKU(品號)");
+        return;
+      }
+      if (!skuRaw) {
+        alert("請填寫 SKU(品號)");
+        return;
+      }
+      if (!nameRaw) {
+        alert("請填寫品名");
+        return;
+      }
       if (sellRaw === "" || !Number.isFinite(Number(sellRaw)) || Number(sellRaw) < 0) {
         alert("請填寫商品售價(TWD)");
         return;
@@ -7052,14 +7197,36 @@
         return;
       }
       const parts = calcChannelSupplyQuote(quoteRaw, mode);
-      row.sellPrice = Number(sellRaw);
-      row.frontRate = Number(frontRaw).toFixed(3);
-      row.quoteTaxMode = mode;
-      row.quoteTaxed = parts.taxed;
-      row.quoteUntaxed = parts.untaxed;
-      row.quoteTaxAmount = parts.tax;
-      row.pcsPerCarton = pcsRaw === "" ? 0 : Math.max(0, Math.floor(Number(pcsRaw) || 0));
-      row.acceptDays = daysRaw === "" ? 0 : Math.max(0, Math.floor(Number(daysRaw) || 0));
+      const payload = {
+        sellPrice: Number(sellRaw),
+        frontRate: Number(frontRaw).toFixed(3),
+        quoteTaxMode: mode,
+        quoteTaxed: parts.taxed,
+        quoteUntaxed: parts.untaxed,
+        quoteTaxAmount: parts.tax,
+        pcsPerCarton: pcsRaw === "" ? 0 : Math.max(0, Math.floor(Number(pcsRaw) || 0)),
+        acceptDays: daysRaw === "" ? 0 : Math.max(0, Math.floor(Number(daysRaw) || 0)),
+        channelProductNo: channelSkuRaw,
+      };
+      if (channelSupplyFormMode === "create") {
+        const meta = findChannelSupplySkuMeta(skuRaw) || {};
+        channelSupplyRows.unshift({
+          id: nextChannelSupplyId(),
+          sku: meta.sku || skuRaw,
+          barcode: meta.barcode || demoBarcodeOf(skuRaw, meta.productCode),
+          name: nameRaw,
+          backRate: "0.000",
+          ...payload,
+        });
+        syncChannelSupplyMetaCount();
+      } else {
+        const row = channelSupplyRows.find((item) => String(item.id) === String(channelSupplyEditId));
+        if (!row) {
+          closeChannelSupplyEditModal();
+          return;
+        }
+        Object.assign(row, payload);
+      }
       closeChannelSupplyEditModal();
       renderChannelSupplyTable();
     }
@@ -14572,7 +14739,19 @@
       renderChannelSupplyTable();
     });
     document.getElementById("channelSupplyCreateBtn")?.addEventListener("click", () => {
-      alert("DEMO：新增商品功能待補");
+      openChannelSupplyCreateModal();
+    });
+    document.getElementById("channelSupplyEditVerifySku")?.addEventListener("click", verifyChannelSupplySku);
+    document.getElementById("channelSupplyEditSku")?.addEventListener("input", () => {
+      if (channelSupplyFormMode !== "create") return;
+      channelSupplySkuVerified = false;
+      document.getElementById("channelSupplyEditName").value = "";
+      const channelSkuEl = document.getElementById("channelSupplyEditChannelSku");
+      if (channelSkuEl) {
+        channelSkuEl.value = "";
+        channelSkuEl.disabled = true;
+        channelSkuEl.placeholder = "驗證完成 SKU(品號)後才能輸入";
+      }
     });
     document.getElementById("channelSupplyImportBtn")?.addEventListener("click", () => {
       alert("DEMO：批次匯入功能待補");
