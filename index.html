@@ -3577,7 +3577,7 @@
                         <th class="num col-alloc">當前可賣量</th>
                         <th>預計出貨數量(下定數量)</th>
                         <th>訂購總箱數</th>
-                        <th class="num">實際出貨數</th>
+                        <th class="num" id="editGoodsShippedHead">實際出貨數</th>
                         <th>單價（不含標）</th>
                         <th>單價（含標）</th>
                         <th>合計</th>
@@ -8342,16 +8342,28 @@
       return queries.some((q) => sku.includes(q) || name.includes(q));
     }
 
+    /** 客戶訂單已有有效出貨單時，下定商品才顯示「實際出貨數」 */
+    function orderHasCreatedShips(orderNo) {
+      const no = String(orderNo || "").trim();
+      if (!no || no === "__new__") return false;
+      return validShipsOfPo(no).length > 0;
+    }
+
     function syncPoGoodsToolbar() {
       const editable = poGoodsEditable();
       const filterBar = document.getElementById("editGoodsFilterBar");
       const confirmBar = document.getElementById("editGoodsConfirmBar");
       const importBtn = document.getElementById("poPickImportBtn");
       const opsHead = document.getElementById("editGoodsOpsHead");
+      const shippedHead = document.getElementById("editGoodsShippedHead");
+      const order = getWorkspaceOrder();
+      const orderNo = (order && order.orderNo) || currentEditOrderNo;
+      const showShipped = orderHasCreatedShips(orderNo);
       if (filterBar) filterBar.classList.toggle("hidden", !editable);
       if (confirmBar) confirmBar.classList.toggle("hidden", !editable);
       if (importBtn) importBtn.classList.toggle("hidden", !editable);
       if (opsHead) opsHead.classList.toggle("hidden", !editable);
+      if (shippedHead) shippedHead.classList.toggle("hidden", !showShipped);
     }
 
     function resetPoEstMarginDisplay() {
@@ -8509,6 +8521,7 @@
     function goodsPdfRowHtml(item, opts) {
       const d = goodsDisplayFields(item);
       const editable = !!(opts && opts.qtyEditable);
+      const showShipped = !!(opts && opts.showShipped);
       const oversell = isOverviewQtyOversell(item);
       const qtyVal = d.qty > 0 ? d.qty : "";
       const qtyCell = editable
@@ -8516,11 +8529,14 @@
         : escapeHtml(d.qty > 0 ? d.qty : "-");
       const priceLabelCell = goodsPriceWithLabelCellHtml(item, !!(opts && opts.priceLabelEditable));
       const orderNo = (opts && opts.orderNo) || currentEditOrderNo;
-      const shippedMap = orderNo && orderNo !== "__new__" ? shippedQtyByKey(orderNo) : {};
+      const shippedMap = showShipped && orderNo && orderNo !== "__new__" ? shippedQtyByKey(orderNo) : {};
       const shippedQty = shippedMap[itemKey(item)] || 0;
       const sellable = item.sellableQty != null
         ? Number(item.sellableQty)
         : virtualAllocOf((getWorkspaceOrder() || {}).channelName || "", item.sku);
+      const shippedCell = showShipped
+        ? `<td class="num">${escapeHtml(shippedQty)}</td>`
+        : "";
       const opsCell = editable
         ? `<td class="ops"><a data-del="1">刪除</a></td>`
         : "";
@@ -8532,7 +8548,7 @@
           <td class="num col-alloc">${escapeHtml(sellable)}</td>
           <td class="col-qty">${qtyCell}</td>
           <td class="num" data-sync="carton">${escapeHtml(d.carton)}</td>
-          <td class="num">${escapeHtml(shippedQty)}</td>
+          ${shippedCell}
           <td class="num" data-sync="priceNo">${escapeHtml(pdfMoney(d.priceNo, 2))}</td>
           <td class="num col-price-label">${priceLabelCell}</td>
           <td class="num" data-sync="amount">${escapeHtml(pdfMoney(d.amount, 2))}</td>
@@ -8628,17 +8644,22 @@
     function renderPoGoodsTable() {
       const body = document.getElementById("editGoodsBody");
       const editable = poGoodsEditable();
-      const cols = editable ? 12 : 11;
+      const orderNo = (workspaceOrder && workspaceOrder.orderNo) || currentEditOrderNo;
+      const showShipped = orderHasCreatedShips(orderNo);
+      syncPoGoodsToolbar();
+      let cols = 10;
+      if (showShipped) cols += 1;
+      if (editable) cols += 1;
       if (!body) return;
       if (!poLineItems.length) {
         body.innerHTML = `<tr class="empty-row"><td colspan="${cols}">${editable ? "請搜尋商品後展開至總攬" : "尚無商品明細"}</td></tr>`;
         updatePoQtyTotal();
         return;
       }
-      const orderNo = (workspaceOrder && workspaceOrder.orderNo) || currentEditOrderNo;
       body.innerHTML = poLineItems.map((row) => goodsPdfRowHtml(row, {
         qtyEditable: editable,
         priceLabelEditable: editable,
+        showShipped,
         orderNo,
       })).join("");
       updatePoQtyTotal();
