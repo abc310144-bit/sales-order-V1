@@ -12432,12 +12432,13 @@
     function clearSettleFilters() {
       ["settleFilterChannel", "settleFilterCreatedFrom", "settleFilterCreatedTo", "settleFilterShippedFrom",
         "settleFilterShippedTo", "settleFilterSku", "settleFilterOrderNo"].forEach((id) => {
-        document.getElementById(id).value = "";
+        const el = document.getElementById(id);
+        if (el) el.value = "";
       });
       const statusEl = document.getElementById("settleFilterStatus");
       if (statusEl) statusEl.value = "待結算";
-      settleRows = [];
-      renderSettleTable();
+      /* 清除後重套預設篩選（待結算），勿留空白表 */
+      applySettleFilters();
     }
 
     function settleSelectedRows() {
