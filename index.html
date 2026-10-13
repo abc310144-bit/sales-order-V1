@@ -2074,8 +2074,8 @@
           <div id="channelShip">
             <div class="menu-leaf">通路/經銷商</div>
             <div class="menu-leaf">通路商品列表</div>
-            <div class="menu-leaf" data-page="shipping">出貨訂單管理</div>
-            <div class="menu-leaf" data-page="online-shipping">線上出貨訂單</div>
+            <div class="menu-leaf" data-page="shipping">出貨單管理</div>
+            <div class="menu-leaf" data-page="online-shipping">線上出貨單管理</div>
             <div class="menu-leaf" data-page="channel-settle">通路結算</div>
           </div>
         </div>
@@ -2240,7 +2240,7 @@
         <div class="page" id="page-ship-accept">
           <div class="acc-page-head">
             <div>
-              <a class="link" id="shipAcceptBack">← 返回出貨訂單管理</a>
+              <a class="link" id="shipAcceptBack">← 返回出貨單管理</a>
               <h2 class="form-title" id="shipAcceptTitle">驗收 <span id="shipAcceptStatus"></span></h2>
               <div class="po-kind-meta" id="shipAcceptMeta"></div>
             </div>
@@ -2469,7 +2469,7 @@
             </div>
             <div class="demo-hint">
               <strong>DEMO 提示｜寄倉結算</strong><br />
-              僅<strong>寄倉通路</strong>；與「出貨訂單管理」對應——出貨單<strong>驗收完成（已驗收）</strong>後，SKU 才進本列表。線上出貨屬轉單，不在此模式。<br />
+              僅<strong>寄倉通路</strong>；與「出貨單管理」對應——出貨單<strong>驗收完成（已驗收）</strong>後，SKU 才進本列表。線上出貨屬轉單，不在此模式。<br />
               依 SKU 批次結算；送出後扣可結數量並產生一包到財務「財務結算」。一包僅限同一通路。<br />
               假資料：通路下拉可選「實體-PW健身工廠」「百貨-新光三越」；單號 <code>SO20260826008</code>／<code>SO20260827034</code>／<code>SO20260815022</code>（對應出貨 VN10473／10472、10510、10484／10485）。
             </div>
@@ -4477,13 +4477,13 @@
       document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
       document.getElementById("page-" + page)?.classList.add("active");
       if (page === "online-shipping" || (page === "ship-create" && shipCreateKind === "online")) {
-        document.title = "線上出貨訂單 - UrMart";
+        document.title = "線上出貨單管理 - UrMart";
       } else if (page === "channel-settle" || page === "channel-settle-detail") {
         document.title = "通路結算 - UrMart";
       } else if (page === "monthly-bill" || page === "monthly-bill-detail") {
         document.title = "財務結算 - UrMart";
       } else if (page === "shipping" || page === "ship-create" || page === "ship-accept") {
-        document.title = page === "ship-accept" ? "出貨驗收 - UrMart" : "出貨訂單管理 - UrMart";
+        document.title = page === "ship-accept" ? "出貨驗收 - UrMart" : "出貨單管理 - UrMart";
       } else {
         document.title = "客戶訂單管理 - UrMart";
       }
@@ -10972,7 +10972,7 @@
         const reason = shipCreateBlockReason(order);
         if (reason) alert(reason);
         else if (shipCreateKind === "online") alert("請選擇線上-轉單且可出貨的客戶訂單");
-        else alert("此客戶訂單請改由出貨訂單管理建立出貨單");
+        else alert("此客戶訂單請改由出貨單管理建立出貨單");
         document.getElementById("shipPoNo").focus();
         return;
       }
