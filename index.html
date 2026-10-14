@@ -820,6 +820,8 @@
       gap: 16px 36px;
       align-items: start;
       max-width: 100%;
+      min-width: 0;
+      width: 100%;
     }
     .po-basic-layout.has-recipient .po-online-head {
       display: contents;
@@ -851,33 +853,46 @@
       grid-row: 2;
       order: unset;
       margin-top: 0;
-      overflow: visible;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
     }
     .recv-table-wrap {
-      overflow: visible;
-      max-width: none;
+      display: block;
+      overflow-x: auto;
+      overflow-y: visible;
       width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      border: 1px solid var(--border-light);
+      -webkit-overflow-scrolling: touch;
     }
     .recv-list-table {
-      min-width: 0;
-      width: 100%;
+      width: max-content;
+      min-width: 2200px;
+      max-width: none;
       table-layout: auto;
     }
     .recv-list-table th,
     .recv-list-table td {
-      white-space: normal;
+      white-space: nowrap;
       vertical-align: middle;
-      word-break: break-word;
+      padding: 10px 12px;
+      font-size: 13px;
     }
     .recv-list-table td.recv-col-address {
-      min-width: 120px;
+      min-width: 220px;
+      white-space: normal;
     }
     .recv-list-table input,
     .recv-list-table select,
     .recv-list-table textarea {
       width: 100%;
       min-width: 0;
+      min-height: 36px;
       box-sizing: border-box;
+      font-size: 13px;
+      padding: 6px 10px;
     }
     .recv-list-table input[readonly] {
       background: #f5f5f5;
@@ -885,10 +900,26 @@
       cursor: default;
     }
     .recv-list-table textarea {
-      min-height: 36px;
+      min-height: 56px;
       resize: vertical;
+      white-space: pre-wrap;
     }
-    .recv-sku-cell { position: relative; min-width: 110px; }
+    .recv-list-table [data-recv="platform"] { min-width: 120px; }
+    .recv-list-table [data-recv="platformOrderNo"] { min-width: 160px; }
+    .recv-list-table [data-recv="arriveDate"],
+    .recv-list-table [data-recv="shipDate"],
+    .recv-list-table [data-recv="expiryAccept"] { min-width: 150px; }
+    .recv-list-table [data-recv="name"] { min-width: 110px; }
+    .recv-list-table [data-recv="zip"] { min-width: 72px; }
+    .recv-list-table [data-recv="tel"] { min-width: 130px; }
+    .recv-list-table [data-recv="sku"] { min-width: 120px; }
+    .recv-list-table [data-recv="itemName"] { min-width: 180px; }
+    .recv-list-table [data-recv="batch"] { min-width: 160px; }
+    .recv-list-table [data-recv="qty"] { min-width: 88px; }
+    .recv-list-table [data-recv="orderAmount"] { min-width: 110px; }
+    .recv-list-table [data-recv="shipMethod"] { min-width: 140px; }
+    .recv-list-table [data-recv="remark"] { min-width: 140px; }
+    .recv-sku-cell { position: relative; min-width: 140px; }
     .recv-sku-hits {
       position: absolute;
       left: 0;
@@ -917,10 +948,11 @@
     #page-order-edit.is-readonly .recv-ops-col,
     #page-order-edit.is-readonly .recv-list-table thead th.recv-ops-col { display: none; }
     #page-order-edit .po-pane[data-po-pane="basic"] {
-      overflow: visible;
+      overflow-x: hidden;
+      min-width: 0;
     }
     #page-order-edit.has-online-recv {
-      overflow-x: auto;
+      overflow-x: hidden;
     }
     @media (max-width: 1100px) {
       .po-basic-layout.has-recipient {
