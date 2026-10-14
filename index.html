@@ -2103,7 +2103,7 @@
             <div class="menu-leaf" data-page="channel-products">通路商品列表</div>
             <div class="menu-leaf" data-page="shipping">出貨單管理</div>
             <div class="menu-leaf" data-page="online-shipping">線上出貨單管理</div>
-            <div class="menu-leaf" data-page="channel-settle">通路結算</div>
+            <div class="menu-leaf" data-page="channel-settle">銷貨單</div>
           </div>
         </div>
 
@@ -2575,8 +2575,9 @@
 
         <div class="page" id="page-channel-settle">
           <div class="channel-settle-mode" id="channelSettleModeGroup" role="group" aria-label="結算類型">
-            <label class="radio-line"><input type="checkbox" id="channelSettleModeBuyout" data-channel-settle-mode="buyout" checked /> 買斷、轉單結算</label>
-            <label class="radio-line"><input type="checkbox" id="channelSettleModeConsign" data-channel-settle-mode="consign" /> 寄倉結算</label>
+            <label class="radio-line"><input type="checkbox" id="channelSettleModeBuyout" data-channel-settle-mode="buyout" checked /> 買斷</label>
+            <label class="radio-line"><input type="checkbox" id="channelSettleModeTransfer" data-channel-settle-mode="transfer" /> 轉單</label>
+            <label class="radio-line"><input type="checkbox" id="channelSettleModeConsign" data-channel-settle-mode="consign" /> 寄倉</label>
           </div>
 
           <div id="channelSettleBuyoutPanel">
@@ -2586,11 +2587,10 @@
                 篩選條件
               </button>
             </div>
-            <div class="demo-hint">
-              <strong>DEMO 提示｜買斷、轉單結算</strong><br />
-              本模式篩選／列表<strong>僅含買斷、轉單</strong>客戶訂單（含線上-轉單）。品運勾選後「送出結算」扣可結數量，並產生一包到財務「財務結算」。<br />
-              <strong>線上出貨</strong>屬轉單：出貨單狀態<strong>已配達</strong>後，對應客戶訂單即出現於此列表（可結基數＝已配達出貨量）。寄倉請改勾「寄倉結算」。<br />
-              初次進入預設「待結算」。一包須為<strong>同一通路</strong>。發票回壓／ezpay 由財務在「財務結算」處理。
+            <div class="demo-hint" id="channelSettleOrderHint">
+              <strong>DEMO 提示｜買斷</strong><br />
+              本模式篩選／列表<strong>僅含買斷</strong>客戶訂單（訂單維度結算）。品運勾選後「送出結算」扣可結數量，並產生一包到財務「財務結算」。<br />
+              初次進入預設「待結算」。一包須為<strong>同一通路</strong>。轉單請改勾「轉單」；寄倉請改勾「寄倉」。發票回壓／ezpay 由財務在「財務結算」處理。
             </div>
             <section class="filter" id="channelSettleFilterPanel">
               <div class="filter-grid">
@@ -2654,7 +2654,7 @@
           <div id="channelSettleConsignPanel" class="hidden">
             <div class="acc-page-head">
               <div>
-                <h2 class="form-title">寄倉結算</h2>
+                <h2 class="form-title">寄倉</h2>
                 <div class="po-kind-meta">僅寄倉通路、狀態為「待結算／部分結算」且尚有可結數量的 SKU；勾選後設定本次結算數量並送出結算（同一通路）。</div>
               </div>
               <div class="acc-head-actions">
@@ -2663,8 +2663,8 @@
               </div>
             </div>
             <div class="demo-hint">
-              <strong>DEMO 提示｜寄倉結算</strong><br />
-              僅<strong>寄倉通路</strong>；與「出貨單管理」對應——出貨單<strong>驗收完成（已驗收）</strong>後，SKU 才進本列表。線上出貨屬轉單，不在此模式。<br />
+              <strong>DEMO 提示｜寄倉</strong><br />
+              僅<strong>寄倉通路</strong>；與「出貨單管理」對應——出貨單<strong>驗收完成（已驗收）</strong>後，SKU 才進本列表。線上出貨屬轉單，請改勾「轉單」。<br />
               依 SKU 批次結算；送出後扣可結數量並產生一包到財務「財務結算」。一包僅限同一通路。<br />
               假資料：通路下拉可選「實體-PW健身工廠」「百貨-新光三越」；單號 <code>SO20260826008</code>／<code>SO20260827034</code>／<code>SO20260815022</code>（對應出貨 VN10473／10472、10510、10484／10485）。
             </div>
@@ -2749,7 +2749,7 @@
         <div class="page" id="page-channel-settle-detail">
           <div class="acc-page-head">
             <div>
-              <a class="link" id="channelSettleDetailBack">← 返回通路結算</a>
+              <a class="link" id="channelSettleDetailBack">← 返回銷貨單</a>
               <h2 class="form-title" id="channelSettleDetailTitle">結算</h2>
               <div class="po-kind-meta" id="channelSettleDetailMeta"></div>
             </div>
@@ -2798,7 +2798,7 @@
           </div>
           <div class="demo-hint">
             <strong>DEMO 提示｜財務結算</strong><br />
-            品運於「通路結算」送出的結算包會出現於此。財務檢視核對金額；<strong>月結</strong>且待開發票時可於檢視頁右上選擇回壓發票或 ezpay 開發票。<br />
+            品運於「銷貨單」送出的結算包會出現於此。財務檢視核對金額；<strong>月結</strong>且待開發票時可於檢視頁右上選擇回壓發票或 ezpay 開發票。<br />
             <strong>待開發票</strong>可由財務於檢視頁「駁回」（必填原因≤20字）→ 狀態改「已駁回」、整包數量加回路徑結算，已駁回僅供檢視、開票按鈕置灰。<br />
             <strong>已開發票</strong>可由財務於檢視頁「刪除發票」→ 清除發票資料、狀態回「待開發票」後可再開票。<br />
             <strong>非月結</strong>僅供核對金額，不顯示開票按鈕，狀態維持待開發票。
@@ -3461,7 +3461,7 @@
           <div class="demo-hint">
             <strong>DEMO 提示｜訂單驗收</strong><br />
             僅<strong>買斷／寄倉</strong>通路且已建立出貨單的客戶訂單會進入驗收列表；已作廢不同步。<br />
-            <strong>轉單</strong>通路免驗收；結算請至「通路出貨 → 通路結算」。<br />
+            <strong>轉單</strong>通路免驗收；結算請至「通路出貨 → 銷貨單」。<br />
             驗收由人工判斷，一張訂單驗收一次。
           </div>
 
@@ -4846,7 +4846,7 @@
       } else if (page === "channel-supply") {
         document.title = "供應商品列表 - UrMart";
       } else if (page === "channel-settle" || page === "channel-settle-detail") {
-        document.title = "通路結算 - UrMart";
+        document.title = "銷貨單 - UrMart";
       } else if (page === "monthly-bill" || page === "monthly-bill-detail") {
         document.title = "財務結算 - UrMart";
       } else if (page === "shipping" || page === "ship-create" || page === "ship-accept") {
@@ -5996,7 +5996,7 @@
     let currentEditOrderNo = "";
     let orderFormMode = "edit";
     let workspaceOrder = null;
-    const DEMO_STORE_KEY = "urmart-sales-demo-v16";
+    const DEMO_STORE_KEY = "urmart-sales-demo-v17";
     let demoReady = false;
     let settlementRecords = [];
     let acceptanceSeeded = false;
@@ -8725,7 +8725,7 @@
           submittedAt: "2026-08-24 13:41:00",
           items: transferPartialRecipients[0].items,
         }),
-        /* 部分出貨：第二收件人尚未出貨 → 買斷／轉單結算僅計 A（已配達）可結量 */
+        /* 部分出貨：第二收件人尚未出貨 → 銷貨單「轉單」僅計 A（已配達）可結量 */
         extraOnlineShip({
           id: 10499,
           salesOrderNo: "SO20260824032",
@@ -12668,7 +12668,7 @@
       return isOrderAccepted(order) ? "已驗收" : "待驗收";
     }
 
-    /** 通路結算狀態：待結算｜部分結算｜已結算 */
+    /** 銷貨單狀態：待結算｜部分結算｜已結算 */
     function settleStatusOf(order) {
       if (!isSettlementSourceOrder(order)) return "";
       const lines = accLinesOf(order);
@@ -13461,10 +13461,35 @@
       alert("成功匯入");
     }
 
-    let channelSettleMode = "buyout"; // buyout | consign
+    let channelSettleMode = "buyout"; // buyout | transfer | consign
 
     function isChannelSettleConsignMode() {
       return channelSettleMode === "consign";
+    }
+
+    function isChannelSettleOrderMode() {
+      return channelSettleMode === "buyout" || channelSettleMode === "transfer";
+    }
+
+    function channelSettleOrderFlowOfMode() {
+      return channelSettleMode === "transfer" ? "轉單" : "買斷";
+    }
+
+    function updateChannelSettleOrderHint() {
+      const el = document.getElementById("channelSettleOrderHint");
+      if (!el) return;
+      if (channelSettleMode === "transfer") {
+        el.innerHTML =
+          `<strong>DEMO 提示｜轉單</strong><br />` +
+          `本模式篩選／列表<strong>僅含轉單</strong>客戶訂單（含線上-轉單；訂單維度結算，邏輯同買斷）。品運勾選後「送出結算」扣可結數量，並產生一包到財務「財務結算」。<br />` +
+          `<strong>線上出貨</strong>：出貨單狀態<strong>已配達</strong>後，對應客戶訂單即出現於此（可結基數＝已配達出貨量）。買斷／寄倉請改勾對應模式。<br />` +
+          `初次進入預設「待結算」。一包須為<strong>同一通路</strong>。發票回壓／ezpay 由財務在「財務結算」處理。`;
+        return;
+      }
+      el.innerHTML =
+        `<strong>DEMO 提示｜買斷</strong><br />` +
+        `本模式篩選／列表<strong>僅含買斷</strong>客戶訂單（訂單維度結算）。品運勾選後「送出結算」扣可結數量，並產生一包到財務「財務結算」。<br />` +
+        `初次進入預設「待結算」。一包須為<strong>同一通路</strong>。轉單請改勾「轉單」；寄倉請改勾「寄倉」。發票回壓／ezpay 由財務在「財務結算」處理。`;
     }
 
     let channelSettleChecked = new Set();
@@ -13501,12 +13526,16 @@
 
     function applyChannelSettleModeUi() {
       const buyout = document.getElementById("channelSettleModeBuyout");
+      const transfer = document.getElementById("channelSettleModeTransfer");
       const consign = document.getElementById("channelSettleModeConsign");
       if (buyout) buyout.checked = channelSettleMode === "buyout";
+      if (transfer) transfer.checked = channelSettleMode === "transfer";
       if (consign) consign.checked = channelSettleMode === "consign";
-      document.getElementById("channelSettleBuyoutPanel")?.classList.toggle("hidden", channelSettleMode !== "buyout");
+      const orderMode = isChannelSettleOrderMode();
+      document.getElementById("channelSettleBuyoutPanel")?.classList.toggle("hidden", !orderMode);
       document.getElementById("channelSettleConsignPanel")?.classList.toggle("hidden", channelSettleMode !== "consign");
-      if (channelSettleMode === "buyout") {
+      if (orderMode) {
+        updateChannelSettleOrderHint();
         renderChannelSettleTable(getChannelSettleFiltered());
       } else {
         applySettleFilters();
@@ -13514,7 +13543,7 @@
     }
 
     function setChannelSettleMode(mode) {
-      const next = mode === "consign" ? "consign" : "buyout";
+      const next = mode === "consign" ? "consign" : (mode === "transfer" ? "transfer" : "buyout");
       if (next !== channelSettleMode) {
         resetChannelSettleBuyoutFilters();
         resetChannelSettleConsignFilters();
@@ -13539,6 +13568,10 @@
       if (isChannelSettleConsignMode()
         && document.getElementById("page-channel-settle")?.classList.contains("active")) {
         return "寄倉";
+      }
+      if (isChannelSettleOrderMode()
+        && document.getElementById("page-channel-settle")?.classList.contains("active")) {
+        return channelSettleOrderFlowOfMode();
       }
       const orderNo = (rows[0] || {}).orderNo;
       const order = salesOrders.find((item) => item.orderNo === orderNo);
@@ -13674,16 +13707,16 @@
       alert(`已送出結算（${record.id}），請至財務「財務結算」核對`);
       settleDetailOrderNo = "";
       settleDetailMode = "settle";
-      const keepConsign = isChannelSettleConsignMode();
+      const keepMode = channelSettleMode;
       settleRows = [];
-      if (keepConsign) {
+      if (keepMode === "consign") {
         resetChannelSettleConsignFilters();
         channelSettleMode = "consign";
       } else {
         channelSettleChecked = new Set();
         const statusEl = document.getElementById("channelSettleFilterStatus");
         if (statusEl) statusEl.value = "待結算";
-        channelSettleMode = "buyout";
+        channelSettleMode = keepMode === "transfer" ? "transfer" : "buyout";
       }
       showPage("channel-settle");
       applyChannelSettleModeUi();
@@ -14124,12 +14157,10 @@
     }
 
     function channelSettleCandidates() {
-      /* 通路結算列表／篩選：僅買斷、轉單；寄倉改走「寄倉結算」 */
+      /* 銷貨單訂單維度：買斷／轉單模式各自只列對應 acceptFlow；寄倉走 SKU 模式 */
+      const wantFlow = channelSettleOrderFlowOfMode();
       return settlementSourceOrders()
-        .filter((order) => {
-          const flow = channelAcceptFlow(order.channelName);
-          return flow === "買斷" || flow === "轉單";
-        })
+        .filter((order) => channelAcceptFlow(order.channelName) === wantFlow)
         .map(channelSettleRowOf)
         .filter(Boolean);
     }
@@ -14281,7 +14312,7 @@
       }
       const flow = channelAcceptFlow(order.channelName);
       if (flow === "寄倉") {
-        alert("寄倉請由「寄倉結算」按鈕查詢與結算，不經本列表");
+        alert("寄倉請改勾「寄倉」模式查詢與結算，不經本列表");
         return;
       }
       if (flow !== "買斷" && flow !== "轉單") {
@@ -14619,8 +14650,9 @@
     }
 
     /**
-     * 線上出貨（轉單）↔ 買斷／轉單結算：已配達出貨單才進可結。
-     * SO20260808029 兩張已配達 → 部分結算；SO20260824032／22033 僅部分已配達 → 待結算
+     * 線上出貨（轉單）↔ 銷貨單「轉單」模式：已配達出貨單才進可結。
+     * SO20260808029 兩張已配達 → 部分結算＋財務結算包類型「轉單」；
+     * SO20260824032／22033 僅部分已配達 → 待結算
      */
     function seedOnlineTransferSettleDemo() {
       if (onlineSettleSeeded) return;
@@ -14637,8 +14669,8 @@
       ensureOnlineDelivered("10520", "2026-08-23 11:30:00");
       const ensureTransferSettledQty = (orderNo, acceptedAt, settledRatio) => {
         const order = salesOrders.find((item) => item.orderNo === orderNo);
-        if (!order || !isOnlineTransferPo(order)) return;
-        if (!validShipsOfPo(orderNo).some((ship) => ship.online && ship.status === "已配達")) return;
+        if (!order || !isOnlineTransferPo(order)) return null;
+        if (!validShipsOfPo(orderNo).some((ship) => ship.online && ship.status === "已配達")) return null;
         const baseMap = settleBaseQtyByKey(order);
         order.acceptance = {
           acceptedAt,
@@ -14657,10 +14689,57 @@
             };
           }).filter((item) => item.acceptQty > 0 || item.settledQty > 0),
         };
+        return order;
       };
-      ensureTransferSettledQty("SO20260808029", "2026-08-10 12:00:00", 0.5);
+      const partial = ensureTransferSettledQty("SO20260808029", "2026-08-10 12:00:00", 0.5);
       ensureTransferSettledQty("SO20260824032", "2026-08-26 09:00:00", 0);
       ensureTransferSettledQty("SO20260822033", "2026-08-24 12:00:00", 0);
+      /* 財務結算假資料：類型「轉單」（對應銷貨單轉單模式已結數量） */
+      if (partial && partial.acceptance && !settlementRecords.some((rec) => String(rec.id) === "20260810029")) {
+        const lines = [];
+        (partial.acceptance.items || []).forEach((item) => {
+          const qty = Number(item.settledQty) || 0;
+          if (qty <= 0) return;
+          const src = (partial.items || []).find((row) => itemKey(row) === item.key);
+          const price = src ? accUnitPrice(src) : 0;
+          const untaxed = accRoundMoney(price);
+          const taxed = accRoundMoney(untaxed * (1 + SETTLE_TAX_RATE));
+          lines.push({
+            orderNo: partial.orderNo,
+            channelName: partial.channelName,
+            key: item.key,
+            sku: item.sku,
+            name: item.name,
+            qty,
+            price: untaxed,
+            priceTaxed: taxed,
+            tax: accRoundMoney(taxed - untaxed),
+            amount: accRoundMoney(taxed * qty),
+            remark: "",
+          });
+        });
+        if (lines.length) {
+          const total = accRoundMoney(lines.reduce((sum, line) => sum + line.amount, 0));
+          settlementRecords.push(normalizeSettlementRecord({
+            id: "20260810029",
+            createdAt: "2026-08-10 14:30:00",
+            operator: "建檔人",
+            type: "轉單",
+            channelName: partial.channelName,
+            channelType: partial.channelType || "台灣線上通路",
+            status: "待開發票",
+            monthly: isMonthlySettleChannel(partial.channelName),
+            invoiceNo: "",
+            invoiceDate: "",
+            invoiceAmount: null,
+            fileName: "",
+            fileType: "",
+            fileData: "",
+            total,
+            lines,
+          }));
+        }
+      }
     }
 
     document.getElementById("accAccordionBtn").addEventListener("click", () => {
