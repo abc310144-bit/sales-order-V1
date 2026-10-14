@@ -2416,6 +2416,7 @@
                   <th>出貨單編號</th>
                   <th>出貨倉庫</th>
                   <th>通路平台</th>
+                  <th>配送編號</th>
                   <th>平台訂單編號</th>
                   <th>訂單狀態</th>
                   <th>收件人</th>
@@ -4759,6 +4760,13 @@
       renderOnlineShippingTable(getOnlineShippingFiltered());
     }
 
+    function onlineDeliveryNo(ship) {
+      if (ship && String(ship.deliveryNo || "").trim()) return String(ship.deliveryNo).trim();
+      const id = Number(ship && ship.id) || 0;
+      if (id) return `DL${String(id).padStart(10, "0")}`;
+      return "—";
+    }
+
     function renderOnlineShippingTable(list) {
       const data = list || getOnlineShippingFiltered();
       const body = document.getElementById("onlineShippingBody");
@@ -4766,7 +4774,7 @@
       if (total) total.textContent = String(data.length);
       if (!body) return;
       if (!data.length) {
-        body.innerHTML = `<tr><td colspan="14" style="text-align:center;color:#8c8c8c;padding:24px;">尚無資料</td></tr>`;
+        body.innerHTML = `<tr><td colspan="15" style="text-align:center;color:#8c8c8c;padding:24px;">尚無資料</td></tr>`;
         return;
       }
       body.innerHTML = data.map((r) => {
@@ -4777,6 +4785,7 @@
           <td>${escapeHtml(r.orderId)}</td>
           <td>${escapeHtml(r.inWarehouse || r.warehouse || "—")}</td>
           <td>${escapeHtml(r.platform || "—")}</td>
+          <td>${escapeHtml(onlineDeliveryNo(r))}</td>
           <td>${escapeHtml(r.platformOrderNo || "—")}</td>
           <td>${statusTag(r.status)}</td>
           <td>${escapeHtml(maskRecvName(rec))}</td>
@@ -8857,6 +8866,7 @@
         online: true,
         platform: "線上-轉單",
         platformOrderNo: cfg.platformOrderNo || "",
+        deliveryNo: cfg.deliveryNo || `DL${pad(cfg.id, 10)}`,
         shipMethod: cfg.shipMethod || "新竹物流",
         recvName: cfg.recvName || "",
         recvTel: cfg.recvTel || "",
@@ -11763,6 +11773,7 @@
           online: true,
           platform: rec.platform || order.channelName || "",
           platformOrderNo: rec.platformOrderNo || "",
+          deliveryNo: `DL${String(ids.id).padStart(10, "0")}`,
           shipMethod,
           recvName: rec.name || "",
           recvTel: rec.tel || "",
