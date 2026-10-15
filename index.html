@@ -7635,12 +7635,12 @@
       if (page) page.classList.toggle("has-online-recv", show);
     }
 
-    function recvExchangeLineHtml(ex, editable) {
+    function recvExchangeLineHtml(ex, editable, showDelete) {
       const qtyVal = ex && (ex.qty === 0 || ex.qty) ? String(ex.qty) : "";
       const ops = editable
         ? `<td class="ops recv-ex-ops">
             <a href="#" data-recv-act="add-ex">新增</a>
-            <a href="#" data-recv-act="del-ex">刪除</a>
+            ${showDelete ? '<a href="#" data-recv-act="del-ex">刪除</a>' : ""}
           </td>`
         : `<td class="ops recv-ex-ops"></td>`;
       return `
@@ -7672,7 +7672,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  ${lines.map((ex) => recvExchangeLineHtml(ex, editable)).join("")}
+                  ${lines.map((ex, idx) => recvExchangeLineHtml(ex, editable, idx > 0)).join("")}
                 </tbody>
               </table>
             </div>
@@ -7680,7 +7680,40 @@
         </tr>`;
     }
 
-    function recvItemRowHtml(row, platform, editable, canExchange) {
+    function recvItemOpsHtml(editable, showDelete) {
+      if (!editable) return `<td class="ops recv-ops-col"></td>`;
+      return `<td class="ops recv-ops-col">
+            <a href="#" data-recv-act="add-item">新增品項</a>
+            ${showDelete ? '<a href="#" data-recv-act="del-item">刪除</a>' : ""}
+          </td>`;
+    }
+
+    function refreshRecvItemDeleteButtons(gid) {
+      const body = document.getElementById("editRecvBody");
+      if (!body || !gid) return;
+      const rows = body.querySelectorAll(`tr.recv-item-row[data-recv-group="${CSS.escape(gid)}"]`);
+      rows.forEach((tr, idx) => {
+        const ops = tr.querySelector("td.recv-ops-col");
+        if (!ops || orderFormMode === "view") return;
+        ops.innerHTML = `
+            <a href="#" data-recv-act="add-item">新增品項</a>
+            ${idx > 0 ? '<a href="#" data-recv-act="del-item">刪除</a>' : ""}`;
+      });
+    }
+
+    function refreshRecvExDeleteButtons(exTbody) {
+      if (!exTbody || orderFormMode === "view") return;
+      const rows = exTbody.querySelectorAll("tr[data-ex-row]");
+      rows.forEach((tr, idx) => {
+        const ops = tr.querySelector("td.recv-ex-ops");
+        if (!ops) return;
+        ops.innerHTML = `
+            <a href="#" data-recv-act="add-ex">新增</a>
+            ${idx > 0 ? '<a href="#" data-recv-act="del-ex">刪除</a>' : ""}`;
+      });
+    }
+
+    function recvItemRowHtml(row, platform, editable, canExchange, showDelete) {
       const qtyVal = row.qty === 0 || row.qty ? String(row.qty) : "";
       const hasEx = Array.isArray(row.exchangeItems) && row.exchangeItems.length > 0;
       const productLocked = hasEx || !editable;
@@ -7696,12 +7729,7 @@
         }
         return `<td class="recv-ex-col"></td>`;
       })();
-      const ops = editable
-        ? `<td class="ops recv-ops-col">
-            <a href="#" data-recv-act="add-item">新增品項</a>
-            <a href="#" data-recv-act="del-item">刪除</a>
-          </td>`
-        : `<td class="ops recv-ops-col"></td>`;
+      const ops = recvItemOpsHtml(editable, !!showDelete);
       const ro = productLocked ? " readonly" : "";
       const main = `
         <tr class="recv-item-row${hasEx ? " is-exchanged" : ""}" data-recv-group="${escapeHtml(row.groupId)}" data-recv-item="${escapeHtml(row.itemKey)}" data-recv-arrive-time="${escapeHtml(row.arriveTime || "")}">
@@ -7757,7 +7785,12 @@
       const editable = orderFormMode !== "view";
       const canExchange = canExchangeOnPo(order);
       const flat = isOnlineTransferPo(order) ? flattenRecipientDisplayRows(list) : [];
-      body.innerHTML = flat.map((row) => recvItemRowHtml(row, platform, editable, canExchange)).join("");
+      const groupSeen = {};
+      body.innerHTML = flat.map((row) => {
+        const isFirstInGroup = !groupSeen[row.groupId];
+        if (isFirstInGroup) groupSeen[row.groupId] = true;
+        return recvItemRowHtml(row, platform, editable, canExchange, !isFirstInGroup);
+      }).join("");
       syncRecipientPanel(order);
       if (document.getElementById("page-order-edit")?.classList.contains("is-readonly")) {
         body.querySelectorAll("input, select, textarea").forEach((el) => {
@@ -8336,19 +8369,24 @@
         if (action === "add-ex") {
           const exTr = act.closest("tr[data-ex-row]");
           if (!exTr) return;
-          exTr.insertAdjacentHTML("afterend", recvExchangeLineHtml(emptyExchangeItem(), true));
+          exTr.insertAdjacentHTML("afterend", recvExchangeLineHtml(emptyExchangeItem(), true, true));
+          refreshRecvExDeleteButtons(exTr.parentElement);
           return;
         }
         if (action === "del-ex") {
           const exTr = act.closest("tr[data-ex-row]");
           const tbody = exTr && exTr.parentElement;
           if (!exTr || !tbody) return;
-          if (tbody.querySelectorAll("tr[data-ex-row]").length <= 1) {
+          const exRows = tbody.querySelectorAll("tr[data-ex-row]");
+          if (exRows[0] === exTr) return;
+          if (exRows.length <= 1) {
             exTr.querySelectorAll("[data-recv-ex]").forEach((el) => { el.value = ""; });
             hideRecvSkuHits(exTr);
+            refreshRecvExDeleteButtons(tbody);
             return;
           }
           exTr.remove();
+          refreshRecvExDeleteButtons(tbody);
           return;
         }
         const tr = act.closest("tr.recv-item-row");
@@ -8376,7 +8414,8 @@
             const block = body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`);
             if (block) insertAfter = block;
           }
-          insertAfter.insertAdjacentHTML("afterend", recvItemRowHtml(row, platform, true, canExchange));
+          insertAfter.insertAdjacentHTML("afterend", recvItemRowHtml(row, platform, true, canExchange, true));
+          refreshRecvItemDeleteButtons(gid);
           syncRecvGroupAmount(gid);
           return;
         }
@@ -8384,6 +8423,7 @@
           const gid = tr.getAttribute("data-recv-group");
           const itemKey = tr.getAttribute("data-recv-item") || "";
           const siblings = body.querySelectorAll(`tr.recv-item-row[data-recv-group="${CSS.escape(gid)}"]`);
+          if (siblings[0] === tr) return;
           const block = itemKey
             ? body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`)
             : null;
@@ -8402,11 +8442,13 @@
               exCell.innerHTML = `<a href="#" data-recv-act="exchange">換貨</a>`;
             } else if (exCell) exCell.innerHTML = "";
             hideRecvSkuHits(tr);
+            refreshRecvItemDeleteButtons(gid);
             syncRecvGroupAmount(gid);
             return;
           }
           if (block) block.remove();
           tr.remove();
+          refreshRecvItemDeleteButtons(gid);
           syncRecvGroupAmount(gid);
         }
       });
