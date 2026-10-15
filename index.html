@@ -2163,7 +2163,7 @@
             <div class="menu-leaf" data-page="channel-products">通路商品列表</div>
             <div class="menu-leaf" data-page="shipping">出貨單管理</div>
             <div class="menu-leaf" data-page="online-shipping">線上出貨單管理</div>
-            <div class="menu-leaf" data-page="channel-settle">銷貨單</div>
+            <div class="menu-leaf" data-page="channel-settle">結帳單建立</div>
           </div>
         </div>
 
@@ -2810,7 +2810,7 @@
         <div class="page" id="page-channel-settle-detail">
           <div class="acc-page-head">
             <div>
-              <a class="link" id="channelSettleDetailBack">← 返回銷貨單</a>
+              <a class="link" id="channelSettleDetailBack">← 返回結帳單建立</a>
               <h2 class="form-title" id="channelSettleDetailTitle">結算</h2>
               <div class="po-kind-meta" id="channelSettleDetailMeta"></div>
             </div>
@@ -2859,7 +2859,7 @@
           </div>
           <div class="demo-hint">
             <strong>DEMO 提示｜財務結算</strong><br />
-            品運於「銷貨單」送出的結算包會出現於此。財務檢視核對金額；<strong>月結</strong>且待開發票時可於檢視頁右上選擇回壓發票或 ezpay 開發票。<br />
+            品運於「結帳單建立」送出的結算包會出現於此。財務檢視核對金額；<strong>月結</strong>且待開發票時可於檢視頁右上選擇回壓發票或 ezpay 開發票。<br />
             <strong>待開發票</strong>可由財務於檢視頁「駁回」（必填原因≤20字）→ 狀態改「已駁回」、整包數量加回路徑結算，已駁回僅供檢視、開票按鈕置灰。<br />
             <strong>已開發票</strong>可由財務於檢視頁「刪除發票」→ 清除發票資料、狀態回「待開發票」後可再開票。<br />
             <strong>非月結</strong>僅供核對金額，不顯示開票按鈕，狀態維持待開發票。
@@ -3522,7 +3522,7 @@
           <div class="demo-hint">
             <strong>DEMO 提示｜訂單驗收</strong><br />
             僅<strong>買斷／寄倉</strong>通路且已建立出貨單的客戶訂單會進入驗收列表；已作廢不同步。<br />
-            <strong>轉單</strong>通路免驗收；結算請至「通路出貨 → 銷貨單」。<br />
+            <strong>轉單</strong>通路免驗收；結算請至「通路出貨 → 結帳單建立」。<br />
             驗收由人工判斷，一張訂單驗收一次。
           </div>
 
@@ -4920,7 +4920,7 @@
       } else if (page === "channel-supply") {
         document.title = "供應商品列表 - UrMart";
       } else if (page === "channel-settle" || page === "channel-settle-detail") {
-        document.title = "銷貨單 - UrMart";
+        document.title = "結帳單建立 - UrMart";
       } else if (page === "monthly-bill" || page === "monthly-bill-detail") {
         document.title = "財務結算 - UrMart";
       } else if (page === "shipping" || page === "ship-create" || page === "ship-accept") {
