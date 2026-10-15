@@ -3904,9 +3904,9 @@
                   <button type="button" class="btn btn-primary" id="poPickImportBtn">匯入商品</button>
                 </div>
                 <div class="po-pick-filter" id="editGoodsFilterBar">
-                  <input id="poPickFilterInput" type="text" placeholder="支援模糊查詢，多個以 , 分隔" autocomplete="off" />
-                  <button type="button" class="btn btn-primary" id="poPickFilterSearch">搜尋</button>
-                  <button type="button" class="btn" id="poPickFilterClear">清除篩選條件</button>
+                  <input id="poPickFilterInput" type="text" placeholder="輸入 SKU（精準），多個以 , 或 ， 分隔" autocomplete="off" />
+                  <button type="button" class="btn btn-primary" id="poPickFilterSearch">新增</button>
+                  <button type="button" class="btn" id="poPickFilterClear">清除</button>
                 </div>
                 <div class="table-wrap ship-items-table-wrap goods-h-scroll po-goods-scroll">
                   <table class="ship-items-table po-goods-table goods-pdf-table" id="editGoodsOverviewTable">
@@ -5212,6 +5212,22 @@
       return name ? "name:" + name : "";
     }
 
+    /** 出貨／剩餘量：同 SKU 不同效期_批號視為不同列 */
+    function itemLineKey(item) {
+      const base = itemKey(item);
+      if (!base) return "";
+      const batch = String((item && item.batch) || "").trim();
+      return batch ? `${base}|batch:${batch}` : base;
+    }
+
+    /** 下定總覽合併鍵：境外＝SKU+效期_批號；其餘＝SKU */
+    function poGoodsLineKey(item, overseas) {
+      const sku = normalizeSku(item && item.sku).toLowerCase();
+      if (!sku) return "";
+      if (!overseas) return sku;
+      return `${sku}||${String((item && item.batch) || "").trim()}`;
+    }
+
     function isSupervisorClosed(order) {
       return !!(order && order.closedBySupervisor);
     }
@@ -5234,22 +5250,35 @@
       return `<span class="void-note-tip" data-tip="${escapeHtml(full)}">${escapeHtml(full.slice(0, 15))}...</span>`;
     }
 
+    /** 出貨量對帳：PO 列有效期_批號 → 只計同批；無批號 → 同 SKU 各批加總（結算仍用 itemKey） */
     function shippedQtyByKey(orderNo) {
       const map = {};
       validShipsOfPo(orderNo).forEach((ship) => {
         (ship.items || []).forEach((item) => {
-          const key = itemKey(item);
-          if (!key) return;
-          map[key] = (map[key] || 0) + (Number(item.qty) || 0);
+          const base = itemKey(item);
+          if (!base) return;
+          const qty = Number(item.qty) || 0;
+          const batch = String((item && item.batch) || "").trim();
+          if (batch) {
+            const lineKey = itemLineKey(item);
+            map[lineKey] = (map[lineKey] || 0) + qty;
+          }
+          map[base] = (map[base] || 0) + qty;
         });
       });
       return map;
     }
 
+    function shippedQtyOfPoLine(order, item, shippedMap) {
+      const map = shippedMap || shippedQtyByKey(order && order.orderNo);
+      const batch = String((item && item.batch) || "").trim();
+      if (batch) return map[itemLineKey(item)] || 0;
+      return map[itemKey(item)] || 0;
+    }
+
     function remainingQtyOfItem(order, item, shippedMap) {
       const ordered = Number(item && item.qty) || 0;
-      const key = itemKey(item);
-      const shipped = ((shippedMap || shippedQtyByKey(order && order.orderNo))[key]) || 0;
+      const shipped = shippedQtyOfPoLine(order, item, shippedMap);
       return Math.max(0, ordered - shipped);
     }
 
@@ -10254,9 +10283,10 @@
       const order = getWorkspaceOrder();
       const orderNo = (order && order.orderNo) || currentEditOrderNo;
       const showShipped = orderHasCreatedShips(orderNo);
-      if (filterBar) filterBar.classList.toggle("hidden", !editable);
-      if (confirmBar) confirmBar.classList.toggle("hidden", !editable);
-      if (importBtn) importBtn.classList.toggle("hidden", !editable);
+      const online = isOnlineTransferPo(order);
+      if (filterBar) filterBar.classList.toggle("hidden", !editable || online);
+      if (confirmBar) confirmBar.classList.toggle("hidden", !editable || online);
+      if (importBtn) importBtn.classList.toggle("hidden", !editable || online);
       if (opsHead) opsHead.classList.toggle("hidden", !editable);
       if (shippedHead) shippedHead.classList.toggle("hidden", !showShipped);
     }
@@ -10276,48 +10306,67 @@
       if (rate) rate.textContent = "0%";
     }
 
-    /** 搜尋：將命中通路商品展開進總攬（已存在列保留數量） */
+    /** 新增：SKU 精準比對；任一不存在則整次不新增。同鍵合併（境外含效期_批號）。 */
     function applyPoPickFilter() {
       if (!poGoodsEditable()) return;
+      const order = getWorkspaceOrder();
+      if (!order || isOnlineTransferPo(order)) return;
       const input = document.getElementById("poPickFilterInput");
-      poPickFilterQueries = parsePoItemQueries(input ? input.value : "");
-      if (!poPickFilterQueries.length) {
-        alert("請輸入 SKU 或商品名稱後再搜尋");
+      const tokens = String(input && input.value || "")
+        .split(/[,，]/)
+        .map((part) => normalizeSku(part))
+        .filter(Boolean);
+      if (!tokens.length) {
+        alert("請輸入 SKU，多個以 , 或 ， 分隔");
         return;
       }
-      const order = getWorkspaceOrder();
-      const channelName = (order && order.channelName) || "";
-      const bySku = {};
-      poLineItems.forEach((item) => {
-        bySku[normalizeSku(item.sku).toLowerCase()] = item;
+      const channelName = order.channelName || "";
+      const bound = channelBoundSkuMap(channelName);
+      const overseas = isOverseasPo(order);
+      const missing = [];
+      const catalogs = [];
+      tokens.forEach((sku) => {
+        const cat = bound[sku.toLowerCase()];
+        if (!cat || normalizeSku(cat.sku).toLowerCase() !== sku.toLowerCase()) {
+          missing.push(sku);
+          return;
+        }
+        catalogs.push(cat);
       });
-      let added = 0;
-      poPickRows.forEach((row) => {
-        if (!poPickRowMatchesFilter(row, poPickFilterQueries)) return;
-        const key = normalizeSku(row.sku).toLowerCase();
-        if (bySku[key]) {
-          bySku[key].sellableQty = row.sellableQty != null
-            ? Number(row.sellableQty)
-            : virtualAllocOf(channelName, row.sku);
+      if (missing.length) {
+        alert("找不到以下 SKU，整次未新增：\n" + missing.join("、"));
+        return;
+      }
+      const byKey = {};
+      poLineItems.forEach((item) => {
+        const key = poGoodsLineKey(item, overseas);
+        if (key) byKey[key] = item;
+      });
+      catalogs.forEach((cat) => {
+        const draftBatch = overseas ? "" : "";
+        const key = poGoodsLineKey({ sku: cat.sku, batch: draftBatch }, overseas);
+        const existing = byKey[key];
+        if (existing) {
+          existing.sellableQty = cat.sellableQty != null
+            ? Number(cat.sellableQty)
+            : virtualAllocOf(channelName, cat.sku);
           return;
         }
         const line = toPoLineItem({
-          ...row,
+          ...cat,
           qty: 0,
-          sellableQty: row.sellableQty != null ? Number(row.sellableQty) : virtualAllocOf(channelName, row.sku),
+          sellableQty: cat.sellableQty != null ? Number(cat.sellableQty) : virtualAllocOf(channelName, cat.sku),
           priceWithLabel: "",
           batch: "",
-          allowEmptyBatch: isOverseasPo(order),
+          allowEmptyBatch: overseas,
         });
-        if (isOverseasPo(order)) line.batch = "";
+        if (overseas) line.batch = "";
         poLineItems.push(line);
-        bySku[key] = line;
-        added += 1;
+        byKey[poGoodsLineKey(line, overseas)] = line;
       });
-      if (!added && !poLineItems.some((item) => poPickRowMatchesFilter(item, poPickFilterQueries))) {
-        alert("查無符合的通路商品");
-      }
-      if (order) order.items = collectEditGoods();
+      if (input) input.value = "";
+      poPickFilterQueries = [];
+      order.items = collectEditGoods();
       poEstMarginConfirmed = false;
       resetPoEstMarginDisplay();
       renderPoGoodsTable();
@@ -10361,7 +10410,7 @@
       const order = getWorkspaceOrder();
       const lines = collectEditGoods();
       if (!lines.length) {
-        alert("請先搜尋並填寫預計出貨數量（正整數）");
+        alert("請先新增商品並填寫預計出貨數量（正整數）");
         return;
       }
       const bad = lines.find((row) => !Number.isInteger(Number(row.qty)) || Number(row.qty) <= 0);
@@ -10430,7 +10479,7 @@
       const priceLabelCell = goodsPriceWithLabelCellHtml(item, !!(opts && opts.priceLabelEditable));
       const orderNo = (opts && opts.orderNo) || currentEditOrderNo;
       const shippedMap = showShipped && orderNo && orderNo !== "__new__" ? shippedQtyByKey(orderNo) : {};
-      const shippedQty = shippedMap[itemKey(item)] || 0;
+      const shippedQty = shippedQtyOfPoLine({ orderNo }, item, shippedMap);
       const sellable = item.sellableQty != null
         ? Number(item.sellableQty)
         : virtualAllocOf((getWorkspaceOrder() || {}).channelName || "", item.sku);
@@ -10566,7 +10615,7 @@
       if (editable) cols += 1;
       if (!body) return;
       if (!poLineItems.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="${cols}">${editable ? "請搜尋商品後展開至總攬" : "尚無商品明細"}</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="${cols}">${editable ? "請輸入 SKU 後按新增" : "尚無商品明細"}</td></tr>`;
         updatePoQtyTotal();
         return;
       }
@@ -11348,19 +11397,21 @@
       }
 
       const channelName = order.channelName || "";
-      const bySku = {};
+      const byKey = {};
       poLineItems.forEach((item) => {
-        bySku[normalizeSku(item.sku).toLowerCase()] = item;
+        const k = poGoodsLineKey(item, overseas);
+        if (k) byKey[k] = item;
       });
       records.forEach((rec) => {
-        const key = normalizeSku(rec.sku).toLowerCase();
-        const catalog = bound[key] || poPickRows.find((item) => normalizeSku(item.sku).toLowerCase() === key);
+        const skuKey = normalizeSku(rec.sku).toLowerCase();
+        const catalog = bound[skuKey] || poPickRows.find((item) => normalizeSku(item.sku).toLowerCase() === skuKey);
         if (!catalog) return;
         const qty = Number(rec.qty) || 0;
-        const batch = String(rec.batch || "").trim();
-        const existing = bySku[key];
+        const batch = overseas ? String(rec.batch || "").trim() : "";
+        const lineKey = poGoodsLineKey({ sku: catalog.sku, batch }, overseas);
+        const existing = byKey[lineKey];
         if (existing) {
-          existing.qty = qty;
+          existing.qty = (Number(existing.qty) || 0) + qty;
           existing.sellableQty = catalog.sellableQty != null
             ? Number(catalog.sellableQty)
             : virtualAllocOf(channelName, catalog.sku);
@@ -11378,7 +11429,7 @@
             ? Number(catalog.sellableQty)
             : virtualAllocOf(channelName, catalog.sku),
           priceWithLabel: "",
-          batch: overseas ? batch : (catalog.batch || ""),
+          batch: overseas ? batch : "",
           allowEmptyBatch: overseas && !batch,
         });
         if (overseas && batch) {
@@ -11387,7 +11438,7 @@
           line.expiryType = meta.expiryType;
         }
         poLineItems.push(line);
-        bySku[key] = line;
+        byKey[poGoodsLineKey(line, overseas)] = line;
       });
       poPickImportSkus = null;
       poPickFilterQueries = [];
@@ -11544,6 +11595,19 @@
           item.expiryType = meta.expiryType;
         }
         const order = getWorkspaceOrder();
+        const overseas = isOverseasPo(order);
+        if (overseas) {
+          const key = poGoodsLineKey(item, true);
+          const dup = poLineItems.find((row) => row.id !== item.id && poGoodsLineKey(row, true) === key);
+          if (dup) {
+            dup.qty = (Number(dup.qty) || 0) + (Number(item.qty) || 0);
+            poLineItems = poLineItems.filter((row) => row.id !== item.id);
+            if (order) order.items = collectEditGoods();
+            poEstMarginConfirmed = false;
+            renderPoGoodsTable();
+            return;
+          }
+        }
         if (order) order.items = collectEditGoods();
         poEstMarginConfirmed = false;
         return;
