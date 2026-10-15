@@ -945,8 +945,48 @@
     .recv-sku-hit:hover { background: #e6f4ff; }
     .recv-list-table .ops { white-space: nowrap; }
     .recv-list-table .ops a + a { margin-left: 8px; }
+    .recv-ex-col { white-space: nowrap; min-width: 72px; }
+    .recv-list-table tr.recv-item-row.is-exchanged > td {
+      background: #e8e8e8;
+    }
+    .recv-list-table tr.recv-ex-block > td {
+      background: #f5f5f5;
+      padding: 10px 14px 12px;
+      border-top: 0;
+    }
+    .recv-ex-inner { max-width: 720px; }
+    .recv-ex-title {
+      font-size: 12px;
+      color: var(--text-2);
+      margin-bottom: 6px;
+    }
+    .recv-exchange-table {
+      width: 100%;
+      min-width: 420px;
+      border-collapse: collapse;
+      background: #fff;
+    }
+    .recv-exchange-table th,
+    .recv-exchange-table td {
+      border: 1px solid var(--border-light);
+      padding: 6px 8px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .recv-exchange-table input {
+      width: 100%;
+      min-height: 32px;
+      box-sizing: border-box;
+      font-size: 13px;
+      padding: 4px 8px;
+    }
+    .recv-exchange-table [data-recv-ex="sku"] { min-width: 120px; }
+    .recv-exchange-table [data-recv-ex="itemName"] { min-width: 160px; }
+    .recv-exchange-table [data-recv-ex="qty"] { min-width: 80px; }
+    .recv-ex-label { color: var(--text-2); font-size: 12px; }
     #page-order-edit.is-readonly .recv-ops-col,
     #page-order-edit.is-readonly .recv-list-table thead th.recv-ops-col { display: none; }
+    #page-order-edit.is-readonly .recv-ex-ops { display: none; }
     #page-order-edit .po-pane[data-po-pane="basic"] {
       overflow-x: hidden;
       min-width: 0;
@@ -3781,6 +3821,7 @@
                 <table class="ship-items-table recv-list-table">
                   <thead>
                     <tr>
+                      <th class="recv-ex-col">換貨</th>
                       <th>通路平台</th>
                       <th>平台訂單編號</th>
                       <th>預計到貨日期</th>
@@ -6147,7 +6188,7 @@
 
     function sanitizeLineItemForStore(item) {
       const src = item || {};
-      return {
+      const out = {
         sku: src.sku || "",
         name: src.name || "",
         productCode: src.productCode || "",
@@ -6160,7 +6201,20 @@
         orderQuote: src.orderQuote ?? "",
         remark: src.remark || "",
         expiryAccept: src.expiryAccept || "",
+        batch: src.batch || "",
       };
+      if (Array.isArray(src.exchangeItems) && src.exchangeItems.length) {
+        out.exchangeItems = src.exchangeItems.map((ex) => ({
+          sku: (ex && ex.sku) || "",
+          name: (ex && ex.name) || "",
+          qty: Number(ex && ex.qty) || 0,
+          unit: (ex && ex.unit) || "",
+          pcsPerCarton: Number(ex && ex.pcsPerCarton) || 0,
+          expiryAccept: (ex && ex.expiryAccept) || "",
+          batch: (ex && ex.batch) || "",
+        })).filter((ex) => ex.sku || ex.qty);
+      }
+      return out;
     }
 
     const STAMP_MAX_BYTES = 2 * 1024 * 1024;
@@ -6570,7 +6624,12 @@
         recipients: src.channelName === "線上-轉單"
           ? recipientListOf(src).map((r) => ({
               ...r,
-              items: (r.items || []).map((item) => ({ ...item })),
+              items: (r.items || []).map((item) => ({
+                ...item,
+                exchangeItems: Array.isArray(item.exchangeItems)
+                  ? item.exchangeItems.map((ex) => ({ ...ex }))
+                  : [],
+              })),
             }))
           : null,
       };
@@ -7357,7 +7416,11 @@
     }
 
     function emptyRecvItem() {
-      return { sku: "", name: "", expiryAccept: "", batch: "", qty: "", unit: "", pcsPerCarton: 0 };
+      return { sku: "", name: "", expiryAccept: "", batch: "", qty: "", unit: "", pcsPerCarton: 0, exchangeItems: [] };
+    }
+
+    function emptyExchangeItem() {
+      return { sku: "", name: "", qty: "", unit: "", pcsPerCarton: 0, expiryAccept: "", batch: "" };
     }
 
     const RECV_SHIP_OPTS = ["新竹物流", "黑猫", "全盛貨運(邱哥)", "宅配通"];
@@ -7365,7 +7428,57 @@
       "platform", "platformOrderNo", "arriveDate", "shipDate", "name", "zip",
       "address", "tel", "orderAmount", "shipMethod", "remark",
     ];
+    const RECV_PRODUCT_FIELDS = ["sku", "itemName", "expiryAccept", "batch", "qty"];
+    const RECV_COL_COUNT = 18;
     let nextRecvGroupId = 1;
+    let nextRecvItemSeq = 1;
+
+    function newRecvItemKey(gid) {
+      return `${gid}__${nextRecvItemSeq++}`;
+    }
+
+    function canExchangeOnPo(order) {
+      if (!isOnlineTransferPo(order)) return false;
+      if (orderFormMode === "view") return false;
+      const no = order && order.orderNo;
+      if (!no || no === "__new__") return true;
+      return validShipsOfPo(no).length === 0;
+    }
+
+    function normalizeExchangeItems(list) {
+      return (list || []).map((ex) => ({
+        sku: normalizeSku((ex && ex.sku) || ""),
+        name: (ex && ex.name) || "",
+        qty: ex && (ex.qty === 0 || ex.qty) ? ex.qty : "",
+        unit: (ex && ex.unit) || "",
+        pcsPerCarton: Number(ex && ex.pcsPerCarton) || 0,
+        expiryAccept: (ex && ex.expiryAccept) || "",
+        batch: (ex && ex.batch) || "",
+      })).filter((ex) => ex.sku || ex.qty || ex.name);
+    }
+
+    function shipItemsFromRecipientItems(items) {
+      const out = [];
+      (items || []).forEach((item) => {
+        const exList = normalizeExchangeItems(item && item.exchangeItems);
+        const usableEx = exList.filter((ex) => ex.sku && Number(ex.qty) > 0);
+        if (usableEx.length) {
+          usableEx.forEach((ex) => {
+            const catalog = channelBoundSkuMap("線上-轉單")[String(ex.sku).toLowerCase()];
+            out.push(toPoLineItem({
+              ...ex,
+              name: ex.name || (catalog && catalog.name) || "",
+              unit: ex.unit || (catalog && catalog.unit) || "",
+              pcsPerCarton: ex.pcsPerCarton || (catalog && catalog.pcsPerCarton) || 0,
+              expiryAccept: ex.expiryAccept || (catalog && catalog.expiryAccept) || "",
+            }));
+          });
+          return;
+        }
+        if (item && item.sku && Number(item.qty) > 0) out.push(toPoLineItem(item));
+      });
+      return out;
+    }
 
     function buyerChannelNameOf(order) {
       const sel = document.getElementById("editOverseasChannelName");
@@ -7381,13 +7494,30 @@
       order.recipient = { ...list[0] };
     }
 
+    function hydrateRecvItem(item) {
+      const src = item || {};
+      return {
+        ...emptyRecvItem(),
+        ...src,
+        exchangeItems: normalizeExchangeItems(src.exchangeItems),
+      };
+    }
+
     function recipientListOf(order) {
       if (!order) return [emptyRecipient()];
       if (Array.isArray(order.recipients) && order.recipients.length) {
-        return order.recipients.map((r) => ({ ...emptyRecipient(), ...r, items: Array.isArray(r.items) ? r.items : [] }));
+        return order.recipients.map((r) => ({
+          ...emptyRecipient(),
+          ...r,
+          items: Array.isArray(r.items) ? r.items.map(hydrateRecvItem) : [],
+        }));
       }
       if (order.recipient) {
-        return [{ ...emptyRecipient(), ...order.recipient, items: Array.isArray(order.recipient.items) ? order.recipient.items : [] }];
+        return [{
+          ...emptyRecipient(),
+          ...order.recipient,
+          items: Array.isArray(order.recipient.items) ? order.recipient.items.map(hydrateRecvItem) : [],
+        }];
       }
       return [emptyRecipient()];
     }
@@ -7451,6 +7581,7 @@
         items.forEach((item) => {
           rows.push({
             groupId,
+            itemKey: newRecvItemKey(groupId),
             arriveTime: rec.arriveTime || "",
             platform: rec.platform || "",
             platformOrderNo: rec.platformOrderNo || "",
@@ -7470,12 +7601,14 @@
             qty: item && (item.qty === 0 || item.qty) ? item.qty : "",
             unit: (item && item.unit) || "",
             pcsPerCarton: (item && item.pcsPerCarton) || 0,
+            exchangeItems: normalizeExchangeItems(item && item.exchangeItems),
           });
         });
       });
       if (!rows.length) {
         rows.push({
           groupId: "g1",
+          itemKey: newRecvItemKey("g1"),
           arriveTime: "",
           ...emptyRecipient(),
           sku: "",
@@ -7485,6 +7618,7 @@
           qty: "",
           unit: "",
           pcsPerCarton: 0,
+          exchangeItems: [],
         });
       }
       nextRecvGroupId = Math.max(nextRecvGroupId, rows.length + 1);
@@ -7501,16 +7635,77 @@
       if (page) page.classList.toggle("has-online-recv", show);
     }
 
-    function recvItemRowHtml(row, platform, editable) {
+    function recvExchangeLineHtml(ex, editable) {
+      const qtyVal = ex && (ex.qty === 0 || ex.qty) ? String(ex.qty) : "";
+      const ops = editable
+        ? `<td class="ops recv-ex-ops">
+            <a href="#" data-recv-act="add-ex">新增</a>
+            <a href="#" data-recv-act="del-ex">刪除</a>
+          </td>`
+        : `<td class="ops recv-ex-ops"></td>`;
+      return `
+        <tr data-ex-row="1">
+          <td class="recv-sku-cell">
+            <input type="text" data-recv-ex="sku" autocomplete="off" value="${escapeHtml((ex && ex.sku) || "")}" ${editable ? "" : "readonly"} />
+            <div class="recv-sku-hits hidden" data-recv-sku-hits></div>
+          </td>
+          <td><input type="text" data-recv-ex="itemName" readonly value="${escapeHtml((ex && ex.name) || "")}" /></td>
+          <td class="num"><input type="number" data-recv-ex="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" ${editable ? "" : "readonly"} /></td>
+          ${ops}
+        </tr>`;
+    }
+
+    function recvExchangeBlockHtml(row, editable) {
+      const lines = (row.exchangeItems && row.exchangeItems.length) ? row.exchangeItems : [emptyExchangeItem()];
+      return `
+        <tr class="recv-ex-block" data-recv-group="${escapeHtml(row.groupId)}" data-recv-item="${escapeHtml(row.itemKey)}">
+          <td colspan="${RECV_COL_COUNT}">
+            <div class="recv-ex-inner">
+              <div class="recv-ex-title">換貨商品（出貨依此；結算仍依上方原品）</div>
+              <table class="recv-exchange-table">
+                <thead>
+                  <tr>
+                    <th>SKU</th>
+                    <th>商品名稱</th>
+                    <th class="num">數量</th>
+                    <th class="ops recv-ex-ops">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${lines.map((ex) => recvExchangeLineHtml(ex, editable)).join("")}
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>`;
+    }
+
+    function recvItemRowHtml(row, platform, editable, canExchange) {
       const qtyVal = row.qty === 0 || row.qty ? String(row.qty) : "";
+      const hasEx = Array.isArray(row.exchangeItems) && row.exchangeItems.length > 0;
+      const productLocked = hasEx || !editable;
+      const exCell = (() => {
+        if (canExchange && !hasEx) {
+          return `<td class="recv-ex-col"><a href="#" data-recv-act="exchange">換貨</a></td>`;
+        }
+        if (canExchange && hasEx) {
+          return `<td class="recv-ex-col"><a href="#" data-recv-act="cancel-exchange">取消換貨</a></td>`;
+        }
+        if (hasEx) {
+          return `<td class="recv-ex-col"><span class="recv-ex-label">已換貨</span></td>`;
+        }
+        return `<td class="recv-ex-col"></td>`;
+      })();
       const ops = editable
         ? `<td class="ops recv-ops-col">
             <a href="#" data-recv-act="add-item">新增品項</a>
             <a href="#" data-recv-act="del-item">刪除</a>
           </td>`
         : `<td class="ops recv-ops-col"></td>`;
-      return `
-        <tr data-recv-group="${escapeHtml(row.groupId)}" data-recv-arrive-time="${escapeHtml(row.arriveTime || "")}">
+      const ro = productLocked ? " readonly" : "";
+      const main = `
+        <tr class="recv-item-row${hasEx ? " is-exchanged" : ""}" data-recv-group="${escapeHtml(row.groupId)}" data-recv-item="${escapeHtml(row.itemKey)}" data-recv-arrive-time="${escapeHtml(row.arriveTime || "")}">
+          ${exCell}
           <td><input type="text" data-recv="platform" readonly value="${escapeHtml(platform || row.platform || "")}" /></td>
           <td><input type="text" data-recv="platformOrderNo" maxlength="50" value="${escapeHtml(row.platformOrderNo || "")}" /></td>
           <td><input type="date" data-recv="arriveDate" value="${escapeHtml(toDateInput(row.arriveDate) || "")}" /></td>
@@ -7520,18 +7715,36 @@
           <td class="recv-col-address"><textarea data-recv="address" rows="1">${escapeHtml(row.address || "")}</textarea></td>
           <td><input type="text" data-recv="tel" maxlength="30" value="${escapeHtml(row.tel || "")}" /></td>
           <td class="recv-sku-cell">
-            <input type="text" data-recv="sku" autocomplete="off" value="${escapeHtml(row.sku || "")}" />
+            <input type="text" data-recv="sku" autocomplete="off" value="${escapeHtml(row.sku || "")}"${ro} />
             <div class="recv-sku-hits hidden" data-recv-sku-hits></div>
           </td>
           <td><input type="text" data-recv="itemName" readonly value="${escapeHtml(row.itemName || "")}" /></td>
-          <td><input type="date" data-recv="expiryAccept" value="${escapeHtml(toDateInput(row.expiryAccept) || "")}" /></td>
+          <td><input type="date" data-recv="expiryAccept" value="${escapeHtml(toDateInput(row.expiryAccept) || "")}"${ro} /></td>
           <td>${recvBatchSelectHtml(row.batch || "")}</td>
-          <td class="num"><input type="number" data-recv="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" /></td>
+          <td class="num"><input type="number" data-recv="qty" min="1" step="1" value="${escapeHtml(qtyVal)}"${ro} /></td>
           <td><input type="number" data-recv="orderAmount" min="0" step="0.01" value="${row.orderAmount === 0 || row.orderAmount ? escapeHtml(String(row.orderAmount)) : ""}" /></td>
           <td>${recvSelectHtml(RECV_SHIP_OPTS, row.shipMethod || "", "shipMethod")}</td>
           <td><input type="text" data-recv="remark" maxlength="30" value="${escapeHtml(row.remark || "")}" /></td>
           ${ops}
         </tr>`;
+      const exBlock = hasEx ? recvExchangeBlockHtml(row, canExchange) : "";
+      return main + exBlock;
+    }
+
+    function setRecvProductLocked(tr, locked) {
+      if (!tr) return;
+      RECV_PRODUCT_FIELDS.forEach((field) => {
+        const el = tr.querySelector(`[data-recv="${field}"]`);
+        if (!el) return;
+        if (field === "itemName") {
+          el.readOnly = true;
+          return;
+        }
+        el.readOnly = !!locked;
+        if (el.tagName === "SELECT") el.disabled = !!locked;
+      });
+      const batchEl = tr.querySelector('[data-recv="batch"]');
+      if (batchEl) batchEl.disabled = !!locked;
     }
 
     function fillRecipientForm(order) {
@@ -7542,13 +7755,16 @@
       let list = isOnlineTransferPo(order) ? recipientListOf(order) : [];
       if (isOnlineTransferPo(order) && !list.length) list = [emptyRecipient()];
       const editable = orderFormMode !== "view";
+      const canExchange = canExchangeOnPo(order);
       const flat = isOnlineTransferPo(order) ? flattenRecipientDisplayRows(list) : [];
-      body.innerHTML = flat.map((row) => recvItemRowHtml(row, platform, editable)).join("");
+      body.innerHTML = flat.map((row) => recvItemRowHtml(row, platform, editable, canExchange)).join("");
       syncRecipientPanel(order);
       if (document.getElementById("page-order-edit")?.classList.contains("is-readonly")) {
         body.querySelectorAll("input, select, textarea").forEach((el) => {
           el.disabled = true;
         });
+      } else {
+        body.querySelectorAll("tr.recv-item-row.is-exchanged").forEach((tr) => setRecvProductLocked(tr, true));
       }
     }
 
@@ -7588,7 +7804,32 @@
         qty: Number.isFinite(qty) ? qty : "",
         unit: "",
         pcsPerCarton: 0,
+        exchangeItems: [],
       };
+    }
+
+    function readExchangeItemsFromBlock(block) {
+      if (!block) return [];
+      const bound = channelBoundSkuMap("線上-轉單");
+      return Array.from(block.querySelectorAll("tr[data-ex-row]")).map((tr) => {
+        const get = (field) => {
+          const el = tr.querySelector(`[data-recv-ex="${field}"]`);
+          return el ? String(el.value || "").trim() : "";
+        };
+        const sku = normalizeSku(get("sku"));
+        const qtyRaw = get("qty");
+        const qty = qtyRaw === "" ? "" : Number(qtyRaw);
+        const catalog = bound[String(sku || "").toLowerCase()];
+        return {
+          sku,
+          name: get("itemName") || (catalog && catalog.name) || "",
+          qty: Number.isFinite(qty) ? qty : "",
+          unit: (catalog && catalog.unit) || "",
+          pcsPerCarton: Number(catalog && catalog.pcsPerCarton) || 0,
+          expiryAccept: (catalog && catalog.expiryAccept) || "",
+          batch: "",
+        };
+      }).filter((ex) => ex.sku || ex.qty || ex.name);
     }
 
     function readRecipientRowsFromDom() {
@@ -7596,7 +7837,7 @@
       if (!body) return [];
       const groupOrder = [];
       const groupMap = {};
-      Array.from(body.querySelectorAll("tr[data-recv-group]")).forEach((tr) => {
+      Array.from(body.querySelectorAll("tr.recv-item-row")).forEach((tr) => {
         const gid = tr.getAttribute("data-recv-group") || "";
         if (!groupMap[gid]) {
           groupMap[gid] = { ...emptyRecipient(), ...readRecvSharedFromTr(tr), items: [] };
@@ -7610,7 +7851,14 @@
           if (!item.pcsPerCarton) item.pcsPerCarton = catalog.pcsPerCarton || 0;
           if (!item.expiryAccept && catalog.expiryAccept) item.expiryAccept = catalog.expiryAccept;
         }
-        if (item.sku || item.qty || item.name) {
+        const itemKey = tr.getAttribute("data-recv-item") || "";
+        const exBlock = itemKey
+          ? body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`)
+          : null;
+        if (tr.classList.contains("is-exchanged") || exBlock) {
+          item.exchangeItems = readExchangeItemsFromBlock(exBlock);
+        }
+        if (item.sku || item.qty || item.name || (item.exchangeItems && item.exchangeItems.length)) {
           groupMap[gid].items.push(item);
         }
       });
@@ -7769,6 +8017,41 @@
             focusRecvField(i, "qty");
             return false;
           }
+          const exList = normalizeExchangeItems(it.exchangeItems);
+          if (Array.isArray(it.exchangeItems) && it.exchangeItems.length) {
+            const usable = exList.filter((ex) => ex.sku && Number(ex.qty) > 0);
+            if (!usable.length) {
+              alert(ip + "已換貨，請至少填寫一筆換貨商品（SKU／數量）");
+              setPoTab("basic");
+              return false;
+            }
+            for (let k = 0; k < usable.length; k++) {
+              const ex = usable[k];
+              const ep = `${ip}換貨第 ${k + 1} 列：`;
+              const exBound = channelBoundSkuMap("線上-轉單")[String(ex.sku).toLowerCase()];
+              if (!exBound) {
+                alert(ep + `SKU「${ex.sku}」未綁定線上-轉單通路商品`);
+                setPoTab("basic");
+                return false;
+              }
+              const exQty = Number(ex.qty);
+              if (!Number.isInteger(exQty) || exQty <= 0) {
+                alert(ep + "數量須為正整數");
+                setPoTab("basic");
+                return false;
+              }
+            }
+            it.exchangeItems = usable.map((ex) => {
+              const cat = channelBoundSkuMap("線上-轉單")[String(ex.sku).toLowerCase()];
+              return {
+                ...ex,
+                name: ex.name || (cat && cat.name) || "",
+                unit: ex.unit || (cat && cat.unit) || "",
+                pcsPerCarton: ex.pcsPerCarton || (cat && cat.pcsPerCarton) || 0,
+                expiryAccept: ex.expiryAccept || (cat && cat.expiryAccept) || "",
+              };
+            });
+          }
         }
       }
       const nos = list.map((r) => r.platformOrderNo);
@@ -7781,22 +8064,31 @@
     }
 
     function syncRecvSharedFields(sourceTr, field) {
-      if (!sourceTr || !RECV_SHARED_FIELDS.includes(field)) return;
+      if (!sourceTr || !sourceTr.classList.contains("recv-item-row")) return;
+      if (!RECV_SHARED_FIELDS.includes(field)) return;
       const gid = sourceTr.getAttribute("data-recv-group");
       const el = sourceTr.querySelector(`[data-recv="${field}"]`);
       if (!el || !gid) return;
       const val = el.value;
       const body = document.getElementById("editRecvBody");
       if (!body) return;
-      body.querySelectorAll(`tr[data-recv-group="${CSS.escape(gid)}"]`).forEach((tr) => {
+      body.querySelectorAll(`tr.recv-item-row[data-recv-group="${CSS.escape(gid)}"]`).forEach((tr) => {
         if (tr === sourceTr) return;
         const target = tr.querySelector(`[data-recv="${field}"]`);
         if (target && target.value !== val) target.value = val;
       });
     }
 
-    function applyRecvSkuPick(tr, catalogRow) {
+    function applyRecvSkuPick(tr, catalogRow, isExchange) {
       if (!tr || !catalogRow) return;
+      if (isExchange) {
+        const skuEl = tr.querySelector('[data-recv-ex="sku"]');
+        const nameEl = tr.querySelector('[data-recv-ex="itemName"]');
+        if (skuEl) skuEl.value = catalogRow.sku || "";
+        if (nameEl) nameEl.value = catalogRow.name || "";
+        hideRecvSkuHits(tr);
+        return;
+      }
       const skuEl = tr.querySelector('[data-recv="sku"]');
       const nameEl = tr.querySelector('[data-recv="itemName"]');
       const expEl = tr.querySelector('[data-recv="expiryAccept"]');
@@ -7847,6 +8139,37 @@
       box.classList.remove("hidden");
     }
 
+    function insertExchangeBlockAfter(itemTr) {
+      if (!itemTr) return;
+      const gid = itemTr.getAttribute("data-recv-group") || "";
+      const itemKey = itemTr.getAttribute("data-recv-item") || newRecvItemKey(gid);
+      itemTr.setAttribute("data-recv-item", itemKey);
+      itemTr.classList.add("is-exchanged");
+      setRecvProductLocked(itemTr, true);
+      const exCell = itemTr.querySelector(".recv-ex-col");
+      if (exCell) exCell.innerHTML = `<a href="#" data-recv-act="cancel-exchange">取消換貨</a>`;
+      const row = {
+        groupId: gid,
+        itemKey,
+        exchangeItems: [emptyExchangeItem()],
+      };
+      itemTr.insertAdjacentHTML("afterend", recvExchangeBlockHtml(row, true));
+    }
+
+    function removeExchangeBlock(itemTr) {
+      if (!itemTr) return;
+      const body = document.getElementById("editRecvBody");
+      const itemKey = itemTr.getAttribute("data-recv-item") || "";
+      const block = body && itemKey
+        ? body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`)
+        : null;
+      if (block) block.remove();
+      itemTr.classList.remove("is-exchanged");
+      setRecvProductLocked(itemTr, false);
+      const exCell = itemTr.querySelector(".recv-ex-col");
+      if (exCell) exCell.innerHTML = `<a href="#" data-recv-act="exchange">換貨</a>`;
+    }
+
     function bindRecvTableEvents() {
       const body = document.getElementById("editRecvBody");
       if (!body || body.dataset.recvBound === "1") return;
@@ -7854,17 +8177,34 @@
       body.addEventListener("input", (e) => {
         if (orderFormMode === "view") return;
         const el = e.target;
-        const tr = el.closest("tr[data-recv-group]");
+        const exField = el.getAttribute("data-recv-ex");
+        if (exField === "sku") {
+          showRecvSkuHits(el.closest("tr[data-ex-row]"), el.value);
+          return;
+        }
+        const tr = el.closest("tr.recv-item-row");
         if (!tr) return;
         const field = el.getAttribute("data-recv");
         if (!field) return;
         if (RECV_SHARED_FIELDS.includes(field)) syncRecvSharedFields(tr, field);
-        if (field === "sku") showRecvSkuHits(tr, el.value);
+        if (field === "sku" && !tr.classList.contains("is-exchanged")) showRecvSkuHits(tr, el.value);
       });
       body.addEventListener("change", (e) => {
         if (orderFormMode === "view") return;
         const el = e.target;
-        const tr = el.closest("tr[data-recv-group]");
+        const exField = el.getAttribute("data-recv-ex");
+        if (exField === "sku") {
+          const exTr = el.closest("tr[data-ex-row]");
+          const bound = channelBoundSkuMap("線上-轉單")[normalizeSku(el.value).toLowerCase()];
+          if (bound) applyRecvSkuPick(exTr, bound, true);
+          else {
+            const nameEl = exTr && exTr.querySelector('[data-recv-ex="itemName"]');
+            if (nameEl) nameEl.value = "";
+            hideRecvSkuHits(exTr);
+          }
+          return;
+        }
+        const tr = el.closest("tr.recv-item-row");
         if (!tr) return;
         const field = el.getAttribute("data-recv");
         if (RECV_SHARED_FIELDS.includes(field)) syncRecvSharedFields(tr, field);
@@ -7873,12 +8213,12 @@
           const fromBatch = expiryDateFromBatch(el.value);
           if (expEl && fromBatch) expEl.value = fromBatch;
         }
-        if (field === "sku") {
+        if (field === "sku" && !tr.classList.contains("is-exchanged")) {
           const bound = channelBoundSkuMap("線上-轉單")[normalizeSku(el.value).toLowerCase()];
-          if (bound) applyRecvSkuPick(tr, bound);
+          if (bound) applyRecvSkuPick(tr, bound, false);
           else {
             const nameEl = tr.querySelector('[data-recv="itemName"]');
-            if (nameEl && !bound) nameEl.value = "";
+            if (nameEl) nameEl.value = "";
             hideRecvSkuHits(tr);
           }
         }
@@ -7888,24 +8228,68 @@
         const pickBtn = e.target.closest("[data-recv-sku-pick]");
         if (pickBtn) {
           e.preventDefault();
-          const tr = pickBtn.closest("tr[data-recv-group]");
+          const exTr = pickBtn.closest("tr[data-ex-row]");
+          const itemTr = pickBtn.closest("tr.recv-item-row");
           const sku = pickBtn.getAttribute("data-recv-sku-pick");
           const bound = channelBoundSkuMap("線上-轉單")[normalizeSku(sku).toLowerCase()];
-          if (tr && bound) applyRecvSkuPick(tr, bound);
+          if (exTr && bound) applyRecvSkuPick(exTr, bound, true);
+          else if (itemTr && bound && !itemTr.classList.contains("is-exchanged")) applyRecvSkuPick(itemTr, bound, false);
           return;
         }
         const act = e.target.closest("[data-recv-act]");
         if (!act) return;
         e.preventDefault();
-        const tr = act.closest("tr[data-recv-group]");
-        if (!tr) return;
         const action = act.getAttribute("data-recv-act");
+        if (action === "exchange") {
+          const order = getWorkspaceOrder();
+          if (!canExchangeOnPo(order)) {
+            alert("已建立出貨單，不可換貨");
+            return;
+          }
+          const itemTr = act.closest("tr.recv-item-row");
+          if (!itemTr || itemTr.classList.contains("is-exchanged")) return;
+          insertExchangeBlockAfter(itemTr);
+          return;
+        }
+        if (action === "cancel-exchange") {
+          const order = getWorkspaceOrder();
+          if (!canExchangeOnPo(order)) {
+            alert("已建立出貨單，不可取消換貨");
+            return;
+          }
+          const itemTr = act.closest("tr.recv-item-row");
+          if (!itemTr) return;
+          removeExchangeBlock(itemTr);
+          return;
+        }
+        if (action === "add-ex") {
+          const exTr = act.closest("tr[data-ex-row]");
+          if (!exTr) return;
+          exTr.insertAdjacentHTML("afterend", recvExchangeLineHtml(emptyExchangeItem(), true));
+          return;
+        }
+        if (action === "del-ex") {
+          const exTr = act.closest("tr[data-ex-row]");
+          const tbody = exTr && exTr.parentElement;
+          if (!exTr || !tbody) return;
+          if (tbody.querySelectorAll("tr[data-ex-row]").length <= 1) {
+            exTr.querySelectorAll("[data-recv-ex]").forEach((el) => { el.value = ""; });
+            hideRecvSkuHits(exTr);
+            return;
+          }
+          exTr.remove();
+          return;
+        }
+        const tr = act.closest("tr.recv-item-row");
+        if (!tr) return;
         if (action === "add-item") {
           const shared = readRecvSharedFromTr(tr);
           const gid = tr.getAttribute("data-recv-group");
           const platform = shared.platform || buyerChannelNameOf(getWorkspaceOrder()) || "線上-轉單";
+          const canExchange = canExchangeOnPo(getWorkspaceOrder());
           const row = {
             groupId: gid,
+            itemKey: newRecvItemKey(gid),
             arriveTime: tr.getAttribute("data-recv-arrive-time") || "",
             ...shared,
             sku: "",
@@ -7913,13 +8297,24 @@
             expiryAccept: "",
             batch: "",
             qty: "",
+            exchangeItems: [],
           };
-          tr.insertAdjacentHTML("afterend", recvItemRowHtml(row, platform, true));
+          let insertAfter = tr;
+          const itemKey = tr.getAttribute("data-recv-item");
+          if (itemKey) {
+            const block = body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`);
+            if (block) insertAfter = block;
+          }
+          insertAfter.insertAdjacentHTML("afterend", recvItemRowHtml(row, platform, true, canExchange));
           return;
         }
         if (action === "del-item") {
           const gid = tr.getAttribute("data-recv-group");
-          const siblings = body.querySelectorAll(`tr[data-recv-group="${CSS.escape(gid)}"]`);
+          const itemKey = tr.getAttribute("data-recv-item") || "";
+          const siblings = body.querySelectorAll(`tr.recv-item-row[data-recv-group="${CSS.escape(gid)}"]`);
+          const block = itemKey
+            ? body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`)
+            : null;
           if (siblings.length <= 1) {
             ["sku", "itemName", "expiryAccept", "qty"].forEach((f) => {
               const el = tr.querySelector(`[data-recv="${f}"]`);
@@ -7927,9 +8322,17 @@
             });
             const batchEl = tr.querySelector('[data-recv="batch"]');
             if (batchEl) batchEl.value = "";
+            if (block) block.remove();
+            tr.classList.remove("is-exchanged");
+            setRecvProductLocked(tr, false);
+            const exCell = tr.querySelector(".recv-ex-col");
+            if (exCell && canExchangeOnPo(getWorkspaceOrder())) {
+              exCell.innerHTML = `<a href="#" data-recv-act="exchange">換貨</a>`;
+            } else if (exCell) exCell.innerHTML = "";
             hideRecvSkuHits(tr);
             return;
           }
+          if (block) block.remove();
           tr.remove();
         }
       });
@@ -11756,9 +12159,16 @@
     }
 
     function sourceItemsForRecipient(order, rec) {
-      if (rec && Array.isArray(rec.items) && rec.items.length) return rec.items.map((row) => toPoLineItem(row));
+      if (rec && Array.isArray(rec.items) && rec.items.length) {
+        return shipItemsFromRecipientItems(rec.items);
+      }
       const list = recipientListOf(order);
-      if (list.length <= 1) return ((order && order.items) || []).map((row) => toPoLineItem(row));
+      if (list.length <= 1) {
+        const items = list[0] && Array.isArray(list[0].items) && list[0].items.length
+          ? list[0].items
+          : ((order && order.items) || []);
+        return shipItemsFromRecipientItems(items);
+      }
       return [];
     }
 
