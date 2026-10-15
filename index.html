@@ -2372,6 +2372,8 @@
               <div class="po-kind-meta" id="shipAcceptMeta"></div>
             </div>
             <div class="acc-head-actions" id="shipAcceptActions">
+              <button type="button" class="btn hidden" id="shipExportDeclBtn">回壓出口報單</button>
+              <button type="button" class="btn hidden" id="shipExportDeclDeleteBtn">刪除出口報單</button>
               <button type="button" class="btn btn-primary" id="shipAcceptSubmitBtn">驗收</button>
             </div>
           </div>
@@ -4610,6 +4612,7 @@
   </div>
 
   <input type="file" id="stampFileInput" class="hidden" accept=".pdf,image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf" />
+  <input type="file" id="exportDeclFileInput" class="hidden" accept=".pdf,image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf" />
   <div id="voidNoteBubble" class="void-note-bubble hidden" role="tooltip"></div>
 
   <script>
@@ -6777,10 +6780,10 @@
       "經銷商-學生營養股份有限公司": { region: "台灣(經銷)", shipArea: "台灣", mode: "經銷", acceptFlow: "轉單", monthlySettle: true, currency: "TWD", phone: "07-333-2211", contact: "學生營養窗口", email: "dealer2@example.com", address: "高雄市前鎮區成功二路88號", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "66778899" },
       "線上-轉單": { region: "台灣(通路)", shipArea: "台灣", mode: "轉單", acceptFlow: "轉單", monthlySettle: false, currency: "TWD", phone: "02-1111-2222", contact: "線上客服", email: "online@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(黑貓)", taxId: "45678912" },
       "線上-蝦皮商城": { region: "台灣(通路)", shipArea: "台灣", mode: "轉單", acceptFlow: "轉單", monthlySettle: false, currency: "TWD", phone: "02-3333-4444", contact: "蝦皮窗口", email: "shopee@example.com", address: "新北市五股區成泰路一段100號 藍田倉", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(宅配通)", taxId: "56789123" },
-      "跨境- Cool Cool Trading": { region: "境外", shipArea: "香港", mode: "跨境", acceptFlow: "轉單", monthlySettle: false, currency: "USD", phone: "+852-1234-5678", contact: "Cool Cool Ops", email: "coolcool@example.com", address: "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong", inWarehouse: "藍田倉", shipOutPoint: "藍雀物流股份有限公司(訂單自取)", taxId: "HK-99887766" },
-      "跨境-Sheng Siong": { region: "境外", shipArea: "新加坡", mode: "跨境", acceptFlow: "轉單", monthlySettle: false, currency: "USD", phone: "+6562698265", contact: "Jane Gwee Chee Chin", email: "gwee.cc@shengsiong.com.sg", address: "6 Mandai Link, Singapore 728652", inWarehouse: "藍田倉", shipOutPoint: "藍雀物流股份有限公司(訂單自取)", taxId: "SG-201234567" },
-      "跨境-Aeon Japan": { region: "境外", shipArea: "日本", mode: "跨境", acceptFlow: "轉單", monthlySettle: false, currency: "USD", phone: "+81-3-1234-5678", contact: "Aeon Import Desk", email: "import@aeon-demo.jp", address: "1-5-1 Nakase, Mihama-ku, Chiba, Japan", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "JP-998877" },
-      "晨曦公司": { region: "境外", shipArea: "香港", mode: "跨境", acceptFlow: "轉單", monthlySettle: false, currency: "TWD", phone: "02-8787-2360", contact: "晨曦窗口", email: "chenxi@example.com", address: "115臺北市南港區三重里三重路19-9號B棟6樓", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(訂單自取)", taxId: "77889900" },
+      "跨境- Cool Cool Trading": { region: "境外", shipArea: "香港", mode: "跨境", acceptFlow: "買斷", monthlySettle: false, currency: "USD", phone: "+852-1234-5678", contact: "Cool Cool Ops", email: "coolcool@example.com", address: "Unit 12, 8/F, Kowloon Bay Trade Centre, Hong Kong", inWarehouse: "藍田倉", shipOutPoint: "藍雀物流股份有限公司(訂單自取)", taxId: "HK-99887766" },
+      "跨境-Sheng Siong": { region: "境外", shipArea: "新加坡", mode: "跨境", acceptFlow: "買斷", monthlySettle: false, currency: "USD", phone: "+6562698265", contact: "Jane Gwee Chee Chin", email: "gwee.cc@shengsiong.com.sg", address: "6 Mandai Link, Singapore 728652", inWarehouse: "藍田倉", shipOutPoint: "藍雀物流股份有限公司(訂單自取)", taxId: "SG-201234567" },
+      "跨境-Aeon Japan": { region: "境外", shipArea: "日本", mode: "跨境", acceptFlow: "買斷", monthlySettle: false, currency: "USD", phone: "+81-3-1234-5678", contact: "Aeon Import Desk", email: "import@aeon-demo.jp", address: "1-5-1 Nakase, Mihama-ku, Chiba, Japan", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(專車)", taxId: "JP-998877" },
+      "晨曦公司": { region: "境外", shipArea: "香港", mode: "跨境", acceptFlow: "買斷", monthlySettle: false, currency: "TWD", phone: "02-8787-2360", contact: "晨曦窗口", email: "chenxi@example.com", address: "115臺北市南港區三重里三重路19-9號B棟6樓", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(訂單自取)", taxId: "77889900" },
       "百貨-新光三越": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "寄倉", monthlySettle: true, currency: "TWD", phone: "02-2388-5555", contact: "新光三越專櫃", email: "skm@example.com", address: "台北市信義區松高路19號 新光三越A11專櫃", inWarehouse: "正光廊-營運部主管", shipOutPoint: "正光廊-營運部主管(訂單自取)", taxId: "88990011" },
     };
 
@@ -13198,6 +13201,101 @@
     }
 
     let shipAcceptDraft = null; // { orderId, readonly, lines: [...] }
+    let pendingExportDeclShipId = "";
+
+    function hasExportDeclFile(ship) {
+      return !!(ship && ship.exportDeclFile && ship.exportDeclFile.data);
+    }
+
+    function shipPoOf(ship) {
+      if (!ship) return null;
+      return salesOrders.find((item) => item.orderNo === ship.salesOrderNo) || null;
+    }
+
+    function needsExportDecl(ship) {
+      return isOverseasPo(shipPoOf(ship));
+    }
+
+    function canUploadExportDecl(ship) {
+      return needsExportDecl(ship) && !!ship && ship.status === "待驗收";
+    }
+
+    function canViewExportDecl(ship) {
+      return needsExportDecl(ship) && hasExportDeclFile(ship);
+    }
+
+    function canDeleteExportDecl(ship) {
+      return canUploadExportDecl(ship) && hasExportDeclFile(ship);
+    }
+
+    function syncExportDeclButtons(ship) {
+      const btn = document.getElementById("shipExportDeclBtn");
+      const delBtn = document.getElementById("shipExportDeclDeleteBtn");
+      if (!btn || !delBtn) return;
+      const overseas = needsExportDecl(ship);
+      const hasFile = hasExportDeclFile(ship);
+      const pending = !!(ship && ship.status === "待驗收");
+      const accepted = !!(ship && ship.status === "已驗收");
+      btn.classList.toggle("hidden", !overseas || (accepted && !hasFile));
+      if (overseas && hasFile) {
+        btn.textContent = "檢視出口報單";
+        btn.disabled = false;
+      } else if (overseas && pending) {
+        btn.textContent = "回壓出口報單";
+        btn.disabled = false;
+      } else {
+        btn.textContent = "回壓出口報單";
+        btn.disabled = true;
+      }
+      delBtn.classList.toggle("hidden", !canDeleteExportDecl(ship));
+      delBtn.disabled = !canDeleteExportDecl(ship);
+    }
+
+    function openExportDeclFile(ship) {
+      if (!canViewExportDecl(ship)) return;
+      stampFileToPdfBytes(shipPoOf(ship) || {}, ship.exportDeclFile).then((bytes) => {
+        const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+        const win = window.open(url, "_blank");
+        if (!win) alert("瀏覽器已封鎖彈出視窗，請允許後再檢視文件");
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      }).catch(() => {
+        alert("無法開啟文件，請重新上傳 PDF 或圖片");
+      });
+    }
+
+    function openExportDeclFilePicker(ship) {
+      if (!canUploadExportDecl(ship) || hasExportDeclFile(ship)) return;
+      pendingExportDeclShipId = ship.orderId || "";
+      const input = document.getElementById("exportDeclFileInput");
+      if (!input) return;
+      input.value = "";
+      input.click();
+    }
+
+    function applyExportDeclToShip(ship, fileData) {
+      if (!canUploadExportDecl(ship)) return;
+      ship.exportDeclFile = fileData;
+      if (!persistDemoData()) {
+        alert("DEMO 儲存空間不足，出口報單可能未寫入本機。請改傳較小的 PDF 或圖片");
+      }
+      syncExportDeclButtons(ship);
+      renderShippingTable(getShippingFiltered ? getShippingFiltered() : undefined);
+    }
+
+    function deleteExportDeclFromShip(ship) {
+      if (!canDeleteExportDecl(ship)) return;
+      if (!confirm("確定刪除已上傳的出口報單？刪除後可重新上傳。")) return;
+      ship.exportDeclFile = null;
+      persistDemoData();
+      syncExportDeclButtons(ship);
+      renderShippingTable(getShippingFiltered ? getShippingFiltered() : undefined);
+    }
+
+    /** 境外未回壓出口報單：彈窗提醒，確定仍可繼續驗收 */
+    function confirmOverseasExportDeclOrContinue(ship) {
+      if (!needsExportDecl(ship) || hasExportDeclFile(ship)) return true;
+      return confirm("尚未回壓出口報單，是否仍要完成驗收？");
+    }
 
     function normalizeNonOnlineShipStatuses() {
       rows.forEach((ship) => {
@@ -13282,9 +13380,11 @@
       document.getElementById("shipAcceptMeta").textContent = ship.acceptNote
         ? `驗收說明：${ship.acceptNote}`
         : "";
-      document.getElementById("shipAcceptActions").classList.toggle("hidden", readonly);
+      document.getElementById("shipAcceptActions").classList.remove("hidden");
+      document.getElementById("shipAcceptSubmitBtn").classList.toggle("hidden", readonly);
       document.getElementById("shipAcceptHint").classList.toggle("hidden", readonly);
       document.getElementById("shipAcceptTitle").firstChild.textContent = readonly ? "檢視驗收 " : "驗收 ";
+      syncExportDeclButtons(ship);
       renderShipAcceptTable();
       showPage("ship-accept");
     }
@@ -13350,6 +13450,9 @@
 
     function startShipAcceptSubmit() {
       if (!shipAcceptDraft || shipAcceptDraft.readonly) return;
+      const ship = rows.find((row) => row.orderId === shipAcceptDraft.orderId);
+      if (!ship || ship.status !== "待驗收") return;
+      if (!confirmOverseasExportDeclOrContinue(ship)) return;
       const checked = shipAcceptDraft.lines.filter((line) => line.checked);
       if (!checked.length) {
         alert("請至少勾選一筆商品進行驗收");
@@ -16413,6 +16516,45 @@
       history.replaceState({}, "", location.pathname);
     });
     document.getElementById("shipAcceptSubmitBtn").addEventListener("click", startShipAcceptSubmit);
+    document.getElementById("shipExportDeclBtn").addEventListener("click", () => {
+      if (!shipAcceptDraft) return;
+      const ship = rows.find((row) => row.orderId === shipAcceptDraft.orderId);
+      if (!ship) return;
+      if (canViewExportDecl(ship)) openExportDeclFile(ship);
+      else openExportDeclFilePicker(ship);
+    });
+    document.getElementById("shipExportDeclDeleteBtn").addEventListener("click", () => {
+      if (!shipAcceptDraft) return;
+      const ship = rows.find((row) => row.orderId === shipAcceptDraft.orderId);
+      if (!ship) return;
+      deleteExportDeclFromShip(ship);
+    });
+    document.getElementById("exportDeclFileInput").addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = "";
+      const ship = rows.find((row) => row.orderId === pendingExportDeclShipId);
+      pendingExportDeclShipId = "";
+      if (!file || !ship || !canUploadExportDecl(ship) || hasExportDeclFile(ship)) return;
+      const okType = /pdf$/i.test(file.type) || /^image\//i.test(file.type) || /\.(pdf|png|jpe?g|webp|gif)$/i.test(file.name);
+      if (!okType) {
+        alert("請上傳 PDF 或圖片");
+        return;
+      }
+      if (file.size > STAMP_MAX_BYTES) {
+        alert("檔案請小於 2MB");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        applyExportDeclToShip(ship, {
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          data: String(reader.result || ""),
+          uploadedAt: nowStamp(),
+        });
+      };
+      reader.readAsDataURL(file);
+    });
     document.getElementById("shipAcceptBody").addEventListener("change", (e) => {
       if (!shipAcceptDraft || shipAcceptDraft.readonly) return;
       if (!e.target.matches("input[data-ship-accept-check]")) return;
