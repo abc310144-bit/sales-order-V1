@@ -915,7 +915,12 @@
     .recv-list-table [data-recv="sku"] { min-width: 120px; }
     .recv-list-table [data-recv="itemName"] { min-width: 180px; }
     .recv-list-table [data-recv="batch"] { min-width: 160px; }
+    .recv-list-table [data-recv="sellableQty"] { min-width: 100px; }
     .recv-list-table [data-recv="qty"] { min-width: 88px; }
+    .recv-list-table input.is-oversell,
+    .recv-exchange-table input.is-oversell {
+      color: #cf1322;
+    }
     .recv-list-table [data-recv="orderAmount"] { min-width: 110px; }
     .recv-list-table [data-recv="shipMethod"] { min-width: 140px; }
     .recv-list-table [data-recv="remark"] { min-width: 140px; }
@@ -954,7 +959,7 @@
       padding: 10px 14px 12px;
       border-top: 0;
     }
-    .recv-ex-inner { max-width: 720px; }
+    .recv-ex-inner { max-width: 880px; }
     .recv-ex-title {
       font-size: 12px;
       color: var(--text-2);
@@ -982,6 +987,7 @@
     }
     .recv-exchange-table [data-recv-ex="sku"] { min-width: 120px; }
     .recv-exchange-table [data-recv-ex="itemName"] { min-width: 160px; }
+    .recv-exchange-table [data-recv-ex="sellableQty"] { min-width: 100px; }
     .recv-exchange-table [data-recv-ex="qty"] { min-width: 80px; }
     .recv-ex-label { color: var(--text-2); font-size: 12px; }
     #page-order-edit.is-readonly .recv-ops-col,
@@ -3847,7 +3853,8 @@
                       <th>商品名稱</th>
                       <th>商品效期</th>
                       <th>批號</th>
-                      <th class="num">數量</th>
+                      <th class="num">當前可賣量</th>
+                      <th class="num">下定數量</th>
                       <th class="num">合計</th>
                       <th>運送方式</th>
                       <th>備註</th>
@@ -7473,7 +7480,7 @@
       "address", "tel", "orderAmount", "shipMethod", "remark",
     ];
     const RECV_PRODUCT_FIELDS = ["sku", "itemName", "expiryAccept", "batch", "qty"];
-    const RECV_COL_COUNT = 18;
+    const RECV_COL_COUNT = 19;
     let nextRecvGroupId = 1;
     let nextRecvItemSeq = 1;
 
@@ -7696,8 +7703,49 @@
       if (page) page.classList.toggle("has-online-recv", show);
     }
 
+    function recvSellableText(sku) {
+      const key = normalizeSku(sku);
+      if (!key) return "-";
+      const bound = channelBoundSkuMap("線上-轉單")[key.toLowerCase()];
+      if (!bound) return "-";
+      if (bound.sellableQty != null && String(bound.sellableQty).trim() !== "") {
+        return String(Number(bound.sellableQty) || 0);
+      }
+      return String(virtualAllocOf("線上-轉單", bound.sku || key) || 0);
+    }
+
+    function recvSellableNumber(text) {
+      if (text == null || text === "" || text === "-") return null;
+      const n = Number(text);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function syncRecvOversell(tr, isExchange) {
+      if (!tr) return;
+      const qtyEl = tr.querySelector(isExchange ? '[data-recv-ex="qty"]' : '[data-recv="qty"]');
+      const sellEl = tr.querySelector(isExchange ? '[data-recv-ex="sellableQty"]' : '[data-recv="sellableQty"]');
+      if (!qtyEl) return;
+      const sell = recvSellableNumber(sellEl && sellEl.value);
+      const qty = Number(qtyEl.value);
+      const over = sell != null && Number.isFinite(qty) && qty > 0 && qty > sell;
+      qtyEl.classList.toggle("is-oversell", over);
+    }
+
+    function fillRecvSellable(tr, sku, isExchange) {
+      if (!tr) return;
+      const sellEl = tr.querySelector(isExchange ? '[data-recv-ex="sellableQty"]' : '[data-recv="sellableQty"]');
+      if (sellEl) sellEl.value = recvSellableText(sku);
+      syncRecvOversell(tr, !!isExchange);
+    }
+
     function recvExchangeLineHtml(ex, editable, showDelete) {
       const qtyVal = ex && (ex.qty === 0 || ex.qty) ? String(ex.qty) : "";
+      const sellVal = recvSellableText((ex && ex.sku) || "");
+      const over = (() => {
+        const sell = recvSellableNumber(sellVal);
+        const qty = Number(qtyVal);
+        return sell != null && Number.isFinite(qty) && qty > 0 && qty > sell;
+      })();
       const ops = editable
         ? `<td class="ops recv-ex-ops">
             <a href="#" data-recv-act="add-ex">新增</a>
@@ -7711,7 +7759,8 @@
             <div class="recv-sku-hits hidden" data-recv-sku-hits></div>
           </td>
           <td><input type="text" data-recv-ex="itemName" readonly value="${escapeHtml((ex && ex.name) || "")}" /></td>
-          <td class="num"><input type="number" data-recv-ex="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" ${editable ? "" : "readonly"} /></td>
+          <td class="num"><input type="text" data-recv-ex="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
+          <td class="num"><input type="number" data-recv-ex="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${over ? "is-oversell" : ""}" ${editable ? "" : "readonly"} /></td>
           ${ops}
         </tr>`;
     }
@@ -7728,7 +7777,8 @@
                   <tr>
                     <th>SKU</th>
                     <th>商品名稱</th>
-                    <th class="num">數量</th>
+                    <th class="num">當前可賣量</th>
+                    <th class="num">下定數量</th>
                     <th class="ops recv-ex-ops">操作</th>
                   </tr>
                 </thead>
@@ -7777,6 +7827,12 @@
 
     function recvItemRowHtml(row, platform, editable, canExchange, showDelete) {
       const qtyVal = row.qty === 0 || row.qty ? String(row.qty) : "";
+      const sellVal = recvSellableText(row.sku || "");
+      const qtyOver = (() => {
+        const sell = recvSellableNumber(sellVal);
+        const qty = Number(qtyVal);
+        return sell != null && Number.isFinite(qty) && qty > 0 && qty > sell;
+      })();
       const hasEx = Array.isArray(row.exchangeItems) && row.exchangeItems.length > 0;
       const productLocked = hasEx || !editable;
       const exCell = (() => {
@@ -7811,7 +7867,8 @@
           <td><input type="text" data-recv="itemName" readonly value="${escapeHtml(row.itemName || "")}" /></td>
           <td><input type="date" data-recv="expiryAccept" value="${escapeHtml(toDateInput(row.expiryAccept) || "")}"${ro} /></td>
           <td>${recvBatchSelectHtml(row.batch || "")}</td>
-          <td class="num"><input type="number" data-recv="qty" min="1" step="1" value="${escapeHtml(qtyVal)}"${ro} /></td>
+          <td class="num"><input type="text" data-recv="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
+          <td class="num"><input type="number" data-recv="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${qtyOver ? "is-oversell" : ""}"${ro} /></td>
           <td class="num"><input type="number" data-recv="orderAmount" min="0" step="0.01" readonly value="${row.orderAmount === 0 || row.orderAmount ? escapeHtml(String(row.orderAmount)) : ""}" /></td>
           <td>${recvSelectHtml(RECV_SHIP_OPTS, row.shipMethod || "", "shipMethod")}</td>
           <td><input type="text" data-recv="remark" maxlength="30" value="${escapeHtml(row.remark || "")}" /></td>
@@ -8302,6 +8359,7 @@
         const nameEl = tr.querySelector('[data-recv-ex="itemName"]');
         if (skuEl) skuEl.value = catalogRow.sku || "";
         if (nameEl) nameEl.value = catalogRow.name || "";
+        fillRecvSellable(tr, catalogRow.sku || "", true);
         hideRecvSkuHits(tr);
         return;
       }
@@ -8321,6 +8379,7 @@
       if (expEl) {
         expEl.value = toDateInput(catalogRow.expiryAccept) || expiryDateFromBatch(batch) || "";
       }
+      fillRecvSellable(tr, catalogRow.sku || "", false);
       hideRecvSkuHits(tr);
     }
 
@@ -8399,6 +8458,11 @@
           const exTr = el.closest("tr[data-ex-row]");
           showRecvSkuHits(exTr, el.value);
           tryAutofillRecvSkuName(exTr, el.value, true);
+          fillRecvSellable(exTr, el.value, true);
+          return;
+        }
+        if (exField === "qty") {
+          syncRecvOversell(el.closest("tr[data-ex-row]"), true);
           return;
         }
         const tr = el.closest("tr.recv-item-row");
@@ -8409,9 +8473,13 @@
         if (field === "sku" && !tr.classList.contains("is-exchanged")) {
           showRecvSkuHits(tr, el.value);
           tryAutofillRecvSkuName(tr, el.value, false);
+          fillRecvSellable(tr, el.value, false);
           syncRecvGroupAmount(tr.getAttribute("data-recv-group"));
         }
-        if (field === "qty") syncRecvGroupAmount(tr.getAttribute("data-recv-group"));
+        if (field === "qty") {
+          syncRecvOversell(tr, false);
+          syncRecvGroupAmount(tr.getAttribute("data-recv-group"));
+        }
       });
       body.addEventListener("change", (e) => {
         if (orderFormMode === "view" && !isViewExchangeMode(getWorkspaceOrder())) return;
@@ -8424,6 +8492,7 @@
           else {
             const nameEl = exTr && exTr.querySelector('[data-recv-ex="itemName"]');
             if (nameEl) nameEl.value = "";
+            fillRecvSellable(exTr, el.value, true);
             hideRecvSkuHits(exTr);
           }
           return;
@@ -8443,11 +8512,15 @@
           else {
             const nameEl = tr.querySelector('[data-recv="itemName"]');
             if (nameEl) nameEl.value = "";
+            fillRecvSellable(tr, el.value, false);
             hideRecvSkuHits(tr);
           }
           syncRecvGroupAmount(tr.getAttribute("data-recv-group"));
         }
-        if (field === "qty") syncRecvGroupAmount(tr.getAttribute("data-recv-group"));
+        if (field === "qty") {
+          syncRecvOversell(tr, false);
+          syncRecvGroupAmount(tr.getAttribute("data-recv-group"));
+        }
       });
       body.addEventListener("click", (e) => {
         if (orderFormMode === "view" && !isViewExchangeMode(getWorkspaceOrder())) return;
@@ -8555,6 +8628,7 @@
               const el = tr.querySelector(`[data-recv="${f}"]`);
               if (el) el.value = "";
             });
+            fillRecvSellable(tr, "", false);
             const batchEl = tr.querySelector('[data-recv="batch"]');
             if (batchEl) batchEl.value = "";
             if (block) block.remove();
