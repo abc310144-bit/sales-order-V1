@@ -3719,7 +3719,6 @@
               <button type="button" class="btn" id="editStampUpload">回壓文件</button>
               <button type="button" class="btn hidden" id="editCopyPo">複製</button>
               <button type="button" class="btn hidden" id="editAddShip" disabled>新增出貨單</button>
-              <button type="button" class="btn btn-primary hidden" id="editSaveExchange">儲存換貨</button>
               <button type="button" class="btn" id="editReject">審核不通過</button>
               <button type="button" class="btn btn-primary" id="editApprove">審核通過</button>
               <button type="button" class="btn btn-primary hidden" id="editConfirmComplete">確認完成</button>
@@ -8081,11 +8080,14 @@
       return `目前狀態不可${action}`;
     }
 
-    function validateRecvExchangeItems(exchangeItems, ip) {
+    function validateRecvExchangeItems(exchangeItems, ip, opts) {
+      const silent = !!(opts && opts.silent);
       const usable = normalizeExchangeItems(exchangeItems).filter((ex) => ex.sku && Number(ex.qty) > 0);
       if (!usable.length) {
-        alert(ip + "已換貨，請至少填寫一筆換貨商品（SKU／數量）");
-        setPoTab("basic");
+        if (!silent) {
+          alert(ip + "已換貨，請至少填寫一筆換貨商品（SKU／數量）");
+          setPoTab("basic");
+        }
         return null;
       }
       for (let k = 0; k < usable.length; k++) {
@@ -8093,14 +8095,18 @@
         const ep = `${ip}換貨第 ${k + 1} 列：`;
         const exBound = channelBoundSkuMap("線上-轉單")[String(ex.sku).toLowerCase()];
         if (!exBound) {
-          alert(ep + `SKU「${ex.sku}」未綁定線上-轉單通路商品`);
-          setPoTab("basic");
+          if (!silent) {
+            alert(ep + `SKU「${ex.sku}」未綁定線上-轉單通路商品`);
+            setPoTab("basic");
+          }
           return null;
         }
         const exQty = Number(ex.qty);
         if (!Number.isInteger(exQty) || exQty <= 0) {
-          alert(ep + "數量須為正整數");
-          setPoTab("basic");
+          if (!silent) {
+            alert(ep + "下定數量須為正整數");
+            setPoTab("basic");
+          }
           return null;
         }
       }
@@ -8116,17 +8122,32 @@
       });
     }
 
-    function saveViewExchange() {
-      const order = getWorkspaceOrder();
-      if (!order || !isViewExchangeMode(order)) return;
+    function recvItemTrFromEl(el) {
+      if (!el) return null;
+      const itemTr = el.closest("tr.recv-item-row");
+      if (itemTr) return itemTr;
+      const block = el.closest("tr.recv-ex-block");
+      if (!block) return null;
+      const itemKey = block.getAttribute("data-recv-item") || "";
       const body = document.getElementById("editRecvBody");
-      if (!body) return;
+      if (!body || !itemKey) return null;
+      return body.querySelector(`tr.recv-item-row[data-recv-item="${CSS.escape(itemKey)}"]`);
+    }
+
+    function persistViewExchangeRow(itemTr) {
+      const order = getWorkspaceOrder();
+      if (!order || !isViewExchangeMode(order) || !itemTr) return false;
+      const body = document.getElementById("editRecvBody");
+      if (!body) return false;
       const recipients = recipientListOf(order);
+      const itemRows = Array.from(body.querySelectorAll("tr.recv-item-row"));
+      const idx = itemRows.indexOf(itemTr);
+      if (idx < 0) return false;
       const groupIndex = {};
       const itemCursor = {};
       let groupSeq = 0;
-      const updates = [];
-      Array.from(body.querySelectorAll("tr.recv-item-row")).forEach((tr) => {
+      let target = null;
+      itemRows.forEach((tr) => {
         const gid = tr.getAttribute("data-recv-group") || "";
         if (!(gid in groupIndex)) {
           groupIndex[gid] = groupSeq++;
@@ -8134,23 +8155,23 @@
         }
         const ri = groupIndex[gid];
         const ii = itemCursor[gid]++;
-        const itemKey = tr.getAttribute("data-recv-item") || "";
-        const exBlock = itemKey
-          ? body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`)
-          : null;
-        updates.push({ ri, ii, exchanged: tr.classList.contains("is-exchanged") || !!exBlock, exBlock });
-      });
-      for (const u of updates) {
-        const rec = recipients[u.ri];
-        const item = rec && rec.items && rec.items[u.ii];
-        if (!item) continue;
-        if (!u.exchanged) {
-          item.exchangeItems = [];
-          continue;
+        if (tr === itemTr) {
+          const itemKey = tr.getAttribute("data-recv-item") || "";
+          const exBlock = itemKey
+            ? body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`)
+            : null;
+          target = { ri, ii, exchanged: tr.classList.contains("is-exchanged") || !!exBlock, exBlock };
         }
-        const prefix = recipients.length > 1 ? `訂單內容第 ${u.ri + 1} 筆：` : "";
-        const checked = validateRecvExchangeItems(readExchangeItemsFromBlock(u.exBlock), `${prefix}商品第 ${u.ii + 1} 列：`);
-        if (!checked) return;
+      });
+      if (!target) return false;
+      const rec = recipients[target.ri];
+      const item = rec && rec.items && rec.items[target.ii];
+      if (!item) return false;
+      if (!target.exchanged) {
+        item.exchangeItems = [];
+      } else {
+        const checked = validateRecvExchangeItems(readExchangeItemsFromBlock(target.exBlock), "", { silent: true });
+        if (!checked) return false;
         item.exchangeItems = checked;
       }
       order.recipients = recipients;
@@ -8159,8 +8180,7 @@
         : emptyRecipient();
       persistDemoData();
       renderSalesTable(getSalesFiltered());
-      fillOrderEdit(order, "view");
-      alert("換貨已儲存");
+      return true;
     }
 
     function validateRecipientRequired(order) {
@@ -8361,6 +8381,7 @@
         if (nameEl) nameEl.value = catalogRow.name || "";
         fillRecvSellable(tr, catalogRow.sku || "", true);
         hideRecvSkuHits(tr);
+        persistViewExchangeRow(recvItemTrFromEl(tr));
         return;
       }
       const skuEl = tr.querySelector('[data-recv="sku"]');
@@ -8495,6 +8516,12 @@
             fillRecvSellable(exTr, el.value, true);
             hideRecvSkuHits(exTr);
           }
+          persistViewExchangeRow(recvItemTrFromEl(exTr));
+          return;
+        }
+        if (exField === "qty") {
+          syncRecvOversell(el.closest("tr[data-ex-row]"), true);
+          persistViewExchangeRow(recvItemTrFromEl(el));
           return;
         }
         const tr = el.closest("tr.recv-item-row");
@@ -8559,6 +8586,7 @@
           const itemTr = act.closest("tr.recv-item-row");
           if (!itemTr) return;
           removeExchangeBlock(itemTr);
+          persistViewExchangeRow(itemTr);
           return;
         }
         if (action === "add-ex") {
@@ -8579,10 +8607,12 @@
             exTr.querySelectorAll("[data-recv-ex]").forEach((el) => { el.value = ""; });
             hideRecvSkuHits(exTr);
             refreshRecvExDeleteButtons(tbody);
+            persistViewExchangeRow(recvItemTrFromEl(exTr));
             return;
           }
           exTr.remove();
           refreshRecvExDeleteButtons(tbody);
+          persistViewExchangeRow(recvItemTrFromEl(tbody));
           return;
         }
         const tr = act.closest("tr.recv-item-row");
@@ -8655,6 +8685,11 @@
           box.classList.add("hidden");
           box.innerHTML = "";
         });
+      });
+      body.addEventListener("focusout", (e) => {
+        const field = e.target && e.target.getAttribute && e.target.getAttribute("data-recv-ex");
+        if (field !== "sku" && field !== "qty") return;
+        persistViewExchangeRow(recvItemTrFromEl(e.target));
       });
     }
 
@@ -12069,12 +12104,6 @@
         addShipBtn.classList.toggle("hidden", !showAddShip);
         addShipBtn.disabled = !showAddShip || !canCreateShipFromPo(order);
       }
-      const saveExBtn = document.getElementById("editSaveExchange");
-      if (saveExBtn) {
-        const showSaveEx = view && isViewExchangeMode(order);
-        saveExBtn.classList.toggle("hidden", !showSaveEx);
-        saveExBtn.disabled = !showSaveEx;
-      }
       setBtnEnabled("editApprove", pending && currentRole === "主管");
       setBtnEnabled("editReject", pending && currentRole === "主管");
       const confirmBtn = document.getElementById("editConfirmComplete");
@@ -12202,7 +12231,6 @@
       fillOrderEdit(order, "view");
       alert("已送出申請");
     });
-    document.getElementById("editSaveExchange").addEventListener("click", saveViewExchange);
     document.getElementById("editApprove").addEventListener("click", () => {
       const order = getWorkspaceOrder();
       if (order) approvePo(order);
