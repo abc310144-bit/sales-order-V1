@@ -632,6 +632,26 @@
     }
     [data-po-pane="ships"] #poFinalMarginOverview { margin-top: 28px; }
     .po-margin-overview.hidden { display: none; }
+    .po-mark-block {
+      margin-top: 28px;
+      padding-top: 16px;
+      border-top: 1px solid #e8e8e8;
+    }
+    .po-mark-block.hidden { display: none; }
+    .po-mark-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--text);
+    }
+    .po-mark-file-link {
+      color: var(--primary);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .po-mark-empty { color: var(--text-3); }
     .po-margin-block .goods-title { margin-bottom: 10px; }
     .po-margin-bar {
       display: grid;
@@ -4049,7 +4069,16 @@
                 </div>
               </div>
             </div>
-          </div>          </div>
+          </div>
+          <div id="poMarkUploadBlock" class="po-mark-block hidden">
+            <div class="po-mark-row">
+              <span>上傳麥頭 :</span>
+              <button type="button" class="btn" id="poMarkPickBtn">選擇檔案</button>
+              <a href="#" id="poMarkFileLink" class="po-mark-file-link hidden"></a>
+              <span id="poMarkEmptyHint" class="po-mark-empty hidden">未上傳</span>
+            </div>
+          </div>
+          </div>
         </div>
       </main>
     </div>
@@ -4629,6 +4658,7 @@
   </div>
 
   <input type="file" id="stampFileInput" class="hidden" accept=".pdf,image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf" />
+  <input type="file" id="markFileInput" class="hidden" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" />
   <input type="file" id="exportDeclFileInput" class="hidden" accept=".pdf,image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf" />
   <div id="voidNoteBubble" class="void-note-bubble hidden" role="tooltip"></div>
 
@@ -5198,8 +5228,104 @@
       return !!order && ["未開立出貨單", "部分出貨"].includes(order.status);
     }
 
+    function needsMarkFile(order) {
+      if (!order || !String(order.channelName || "").trim()) return false;
+      try {
+        const flow = channelAcceptFlow(order.channelName);
+        return flow === "買斷" || flow === "寄倉";
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function hasMarkFile(order) {
+      return !!(order && order.markFile && order.markFile.data);
+    }
+
+    function canUploadMarkFile(order) {
+      if (!needsMarkFile(order)) return false;
+      if (currentRole !== "建檔人" && currentRole !== "主管") return false;
+      if (orderFormMode === "view") return false;
+      return currentEditOrderNo === "__new__" || order.status === "草稿";
+    }
+
     function canCreateShipFromPo(order) {
-      return canShipFromPo(order) && (!needsStampPo(order) || hasStampFile(order));
+      return canShipFromPo(order)
+        && (!needsStampPo(order) || hasStampFile(order))
+        && (!needsMarkFile(order) || hasMarkFile(order));
+    }
+
+    function demoMarkFile() {
+      return {
+        name: "demo-mark.png",
+        type: "image/png",
+        data: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+        uploadedAt: "2026-08-01 09:00:00",
+      };
+    }
+
+    function ensureDemoMarkFiles() {
+      salesOrders.forEach((order) => {
+        if (!needsMarkFile(order) || hasMarkFile(order)) return;
+        if (order.status === "草稿") return;
+        order.markFile = demoMarkFile();
+      });
+    }
+
+    function isMarkImageFile(file) {
+      if (!file) return false;
+      if (/^(image\/jpeg|image\/jpg|image\/png|image\/webp)$/i.test(file.type)) return true;
+      return /\.(jpe?g|png|webp)$/i.test(file.name || "");
+    }
+
+    function syncMarkUploadUi(order) {
+      const block = document.getElementById("poMarkUploadBlock");
+      const pickBtn = document.getElementById("poMarkPickBtn");
+      const link = document.getElementById("poMarkFileLink");
+      const emptyHint = document.getElementById("poMarkEmptyHint");
+      if (!block || !pickBtn || !link || !emptyHint) return;
+      const show = needsMarkFile(order);
+      block.classList.toggle("hidden", !show);
+      if (!show) {
+        pickBtn.classList.add("hidden");
+        link.classList.add("hidden");
+        emptyHint.classList.add("hidden");
+        return;
+      }
+      const hasFile = hasMarkFile(order);
+      const canUpload = canUploadMarkFile(order);
+      pickBtn.classList.toggle("hidden", !canUpload);
+      pickBtn.disabled = !canUpload;
+      link.classList.toggle("hidden", !hasFile);
+      link.textContent = hasFile ? (order.markFile.name || "麥頭檔案") : "";
+      emptyHint.classList.toggle("hidden", hasFile || canUpload);
+    }
+
+    function applyMarkToOrder(order, fileData) {
+      if (!order) return;
+      order.markFile = fileData;
+      if (order.orderNo && persistDemoData() === false) {
+        alert("檔案無法寫入本機 DEMO，請改傳較小的圖片");
+      }
+      syncMarkUploadUi(order);
+      if (order.orderNo) syncEditFooter(order, orderFormMode);
+    }
+
+    function downloadMarkFile(order) {
+      if (!hasMarkFile(order)) return;
+      const file = order.markFile;
+      const a = document.createElement("a");
+      a.href = file.data;
+      a.download = file.name || "mark";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    function validateMarkFileRequired(order) {
+      if (!needsMarkFile(order) || hasMarkFile(order)) return true;
+      alert("買斷／寄倉通路請先上傳麥頭");
+      return false;
     }
 
     function canShowPoShipTab(order) {
@@ -6161,7 +6287,7 @@
     let currentEditOrderNo = "";
     let orderFormMode = "edit";
     let workspaceOrder = null;
-    const DEMO_STORE_KEY = "urmart-sales-demo-v19";
+    const DEMO_STORE_KEY = "urmart-sales-demo-v20";
     let demoReady = false;
     let settlementRecords = [];
     let acceptanceSeeded = false;
@@ -6268,6 +6394,7 @@
     }
 
     const STAMP_MAX_BYTES = 2 * 1024 * 1024;
+    const MARK_MAX_BYTES = 5 * 1024 * 1024;
     let pendingStampOrderNo = "";
 
     function pdfStrBytes(text) {
@@ -6604,6 +6731,7 @@
         general,
         recipient: name === "線上-轉單" ? emptyRecipient() : null,
         recipients: name === "線上-轉單" ? [emptyRecipient()] : null,
+        markFile: null,
       };
       currentEditOrderNo = "__new__";
       workspaceOrder = order;
@@ -6664,6 +6792,7 @@
         dealer: null,
         general: null,
         stampFile: null,
+        markFile: null,
         closedBySupervisor: false,
         completeNote: "",
         voidReason: "",
@@ -10111,6 +10240,7 @@
       ensureSeedShipItems();
     }
     normalizeAllStampFlow();
+    ensureDemoMarkFiles();
     demoReady = true;
     persistDemoData();
     renderSalesTable(getSalesFiltered());
@@ -12179,6 +12309,7 @@
       }
       syncPoGoodsToolbar();
       syncEditFooter(order, orderFormMode);
+      syncMarkUploadUi(order);
       showPage("order-edit");
     }
 
@@ -12227,6 +12358,7 @@
       if (!validatePoDocNoRequired(order)) return;
       if (!validateRecipientRequired(order)) return;
       if (!validateOverseasGoodsBatch(order)) return;
+      if (!validateMarkFileRequired(order)) return;
       commitWorkspaceOrder(order, "待審核");
       fillOrderEdit(order, "view");
       alert("已送出申請");
@@ -12273,6 +12405,39 @@
         applyStampToOrder(order, {
           name: file.name,
           type: file.type || "application/octet-stream",
+          data: String(reader.result || ""),
+          uploadedAt: nowStamp(),
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+    document.getElementById("poMarkPickBtn").addEventListener("click", () => {
+      const order = getWorkspaceOrder();
+      if (!canUploadMarkFile(order)) return;
+      document.getElementById("markFileInput").click();
+    });
+    document.getElementById("poMarkFileLink").addEventListener("click", (e) => {
+      e.preventDefault();
+      downloadMarkFile(getWorkspaceOrder());
+    });
+    document.getElementById("markFileInput").addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = "";
+      const order = getWorkspaceOrder();
+      if (!file || !canUploadMarkFile(order)) return;
+      if (!isMarkImageFile(file)) {
+        alert("請上傳 jpg／png／webp 圖片");
+        return;
+      }
+      if (file.size > MARK_MAX_BYTES) {
+        alert("檔案請小於 5MB");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        applyMarkToOrder(order, {
+          name: file.name,
+          type: file.type || "image/jpeg",
           data: String(reader.result || ""),
           uploadedAt: nowStamp(),
         });
@@ -12379,6 +12544,8 @@
         order.channelName = name;
         order.items = [];
         loadPoGoodsWorkspace(order);
+        if (!needsMarkFile(order)) order.markFile = null;
+        syncMarkUploadUi(order);
       }
     });
     document.getElementById("editOverseasChannelName").addEventListener("change", () => {
@@ -12409,6 +12576,8 @@
         fillRecipientForm(order);
         order.items = [];
         loadPoGoodsWorkspace(order);
+        if (!needsMarkFile(order)) order.markFile = null;
+        syncMarkUploadUi(order);
       }
     });
     document.getElementById("editTermsOfDelivery").addEventListener("change", () => {});
@@ -13823,6 +13992,9 @@
       if (canCreateShipFromPo(po)) return "";
       if (needsStampPo(po) && !hasStampFile(po) && !["草稿", "待審核", "已作廢"].includes(po.status)) {
         return "請先回壓雙方用印文件才能新增出貨單";
+      }
+      if (needsMarkFile(po) && !hasMarkFile(po) && !["草稿", "待審核", "已作廢"].includes(po.status)) {
+        return "請先上傳麥頭才能新增出貨單";
       }
       return po.status === "已開立出貨單" || po.status === "已作廢" ? "此客戶訂單目前無法再建立出貨單" : "此客戶訂單尚未審核通過，無法建立出貨單";
     }
