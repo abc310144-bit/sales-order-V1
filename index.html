@@ -2078,6 +2078,12 @@
     }
     .channel-supply-sku-row input { flex: 1; min-width: 0; }
     .channel-supply-sku-row .btn { flex: 0 0 auto; white-space: nowrap; }
+    .channel-supply-quote-ctrl {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+    }
     .acc-basic-layout {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
@@ -3959,8 +3965,9 @@
                         <th>預計出貨數量(下定數量)</th>
                         <th>訂購總箱數</th>
                         <th class="num" id="editGoodsShippedHead">實際出貨數</th>
-                        <th>單價（不含標）</th>
-                        <th>單價（含標）</th>
+                        <th class="num col-po-price-pair" id="editGoodsPriceNoHead">單價（不含標）</th>
+                        <th class="num col-po-price-pair" id="editGoodsPriceLabelHead">單價（含標）</th>
+                        <th class="num col-po-quote hidden" id="editGoodsQuoteHead">商品報價(TWD)</th>
                         <th>合計</th>
                         <th>備註</th>
                         <th class="ops" id="editGoodsOpsHead">操作</th>
@@ -4524,6 +4531,24 @@
             </div>
           </div>
         </div>
+        <div class="form-row hidden" id="channelSupplyEditPriceLabelRow">
+          <label for="channelSupplyEditPriceLabel">含標價格</label>
+          <div class="form-ctrl">
+            <div class="fee-suffix-field">
+              <input type="number" id="channelSupplyEditPriceLabel" min="0.01" step="0.01" />
+              <span class="suffix">TWD</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-row hidden" id="channelSupplyEditPriceNoLabelRow">
+          <label for="channelSupplyEditPriceNoLabel">不含標價格</label>
+          <div class="form-ctrl">
+            <div class="fee-suffix-field">
+              <input type="number" id="channelSupplyEditPriceNoLabel" min="0.01" step="0.01" />
+              <span class="suffix">TWD</span>
+            </div>
+          </div>
+        </div>
         <div class="form-row">
           <label class="required">報價稅別</label>
           <div class="form-ctrl">
@@ -4536,7 +4561,13 @@
         <div class="form-row">
           <label class="required" for="channelSupplyEditQuote" id="channelSupplyEditQuoteLabel">商品報價(TWD)(含稅)</label>
           <div class="form-ctrl">
-            <input type="number" id="channelSupplyEditQuote" min="0" step="0.01" />
+            <div class="channel-supply-quote-ctrl">
+              <div class="radio-group hidden" id="channelSupplyEditQuoteLinkGroup">
+                <label class="radio-line"><input type="checkbox" id="channelSupplyEditQuoteLinkLabel" data-quote-link="label" /> 同含標價</label>
+                <label class="radio-line"><input type="checkbox" id="channelSupplyEditQuoteLinkNoLabel" data-quote-link="noLabel" /> 同不含標價</label>
+              </div>
+              <input type="number" id="channelSupplyEditQuote" min="0" step="0.01" />
+            </div>
           </div>
         </div>
         <div class="form-row">
@@ -6310,6 +6341,7 @@
           acceptanceSeeded,
           consignSettleSeeded,
           onlineSettleSeeded,
+          channelSupplyByChannel,
         };
         localStorage.setItem(DEMO_STORE_KEY, JSON.stringify(payload));
         return true;
@@ -6645,6 +6677,9 @@
         acceptanceSeeded = !!data.acceptanceSeeded;
         consignSettleSeeded = !!data.consignSettleSeeded;
         onlineSettleSeeded = !!data.onlineSettleSeeded;
+        if (data.channelSupplyByChannel && typeof data.channelSupplyByChannel === "object") {
+          channelSupplyByChannel = data.channelSupplyByChannel;
+        }
         return true;
       } catch (err) {
         return false;
@@ -6905,6 +6940,9 @@
         });
         if (Array.isArray(data.rows)) rows = data.rows;
         if (Array.isArray(data.settlementRecords)) settlementRecords = data.settlementRecords;
+        if (data.channelSupplyByChannel && typeof data.channelSupplyByChannel === "object") {
+          channelSupplyByChannel = data.channelSupplyByChannel;
+        }
         renderSalesTable(getSalesFiltered());
         renderShippingTable();
         refreshAcceptancePages();
@@ -7001,6 +7039,7 @@
         const meta = metaForSku(item.sku);
         const pcs = Number(item.pcsPerCarton) || 0;
         const sellableQty = virtualAllocOf(channelName, item.sku);
+        const price = channelProductPriceOf(channelName, item.sku);
         return {
           sku: item.sku,
           name: item.name,
@@ -7008,9 +7047,11 @@
           expiryAccept: item.expiryAccept,
           pcsPerCarton: pcs,
           sellableQty,
-          priceNoLabel: meta.priceNoLabel || "",
-          quote: meta.quote || "0",
-          orderQuote: meta.priceNoLabel || meta.quote || "0",
+          priceNoLabel: price.priceNoLabel || "",
+          priceLabel: price.priceLabel || "",
+          quoteLink: price.quoteLink || "",
+          quote: price.quote > 0 ? String(price.quote) : (meta.quote || "0"),
+          orderQuote: price.quote > 0 ? String(price.quote) : (meta.quote || "0"),
           productCode: meta.productCode,
           cost: meta.cost,
         };
@@ -7067,6 +7108,10 @@
         if (names.includes(name)) return group;
       }
       return "";
+    }
+
+    function isOverseasChannel(channelName) {
+      return channelTypeOfName(channelName) === "境外通路";
     }
 
     /** DEMO｜通路商品列表（當前合作通路）假資料；僅 UI */
@@ -7156,6 +7201,7 @@
 
     let channelSupplyChannelName = "";
     let channelSupplyRows = [];
+    let channelSupplyByChannel = {};
 
     function demoBarcodeOf(sku, productCode) {
       const fromCode = String(productCode || "").replace(/\D/g, "");
@@ -7187,14 +7233,57 @@
       return { taxed, untaxed, tax: roundChannelSupplyMoney(taxed - untaxed) };
     }
 
+    function parsePositiveMoney(raw) {
+      const n = Number(String(raw == null ? "" : raw).trim());
+      if (!Number.isFinite(n) || n <= 0) return null;
+      return roundChannelSupplyMoney(n);
+    }
+
+    function channelSupplyQuoteAmount(row) {
+      if (!row) return 0;
+      const n = row.quoteTaxMode === "untaxed" ? Number(row.quoteUntaxed) : Number(row.quoteTaxed);
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    }
+
+    function channelSupplyRowOf(channelName, sku) {
+      const key = normalizeSku(sku).toLowerCase();
+      if (!key) return null;
+      const rows = channelSupplyByChannel[channelName];
+      if (!Array.isArray(rows)) return null;
+      return rows.find((row) => normalizeSku(row.sku).toLowerCase() === key) || null;
+    }
+
+    function channelProductPriceOf(channelName, sku) {
+      const row = channelSupplyRowOf(channelName, sku);
+      if (row) {
+        return {
+          quote: channelSupplyQuoteAmount(row),
+          quoteLink: row.quoteLink === "noLabel" ? "noLabel" : (row.quoteLink === "label" ? "label" : ""),
+          priceLabel: row.priceLabel,
+          priceNoLabel: row.priceNoLabel,
+        };
+      }
+      const meta = typeof metaForSku === "function" ? metaForSku(sku) : {};
+      const quote = Number(meta.quote) || 0;
+      const overseas = isOverseasChannel(channelName);
+      return {
+        quote,
+        quoteLink: overseas ? "label" : "",
+        priceLabel: overseas ? quote : "",
+        priceNoLabel: meta.priceNoLabel || "",
+      };
+    }
+
     function buildChannelSupplyRows(channelName) {
       const catalog = typeof channelPickCatalog === "function"
         ? channelPickCatalog(channelName)
         : (typeof mockItemsFor === "function" ? mockItemsFor(channelName) : []);
+      const overseas = isOverseasChannel(channelName);
       return catalog.map((item, idx) => {
         const quote = Number(item.quote) || Number(String(item.quote || "").replace(/,/g, "")) || 0;
         const sell = quote > 0 ? Math.round(quote * 1.35) : null;
         const parts = quote > 0 ? calcChannelSupplyQuote(quote, "taxed") : { taxed: null, untaxed: null, tax: null };
+        const noLabel = parsePositiveMoney(item.priceNoLabel);
         return {
           id: 14500 - idx,
           sku: item.sku || "",
@@ -7206,6 +7295,9 @@
           quoteTaxed: parts.taxed,
           quoteUntaxed: parts.untaxed,
           quoteTaxAmount: parts.tax,
+          quoteLink: overseas ? "label" : "",
+          priceLabel: overseas && quote > 0 ? quote : "",
+          priceNoLabel: overseas && noLabel != null ? noLabel : "",
           backRate: "0.000",
           pcsPerCarton: Number(item.pcsPerCarton) || 0,
           acceptDays: 1,
@@ -7266,7 +7358,10 @@
 
     function openChannelSupplyList(channelName) {
       channelSupplyChannelName = channelName || "";
-      channelSupplyRows = buildChannelSupplyRows(channelSupplyChannelName);
+      if (!Array.isArray(channelSupplyByChannel[channelSupplyChannelName])) {
+        channelSupplyByChannel[channelSupplyChannelName] = buildChannelSupplyRows(channelSupplyChannelName);
+      }
+      channelSupplyRows = channelSupplyByChannel[channelSupplyChannelName];
       const meta = document.getElementById("channelSupplyMeta");
       if (meta) meta.textContent = channelSupplyChannelName
         ? `通路：${channelSupplyChannelName}｜共 ${channelSupplyRows.length} 項供應商品`
@@ -7315,6 +7410,67 @@
           : (parts.untaxed == null ? "" : String(parts.untaxed));
       }
       return parts;
+    }
+
+    function isOverseasSupplyForm() {
+      return isOverseasChannel(channelSupplyChannelName);
+    }
+
+    function channelSupplyEditQuoteLink() {
+      const noLabel = document.getElementById("channelSupplyEditQuoteLinkNoLabel");
+      const label = document.getElementById("channelSupplyEditQuoteLinkLabel");
+      if (noLabel && noLabel.checked) return "noLabel";
+      if (label && label.checked) return "label";
+      return "";
+    }
+
+    function fillLinkedQuoteFromLabel() {
+      const quoteEl = document.getElementById("channelSupplyEditQuote");
+      if (!quoteEl) return;
+      const link = channelSupplyEditQuoteLink();
+      if (!link) return;
+      const srcId = link === "noLabel" ? "channelSupplyEditPriceNoLabel" : "channelSupplyEditPriceLabel";
+      const n = parsePositiveMoney((document.getElementById(srcId) || {}).value);
+      quoteEl.value = n == null ? "" : String(n);
+      refreshChannelSupplyEditQuoteCalc();
+    }
+
+    function setChannelSupplyQuoteLocked(locked) {
+      const quoteEl = document.getElementById("channelSupplyEditQuote");
+      if (!quoteEl) return;
+      quoteEl.readOnly = !!locked;
+      quoteEl.disabled = !!locked;
+    }
+
+    function setChannelSupplyQuoteLink(link) {
+      const labelEl = document.getElementById("channelSupplyEditQuoteLinkLabel");
+      const noLabelEl = document.getElementById("channelSupplyEditQuoteLinkNoLabel");
+      const next = link === "noLabel" ? "noLabel" : (link === "label" ? "label" : "");
+      if (labelEl) labelEl.checked = next === "label";
+      if (noLabelEl) noLabelEl.checked = next === "noLabel";
+      const quoteEl = document.getElementById("channelSupplyEditQuote");
+      if (next) {
+        setChannelSupplyQuoteLocked(true);
+        fillLinkedQuoteFromLabel();
+      } else {
+        setChannelSupplyQuoteLocked(false);
+        if (quoteEl) quoteEl.value = "";
+        refreshChannelSupplyEditQuoteCalc();
+      }
+    }
+
+    function syncOverseasSupplyForm() {
+      const overseas = isOverseasSupplyForm();
+      document.getElementById("channelSupplyEditPriceLabelRow")?.classList.toggle("hidden", !overseas);
+      document.getElementById("channelSupplyEditPriceNoLabelRow")?.classList.toggle("hidden", !overseas);
+      document.getElementById("channelSupplyEditQuoteLinkGroup")?.classList.toggle("hidden", !overseas);
+      if (!overseas) {
+        setChannelSupplyQuoteLocked(false);
+        const labelEl = document.getElementById("channelSupplyEditQuoteLinkLabel");
+        const noLabelEl = document.getElementById("channelSupplyEditQuoteLinkNoLabel");
+        if (labelEl) labelEl.checked = false;
+        if (noLabelEl) noLabelEl.checked = false;
+      }
     }
 
     function setChannelSupplySkuLock(locked) {
@@ -7393,7 +7549,7 @@
       document.getElementById("channelSupplyEditSku").value = meta.sku;
       document.getElementById("channelSupplyEditName").value = meta.name || "";
       if (meta.pcsPerCarton) document.getElementById("channelSupplyEditPcs").value = meta.pcsPerCarton;
-      if (meta.quote > 0 && !document.getElementById("channelSupplyEditQuote").value) {
+      if (!isOverseasSupplyForm() && meta.quote > 0 && !document.getElementById("channelSupplyEditQuote").value) {
         setChannelSupplyEditTaxMode("taxed");
         document.getElementById("channelSupplyEditQuote").value = meta.quote;
         refreshChannelSupplyEditQuoteCalc();
@@ -7427,13 +7583,17 @@
       document.getElementById("channelSupplyEditName").value = "";
       document.getElementById("channelSupplyEditSellPrice").value = "";
       document.getElementById("channelSupplyEditFrontRate").value = "0.000";
+      document.getElementById("channelSupplyEditPriceLabel").value = "";
+      document.getElementById("channelSupplyEditPriceNoLabel").value = "";
       setChannelSupplyEditTaxMode("taxed");
+      setChannelSupplyQuoteLink("");
       document.getElementById("channelSupplyEditQuote").value = "";
       document.getElementById("channelSupplyEditBackRate").value = "0.000";
       document.getElementById("channelSupplyEditPcs").value = "";
       document.getElementById("channelSupplyEditAcceptDays").value = "1";
       document.getElementById("channelSupplyEditChannelSku").value = "";
       document.getElementById("channelSupplyEditChannelSku").placeholder = "驗證完成 SKU(品號)後才能輸入";
+      syncOverseasSupplyForm();
       refreshChannelSupplyEditQuoteCalc();
     }
 
@@ -7448,6 +7608,7 @@
       document.getElementById("channelSupplyEditTitle").textContent = "新增商品";
       fillChannelSupplyFormDefaults();
       setChannelSupplySkuLock(false);
+      syncOverseasSupplyForm();
       document.getElementById("channelSupplyEditModal")?.classList.remove("hidden");
     }
 
@@ -7467,6 +7628,10 @@
       document.getElementById("channelSupplyEditSellPrice").value =
         row.sellPrice == null || row.sellPrice === "" ? "" : row.sellPrice;
       document.getElementById("channelSupplyEditFrontRate").value = row.frontRate ?? "0.000";
+      document.getElementById("channelSupplyEditPriceLabel").value =
+        row.priceLabel == null || row.priceLabel === "" ? "" : row.priceLabel;
+      document.getElementById("channelSupplyEditPriceNoLabel").value =
+        row.priceNoLabel == null || row.priceNoLabel === "" ? "" : row.priceNoLabel;
       setChannelSupplyEditTaxMode(mode);
       document.getElementById("channelSupplyEditQuote").value = mode === "untaxed"
         ? (row.quoteUntaxed == null || row.quoteUntaxed === "" ? "" : row.quoteUntaxed)
@@ -7477,6 +7642,17 @@
       document.getElementById("channelSupplyEditChannelSku").value = row.channelProductNo || "";
       document.getElementById("channelSupplyEditChannelSku").placeholder = "驗證完成 SKU(品號)後才能輸入";
       setChannelSupplySkuLock(true);
+      syncOverseasSupplyForm();
+      if (isOverseasSupplyForm()) {
+        const link = row.quoteLink === "noLabel" ? "noLabel" : "label";
+        if ((link === "label" && !document.getElementById("channelSupplyEditPriceLabel").value)
+          && row.quoteTaxed) {
+          document.getElementById("channelSupplyEditPriceLabel").value = row.quoteTaxed;
+        }
+        setChannelSupplyQuoteLink(link);
+      } else {
+        setChannelSupplyQuoteLocked(false);
+      }
       refreshChannelSupplyEditQuoteCalc();
       document.getElementById("channelSupplyEditModal")?.classList.remove("hidden");
     }
@@ -7511,6 +7687,34 @@
         alert("請填寫商品前抽(%)");
         return;
       }
+      const overseas = isOverseasSupplyForm();
+      const quoteLink = overseas ? channelSupplyEditQuoteLink() : "";
+      const priceLabelRaw = document.getElementById("channelSupplyEditPriceLabel").value.trim();
+      const priceNoLabelRaw = document.getElementById("channelSupplyEditPriceNoLabel").value.trim();
+      const priceLabel = priceLabelRaw === "" ? "" : parsePositiveMoney(priceLabelRaw);
+      const priceNoLabel = priceNoLabelRaw === "" ? "" : parsePositiveMoney(priceNoLabelRaw);
+      if (overseas) {
+        if (priceLabelRaw && priceLabel == null) {
+          alert("含標價格僅可輸入正數");
+          return;
+        }
+        if (priceNoLabelRaw && priceNoLabel == null) {
+          alert("不含標價格僅可輸入正數");
+          return;
+        }
+        if (!quoteLink) {
+          alert("請選擇商品報價：同含標價或同不含標價");
+          return;
+        }
+        if (quoteLink === "label" && priceLabel == null) {
+          alert("請填寫含標價格");
+          return;
+        }
+        if (quoteLink === "noLabel" && priceNoLabel == null) {
+          alert("請填寫不含標價格");
+          return;
+        }
+      }
       if (quoteRaw === "" || !Number.isFinite(Number(quoteRaw)) || Number(quoteRaw) < 0) {
         alert("請填寫商品報價(TWD)");
         return;
@@ -7523,6 +7727,9 @@
         quoteTaxed: parts.taxed,
         quoteUntaxed: parts.untaxed,
         quoteTaxAmount: parts.tax,
+        quoteLink,
+        priceLabel: overseas ? priceLabel : "",
+        priceNoLabel: overseas ? priceNoLabel : "",
         pcsPerCarton: pcsRaw === "" ? 0 : Math.max(0, Math.floor(Number(pcsRaw) || 0)),
         acceptDays: daysRaw === "" ? 0 : Math.max(0, Math.floor(Number(daysRaw) || 0)),
         channelProductNo: channelSkuRaw,
@@ -7546,6 +7753,8 @@
         }
         Object.assign(row, payload);
       }
+      channelSupplyByChannel[channelSupplyChannelName] = channelSupplyRows;
+      persistDemoData();
       closeChannelSupplyEditModal();
       renderChannelSupplyTable();
     }
@@ -8425,15 +8634,7 @@
     }
 
     function recvItemUnitPrice(sku) {
-      const key = normalizeSku(sku).toLowerCase();
-      if (!key) return 0;
-      const cat = channelBoundSkuMap("線上-轉單")[key];
-      if (cat && cat.priceNoLabel != null && String(cat.priceNoLabel).trim() !== "") {
-        const n = Number(cat.priceNoLabel);
-        if (Number.isFinite(n)) return n;
-      }
-      const meta = typeof metaForSku === "function" ? metaForSku(sku) : null;
-      const n = Number((meta && (meta.priceNoLabel || meta.quote)) || 0);
+      const n = channelProductPriceOf("線上-轉單", sku).quote;
       return Number.isFinite(n) ? n : 0;
     }
 
@@ -9337,9 +9538,15 @@
         const line = extra[String(item.sku || "")] || extra[String(item.productCode || "")] || {};
         const qty = Number(item.qty != null ? item.qty : line.orderPcs) || 0;
         const pcs = pcsPerCartonOf(item, line);
-        const meta = metaForSku(item.sku);
-        const price = Number(line.priceNoLabel != null ? line.priceNoLabel : (item.orderQuote || item.quote || meta.quote)) || 0;
-        const priceLabel = pdfPriceWithLabelDisplay(item);
+        const quote = goodsQuoteOf(item, order);
+        const quoteLink = goodsQuoteLinkOf(item, order);
+        const overseas = isOverseasPo(order);
+        const price = overseas
+          ? (quoteLink === "noLabel" ? quote : null)
+          : quote;
+        const priceLabel = overseas
+          ? (quoteLink === "label" ? quote : null)
+          : null;
         const cartons = orderCartonQty(qty, pcs);
         return {
           sku: item.sku || line.barcode || "",
@@ -9351,7 +9558,8 @@
           orderCarton: cartons === "" ? "" : cartons,
           priceLabel,
           price,
-          total: Math.round(qty * price * 100) / 100,
+          quote,
+          total: Math.round(qty * quote * 100) / 100,
           remark: remarksForPdfItem(order, item),
         };
       });
@@ -9404,6 +9612,7 @@
         carton: "訂購總箱數",
         priceNoLabel: "單價（不含標）",
         priceLabel: "單價（含標）",
+        quote: "商品報價(TWD)",
         amount: "合計",
         remark: "備註",
         total: "合計",
@@ -9436,6 +9645,7 @@
         carton: "Order Carton",
         priceNoLabel: "Price " + currency + " (No Label)",
         priceLabel: "Price " + currency + " (Label)",
+        quote: "Product Quote (TWD)",
         amount: "Total",
         remark: "Remark",
         total: "Total",
@@ -9446,6 +9656,11 @@
         print: "Print / Save as PDF",
       };
       const amountSuffix = dealer ? "" : " " + currency;
+      const overseas = isOverseasPo(order);
+      const priceHeadHtml = overseas
+        ? `<th class="num">${escapeHtml(t.priceNoLabel)}</th><th class="num">${escapeHtml(t.priceLabel)}</th>`
+        : `<th class="num">${escapeHtml(t.quote)}</th>`;
+      const colCount = overseas ? 9 : 8;
       const rowsHtml = lines.length
         ? lines.map((row) => `
             <tr>
@@ -9454,12 +9669,14 @@
               <td class="num">${escapeHtml(row.pcsPerCarton)}</td>
               <td class="num">${escapeHtml(row.orderPcs)}</td>
               <td class="num">${escapeHtml(row.orderCarton)}</td>
-              <td class="num">${escapeHtml(pdfMoney(row.price, 2))}</td>
-              <td class="num">${row.priceLabel == null ? "-" : escapeHtml(pdfMoney(row.priceLabel, 2))}</td>
+              ${overseas
+                ? `<td class="num">${row.price == null ? "-" : escapeHtml(pdfMoney(row.price, 2))}</td>
+              <td class="num">${row.priceLabel == null ? "-" : escapeHtml(pdfMoney(row.priceLabel, 2))}</td>`
+                : `<td class="num">${escapeHtml(pdfMoney(row.quote, 2))}</td>`}
               <td class="num">${escapeHtml(pdfMoney(row.total, 2))}${amountSuffix}</td>
               <td class="remark">${escapeHtml(row.remark)}</td>
             </tr>`).join("")
-        : `<tr><td colspan="9" class="empty">${t.empty}</td></tr>`;
+        : `<tr><td colspan="${colCount}" class="empty">${t.empty}</td></tr>`;
       return `<!DOCTYPE html>
 <html lang="${t.lang}">
 <head>
@@ -9579,8 +9796,7 @@
           <th class="num">${escapeHtml(t.pcs)}</th>
           <th class="num">${escapeHtml(t.qty)}</th>
           <th class="num">${escapeHtml(t.carton)}</th>
-          <th class="num">${escapeHtml(t.priceNoLabel)}</th>
-          <th class="num">${escapeHtml(t.priceLabel)}</th>
+          ${priceHeadHtml}
           <th class="num">${escapeHtml(t.amount)}${amountSuffix}</th>
           <th>${escapeHtml(t.remark)}</th>
         </tr>
@@ -10591,6 +10807,16 @@
       });
     }
 
+    function syncPoGoodsPriceColumns(order) {
+      const overseas = isOverseasPo(order);
+      document.querySelectorAll("#editGoodsOverviewTable .col-po-price-pair").forEach((el) => {
+        el.classList.toggle("hidden", !overseas);
+      });
+      document.querySelectorAll("#editGoodsOverviewTable .col-po-quote").forEach((el) => {
+        el.classList.toggle("hidden", overseas);
+      });
+    }
+
     function poBatchSelectHtml(selected, editable) {
       const batches = typeof allShipBatches === "function" ? allShipBatches() : [];
       const cur = selected || "";
@@ -10807,18 +11033,32 @@
     }
 
     function goodsPriceNoLabel(item) {
-      const meta = metaForSku(item && item.sku);
-      if (item && item.priceNoLabel != null && item.priceNoLabel !== "") return Number(item.priceNoLabel) || 0;
-      if (meta.priceNoLabel != null && meta.priceNoLabel !== "") return Number(meta.priceNoLabel) || 0;
-      const n = Number(item && item.orderQuote);
-      if (Number.isFinite(n) && n > 0) return n;
-      return Number((item && item.quote) || (meta && meta.quote)) || 0;
+      return goodsQuoteOf(item);
+    }
+
+    function goodsQuoteOf(item, order) {
+      order = order || getWorkspaceOrder();
+      const channel = (order && order.channelName) || "";
+      const live = channelProductPriceOf(channel, item && item.sku);
+      if (live.quote > 0) return live.quote;
+      const fallback = Number((item && (item.quote || item.orderQuote || item.priceNoLabel)) || 0);
+      return Number.isFinite(fallback) && fallback > 0 ? fallback : 0;
+    }
+
+    function goodsQuoteLinkOf(item, order) {
+      order = order || getWorkspaceOrder();
+      const channel = (order && order.channelName) || "";
+      const live = channelProductPriceOf(channel, item && item.sku);
+      if (live.quote > 0) return live.quoteLink || "";
+      if (isOverseasPo(order)) return "label";
+      return "";
     }
 
     function goodsDisplayFields(item) {
       const qty = Number(item && item.qty) || 0;
       const pcs = pcsPerCartonOf(item);
-      const priceNo = goodsPriceNoLabel(item);
+      const quote = goodsQuoteOf(item);
+      const link = goodsQuoteLinkOf(item);
       const cartons = orderCartonQty(qty, pcs);
       return {
         sku: (item && item.sku) || "",
@@ -10826,19 +11066,20 @@
         pcs: pcs || "",
         qty,
         carton: cartons,
-        priceNo,
-        amount: Math.round(qty * priceNo * 100) / 100,
+        quote,
+        quoteLink: link,
+        priceNo: link === "noLabel" ? quote : (link === "label" ? null : quote),
+        priceLabel: link === "label" ? quote : null,
+        amount: Math.round(qty * quote * 100) / 100,
         remark: userFacingRemark(item && item.remark),
       };
     }
 
-    function goodsPriceWithLabelCellHtml(item, editable) {
-      if (editable) {
-        const val = hasPriceWithLabel(item) ? String(item.priceWithLabel) : "";
-        return `<input type="number" min="0.01" step="0.01" data-field="priceWithLabel" value="${escapeHtml(val)}" />`;
-      }
-      if (!hasPriceWithLabel(item)) return "-";
-      return escapeHtml(pdfMoney(parsePriceWithLabel(item.priceWithLabel), 2));
+    function goodsPriceCellText(value) {
+      if (value == null || value === "") return "-";
+      const n = Number(value);
+      if (!Number.isFinite(n) || n <= 0) return "-";
+      return escapeHtml(pdfMoney(n, 2));
     }
 
     function goodsPdfRowHtml(item, opts) {
@@ -10851,7 +11092,11 @@
       const qtyCell = editable
         ? `<input type="number" min="1" step="1" data-field="qty" value="${escapeHtml(qtyVal)}"${oversell ? ' class="is-oversell"' : ""} />`
         : escapeHtml(d.qty > 0 ? d.qty : "-");
-      const priceLabelCell = goodsPriceWithLabelCellHtml(item, !!(opts && opts.priceLabelEditable));
+      const overseas = isOverseasPo(getWorkspaceOrder());
+      const priceCells = overseas
+        ? `<td class="num col-po-price-pair">${goodsPriceCellText(d.priceNo)}</td>
+          <td class="num col-po-price-pair col-price-label">${goodsPriceCellText(d.priceLabel)}</td>`
+        : `<td class="num col-po-quote">${goodsPriceCellText(d.quote)}</td>`;
       const orderNo = (opts && opts.orderNo) || currentEditOrderNo;
       const shippedMap = showShipped && orderNo && orderNo !== "__new__" ? shippedQtyByKey(orderNo) : {};
       const shippedQty = shippedQtyOfPoLine({ orderNo }, item, shippedMap);
@@ -10877,8 +11122,7 @@
           <td class="col-qty">${qtyCell}</td>
           <td class="num" data-sync="carton">${escapeHtml(d.carton)}</td>
           ${shippedCell}
-          <td class="num" data-sync="priceNo">${escapeHtml(pdfMoney(d.priceNo, 2))}</td>
-          <td class="num col-price-label">${priceLabelCell}</td>
+          ${priceCells}
           <td class="num" data-sync="amount">${escapeHtml(pdfMoney(d.amount, 2))}</td>
           <td>${escapeHtml(d.remark)}</td>
           ${opsCell}
@@ -10983,11 +11227,10 @@
       const showShipped = orderHasCreatedShips(orderNo);
       const showBatch = isOverseasPo(order);
       syncPoGoodsBatchColumn(order);
+      syncPoGoodsPriceColumns(order);
       syncPoGoodsToolbar();
-      let cols = 10;
-      if (showBatch) cols += 1;
-      if (showShipped) cols += 1;
-      if (editable) cols += 1;
+      let cols = [...document.querySelectorAll("#editGoodsOverviewTable thead th")]
+        .filter((th) => !th.classList.contains("hidden")).length;
       if (!body) return;
       if (!poLineItems.length) {
         body.innerHTML = `<tr class="empty-row"><td colspan="${cols}">${editable ? "請輸入 SKU 後按新增" : "尚無商品明細"}</td></tr>`;
@@ -10996,7 +11239,6 @@
       }
       body.innerHTML = poLineItems.map((row) => goodsPdfRowHtml(row, {
         qtyEditable: editable,
-        priceLabelEditable: editable,
         showShipped,
         showBatch,
         orderNo,
@@ -14295,7 +14537,7 @@
     }
 
     function accUnitPrice(item) {
-      return hasPriceWithLabel(item) ? parsePriceWithLabel(item.priceWithLabel) : goodsPriceNoLabel(item);
+      return goodsQuoteOf(item);
     }
 
     function accShipInfoByKey(orderNo) {
@@ -16594,15 +16836,27 @@
       const mode = e.target?.dataset?.channelSupplyTaxMode;
       if (!mode) return;
       const quoteEl = document.getElementById("channelSupplyEditQuote");
+      const linked = isOverseasSupplyForm() && !!channelSupplyEditQuoteLink();
       const prevMode = mode === "untaxed" ? "taxed" : "untaxed";
       const prevParts = calcChannelSupplyQuote(quoteEl?.value, prevMode);
       setChannelSupplyEditTaxMode(mode);
-      if (quoteEl && prevParts.taxed != null) {
+      if (!linked && quoteEl && prevParts.taxed != null) {
         quoteEl.value = mode === "untaxed" ? prevParts.untaxed : prevParts.taxed;
       }
+      if (linked) fillLinkedQuoteFromLabel();
       refreshChannelSupplyEditQuoteCalc();
     });
     document.getElementById("channelSupplyEditQuote")?.addEventListener("input", refreshChannelSupplyEditQuoteCalc);
+    document.getElementById("channelSupplyEditQuoteLinkGroup")?.addEventListener("change", (e) => {
+      const link = e.target?.dataset?.quoteLink;
+      if (!link) return;
+      setChannelSupplyQuoteLink(e.target.checked ? link : "");
+    });
+    const syncLinkedQuote = () => {
+      if (isOverseasSupplyForm() && channelSupplyEditQuoteLink()) fillLinkedQuoteFromLabel();
+    };
+    document.getElementById("channelSupplyEditPriceLabel")?.addEventListener("input", syncLinkedQuote);
+    document.getElementById("channelSupplyEditPriceNoLabel")?.addEventListener("input", syncLinkedQuote);
 
     document.getElementById("channelSettleAccordionBtn").addEventListener("click", () => {
       const btn = document.getElementById("channelSettleAccordionBtn");
