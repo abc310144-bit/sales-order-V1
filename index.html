@@ -3181,7 +3181,7 @@
                         <div class="form-ctrl"><span class="ship-view-val" id="shipViewInWarehouse">-</span></div>
                       </div>
                       <div class="form-row">
-                        <label>貿易條件</label>
+                        <label id="shipViewIncotermLabel">貿易條件</label>
                         <div class="form-ctrl"><span class="ship-view-val" id="shipViewIncoterm">-</span></div>
                       </div>
                     </div>
@@ -3265,7 +3265,7 @@
                         </div>
                       </div>
                       <div class="form-row online-ship-hide">
-                        <label class="required">貿易條件</label>
+                        <label class="required" id="poShipIncotermLabel">貿易條件</label>
                         <div class="form-ctrl">
                           <select id="poShipIncoterm">
                             <option value="">請選擇</option>
@@ -9291,6 +9291,7 @@
 
     const DEMO_COLLECTION_TERMS = "月結 30 天";
     const INCOTERM_SELECT_HTML = `<option value="">請選擇</option><option>FOB</option><option>CIF</option><option>EXW</option><option>DDU</option>`;
+    const SHIP_INCOTERM_SELECT_HTML = `<option value="">請選擇</option><option>FOB</option><option>CIF</option><option>EXW</option><option>CFR</option><option>DAP</option><option>DDP</option>`;
 
     function usesCollectionTerms(order) {
       const kind = poKindOf(order);
@@ -9331,6 +9332,24 @@
         sel.appendChild(opt);
       }
       sel.value = current;
+    }
+
+    function shipUsesCollectionTerms(ship, po) {
+      if (po) return usesCollectionTerms(po);
+      const type = String((ship && ship.shipChannelType) || "");
+      if (type === "境外通路") return false;
+      const name = (ship && (ship.shipChannelName || ship.channel)) || "";
+      const profile = (typeof channelProfiles !== "undefined" && channelProfiles[name]) || {};
+      if (profile.region === "境外") return false;
+      return !!(type || name);
+    }
+
+    function applyShipTermsLabels(collect) {
+      const text = collect ? "收款條件" : "貿易條件";
+      const createLabel = document.getElementById("poShipIncotermLabel");
+      const viewLabel = document.getElementById("shipViewIncotermLabel");
+      if (createLabel) createLabel.textContent = text;
+      if (viewLabel) viewLabel.textContent = text;
     }
 
     function poKindOf(order) {
@@ -13562,11 +13581,16 @@
     function syncPoShipIncotermFromOrder(order) {
       const sel = document.getElementById("poShipIncoterm");
       if (!sel) return;
-      if (usesCollectionTerms(order)) {
-        if (shipFormMode !== "view") sel.value = sel.value || "";
+      const collect = usesCollectionTerms(order);
+      applyShipTermsLabels(collect);
+      if (collect) {
+        const val = collectionTermsOf(order);
+        sel.innerHTML = `<option value="${escapeHtml(val)}">${escapeHtml(val)}</option>`;
+        sel.value = val;
         sel.disabled = shipFormMode === "view";
         return;
       }
+      sel.innerHTML = SHIP_INCOTERM_SELECT_HTML;
       const party = order ? partyRecord(order) : null;
       const terms = (party && party.termsOfDelivery) || "";
       if (terms && !Array.from(sel.options).some((opt) => opt.value === terms)) {
@@ -13980,9 +14004,11 @@
         return;
       }
       pickup = pickupEl.value;
-      incoterm = document.getElementById("poShipIncoterm").value;
+      incoterm = usesCollectionTerms(order)
+        ? collectionTermsOf(order)
+        : document.getElementById("poShipIncoterm").value;
       if (!incoterm) {
-        alert("請選擇貿易條件");
+        alert(usesCollectionTerms(order) ? "請選擇收款條件" : "請選擇貿易條件");
         document.getElementById("poShipIncoterm").focus();
         return;
       }
@@ -14070,7 +14096,9 @@
       setText("shipViewArriveDate", arriveDate);
       setText("shipViewArriveTime", arriveTime);
       setText("shipViewInWarehouse", warehouse);
-      setText("shipViewIncoterm", ship.incoterm || "");
+      const collect = shipUsesCollectionTerms(ship, po);
+      applyShipTermsLabels(collect);
+      setText("shipViewIncoterm", collect ? collectionTermsOf(po || { channelName: fallbackName }) : (ship.incoterm || ""));
       setText("shipViewChannelType", snap.shipChannelType);
       setText("shipViewChannelArea", snap.shipChannelArea);
       setText("shipViewChannelName", snap.shipChannelName);
@@ -14376,7 +14404,7 @@
       clearPoShipCreateFields();
       document.getElementById("shipPoNo").value = ship.salesOrderNo || "";
       syncPoShipIncotermFromOrder(po);
-      if (ship.incoterm) {
+      if (ship.incoterm && !usesCollectionTerms(po)) {
         const sel = document.getElementById("poShipIncoterm");
         if (sel && !Array.from(sel.options).some((opt) => opt.value === ship.incoterm)) {
           const opt = document.createElement("option");
