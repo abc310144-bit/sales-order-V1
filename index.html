@@ -8160,32 +8160,35 @@
       return groups;
     }
 
+    function recvRemainCapKey(rec, sku) {
+      const poNo = String((rec && rec.platformOrderNo) || "").trim().toLowerCase();
+      const skuKey = normalizeSku(sku).toLowerCase();
+      return skuKey ? `${poNo}|${skuKey}` : "";
+    }
+
     function collectCheckedRecvShipGroups(order) {
       const list = recipientListOf(order);
       const remainCap = {};
       remainingOnlineShipGroups(order).forEach((group) => {
-        const rec = group.rec;
-        const idx = list.indexOf(rec);
-        if (idx < 0) return;
         (group.items || []).forEach((item) => {
-          const sku = normalizeSku(item && item.sku).toLowerCase();
-          if (!sku) return;
-          const key = `${idx}|${sku}`;
+          const key = recvRemainCapKey(group.rec, item && item.sku);
+          if (!key) return;
           remainCap[key] = (remainCap[key] || 0) + (Number(item.qty) || 0);
         });
       });
       const grouped = {};
-      document.querySelectorAll("#editRecvBody [data-recv-ship-check]:checked:not(:disabled)").forEach((el) => {
+      document.querySelectorAll("#editRecvBody [data-recv-ship-check]:checked").forEach((el) => {
+        if (el.hasAttribute("data-ship-locked")) return;
         const gid = el.getAttribute("data-recv-group") || "";
         const idx = Math.max(0, Number(String(gid).replace(/^g/i, "")) - 1);
         const rec = list[idx];
         if (!rec) return;
         const sku = el.getAttribute("data-recv-sku") || "";
-        const skuKey = normalizeSku(sku).toLowerCase();
-        const cap = remainCap[`${idx}|${skuKey}`] || 0;
+        const capKey = recvRemainCapKey(rec, sku);
+        const cap = remainCap[capKey] || 0;
         const remain = Math.min(Number(el.getAttribute("data-recv-remain")) || 0, cap);
         if (!sku || remain <= 0) return;
-        remainCap[`${idx}|${skuKey}`] = cap - remain;
+        remainCap[capKey] = cap - remain;
         if (!grouped[gid]) grouped[gid] = { rec, items: [] };
         grouped[gid].items.push(toPoLineItem({
           sku,
