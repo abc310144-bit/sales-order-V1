@@ -1688,13 +1688,15 @@
     .table-empty svg { display: block; }
     .goods-pdf-table .num { text-align: right; white-space: nowrap; }
     .goods-pdf-table .col-name { min-width: 220px; white-space: normal; }
-    .goods-pdf-table .col-qty input {
+    .goods-pdf-table .col-qty input,
+    .goods-pdf-table input[data-field="remark"] {
       width: 100%;
       min-width: 88px;
       height: 32px;
       border: 1px solid var(--border);
       border-radius: 2px;
       padding: 0 8px;
+      box-sizing: border-box;
     }
     .po-goods-table thead th {
       position: sticky;
@@ -6275,7 +6277,7 @@
           tel: first.tel,
           orderAmount: first.orderAmount === "" ? "0" : first.orderAmount,
           shipMethod: first.shipMethod || "",
-          remark: (first.remark || "").slice(0, 30),
+          remark: clipPoRemark(first.remark),
           arriveDate: excelDateToInput(first.arriveDate),
           arriveTime: excelTimeToHm(first.arriveTime),
           shipDate: excelDateToInput(first.shipDate),
@@ -6952,6 +6954,7 @@
       const max = poWizardMaxStep(current);
       poWizardStep = Math.max(1, Math.min(Number(step) || 1, max));
       const page = document.getElementById("page-order-edit");
+      const wasPreview = !!(page && page.classList.contains("is-wizard-preview"));
       const online = poWizardUsesOnline(current);
       const atLast = poWizardStep >= max;
       page.classList.toggle("is-wizard", poWizardOn);
@@ -6993,6 +6996,11 @@
       const enteringGoods = poWizardStep === 2 && !atLast && poWizardPrevStep !== 2;
       poWizardPrevStep = poWizardStep;
       if (enteringGoods) poEstMarginConfirmed = false;
+      const previewNow = page.classList.contains("is-wizard-preview");
+      if (previewNow || wasPreview) {
+        if (online) fillRecipientForm(current);
+        renderPoGoodsTable();
+      }
     }
 
     function syncPoWizardUi(order, mode, opts) {
@@ -8758,7 +8766,7 @@
           <td class="num"><input type="number" data-recv="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${qtyOver ? "is-oversell" : ""}"${ro} /></td>
           <td class="num"><input type="number" data-recv="orderAmount" min="0" step="0.01" readonly value="${row.orderAmount === 0 || row.orderAmount ? escapeHtml(String(row.orderAmount)) : ""}" /></td>
           <td>${recvSelectHtml(RECV_SHIP_OPTS, row.shipMethod || "", "shipMethod")}</td>
-          <td><input type="text" data-recv="remark" maxlength="30" value="${escapeHtml(row.remark || "")}" /></td>
+          ${recvRemarkCellHtml(row, editable)}
           ${ops}
         </tr>`;
       const exBlock = hasEx ? recvExchangeBlockHtml(row, canExchange, shipMeta && shipMeta.exchanges) : "";
@@ -8853,7 +8861,9 @@
     function readRecvSharedFromTr(tr) {
       const get = (field) => {
         const el = tr.querySelector(`[data-recv="${field}"]`);
-        return el ? String(el.value || "").trim() : "";
+        if (!el) return "";
+        if (el.matches("input, textarea, select")) return String(el.value || "").trim();
+        return String(el.textContent || "").trim();
       };
       return {
         platform: get("platform"),
@@ -8867,7 +8877,7 @@
         tel: get("tel"),
         orderAmount: get("orderAmount"),
         shipMethod: get("shipMethod"),
-        remark: get("remark").slice(0, 30),
+        remark: clipPoRemark(get("remark")),
       };
     }
 
@@ -9182,11 +9192,6 @@
         if (!rec.shipMethod) {
           alert(prefix + "請選擇運送方式");
           focusRecvOrWizard(i, "shipMethod");
-          return false;
-        }
-        if (rec.remark && (rec.remark.length < 5 || rec.remark.length > 30)) {
-          alert(prefix + "備註最少 5 字、最多 30 字");
-          focusRecvOrWizard(i, "remark");
           return false;
         }
         const items = (rec.items || []).filter((it) => it && (it.sku || Number(it.qty) > 0));
@@ -10104,12 +10109,12 @@
     function remarksForPdfItem(order, item) {
       const parts = [];
       const poRemark = userFacingRemark(item && item.remark);
-      if (poRemark) parts.push(poRemark);
       validShipsOfPo((order && order.orderNo) || "").forEach((ship) => {
         (ship.items || []).forEach((line) => {
           if (itemKey(line) !== itemKey(item) && String(line.sku || "") !== String((item && item.sku) || "")) return;
           const note = userFacingRemark(line.remark);
-          if (note && !parts.includes(note)) parts.push(note);
+          if (!note || note === poRemark || parts.includes(note)) return;
+          parts.push(note);
         });
       });
       return parts.join("；");
@@ -11475,7 +11480,7 @@
         priceNoLabel: src.priceNoLabel ?? meta.priceNoLabel ?? "",
         stock: src.stock ?? 0,
         sellableQty: src.sellableQty != null ? Number(src.sellableQty) : undefined,
-        remark: src.remark || "",
+        remark: clipPoRemark(src.remark),
         pcsPerCarton: Number(src.pcsPerCarton) || Number((catalogLineBySku(src.sku) || {}).pcsPerCarton) || pcsFromItemRemark(src) || 0,
         qty: Number(src.qty) || 0,
         priceWithLabel: src.priceWithLabel != null && src.priceWithLabel !== "" ? String(src.priceWithLabel) : "",
@@ -11860,7 +11865,7 @@
           ${shippedCell}
           ${priceCells}
           <td class="num" data-sync="amount">${escapeHtml(pdfMoney(d.amount, 2))}</td>
-          <td>${escapeHtml(d.remark)}</td>
+          ${goodsRemarkCellHtml(d.remark, editable)}
           ${opsCell}
         </tr>`;
     }
@@ -11985,6 +11990,34 @@
 
     function poGoodsEditable() {
       return !document.getElementById("page-order-edit").classList.contains("is-readonly");
+    }
+
+    function clipPoRemark(text) {
+      return String(text == null ? "" : text).slice(0, 20);
+    }
+
+    function poRemarkFieldEditable() {
+      if (orderFormMode === "view") return false;
+      const page = document.getElementById("page-order-edit");
+      if (!page) return false;
+      if (page.classList.contains("is-readonly") || page.classList.contains("is-wizard-preview")) return false;
+      return true;
+    }
+
+    function goodsRemarkCellHtml(remark, qtyEditable) {
+      const text = clipPoRemark(userFacingRemark(remark));
+      if (qtyEditable && poRemarkFieldEditable()) {
+        return `<td><input type="text" data-field="remark" maxlength="20" value="${escapeHtml(text)}" /></td>`;
+      }
+      return `<td>${escapeHtml(text)}</td>`;
+    }
+
+    function recvRemarkCellHtml(row, editable) {
+      const text = clipPoRemark(row && row.remark);
+      if (editable && poRemarkFieldEditable()) {
+        return `<td><input type="text" data-recv="remark" maxlength="20" value="${escapeHtml(text)}" /></td>`;
+      }
+      return `<td><span data-recv="remark">${escapeHtml(text)}</span></td>`;
     }
 
     function allCatalogItems() {
@@ -12878,6 +12911,12 @@
       if (!tr) return;
       const item = poLineItems.find((row) => row.id === tr.dataset.id);
       if (!item) return;
+      if (field === "remark") {
+        const text = clipPoRemark(e.target.value);
+        item.remark = text;
+        if (e.target.value !== text) e.target.value = text;
+        return;
+      }
       if (field === "priceWithLabel") {
         if (e.type === "input") {
           item.priceWithLabel = e.target.value;
