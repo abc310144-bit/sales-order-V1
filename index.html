@@ -1692,7 +1692,8 @@
     .goods-pdf-table .num { text-align: right; white-space: nowrap; }
     .goods-pdf-table .col-name { min-width: 220px; white-space: normal; }
     .goods-pdf-table .col-qty input,
-    .goods-pdf-table input[data-field="remark"] {
+    .goods-pdf-table input[data-field="remark"],
+    .goods-pdf-table input[data-field="palletIn"] {
       width: 100%;
       min-width: 88px;
       height: 32px;
@@ -4076,6 +4077,9 @@
                         <th class="num col-po-price-pair" id="editGoodsPriceLabelHead">單價（含標）</th>
                         <th class="num col-po-quote hidden" id="editGoodsQuoteHead">商品報價(TWD)</th>
                         <th>合計</th>
+                        <th class="num col-po-pallet hidden">淨重(KG)</th>
+                        <th class="col-po-pallet hidden">板入數</th>
+                        <th class="num col-po-pallet hidden">板數</th>
                         <th>備註</th>
                         <th class="ops" id="editGoodsOpsHead">操作</th>
                       </tr>
@@ -6593,6 +6597,8 @@
         remark: src.remark || "",
         expiryAccept: src.expiryAccept || "",
         batch: src.batch || "",
+        netWeightG: snapshotNetWeightG(src),
+        palletIn: snapshotPalletIn(src),
       };
       if (Array.isArray(src.exchangeItems) && src.exchangeItems.length) {
         out.exchangeItems = src.exchangeItems.map((ex) => ({
@@ -7046,7 +7052,8 @@
         }
         return validateRecipientRequired(order);
       }
-      return validateAddedGoodsQty(order);
+      if (!validateAddedGoodsQty(order)) return false;
+      return validateOverseasPalletIn(order);
     }
 
     function savePoWizardDraft(opts) {
@@ -7380,18 +7387,18 @@
     }
 
     const mockItemPool = [
-      { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 24, pcsPerCarton: 24 },
-      { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12, pcsPerCarton: 12 },
-      { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18, pcsPerCarton: 18 },
-      { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 36, pcsPerCarton: 36 },
-      { sku: "UM-4412", name: "電解質補給粉", expiryAccept: "2026-09-30", unit: "盒", qty: 20, pcsPerCarton: 20 },
-      { sku: "PX-8801", name: "優質高蛋白棒", expiryAccept: "2026-11-30", unit: "盒", qty: 48, pcsPerCarton: 24 },
-      { sku: "UM-5520", name: "植物蛋白飲 原味", expiryAccept: "2027-02-28", unit: "罐", qty: 16, pcsPerCarton: 16 },
-      { sku: "UM-6601", name: "蛋白酥脆脆 起司 30g", expiryAccept: "2027-04-30", unit: "盒", qty: 24, pcsPerCarton: 24 },
-      { sku: "UM-6602", name: "手作蛋白餅乾 原味", expiryAccept: "2027-01-15", unit: "盒", qty: 20, pcsPerCarton: 20 },
-      { sku: "UM-7703", name: "零卡果凍 蜂蜜檸檬", expiryAccept: "2027-06-30", unit: "箱", qty: 30, pcsPerCarton: 30 },
-      { sku: "UM-8804", name: "分離乳清 可可 500g", expiryAccept: "2027-03-01", unit: "袋", qty: 12, pcsPerCarton: 12 },
-      { sku: "UM-9905", name: "植物蛋白棒 花生", expiryAccept: "2027-02-10", unit: "盒", qty: 16, pcsPerCarton: 16 },
+      { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 24, pcsPerCarton: 24, weightG: 80 },
+      { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12, pcsPerCarton: 12, weightG: 1000 },
+      { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18, pcsPerCarton: 18, weightG: 180 },
+      { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 36, pcsPerCarton: 36, weightG: 250 },
+      { sku: "UM-4412", name: "電解質補給粉", expiryAccept: "2026-09-30", unit: "盒", qty: 20, pcsPerCarton: 20, weightG: 100 },
+      { sku: "PX-8801", name: "優質高蛋白棒", expiryAccept: "2026-11-30", unit: "盒", qty: 48, pcsPerCarton: 24, weightG: 480 },
+      { sku: "UM-5520", name: "植物蛋白飲 原味", expiryAccept: "2027-02-28", unit: "罐", qty: 16, pcsPerCarton: 16, weightG: 350 },
+      { sku: "UM-6601", name: "蛋白酥脆脆 起司 30g", expiryAccept: "2027-04-30", unit: "盒", qty: 24, pcsPerCarton: 24, weightG: 120 },
+      { sku: "UM-6602", name: "手作蛋白餅乾 原味", expiryAccept: "2027-01-15", unit: "盒", qty: 20, pcsPerCarton: 20, weightG: 200 },
+      { sku: "UM-7703", name: "零卡果凍 蜂蜜檸檬", expiryAccept: "2027-06-30", unit: "箱", qty: 30, pcsPerCarton: 30, weightG: 800 },
+      { sku: "UM-8804", name: "分離乳清 可可 500g", expiryAccept: "2027-03-01", unit: "袋", qty: 12, pcsPerCarton: 12, weightG: 500 },
+      { sku: "UM-9905", name: "植物蛋白棒 花生", expiryAccept: "2027-02-10", unit: "盒", qty: 16, pcsPerCarton: 16, weightG: 160 },
     ];
 
     function mockItemsFor(channelName) {
@@ -11486,6 +11493,8 @@
         stock: src.stock ?? 0,
         sellableQty: src.sellableQty != null ? Number(src.sellableQty) : undefined,
         remark: clipPoRemark(src.remark),
+        netWeightG: snapshotNetWeightG(src),
+        palletIn: snapshotPalletIn(src),
         pcsPerCarton: Number(src.pcsPerCarton) || Number((catalogLineBySku(src.sku) || {}).pcsPerCarton) || pcsFromItemRemark(src) || 0,
         qty: Number(src.qty) || 0,
         priceWithLabel: src.priceWithLabel != null && src.priceWithLabel !== "" ? String(src.priceWithLabel) : "",
@@ -11506,6 +11515,13 @@
       });
       document.querySelectorAll("#editGoodsOverviewTable .col-po-quote").forEach((el) => {
         el.classList.toggle("hidden", overseas);
+      });
+    }
+
+    function syncPoGoodsPalletColumns(order) {
+      const show = isOverseasPo(order);
+      document.querySelectorAll("#editGoodsOverviewTable .col-po-pallet").forEach((el) => {
+        el.classList.toggle("hidden", !show);
       });
     }
 
@@ -11536,6 +11552,19 @@
         }
       }
       return true;
+    }
+
+    /** 境外：下訂數量大於 0 的列，板入數必填且為正整數。 */
+    function validateOverseasPalletIn(order) {
+      if (!isOverseasPo(order)) return true;
+      const lines = (poLineItems || []).filter((row) => (Number(row.qty) || 0) > 0);
+      const missing = lines.filter((row) => !snapshotPalletIn(row));
+      if (!missing.length) return true;
+      const names = missing.map((row) => normalizeSku(row.sku) || "（未填 SKU）");
+      alert("以下商品請填寫大於 0 的正整數板入數：\n" + names.join("、"));
+      if (poWizardOn) setPoWizardStep(2);
+      else setPoTab("goods");
+      return false;
     }
 
     function validatePoTermsRequired(order) {
@@ -11762,6 +11791,7 @@
       }
       if (order) order.items = lines;
       if (!validateOverseasGoodsBatch(order)) return;
+      if (!validateOverseasPalletIn(order)) return;
       poEstMarginConfirmed = true;
       renderPoEstMargin(order);
       alert("已確認下定商品，並試算預估營收／成本／毛利");
@@ -11793,6 +11823,53 @@
       if (live.quote > 0) return live.quoteLink || "";
       if (isOverseasPo(order)) return "label";
       return "";
+    }
+
+    /** 商品管理「重量」：DEMO 用 mockItemPool.weightG（公克）。正式環境依 SKU 取主檔，寫入該列後凍結。 */
+    function productMasterWeightG(sku) {
+      const cat = catalogLineBySku(sku);
+      const n = Number(cat && cat.weightG);
+      return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
+    }
+
+    function snapshotNetWeightG(src) {
+      if (src && src.netWeightG != null && src.netWeightG !== "") {
+        const n = Number(src.netWeightG);
+        return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
+      }
+      return productMasterWeightG(src && src.sku);
+    }
+
+    function snapshotPalletIn(src) {
+      const raw = src && src.palletIn;
+      if (raw == null || String(raw).trim() === "") return "";
+      if (!/^[1-9]\d*$/.test(String(raw).trim())) return "";
+      return Number(raw);
+    }
+
+    function lineNetWeightKgText(item, qty) {
+      const grams = Number(item && item.netWeightG) || 0;
+      const n = Number(qty) || 0;
+      if (grams <= 0 || n <= 0) return "-";
+      const kg = Math.round(grams * n) / 1000;
+      return kg.toFixed(3).replace(/\.?0+$/, "");
+    }
+
+    function palletCountText(carton, palletIn) {
+      const cartons = Number(carton);
+      const perPallet = snapshotPalletIn({ palletIn });
+      if (!Number.isFinite(cartons) || cartons <= 0 || !perPallet) return "-";
+      return (Math.round((cartons / perPallet) * 100) / 100).toFixed(2);
+    }
+
+    function overseasPalletCellsHtml(item, d, editable) {
+      const weight = lineNetWeightKgText(item, d.qty);
+      const pallets = palletCountText(d.carton, item.palletIn);
+      const palletVal = snapshotPalletIn(item) ? String(item.palletIn) : "";
+      const palletCell = editable && poRemarkFieldEditable()
+        ? `<td class="col-po-pallet"><input type="number" min="1" step="1" inputmode="numeric" data-field="palletIn" value="${escapeHtml(palletVal)}" /></td>`
+        : `<td class="num col-po-pallet">${escapeHtml(palletVal || "-")}</td>`;
+      return `<td class="num col-po-pallet" data-sync="netWeight">${escapeHtml(weight)}</td>${palletCell}<td class="num col-po-pallet" data-sync="palletQty">${escapeHtml(pallets)}</td>`;
     }
 
     function goodsDisplayFields(item) {
@@ -11870,6 +11947,7 @@
           ${shippedCell}
           ${priceCells}
           <td class="num" data-sync="amount">${escapeHtml(pdfMoney(d.amount, 2))}</td>
+          ${overseas ? overseasPalletCellsHtml(item, d, editable) : ""}
           ${goodsRemarkCellHtml(d.remark, editable)}
           ${opsCell}
         </tr>`;
@@ -11974,6 +12052,7 @@
       const showBatch = isOverseasPo(order);
       syncPoGoodsBatchColumn(order);
       syncPoGoodsPriceColumns(order);
+      syncPoGoodsPalletColumns(order);
       syncPoGoodsToolbar();
       let cols = [...document.querySelectorAll("#editGoodsOverviewTable thead th")]
         .filter((th) => !th.classList.contains("hidden")).length;
@@ -12909,8 +12988,12 @@
       const d = goodsDisplayFields(item);
       const carton = tr.querySelector('[data-sync="carton"]');
       const amount = tr.querySelector('[data-sync="amount"]');
+      const netWeight = tr.querySelector('[data-sync="netWeight"]');
+      const palletQty = tr.querySelector('[data-sync="palletQty"]');
       if (carton) carton.textContent = d.carton;
       if (amount) amount.textContent = pdfMoney(d.amount, 2);
+      if (netWeight) netWeight.textContent = lineNetWeightKgText(item, d.qty);
+      if (palletQty) palletQty.textContent = palletCountText(d.carton, item.palletIn);
       const qtyInput = tr.querySelector('[data-field="qty"]');
       if (qtyInput) qtyInput.classList.toggle("is-oversell", isOverviewQtyOversell(item));
     }
@@ -12942,6 +13025,36 @@
         }
         item.priceWithLabel = normalized;
         e.target.value = normalized;
+        return;
+      }
+      if (field === "palletIn") {
+        const raw = String(e.target.value || "").trim();
+        if (e.type === "input") {
+          if (raw === "") {
+            item.palletIn = "";
+            refreshOverviewRowDerived(tr, item);
+            return;
+          }
+          if (!/^[1-9]\d*$/.test(raw)) {
+            e.target.value = snapshotPalletIn(item) ? String(item.palletIn) : "";
+            return;
+          }
+          item.palletIn = Number(raw);
+          refreshOverviewRowDerived(tr, item);
+          return;
+        }
+        if (!/^[1-9]\d*$/.test(raw)) {
+          alert("板入數僅可填寫大於 0 的正整數");
+          item.palletIn = snapshotPalletIn(item);
+          e.target.value = item.palletIn ? String(item.palletIn) : "";
+          refreshOverviewRowDerived(tr, item);
+          return;
+        }
+        item.palletIn = Number(raw);
+        e.target.value = String(item.palletIn);
+        refreshOverviewRowDerived(tr, item);
+        const palletOrder = getWorkspaceOrder();
+        if (palletOrder) palletOrder.items = collectEditGoods();
         return;
       }
       if (field === "qty") {
@@ -13370,6 +13483,7 @@
       if (!validatePoDocNoRequired(order)) return;
       if (!validateRecipientRequired(order)) return;
       if (!validateOverseasGoodsBatch(order)) return;
+      if (!validateOverseasPalletIn(order)) return;
       commitWorkspaceOrder(order, "草稿");
       fillOrderEdit(order, "edit");
       alert("已儲存為草稿");
@@ -13382,6 +13496,7 @@
       if (!validatePoDocNoRequired(order)) return;
       if (!validateRecipientRequired(order)) return;
       if (!validateOverseasGoodsBatch(order)) return;
+      if (!validateOverseasPalletIn(order)) return;
       if (!validateMarkFileRequired(order)) return;
       commitWorkspaceOrder(order, "待審核");
       poWizardOn = false;
@@ -13391,6 +13506,7 @@
     });
     document.getElementById("editWizardDraft").addEventListener("click", () => {
       if (orderFormMode === "view") return;
+      if (!validateOverseasPalletIn(getWorkspaceOrder())) return;
       const saved = savePoWizardDraft({});
       if (!saved) return;
       fillOrderEdit(saved, "edit", { wizardStep: poWizardStep });
