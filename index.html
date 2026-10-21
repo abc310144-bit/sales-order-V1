@@ -1153,6 +1153,8 @@
     #page-order-edit.is-wizard.is-online-wizard[data-wizard-step="2"] .po-vendor-col,
     #page-order-edit.is-wizard.is-online-wizard[data-wizard-step="2"] .po-basic-top { display: none !important; }
     #page-order-edit.is-wizard.is-online-wizard[data-wizard-step="2"] #editRecipientPanel { display: block !important; }
+    #page-order-edit.is-wizard-preview #recvConfirmGoodsBar,
+    #page-order-edit.is-readonly #recvConfirmGoodsBar { display: none !important; }
     #page-order-edit.is-wizard-preview input,
     #page-order-edit.is-wizard-preview select,
     #page-order-edit.is-wizard-preview textarea {
@@ -3974,10 +3976,9 @@
                       <th>電話</th>
                       <th>SKU</th>
                       <th>商品名稱</th>
-                      <th>商品效期</th>
-                      <th>批號</th>
+                      <th>效期_批號</th>
                       <th class="num">當前可賣量</th>
-                      <th class="num">下定數量</th>
+                      <th class="num">預計出貨數量(下訂數量)</th>
                       <th class="num">合計</th>
                       <th>運送方式</th>
                       <th>備註</th>
@@ -3986,6 +3987,9 @@
                   </thead>
                   <tbody id="editRecvBody"></tbody>
                 </table>
+              </div>
+              <div class="filter-actions hidden" id="recvConfirmGoodsBar" style="justify-content:flex-end;margin-top:12px">
+                <button type="button" class="btn btn-primary" id="recvConfirmGoodsBtn">確認下定商品</button>
               </div>
             </aside>
               <div class="po-vendor-col">
@@ -4060,7 +4064,7 @@
                         <th class="col-po-batch hidden" id="editGoodsBatchHead">效期_批號</th>
                         <th>箱入數</th>
                         <th class="num col-alloc">當前可賣量</th>
-                        <th>預計出貨數量(下定數量)</th>
+                        <th>預計出貨數量(下訂數量)</th>
                         <th>訂購總箱數</th>
                         <th class="num" id="editGoodsShippedHead">實際出貨數</th>
                         <th class="num col-po-price-pair" id="editGoodsPriceNoHead">單價（不含標）</th>
@@ -6488,8 +6492,10 @@
     let workspaceOrder = null;
     let poWizardOn = false;
     let poWizardStep = 1;
+    let poWizardPrevStep = 0;
     let poWizardSessionNew = false;
     let poWizardSkipSession = false;
+    let poEstMarginConfirmed = false;
     const DEMO_STORE_KEY = "urmart-sales-demo-v21";
     let demoReady = false;
     let settlementRecords = [];
@@ -6983,6 +6989,9 @@
       }
       if (show.goods) renderPoEstMargin(current);
       if (show.fees) loadOrderFees(current);
+      const enteringGoods = poWizardStep === 2 && !atLast && poWizardPrevStep !== 2;
+      poWizardPrevStep = poWizardStep;
+      if (enteringGoods) poEstMarginConfirmed = false;
     }
 
     function syncPoWizardUi(order, mode, opts) {
@@ -7006,14 +7015,29 @@
       setPoWizardStep(poWizardStep, order);
     }
 
-    function savePoWizardDraft(requireBasic) {
+    function savePoWizardDraft(opts) {
+      const requireBasic = !!(opts && opts.requireBasic);
+      const requireGoods = !!(opts && opts.requireGoods);
       const order = getWorkspaceOrder();
       if (!order) return null;
       if (requireBasic && !validatePoDocNoRequired(order)) return null;
+      if (requireBasic && !validatePoTermsRequired(order)) return null;
       applyEditFormToOrder(order);
       applyOrderFees(order);
       if (requireBasic && !validateMarkFileRequired(order)) return null;
+      if (requireGoods) {
+        if (!poEstMarginConfirmed) {
+          alert("請先確認下定商品");
+          return null;
+        }
+        if (isOnlineTransferPo(order)) {
+          if (!validateRecipientRequired(order)) return null;
+        } else if (!validatePoGoodsRequired(order)) {
+          return null;
+        }
+      }
       commitWorkspaceOrder(order, "草稿");
+      poWizardSessionNew = false;
       return order;
     }
 
@@ -8153,8 +8177,8 @@
       "platform", "platformOrderNo", "arriveDate", "shipDate", "name", "zip",
       "address", "tel", "orderAmount", "shipMethod", "remark",
     ];
-    const RECV_PRODUCT_FIELDS = ["sku", "itemName", "expiryAccept", "batch", "qty"];
-    const RECV_COL_COUNT = 20;
+    const RECV_PRODUCT_FIELDS = ["sku", "itemName", "batch", "qty"];
+    const RECV_COL_COUNT = 19;
     let nextRecvGroupId = 1;
     let nextRecvItemSeq = 1;
 
@@ -8166,6 +8190,7 @@
 
     function canExchangeOnPo(order) {
       if (!isOnlineTransferPo(order)) return false;
+      if (poWizardOn && poWizardSessionNew) return false;
       if (currentRole !== "建檔人" && currentRole !== "主管") return false;
       const no = order && order.orderNo;
       if (!no || no === "__new__" || currentEditOrderNo === "__new__") return false;
@@ -8630,7 +8655,7 @@
                     <th>SKU</th>
                     <th>商品名稱</th>
                     <th class="num">當前可賣量</th>
-                    <th class="num">下定數量</th>
+                    <th class="num">預計出貨數量(下訂數量)</th>
                     <th class="ops recv-ex-ops">操作</th>
                   </tr>
                 </thead>
@@ -8718,7 +8743,6 @@
             <div class="recv-sku-hits hidden" data-recv-sku-hits></div>
           </td>
           <td><input type="text" data-recv="itemName" readonly value="${escapeHtml(row.itemName || "")}" /></td>
-          <td><input type="date" data-recv="expiryAccept" value="${escapeHtml(toDateInput(row.expiryAccept) || "")}"${ro} /></td>
           <td>${recvBatchSelectHtml(row.batch || "")}</td>
           <td class="num"><input type="text" data-recv="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
           <td class="num"><input type="number" data-recv="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${qtyOver ? "is-oversell" : ""}"${ro} /></td>
@@ -8799,6 +8823,10 @@
         return recvItemRowHtml(row, platform, editable, canExchange, !isFirstInGroup, { origin, exchanges });
       }).join("");
       syncRecipientPanel(order);
+      const recvConfirm = document.getElementById("recvConfirmGoodsBar");
+      if (recvConfirm) {
+        recvConfirm.classList.toggle("hidden", !isOnlineTransferPo(order) || orderFormMode === "view" || (document.getElementById("page-order-edit") || {}).classList.contains("is-wizard-preview"));
+      }
       if (document.getElementById("page-order-edit")?.classList.contains("is-readonly")) {
         body.querySelectorAll("input, select, textarea").forEach((el) => {
           if (el.matches("[data-recv-ship-check], #recvShipCheckAll")) return;
@@ -8843,7 +8871,7 @@
       return {
         sku: normalizeSku(get("sku")),
         name: get("itemName"),
-        expiryAccept: get("expiryAccept"),
+        expiryAccept: get("expiryAccept") || expiryDateFromBatch(get("batch")),
         batch: get("batch"),
         qty: Number.isFinite(qty) ? qty : "",
         unit: "",
@@ -8939,7 +8967,7 @@
     }
 
     function focusRecvField(groupIdx, field) {
-      setPoTab("basic");
+      if (!poWizardOn) setPoTab("basic");
       const body = document.getElementById("editRecvBody");
       if (!body) return;
       const groups = [];
@@ -8956,7 +8984,7 @@
     }
 
     function focusRecvItemField(trOrGroupIdx, field) {
-      setPoTab("basic");
+      if (!poWizardOn) setPoTab("basic");
       if (trOrGroupIdx && trOrGroupIdx.nodeType === 1) {
         const el = trOrGroupIdx.querySelector(`[data-recv="${field}"]`);
         if (el) el.focus();
@@ -8995,7 +9023,7 @@
         const exQty = Number(ex.qty);
         if (!Number.isInteger(exQty) || exQty <= 0) {
           if (!silent) {
-            alert(ep + "下定數量須為正整數");
+            alert(ep + "預計出貨數量(下訂數量)須為正整數");
             setPoTab("basic");
           }
           return null;
@@ -9074,6 +9102,12 @@
       return true;
     }
 
+    function focusRecvOrWizard(fieldIdx, field) {
+      if (poWizardOn) setPoWizardStep(2);
+      else setPoTab("basic");
+      if (field) focusRecvField(fieldIdx, field);
+    }
+
     function validateRecipientRequired(order) {
       if (!isOnlineTransferPo(order)) return true;
       applyRecipientForm(order);
@@ -9087,12 +9121,12 @@
         order.recipient = { ...list[0] };
         fillRecipientForm(order);
         alert("手動建立僅可填寫一筆平台訂單（多品項可新增列）；多筆平台訂單請使用匯入");
-        setPoTab("basic");
+        focusRecvOrWizard();
         return false;
       }
       if (!list.length) {
         alert("請至少填寫一筆訂單內容");
-        setPoTab("basic");
+        focusRecvOrWizard();
         return false;
       }
       for (let i = 0; i < list.length; i++) {
@@ -9100,54 +9134,55 @@
         const prefix = list.length > 1 ? `訂單內容第 ${i + 1} 筆：` : "";
         if (!rec.platform) {
           alert(prefix + "請先選擇買方通路名稱（將同步至通路平台）");
-          setPoTab("basic");
+          if (poWizardOn) setPoWizardStep(1);
+          else setPoTab("basic");
           document.getElementById("editOverseasChannelName").focus();
           return false;
         }
         if (!rec.platformOrderNo) {
           alert(prefix + "請輸入平台訂單編號");
-          focusRecvField(i, "platformOrderNo");
+          focusRecvOrWizard(i, "platformOrderNo");
           return false;
         }
         if (!isValidPlatformOrderNo(rec.platformOrderNo)) {
           alert(prefix + `平台訂單編號「${rec.platformOrderNo}」最多 50 字，僅可中、英、數、_、-`);
-          focusRecvField(i, "platformOrderNo");
+          focusRecvOrWizard(i, "platformOrderNo");
           return false;
         }
         if (!rec.name) {
           alert(prefix + "請輸入收件人姓名");
-          focusRecvField(i, "name");
+          focusRecvOrWizard(i, "name");
           return false;
         }
         if (!/^\d{3}$/.test(rec.zip)) {
           alert(prefix + "郵遞區號請輸入三碼數字");
-          focusRecvField(i, "zip");
+          focusRecvOrWizard(i, "zip");
           return false;
         }
         if (!rec.address) {
           alert(prefix + "請輸入收件人地址");
-          focusRecvField(i, "address");
+          focusRecvOrWizard(i, "address");
           return false;
         }
         if (!rec.tel) {
           alert(prefix + "請輸入收件人電話");
-          focusRecvField(i, "tel");
+          focusRecvOrWizard(i, "tel");
           return false;
         }
         if (!rec.shipMethod) {
           alert(prefix + "請選擇運送方式");
-          focusRecvField(i, "shipMethod");
+          focusRecvOrWizard(i, "shipMethod");
           return false;
         }
         if (rec.remark && (rec.remark.length < 5 || rec.remark.length > 30)) {
           alert(prefix + "備註最少 5 字、最多 30 字");
-          focusRecvField(i, "remark");
+          focusRecvOrWizard(i, "remark");
           return false;
         }
         const items = (rec.items || []).filter((it) => it && (it.sku || Number(it.qty) > 0));
         if (!items.length) {
-          alert(prefix + "請至少填寫一筆商品（SKU／數量）");
-          focusRecvField(i, "sku");
+          alert(prefix + "請至少填寫一筆商品（SKU／預計出貨數量）");
+          focusRecvOrWizard(i, "sku");
           return false;
         }
         for (let j = 0; j < items.length; j++) {
@@ -9155,19 +9190,24 @@
           const ip = `${prefix}商品第 ${j + 1} 列：`;
           if (!it.sku) {
             alert(ip + "請輸入 SKU");
-            focusRecvField(i, "sku");
+            focusRecvOrWizard(i, "sku");
             return false;
           }
           const bound = channelBoundSkuMap("線上-轉單")[String(it.sku).toLowerCase()];
           if (!bound) {
             alert(ip + `SKU「${it.sku}」未綁定線上-轉單通路商品`);
-            focusRecvField(i, "sku");
+            focusRecvOrWizard(i, "sku");
+            return false;
+          }
+          if (!it.batch) {
+            alert(ip + "請選擇效期_批號");
+            focusRecvOrWizard(i, "batch");
             return false;
           }
           const qty = Number(it.qty);
           if (!Number.isInteger(qty) || qty <= 0) {
-            alert(ip + "數量須為正整數");
-            focusRecvField(i, "qty");
+            alert(ip + "預計出貨數量(下訂數量)須為正整數");
+            focusRecvOrWizard(i, "qty");
             return false;
           }
           if (Array.isArray(it.exchangeItems) && it.exchangeItems.length) {
@@ -9180,7 +9220,7 @@
       const nos = list.map((r) => r.platformOrderNo);
       if (new Set(nos).size !== nos.length) {
         alert("平台訂單編號不可重複");
-        setPoTab("basic");
+        focusRecvOrWizard();
         return false;
       }
       return true;
@@ -9625,12 +9665,18 @@
       if (!sel) return;
       if (usesCollectionTerms(order)) {
         const val = collectionTermsOf(order);
-        if (label) label.textContent = "收款條件";
+        if (label) {
+          label.textContent = "收款條件";
+          label.classList.toggle("required", isDealerPo(order));
+        }
         sel.innerHTML = `<option value="${escapeHtml(val)}">${escapeHtml(val)}</option>`;
         sel.value = val;
         return;
       }
-      if (label) label.textContent = "貿易條件";
+      if (label) {
+        label.textContent = "貿易條件";
+        label.classList.toggle("required", isOverseasPo(order));
+      }
       const current = ((order && partyRecord(order)) || {}).termsOfDelivery || "";
       sel.innerHTML = INCOTERM_SELECT_HTML;
       if (current && !Array.from(sel.options).some((opt) => opt.value === current)) {
@@ -11120,7 +11166,6 @@
     let poPickFilterQueries = [];
     let poPickImportSkus = null;
     /** 預估毛利：僅按「確認下定商品」後更新（檢視模式直接顯示） */
-    let poEstMarginConfirmed = false;
 
     const virtualAllocDefaults = {
       "UM-1001": 120,
@@ -11465,11 +11510,44 @@
         const line = lines[i];
         if (!line.batch || !allB.includes(line.batch)) {
           alert(`SKU「${line.sku || ""}」：請選擇效期_批號`);
-          setPoTab("goods");
+          if (poWizardOn) setPoWizardStep(2);
+          else setPoTab("goods");
           return false;
         }
       }
       return true;
+    }
+
+    function validatePoTermsRequired(order) {
+      if (!order || isOnlineTransferPo(order)) return true;
+      if (!isOverseasPo(order) && !isDealerPo(order)) return true;
+      const sel = document.getElementById("editTermsOfDelivery");
+      const val = String((sel && sel.value) || "").trim();
+      if (val) return true;
+      alert(isOverseasPo(order) ? "請選擇貿易條件" : "請選擇收款條件");
+      if (poWizardOn) setPoWizardStep(1);
+      else setPoTab("basic");
+      if (sel) sel.focus();
+      return false;
+    }
+
+    function validatePoGoodsRequired(order) {
+      if (isOnlineTransferPo(order)) return validateRecipientRequired(order);
+      const lines = collectEditGoods();
+      if (!lines.length) {
+        alert("請至少填寫一列 SKU 與預計出貨數量(下訂數量)");
+        if (poWizardOn) setPoWizardStep(2);
+        else setPoTab("goods");
+        return false;
+      }
+      const noSku = lines.find((row) => !normalizeSku(row.sku));
+      if (noSku) {
+        alert("請填寫 SKU");
+        if (poWizardOn) setPoWizardStep(2);
+        else setPoTab("goods");
+        return false;
+      }
+      return validateOverseasGoodsBatch(order);
     }
 
     function loadPoGoods(items) {
@@ -11636,14 +11714,22 @@
     function confirmPoOrderedGoods() {
       if (!poGoodsEditable()) return;
       const order = getWorkspaceOrder();
-      const lines = collectEditGoods();
-      if (!lines.length) {
-        alert("請先新增商品並填寫預計出貨數量（正整數）");
+      if (order && isOnlineTransferPo(order)) {
+        if (!validateRecipientRequired(order)) return;
+        loadPoGoodsWorkspace(order);
+        poEstMarginConfirmed = true;
+        renderPoEstMargin(order);
+        alert("已確認下定商品，並試算預估營收／成本／毛利");
         return;
       }
-      const bad = lines.find((row) => !Number.isInteger(Number(row.qty)) || Number(row.qty) <= 0);
-      if (bad) {
-        alert("預計出貨數量僅可填寫大於 0 的正整數");
+      const lines = collectEditGoods();
+      if (!lines.length) {
+        alert("請至少填寫一列 SKU 與預計出貨數量(下訂數量)");
+        return;
+      }
+      const noSku = lines.find((row) => !normalizeSku(row.sku));
+      if (noSku) {
+        alert("請填寫 SKU");
         return;
       }
       if (order) order.items = lines;
@@ -13236,18 +13322,18 @@
     });
     document.getElementById("editWizardDraft").addEventListener("click", () => {
       if (orderFormMode === "view") return;
-      const saved = savePoWizardDraft(false);
+      const saved = savePoWizardDraft({});
       if (!saved) return;
       fillOrderEdit(saved, "edit", { wizardStep: poWizardStep });
       alert("已儲存為草稿");
     });
     document.getElementById("editWizardSavePage").addEventListener("click", () => {
-      const saved = savePoWizardDraft(true);
+      const saved = savePoWizardDraft({ requireBasic: true });
       if (!saved) return;
       fillOrderEdit(saved, "edit", { wizardStep: 2 });
     });
     document.getElementById("editWizardSave").addEventListener("click", () => {
-      const saved = savePoWizardDraft(false);
+      const saved = savePoWizardDraft({ requireGoods: poWizardStep === 2 });
       if (!saved) return;
       fillOrderEdit(saved, "edit", { wizardStep: poWizardStep + 1 });
     });
@@ -13620,6 +13706,8 @@
       }
     });
     document.getElementById("poConfirmGoodsBtn").addEventListener("click", confirmPoOrderedGoods);
+    const recvConfirmGoodsBtn = document.getElementById("recvConfirmGoodsBtn");
+    if (recvConfirmGoodsBtn) recvConfirmGoodsBtn.addEventListener("click", confirmPoOrderedGoods);
     document.getElementById("editGoodsBody").addEventListener("input", onPoItemField);
     document.getElementById("editGoodsBody").addEventListener("change", onPoItemField);
     document.getElementById("editGoodsBody").addEventListener("click", (e) => {
