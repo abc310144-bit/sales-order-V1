@@ -1171,7 +1171,7 @@
     #page-order-edit.is-readonly [data-del-fee] { display: none !important; }
     .po-wizard-foot {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: center;
       gap: 12px;
       margin-top: 28px;
@@ -2089,6 +2089,10 @@
       cursor: pointer;
     }
     .ops a:hover { text-decoration: underline; }
+    #page-order-edit.can-recv-ship-check input[data-recv-ship-check]:disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
     #page-ship-create:not(.is-online) .online-ship-only { display: none !important; }
     #page-ship-create.is-online .po-ship-acc.online-ship-only { display: block; }
     #page-ship-create.is-online .form-row.online-ship-only { display: grid; }
@@ -4208,7 +4212,6 @@
             </div>
           </div>
           <div id="poWizardFoot" class="po-wizard-foot hidden">
-            <button type="button" class="btn" id="editWizardCancel">取消</button>
             <div class="po-wizard-foot-right">
               <button type="button" class="btn hidden" id="editWizardBack">返回</button>
               <button type="button" class="btn" id="editWizardDraft">儲存為草稿</button>
@@ -5260,7 +5263,7 @@
       },
       {
         orderNo: "SO20260825004", poDocNo: "", shipNo: "", channelType: "台灣線上通路", channelName: "線上-轉單",
-        status: "未開立出貨單", operator: "sarah.lin", createdAt: "2026-08-25 10:08:19",
+        status: "部分出貨", operator: "sarah.lin", createdAt: "2026-08-25 10:08:19",
         fileName: "", fileUrl: "", fileType: "",
         address: "新北市五股區成泰路一段100號 藍田倉",
         arriveDate: "", shipByTime: "",
@@ -5281,6 +5284,23 @@
             items: [
               { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", batch: "2026-09-15_藍田", unit: "罐", qty: 12, pcsPerCarton: 12 },
               { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", batch: "2026-10-01_全聯", unit: "盒", qty: 18, pcsPerCarton: 18 }
+            ],
+          },
+          {
+            platform: "線上-轉單",
+            platformOrderNo: "OL-TRANSFER-0825-B",
+            name: "李美華",
+            zip: "104",
+            address: "台北市中山區民生東路二段50號",
+            tel: "0987-654-321",
+            orderAmount: "960",
+            shipMethod: "黑猫",
+            remark: "",
+            arriveDate: "2026-08-28",
+            arriveTime: "14:00",
+            shipDate: "2026-08-27",
+            items: [
+              { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", batch: "2026-11-01_藍田", unit: "盒", qty: 8, pcsPerCarton: 12 }
             ],
           },
         ],
@@ -5304,7 +5324,8 @@
         },
         items: [
           { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", batch: "2026-09-15_藍田", unit: "罐", qty: 12, pcsPerCarton: 12 },
-          { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", batch: "2026-10-01_全聯", unit: "盒", qty: 18, pcsPerCarton: 18 }
+          { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", batch: "2026-10-01_全聯", unit: "盒", qty: 18, pcsPerCarton: 18 },
+          { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", batch: "2026-11-01_藍田", unit: "盒", qty: 8, pcsPerCarton: 12 }
         ]
       },
       {
@@ -7016,23 +7037,6 @@
       persistDemoData();
     }
 
-    function cancelPoWizard() {
-      if (poWizardSessionNew) {
-        const no = (getWorkspaceOrder() && getWorkspaceOrder().orderNo) || currentEditOrderNo;
-        if (no && no !== "__new__") {
-          salesOrders = salesOrders.filter((item) => item.orderNo !== no);
-          persistDemoData();
-          renderSalesTable(getSalesFiltered());
-        }
-      }
-      poWizardOn = false;
-      poWizardSessionNew = false;
-      workspaceOrder = null;
-      currentEditOrderNo = "";
-      history.replaceState({}, "", location.pathname);
-      showPage("sales");
-    }
-
     function setPoTab(name) {
       if (poWizardOn && orderFormMode !== "view") {
         if (name === "basic") setPoWizardStep(1);
@@ -8384,7 +8388,7 @@
     function recvShippedQtyPool(orderNo) {
       const byPo = {};
       const bySku = {};
-      onlineShipsForPo(orderNo).forEach((ship) => {
+      validShipsOfPo(orderNo).forEach((ship) => {
         const poNo = String(ship.platformOrderNo || "").trim();
         (ship.items || []).forEach((item) => {
           const key = shipLineSkuKey(item);
@@ -8431,7 +8435,7 @@
         `data-recv-expiry="${escapeHtml((info && info.expiryAccept) || "")}"`,
         `data-recv-batch="${escapeHtml((info && info.batch) || "")}"`,
       ];
-      if (locked) attrs.push(`data-ship-locked="1"`, "disabled");
+      if (locked) attrs.push(`data-ship-locked="1"`, "disabled", `title="已出完，不可再出"`);
       if (checked) attrs.push("checked");
       return `<td class="recv-ship-check-col col-check"><input type="checkbox" ${attrs.join(" ")} /></td>`;
     }
@@ -10797,6 +10801,29 @@
         extraShip(10494, "SO20260809028", "實體-寶雅", "待驗收", "misha.huang", "2026-08-09 14:11:08"),
         extraShip(10495, "SO20260809028", "實體-寶雅", "待驗收", "misha.huang", "2026-08-09 14:38:42", { shipped: "2026-08-10 08:20:00" }),
         extraOnlineShip({
+          id: 10530,
+          salesOrderNo: "SO20260825004",
+          platformOrderNo: "OL-TRANSFER-0825",
+          status: "已出貨",
+          applicant: "sarah.lin",
+          created: "2026-08-25 11:08:19",
+          expectDate: "2026-08-25",
+          arriveDate: "2026-08-27",
+          arriveTime: "18:00",
+          shipOutDate: "2026-08-26",
+          shipMethod: "新竹物流",
+          recvName: "王小明",
+          recvTel: "0912-345-678",
+          recvAddress: "新北市五股區成泰路一段88號",
+          recvRemark: "請於白天配送",
+          shipped: "2026-08-26 16:10:00",
+          submittedAt: "2026-08-25 11:10:00",
+          items: [
+            transferLine("UM-1002", "乳清蛋白粉 巧克力 1kg", 12, "罐", "2026-12-15", 12),
+            transferLine("UM-2108", "益生菌隨手包", 18, "盒", "2026-11-30", 18),
+          ],
+        }),
+        extraOnlineShip({
           id: 10496,
           salesOrderNo: "SO20260808029",
           platformOrderNo: "OL-T-0808-A",
@@ -10993,6 +11020,60 @@
       });
     }
 
+    function ensureOnlineTransfer25004Demo() {
+      const order = salesOrders.find((item) => item.orderNo === "SO20260825004");
+      if (!order || !isOnlineTransferPo(order)) return;
+      if (!Array.isArray(order.recipients) || !order.recipients.length) {
+        order.recipients = recipientListOf(order);
+      }
+      if (!order.recipients.some((rec) => rec.platformOrderNo === "OL-TRANSFER-0825-B")) {
+        order.recipients.push({
+          platform: "線上-轉單",
+          platformOrderNo: "OL-TRANSFER-0825-B",
+          name: "李美華",
+          zip: "104",
+          address: "台北市中山區民生東路二段50號",
+          tel: "0987-654-321",
+          orderAmount: "960",
+          shipMethod: "黑猫",
+          remark: "",
+          arriveDate: "2026-08-28",
+          arriveTime: "14:00",
+          shipDate: "2026-08-27",
+          items: [
+            { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", batch: "2026-11-01_藍田", unit: "盒", qty: 8, pcsPerCarton: 12 },
+          ],
+        });
+      }
+      if (typeof aggregateRecipientItems === "function") {
+        order.items = aggregateRecipientItems(order.recipients);
+      }
+      const first = order.recipients.find((rec) => rec.platformOrderNo === "OL-TRANSFER-0825") || order.recipients[0];
+      const hasFirstShip = validShipsOfPo(order.orderNo).some((ship) => String(ship.platformOrderNo || "") === "OL-TRANSFER-0825");
+      if (first && !hasFirstShip) {
+        rows.unshift(extraOnlineShip({
+          id: 10530,
+          salesOrderNo: "SO20260825004",
+          platformOrderNo: "OL-TRANSFER-0825",
+          status: "已出貨",
+          applicant: "sarah.lin",
+          created: "2026-08-25 11:08:19",
+          expectDate: "2026-08-25",
+          arriveDate: first.arriveDate || "2026-08-27",
+          arriveTime: first.arriveTime || "18:00",
+          shipOutDate: first.shipDate || "2026-08-26",
+          shipMethod: first.shipMethod || "新竹物流",
+          recvName: first.name || "王小明",
+          recvTel: first.tel || "",
+          recvAddress: first.address || "",
+          recvRemark: first.remark || "",
+          shipped: "2026-08-26 16:10:00",
+          submittedAt: "2026-08-25 11:10:00",
+          items: first.items || [],
+        }));
+      }
+    }
+
     if (!restoreDemoData()) {
       seedExtraDemoData();
       ensureSeedShipItems();
@@ -11000,6 +11081,7 @@
     } else {
       ensureSeedShipItems();
     }
+    ensureOnlineTransfer25004Demo();
     normalizeAllStampFlow();
     ensureDemoMarkFiles();
     demoReady = true;
@@ -13152,7 +13234,6 @@
       fillOrderEdit(order, "view");
       alert("已送出申請");
     });
-    document.getElementById("editWizardCancel").addEventListener("click", cancelPoWizard);
     document.getElementById("editWizardDraft").addEventListener("click", () => {
       if (orderFormMode === "view") return;
       const saved = savePoWizardDraft(false);
@@ -13561,6 +13642,13 @@
 
     let shipPoLocked = false;
 
+    function setShipChannelLocked(locked) {
+      ["poShipChannelType", "poShipChannelArea", "poShipChannelName"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el && shipFormMode !== "view") el.disabled = !!locked;
+      });
+    }
+
     function setShipPoLocked(locked) {
       shipPoLocked = !!locked;
       const page = document.getElementById("page-ship-create");
@@ -13568,6 +13656,7 @@
       const input = document.getElementById("shipPoNo");
       if (input && shipFormMode !== "view") input.disabled = shipPoLocked;
       if (shipPoLocked) document.getElementById("shipPoList").classList.add("hidden");
+      setShipChannelLocked(shipPoLocked);
     }
 
     function setShipFormReadonly(readonly) {
@@ -13594,6 +13683,7 @@
       if (!readonly && shipPoLocked) {
         const input = document.getElementById("shipPoNo");
         if (input) input.disabled = true;
+        setShipChannelLocked(true);
       }
       if (readonly) setShipPoLocked(false);
       if (typeof renderPoShipGoodsTable === "function" && Array.isArray(poShipGoods)) {
@@ -13823,7 +13913,9 @@
         created.push(result.ship.orderId);
       });
       if (created.length) {
-        syncPoStatusFromShips(order);
+        const live = salesOrders.find((item) => item.orderNo === order.orderNo) || order;
+        syncPoStatusFromShips(live);
+        order.status = live.status;
         persistDemoData();
         renderShippingTable();
         renderSalesTable(getSalesFiltered());
@@ -14037,12 +14129,36 @@
       };
     }
 
-    /** 設定欄：其餘欄位有值才帶；通路類型／地區／名稱建立時不從客戶訂單帶入。 */
+    function fillPoShipChannelFromOrder(order) {
+      if (!order) {
+        resetPoShipChannelCascade();
+        return;
+      }
+      const name = order.channelName || "";
+      const type = order.channelType || channelTypeOfName(name) || "";
+      const profile = channelProfiles[name] || {};
+      const area = profile.shipArea || (type === "境外通路" ? "" : (type ? "台灣" : ""));
+      const typeSel = document.getElementById("poShipChannelType");
+      if (typeSel) {
+        if (type && !Array.from(typeSel.options).some((opt) => opt.value === type)) {
+          const opt = document.createElement("option");
+          opt.value = type;
+          opt.textContent = type;
+          typeSel.appendChild(opt);
+        }
+        typeSel.value = type;
+      }
+      fillPoShipChannelAreaOptions(area);
+      fillPoShipChannelNameOptions(name);
+      refreshPoShipChannelAutofill();
+    }
+
+    /** 選定客戶訂單後帶入出貨／通路基本資料。 */
     function resetPoShipCreateForm(order) {
       initExpectArriveTimeOptions();
-      resetPoShipChannelCascade();
+      fillPoShipChannelFromOrder(order);
       syncPoShipIncotermFromOrder(order);
-      document.getElementById("poShipExpectDate").value = toDateInput(order && order.expectDate) || "";
+      document.getElementById("poShipExpectDate").value = toDateInput((order && order.expectDate) || nowStamp()) || "";
       document.getElementById("poShipArriveDate").value = toDateInput(order && order.arriveDate) || "";
       fillHourMinute("poShipArriveHour", "poShipArriveMinute", (order && order.arriveTime) || "");
       document.getElementById("poShipOutDate").value = toDateInput(order && order.shipByTime) || "";
