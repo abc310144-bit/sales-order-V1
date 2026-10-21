@@ -1091,6 +1091,99 @@
       border-bottom-color: var(--primary);
       font-weight: 600;
     }
+    .po-wizard {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      margin: 8px 0 28px;
+      padding: 8px 16px 16px;
+    }
+    .po-wizard.hidden { display: none; }
+    .po-wizard-step {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      pointer-events: none;
+    }
+    .po-wizard-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      min-width: 88px;
+    }
+    .po-wizard-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid #d9d9d9;
+      background: #fff;
+      color: #8c8c8c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .po-wizard-step.is-active .po-wizard-dot,
+    .po-wizard-step.is-done .po-wizard-dot {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+    .po-wizard-label {
+      font-size: 13px;
+      color: #8c8c8c;
+      white-space: nowrap;
+    }
+    .po-wizard-step.is-active .po-wizard-label { color: var(--primary); font-weight: 600; }
+    .po-wizard-line {
+      width: 72px;
+      height: 2px;
+      background: #e8e8e8;
+      margin: 0 8px 22px;
+    }
+    .po-wizard-step.is-done + .po-wizard-step .po-wizard-line,
+    .po-wizard-step.is-done .po-wizard-line { background: var(--primary); }
+    #page-order-edit.is-wizard .po-tabs { display: none; }
+    #page-order-edit.is-wizard #editFooter { display: none; }
+    #page-order-edit.is-wizard:not(.is-wizard-preview):not([data-wizard-step="1"]) #poMarkUploadBlock { display: none !important; }
+    #page-order-edit.is-wizard[data-wizard-step="1"] #editRecipientPanel { display: none !important; }
+    #page-order-edit.is-wizard.is-online-wizard[data-wizard-step="2"] .po-buyer-col,
+    #page-order-edit.is-wizard.is-online-wizard[data-wizard-step="2"] .po-vendor-col,
+    #page-order-edit.is-wizard.is-online-wizard[data-wizard-step="2"] .po-basic-top { display: none !important; }
+    #page-order-edit.is-wizard.is-online-wizard[data-wizard-step="2"] #editRecipientPanel { display: block !important; }
+    #page-order-edit.is-wizard-preview input,
+    #page-order-edit.is-wizard-preview select,
+    #page-order-edit.is-wizard-preview textarea {
+      pointer-events: none;
+      background: #f5f5f5;
+      cursor: not-allowed;
+    }
+    #page-order-edit.is-wizard-preview #editGoodsToolbar,
+    #page-order-edit.is-wizard-preview #editGoodsFilterBar,
+    #page-order-edit.is-wizard-preview #editGoodsConfirmBar,
+    #page-order-edit.is-wizard-preview #editGoodsOpsHead,
+    #page-order-edit.is-wizard-preview #poOrderAddFeeBtn,
+    #page-order-edit.is-wizard-preview .recv-ops-col,
+    #page-order-edit.is-wizard-preview [data-del-fee],
+    #page-order-edit.is-readonly #poOrderAddFeeBtn,
+    #page-order-edit.is-readonly [data-del-fee] { display: none !important; }
+    .po-wizard-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 28px;
+      padding: 16px 0 8px;
+    }
+    .po-wizard-foot.hidden { display: none; }
+    .po-wizard-foot-right {
+      display: flex;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
     .po-pane {
       min-height: 240px;
       min-width: 0;
@@ -3466,39 +3559,6 @@
                   </div>
                 </div>
               </div>
-              <div class="po-ship-acc online-ship-hide" data-acc="fees">
-                <button type="button" class="po-ship-acc-head">
-                  <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
-                  費用填寫
-                </button>
-                <div class="po-ship-acc-body">
-                  <div class="ship-fee-card">
-                    <h4>出貨商品後扣項目</h4>
-                    <div class="ship-rebate-line" id="poShipRebateText">後扣項目 0 %</div>
-                  </div>
-                  <div class="ship-fee-card">
-                    <h4>訂單費用</h4>
-                    <button type="button" class="btn btn-primary" id="poShipAddFeeBtn">
-                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M8 3v10M3 8h10"/></svg>
-                      新增訂單費用
-                    </button>
-                    <div class="table-wrap po-ship-fee-table hidden" id="poShipFeeTableWrap">
-                      <table class="related-table">
-                        <thead>
-                          <tr>
-                            <th>項目名稱</th>
-                            <th>項目細節</th>
-                            <th>項目比例</th>
-                            <th>項目金額(TWD)</th>
-                            <th>操作</th>
-                          </tr>
-                        </thead>
-                        <tbody id="poShipFeeBody"></tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
               <div class="po-ship-create-foot">
                 <button type="button" class="btn" id="poShipCreateCancel">取消</button>
                 <button type="button" class="btn btn-primary" id="poShipCreateConfirm">發送出貨單審核通知</button>
@@ -3783,9 +3843,11 @@
               <button type="button" class="btn btn-primary" id="editSubmit">送出申請</button>
             </div>
           </div>
+          <nav class="po-wizard hidden" id="poWizardSteps" aria-label="建立步驟"></nav>
           <div class="po-tabs" id="poTabs">
             <button type="button" class="po-tab active" data-po-tab="basic">訂單基本資料</button>
             <button type="button" class="po-tab" data-po-tab="goods">下定商品</button>
+            <button type="button" class="po-tab hidden" data-po-tab="fees">費用</button>
             <button type="button" class="po-tab" data-po-tab="ships">出貨單</button>
           </div>
 
@@ -4065,6 +4127,34 @@
             </div>
           </div>
 
+          <div class="po-pane hidden" data-po-pane="fees">
+            <div class="ship-fee-card">
+              <h4>出貨商品後扣項目</h4>
+              <div class="ship-rebate-line" id="poShipRebateText">後扣項目 0 %</div>
+            </div>
+            <div class="ship-fee-card">
+              <h4>訂單費用</h4>
+              <button type="button" class="btn btn-primary" id="poOrderAddFeeBtn">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M8 3v10M3 8h10"/></svg>
+                新增訂單費用
+              </button>
+              <div class="table-wrap po-ship-fee-table hidden" id="poShipFeeTableWrap">
+                <table class="related-table">
+                  <thead>
+                    <tr>
+                      <th>項目名稱</th>
+                      <th>項目細節</th>
+                      <th>項目比例</th>
+                      <th>項目金額(TWD)</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="poShipFeeBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
           <div class="po-pane hidden" data-po-pane="ships">
             <div class="goods-block" style="margin-top:0">
               <h3 class="goods-title">相關出貨單</h3>
@@ -4115,6 +4205,16 @@
               <button type="button" class="btn" id="poMarkPickBtn">選擇檔案</button>
               <a href="#" id="poMarkFileLink" class="po-mark-file-link hidden"></a>
               <span id="poMarkEmptyHint" class="po-mark-empty hidden">未上傳</span>
+            </div>
+          </div>
+          <div id="poWizardFoot" class="po-wizard-foot hidden">
+            <button type="button" class="btn" id="editWizardCancel">取消</button>
+            <div class="po-wizard-foot-right">
+              <button type="button" class="btn hidden" id="editWizardBack">返回</button>
+              <button type="button" class="btn" id="editWizardDraft">儲存為草稿</button>
+              <button type="button" class="btn btn-primary hidden" id="editWizardSavePage">儲存此分頁</button>
+              <button type="button" class="btn btn-primary hidden" id="editWizardSave">儲存</button>
+              <button type="button" class="btn btn-primary hidden" id="editWizardSubmit">送出申請</button>
             </div>
           </div>
           </div>
@@ -5933,7 +6033,8 @@
           if (!order) return;
           persistDemoData();
           closeImportModal();
-          openPoWorkspace({ po: order.orderNo, mode: "edit" });
+          poWizardSessionNew = true;
+          openPoWorkspace({ po: order.orderNo, mode: "edit", wizard: "preview" });
         }).catch((err) => {
           alert(err && err.message ? err.message : "轉單匯入失敗");
         });
@@ -5943,6 +6044,8 @@
       if (!order) return;
       persistDemoData();
       closeImportModal();
+      poWizardSessionNew = true;
+      openPoWorkspace({ po: order.orderNo, mode: "edit", wizard: "preview" });
     }
 
     function excelDateToInput(val) {
@@ -6219,6 +6322,7 @@
         general: !isOverseas && !isDealer ? party : null,
         recipient: null,
         recipients: null,
+        fees: [],
       };
       if (isTransfer) {
         order.poDocNo = "";
@@ -6361,6 +6465,10 @@
     let currentEditOrderNo = "";
     let orderFormMode = "edit";
     let workspaceOrder = null;
+    let poWizardOn = false;
+    let poWizardStep = 1;
+    let poWizardSessionNew = false;
+    let poWizardSkipSession = false;
     const DEMO_STORE_KEY = "urmart-sales-demo-v21";
     let demoReady = false;
     let settlementRecords = [];
@@ -6747,9 +6855,193 @@
       return salesOrders.find((item) => item.orderNo === currentEditOrderNo);
     }
 
+    function poWizardUsesOnline(order) {
+      return isOnlineTransferPo(order);
+    }
+
+    function poWizardMaxStep(order) {
+      return poWizardUsesOnline(order) ? 3 : 4;
+    }
+
+    function shouldUsePoWizard(order, mode, opts) {
+      if (!order) return false;
+      if (mode === "view") return false;
+      if (poWizardSkipSession || (opts && opts.skipWizard)) return false;
+      return !order.orderNo || order.status === "草稿" || currentEditOrderNo === "__new__";
+    }
+
+    function poWizardLabels(order) {
+      return poWizardUsesOnline(order)
+        ? ["訂單基本資料", "設定訂單內容", "預覽"]
+        : ["建立基本資料", "建立下定商品", "費用填寫", "訂單預覽"];
+    }
+
+    function renderPoWizardSteps(order) {
+      const nav = document.getElementById("poWizardSteps");
+      if (!nav) return;
+      const labels = poWizardLabels(order);
+      nav.innerHTML = labels.map((label, i) => {
+        const n = i + 1;
+        const state = n < poWizardStep ? "is-done" : (n === poWizardStep ? "is-active" : "");
+        const line = i < labels.length - 1 ? `<div class="po-wizard-line"></div>` : "";
+        return `<div class="po-wizard-step ${state}"><div class="po-wizard-node"><div class="po-wizard-dot">${n}</div><div class="po-wizard-label">${escapeHtml(label)}</div></div>${line}</div>`;
+      }).join("");
+    }
+
+    function syncPoWizardButtons(order) {
+      const max = poWizardMaxStep(order);
+      const atFirst = poWizardStep <= 1;
+      const atLast = poWizardStep >= max;
+      const show = (id, on) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle("hidden", !on);
+      };
+      show("editWizardBack", !atFirst);
+      show("editWizardSavePage", atFirst);
+      show("editWizardSave", !atFirst && !atLast);
+      show("editWizardSubmit", atLast);
+    }
+
+    function syncPoFeesTab(order) {
+      const tab = document.querySelector('.po-tab[data-po-tab="fees"]');
+      const show = !!order && !poWizardUsesOnline(order) && orderFormMode === "view";
+      if (tab) tab.classList.toggle("hidden", !show);
+    }
+
+    function loadOrderFees(order) {
+      poShipFees = Array.isArray(order && order.fees) ? order.fees.map((fee) => ({ ...fee })) : [];
+      const rebate = document.getElementById("poShipRebateText");
+      if (rebate) rebate.textContent = `後扣項目 ${channelRebatePercent((order && order.channelName) || "")} %`;
+      if (typeof renderPoShipFees === "function") renderPoShipFees();
+    }
+
+    function applyOrderFees(order) {
+      if (!order) return;
+      order.fees = poShipFees.map((fee) => ({ ...fee }));
+    }
+
+    function setPoWizardStep(step, order) {
+      const current = order || getWorkspaceOrder();
+      const max = poWizardMaxStep(current);
+      poWizardStep = Math.max(1, Math.min(Number(step) || 1, max));
+      const page = document.getElementById("page-order-edit");
+      const online = poWizardUsesOnline(current);
+      const atLast = poWizardStep >= max;
+      page.classList.toggle("is-wizard", poWizardOn);
+      page.classList.toggle("is-online-wizard", poWizardOn && online);
+      page.classList.toggle("is-wizard-preview", poWizardOn && atLast);
+      page.dataset.wizardStep = String(poWizardStep);
+      const show = {};
+      if (!poWizardOn) return;
+      if (atLast) {
+        show.basic = true;
+        show.goods = true;
+        show.fees = !online;
+        show.ships = false;
+      } else if (online) {
+        show.basic = poWizardStep === 1 || poWizardStep === 2;
+        show.goods = false;
+        show.fees = false;
+        show.ships = false;
+      } else {
+        show.basic = poWizardStep === 1;
+        show.goods = poWizardStep === 2;
+        show.fees = poWizardStep === 3;
+        show.ships = false;
+      }
+      document.querySelectorAll(".po-pane").forEach((el) => {
+        el.classList.toggle("hidden", !show[el.dataset.poPane]);
+      });
+      const wizardFoot = document.getElementById("poWizardFoot");
+      if (wizardFoot) wizardFoot.classList.toggle("hidden", !poWizardOn);
+      renderPoWizardSteps(current);
+      syncPoWizardButtons(current);
+      if (show.goods && online && orderFormMode !== "view") {
+        applyRecipientForm(current);
+        loadPoGoodsWorkspace(current);
+      }
+      if (show.goods) renderPoEstMargin(current);
+      if (show.fees) loadOrderFees(current);
+    }
+
+    function syncPoWizardUi(order, mode, opts) {
+      const use = shouldUsePoWizard(order, mode, opts);
+      poWizardOn = use;
+      const page = document.getElementById("page-order-edit");
+      const nav = document.getElementById("poWizardSteps");
+      const foot = document.getElementById("poWizardFoot");
+      if (nav) nav.classList.toggle("hidden", !use);
+      if (foot) foot.classList.toggle("hidden", !use);
+      page.classList.toggle("is-wizard", use);
+      page.classList.toggle("is-online-wizard", use && poWizardUsesOnline(order));
+      if (!use) {
+        page.classList.remove("is-wizard-preview");
+        delete page.dataset.wizardStep;
+        return;
+      }
+      if (opts && opts.preview) poWizardStep = poWizardMaxStep(order);
+      else if (opts && opts.wizardStep) poWizardStep = opts.wizardStep;
+      else poWizardStep = 1;
+      setPoWizardStep(poWizardStep, order);
+    }
+
+    function savePoWizardDraft(requireBasic) {
+      const order = getWorkspaceOrder();
+      if (!order) return null;
+      if (requireBasic && !validatePoDocNoRequired(order)) return null;
+      applyEditFormToOrder(order);
+      applyOrderFees(order);
+      if (requireBasic && !validateMarkFileRequired(order)) return null;
+      commitWorkspaceOrder(order, "草稿");
+      return order;
+    }
+
+    function clearPoWizardCurrentStep(order) {
+      if (!order) return;
+      const online = poWizardUsesOnline(order);
+      if (poWizardStep === 2 && online) {
+        order.recipient = emptyRecipient();
+        order.recipients = [{ ...order.recipient }];
+        fillRecipientForm(order);
+        order.items = [];
+        loadPoGoodsWorkspace(order);
+      } else if (poWizardStep === 2 && !online) {
+        order.items = [];
+        loadPoGoodsWorkspace(order);
+      } else if (poWizardStep === 3 && !online) {
+        poShipFees = [];
+        order.fees = [];
+        renderPoShipFees();
+      }
+      persistDemoData();
+    }
+
+    function cancelPoWizard() {
+      if (poWizardSessionNew) {
+        const no = (getWorkspaceOrder() && getWorkspaceOrder().orderNo) || currentEditOrderNo;
+        if (no && no !== "__new__") {
+          salesOrders = salesOrders.filter((item) => item.orderNo !== no);
+          persistDemoData();
+          renderSalesTable(getSalesFiltered());
+        }
+      }
+      poWizardOn = false;
+      poWizardSessionNew = false;
+      workspaceOrder = null;
+      currentEditOrderNo = "";
+      history.replaceState({}, "", location.pathname);
+      showPage("sales");
+    }
+
     function setPoTab(name) {
+      if (poWizardOn && orderFormMode !== "view") {
+        if (name === "basic") setPoWizardStep(1);
+        return;
+      }
       const shipsTab = document.querySelector('.po-tab[data-po-tab="ships"]');
       if (name === "ships" && shipsTab && shipsTab.classList.contains("hidden")) name = "basic";
+      const feesTab = document.querySelector('.po-tab[data-po-tab="fees"]');
+      if (name === "fees" && feesTab && feesTab.classList.contains("hidden")) name = "basic";
       document.querySelectorAll(".po-tab").forEach((el) => el.classList.toggle("active", el.dataset.poTab === name));
       document.querySelectorAll(".po-pane").forEach((el) => el.classList.toggle("hidden", el.dataset.poPane !== name));
       const footer = document.getElementById("editFooter");
@@ -6762,6 +7054,7 @@
         }
         renderPoEstMargin(getWorkspaceOrder());
       }
+      if (name === "fees") loadOrderFees(getWorkspaceOrder());
     }
 
     function syncPoShipTab(order) {
@@ -6773,6 +7066,8 @@
     }
 
     function startCreateWorkspace(kind, channelName, channelType) {
+      poWizardSessionNew = true;
+      poWizardSkipSession = false;
       const createdAt = nowStamp();
       const name = channelName || "";
       const profile = channelProfiles[name] || {};
@@ -6810,6 +7105,7 @@
         recipient: name === "線上-轉單" ? emptyRecipient() : null,
         recipients: name === "線上-轉單" ? [emptyRecipient()] : null,
         markFile: null,
+        fees: [],
       };
       currentEditOrderNo = "__new__";
       workspaceOrder = order;
@@ -6871,6 +7167,7 @@
         general: null,
         stampFile: null,
         markFile: null,
+        fees: Array.isArray(src.fees) ? src.fees.map((fee) => ({ ...fee })) : [],
         closedBySupervisor: false,
         completeNote: "",
         voidReason: "",
@@ -6927,11 +7224,13 @@
       closeCopyPoModal();
       if (!canCopyPo(src)) return;
       const draft = buildCopiedDraft(src);
+      poWizardSkipSession = true;
+      poWizardSessionNew = false;
       currentEditOrderNo = "__new__";
       workspaceOrder = draft;
-      fillOrderEdit(draft, "edit");
+      fillOrderEdit(draft, "edit", { skipWizard: true });
       commitWorkspaceOrder(draft, "草稿");
-      fillOrderEdit(draft, "edit");
+      fillOrderEdit(draft, "edit", { skipWizard: true });
     }
 
     function commitWorkspaceOrder(order, status) {
@@ -6968,7 +7267,7 @@
       }
       if (po) {
         const order = salesOrders.find((item) => item.orderNo === po);
-        if (order) fillOrderEdit(order, mode);
+        if (order) fillOrderEdit(order, mode, { preview: params.get("wizard") === "preview" });
       }
     }
 
@@ -12624,6 +12923,7 @@
       order.shipByTime = toDateInput(document.getElementById("editShipByTime").value);
       applyOverseasForm(order);
       applyRecipientForm(order);
+      applyOrderFees(order);
     }
 
     function approvePo(order) {
@@ -12741,7 +13041,7 @@
       return false;
     }
 
-    function fillOrderEdit(order, mode) {
+    function fillOrderEdit(order, mode, opts) {
       initExpectArriveTimeOptions();
       workspaceOrder = order;
       currentEditOrderNo = order.orderNo || "__new__";
@@ -12774,8 +13074,10 @@
       fillRecipientForm(order);
       if (!Array.isArray(order.items)) order.items = [];
       loadPoGoodsWorkspace(order);
+      loadOrderFees(order);
       renderRelatedShips(order);
-      setPoTab("basic");
+      syncPoWizardUi(order, orderFormMode, opts || {});
+      if (!poWizardOn) setPoTab("basic");
       setOrderFormReadonly(orderFormMode === "view");
       const viewExchange = isViewExchangeMode(order);
       document.getElementById("page-order-edit").classList.toggle("can-exchange", viewExchange);
@@ -12792,6 +13094,7 @@
       }
       syncPoGoodsToolbar();
       syncEditFooter(order, orderFormMode);
+      syncPoFeesTab(order);
       syncMarkUploadUi(order);
       showPage("order-edit");
     }
@@ -12844,8 +13147,38 @@
       if (!validateOverseasGoodsBatch(order)) return;
       if (!validateMarkFileRequired(order)) return;
       commitWorkspaceOrder(order, "待審核");
+      poWizardOn = false;
+      poWizardSessionNew = false;
       fillOrderEdit(order, "view");
       alert("已送出申請");
+    });
+    document.getElementById("editWizardCancel").addEventListener("click", cancelPoWizard);
+    document.getElementById("editWizardDraft").addEventListener("click", () => {
+      if (orderFormMode === "view") return;
+      const saved = savePoWizardDraft(false);
+      if (!saved) return;
+      fillOrderEdit(saved, "edit", { wizardStep: poWizardStep });
+      alert("已儲存為草稿");
+    });
+    document.getElementById("editWizardSavePage").addEventListener("click", () => {
+      const saved = savePoWizardDraft(true);
+      if (!saved) return;
+      fillOrderEdit(saved, "edit", { wizardStep: 2 });
+    });
+    document.getElementById("editWizardSave").addEventListener("click", () => {
+      const saved = savePoWizardDraft(false);
+      if (!saved) return;
+      fillOrderEdit(saved, "edit", { wizardStep: poWizardStep + 1 });
+    });
+    document.getElementById("editWizardBack").addEventListener("click", () => {
+      const order = getWorkspaceOrder();
+      clearPoWizardCurrentStep(order);
+      applyOrderFees(order);
+      const next = Math.max(1, poWizardStep - 1);
+      fillOrderEdit(order, "edit", { wizardStep: next });
+    });
+    document.getElementById("editWizardSubmit").addEventListener("click", () => {
+      document.getElementById("editSubmit").click();
     });
     document.getElementById("editApprove").addEventListener("click", () => {
       const order = getWorkspaceOrder();
@@ -12928,6 +13261,14 @@
       };
       reader.readAsDataURL(file);
     });
+    document.getElementById("page-order-edit").addEventListener("click", (e) => {
+      const delFee = e.target.closest("[data-del-fee]");
+      if (!delFee || document.getElementById("page-order-edit").classList.contains("is-wizard-preview")) return;
+      poShipFees = poShipFees.filter((fee) => fee.id !== delFee.dataset.delFee);
+      const order = getWorkspaceOrder();
+      if (order) order.fees = poShipFees.map((fee) => ({ ...fee }));
+      renderPoShipFees();
+    });
     document.getElementById("editCopyPo").addEventListener("click", openCopyPoModal);
     document.getElementById("editAddShip").addEventListener("click", () => {
       const order = getWorkspaceOrder();
@@ -12995,7 +13336,7 @@
       clearOnlineShippingFilterFields();
       renderOnlineShippingTable(getOnlineShippingFiltered());
     });
-    document.getElementById("poShipAddFeeBtn").addEventListener("click", openPoShipFeeModal);
+    document.getElementById("poOrderAddFeeBtn").addEventListener("click", openPoShipFeeModal);
     document.getElementById("poShipFeeClose").addEventListener("click", closePoShipFeeModal);
     document.getElementById("poShipFeeCancel").addEventListener("click", closePoShipFeeModal);
     document.getElementById("poShipFeeConfirm").addEventListener("click", confirmPoShipFee);
@@ -13247,11 +13588,6 @@
       if (confirmBtn) confirmBtn.classList.toggle("hidden", readonly);
       const cancelBtn = document.getElementById("poShipCreateCancel");
       if (cancelBtn) cancelBtn.textContent = readonly ? "返回列表" : "取消";
-      const addFeeBtn = document.getElementById("poShipAddFeeBtn");
-      if (addFeeBtn) {
-        addFeeBtn.classList.remove("hidden");
-        addFeeBtn.disabled = !!readonly;
-      }
       // 貿易條件：建立可選；檢視唯讀
       const incoterm = document.getElementById("poShipIncoterm");
       if (incoterm) incoterm.disabled = !!readonly;
@@ -13315,13 +13651,10 @@
       fillPoShipWarehouseSelect("");
       document.querySelectorAll('input[name="poShipPickup"]').forEach((el) => { el.checked = false; });
       clearOnlineShipFields();
-      poShipFees = [];
       poShipGoods = [];
       poShipShortage = [];
-      renderPoShipFees();
       renderPoShipGoodsTable();
       syncPoShipStockWarn();
-      document.getElementById("poShipRebateText").textContent = "後扣項目 0 %";
     }
 
     function openShipCreatePage() {
@@ -13722,16 +14055,12 @@
           el.checked = el.value === order.pickup;
         });
       }
-      poShipFees = [];
       const source = ((order && order.items) || []).map((row) => toPoLineItem(row));
       const plan = poShipFillPlan(order, source);
       poShipGoods = plan.goods;
       poShipShortage = plan.shortage;
-      renderPoShipFees();
       renderPoShipGoodsTable();
       syncPoShipStockWarn();
-      const pct = channelRebatePercent(order && order.channelName);
-      document.getElementById("poShipRebateText").textContent = `後扣項目 ${pct} %`;
       document.querySelectorAll("#poShipCreatePanel .po-ship-acc").forEach((el) => el.classList.remove("collapsed"));
     }
 
@@ -13903,7 +14232,10 @@
     }
 
     function openPoShipFeeModal() {
-      if (shipFormMode === "view") return;
+      const poPage = document.getElementById("page-order-edit");
+      if (poPage && poPage.classList.contains("active")) {
+        if (poPage.classList.contains("is-readonly") || poPage.classList.contains("is-wizard-preview")) return;
+      } else if (shipFormMode === "view") return;
       document.getElementById("poShipFeeName").value = "";
       document.getElementById("poShipFeeDetail").value = "";
       document.getElementById("poShipFeeRate").value = "";
@@ -13945,6 +14277,8 @@
         amount: hasAmount ? amountEl.value : "",
       });
       renderPoShipFees();
+      const order = getWorkspaceOrder();
+      if (order) applyOrderFees(order);
       closePoShipFeeModal();
     }
 
@@ -14042,7 +14376,7 @@
         pickup,
         ...channelSnap,
         rebatePercent: channelRebatePercent(order.channelName),
-        fees: poShipFees.map((fee) => ({ ...fee })),
+        fees: [],
         items: poShipGoods.map((item) => poItemToShipLine(item)),
         online: false,
         platform: "",
@@ -14440,7 +14774,6 @@
         renderShipRecipientView(ship);
       }
       renderShipSettingsView(ship, po);
-      poShipFees = Array.isArray(ship.fees) ? ship.fees.map((fee) => ({ ...fee })) : [];
       const channel = (po && po.channelName) || ship.channel || "";
       const poItemByKey = {};
       ((po && po.items) || []).forEach((item) => {
@@ -14471,9 +14804,7 @@
       });
       poShipShortage = [];
       setShipFormReadonly(true);
-      renderPoShipFees();
       syncPoShipStockWarn();
-      document.getElementById("poShipRebateText").textContent = `後扣項目 ${ship.rebatePercent != null ? ship.rebatePercent : channelRebatePercent(channel)} %`;
       document.querySelectorAll("#poShipCreatePanel .po-ship-acc").forEach((el) => el.classList.remove("collapsed"));
       showPage("ship-create");
     }
