@@ -5308,9 +5308,11 @@
     }
 
     function canCreateShipFromPo(order) {
-      return canShipFromPo(order)
-        && (!needsStampPo(order) || hasStampFile(order))
-        && (!needsMarkFile(order) || hasMarkFile(order));
+      if (!canShipFromPo(order)) return false;
+      if (needsStampPo(order) && !hasStampFile(order)) return false;
+      if (needsMarkFile(order) && !hasMarkFile(order)) return false;
+      if (isOnlineTransferPo(order) && remainingOnlineShipGroups(order).length === 0) return false;
+      return true;
     }
 
     function demoMarkFile() {
@@ -8056,19 +8058,40 @@
         && canCreateShipFromPo(order);
     }
 
+    function shipLineSkuKey(item) {
+      const sku = normalizeSku(item && item.sku);
+      if (sku) return sku.toLowerCase();
+      const code = normalizeSku(item && item.productCode);
+      return code ? code.toLowerCase() : "";
+    }
+
+    function shipLineQty(item) {
+      return Number(item && (item.qty ?? item.expectQty ?? item.orderedQty)) || 0;
+    }
+
     function recvShippedQtyPool(orderNo) {
       const byPo = {};
+      const bySku = {};
       onlineShipsForPo(orderNo).forEach((ship) => {
-        const poNo = String(ship.platformOrderNo || "");
-        if (!poNo) return;
-        if (!byPo[poNo]) byPo[poNo] = {};
+        const poNo = String(ship.platformOrderNo || "").trim();
         (ship.items || []).forEach((item) => {
-          const key = normalizeSku(item && item.sku).toLowerCase();
-          if (!key) return;
-          byPo[poNo][key] = (byPo[poNo][key] || 0) + (Number(item.qty) || 0);
+          const key = shipLineSkuKey(item);
+          const qty = shipLineQty(item);
+          if (!key || qty <= 0) return;
+          bySku[key] = (bySku[key] || 0) + qty;
+          if (!poNo) return;
+          if (!byPo[poNo]) byPo[poNo] = {};
+          byPo[poNo][key] = (byPo[poNo][key] || 0) + qty;
         });
       });
-      return byPo;
+      return { byPo, bySku };
+    }
+
+    function recvShipPoolForRecipient(shipped, rec, onlyOneRecipient) {
+      const src = shipped || { byPo: {}, bySku: {} };
+      if (onlyOneRecipient) return { ...(src.bySku || {}) };
+      const poNo = String((rec && rec.platformOrderNo) || "").trim();
+      return { ...((src.byPo && src.byPo[poNo]) || {}) };
     }
 
     function takeRecvShipRemain(pool, sku, qty) {
@@ -8104,10 +8127,10 @@
     function remainingOnlineShipGroups(order) {
       const list = recipientListOf(order);
       const shipped = recvShippedQtyPool((order && order.orderNo) || "");
+      const onlyOneRecipient = list.length <= 1;
       const groups = [];
       list.forEach((rec) => {
-        const poNo = String((rec && rec.platformOrderNo) || "");
-        const pool = { ...(shipped[poNo] || {}) };
+        const pool = recvShipPoolForRecipient(shipped, rec, onlyOneRecipient);
         const items = [];
         ((rec && rec.items) || []).forEach((item) => {
           const exList = normalizeExchangeItems(item && item.exchangeItems).filter((ex) => ex.sku && Number(ex.qty) > 0);
@@ -8115,22 +8138,21 @@
             exList.forEach((ex) => {
               const remain = takeRecvShipRemain(pool, ex.sku, ex.qty);
               if (remain > 0) {
-                const catalog = channelBoundSkuMap("線上-轉單")[String(ex.sku).toLowerCase()];
-                items.push(toPoLineItem({
+                items.push({
                   ...ex,
                   qty: remain,
-                  name: ex.name || (catalog && catalog.name) || "",
-                  unit: ex.unit || (catalog && catalog.unit) || "",
-                  pcsPerCarton: ex.pcsPerCarton || (catalog && catalog.pcsPerCarton) || 0,
-                  expiryAccept: ex.expiryAccept || (catalog && catalog.expiryAccept) || "",
-                }));
+                  name: ex.name || "",
+                  unit: ex.unit || "",
+                  pcsPerCarton: ex.pcsPerCarton || 0,
+                  expiryAccept: ex.expiryAccept || "",
+                });
               }
             });
             return;
           }
           if (item && item.sku && Number(item.qty) > 0) {
             const remain = takeRecvShipRemain(pool, item.sku, item.qty);
-            if (remain > 0) items.push(toPoLineItem({ ...item, qty: remain }));
+            if (remain > 0) items.push({ ...item, qty: remain });
           }
         });
         if (items.length) groups.push({ rec, items });
@@ -8140,6 +8162,18 @@
 
     function collectCheckedRecvShipGroups(order) {
       const list = recipientListOf(order);
+      const remainCap = {};
+      remainingOnlineShipGroups(order).forEach((group) => {
+        const rec = group.rec;
+        const idx = list.indexOf(rec);
+        if (idx < 0) return;
+        (group.items || []).forEach((item) => {
+          const sku = normalizeSku(item && item.sku).toLowerCase();
+          if (!sku) return;
+          const key = `${idx}|${sku}`;
+          remainCap[key] = (remainCap[key] || 0) + (Number(item.qty) || 0);
+        });
+      });
       const grouped = {};
       document.querySelectorAll("#editRecvBody [data-recv-ship-check]:checked:not(:disabled)").forEach((el) => {
         const gid = el.getAttribute("data-recv-group") || "";
@@ -8147,8 +8181,11 @@
         const rec = list[idx];
         if (!rec) return;
         const sku = el.getAttribute("data-recv-sku") || "";
-        const remain = Number(el.getAttribute("data-recv-remain")) || 0;
+        const skuKey = normalizeSku(sku).toLowerCase();
+        const cap = remainCap[`${idx}|${skuKey}`] || 0;
+        const remain = Math.min(Number(el.getAttribute("data-recv-remain")) || 0, cap);
         if (!sku || remain <= 0) return;
+        remainCap[`${idx}|${skuKey}`] = cap - remain;
         if (!grouped[gid]) grouped[gid] = { rec, items: [] };
         grouped[gid].items.push(toPoLineItem({
           sku,
@@ -8404,14 +8441,15 @@
       document.getElementById("page-order-edit")?.classList.toggle("can-recv-ship-check", showShipCheck);
       const flat = isOnlineTransferPo(order) ? flattenRecipientDisplayRows(list) : [];
       const shipped = recvShippedQtyPool((order && order.orderNo) || "");
+      const onlyOneRecipient = list.length <= 1;
       const pools = {};
       const groupSeen = {};
       body.innerHTML = flat.map((row) => {
         const isFirstInGroup = !groupSeen[row.groupId];
         if (isFirstInGroup) groupSeen[row.groupId] = true;
-        const poNo = String(row.platformOrderNo || "");
-        if (!pools[poNo]) pools[poNo] = { ...(shipped[poNo] || {}) };
-        const pool = pools[poNo];
+        const poolKey = onlyOneRecipient ? "__all__" : String(row.platformOrderNo || "").trim();
+        if (!pools[poolKey]) pools[poolKey] = recvShipPoolForRecipient(shipped, row, onlyOneRecipient);
+        const pool = pools[poolKey];
         const hasEx = Array.isArray(row.exchangeItems) && row.exchangeItems.length > 0;
         const origin = {
           show: showShipCheck,
