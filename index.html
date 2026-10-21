@@ -7010,9 +7010,33 @@
         return;
       }
       if (opts && opts.preview) poWizardStep = poWizardMaxStep(order);
-      else if (opts && opts.wizardStep) poWizardStep = opts.wizardStep;
+      else if (opts && opts.wizardStep != null && opts.wizardStep !== "") poWizardStep = Number(opts.wizardStep) || 1;
       else poWizardStep = 1;
       setPoWizardStep(poWizardStep, order);
+    }
+
+    function isPoWizardGoodsStep() {
+      if (!poWizardOn) return false;
+      const page = document.getElementById("page-order-edit");
+      if (!page || page.classList.contains("is-wizard-preview")) return false;
+      return Number(page.dataset.wizardStep || poWizardStep) === 2;
+    }
+
+    function guardWizardGoodsAdvance(order) {
+      if (!order) return false;
+      if (isOnlineTransferPo(order)) {
+        if (!poEstMarginConfirmed) {
+          alert("請先確認下定商品");
+          return false;
+        }
+        return validateRecipientRequired(order);
+      }
+      if (!validatePoGoodsRequired(order)) return false;
+      if (!poEstMarginConfirmed) {
+        alert("請先確認下定商品");
+        return false;
+      }
+      return true;
     }
 
     function savePoWizardDraft(opts) {
@@ -7025,17 +7049,7 @@
       applyEditFormToOrder(order);
       applyOrderFees(order);
       if (requireBasic && !validateMarkFileRequired(order)) return null;
-      if (requireGoods) {
-        if (!poEstMarginConfirmed) {
-          alert("請先確認下定商品");
-          return null;
-        }
-        if (isOnlineTransferPo(order)) {
-          if (!validateRecipientRequired(order)) return null;
-        } else if (!validatePoGoodsRequired(order)) {
-          return null;
-        }
-      }
+      if (requireGoods && !guardWizardGoodsAdvance(order)) return null;
       commitWorkspaceOrder(order, "草稿");
       poWizardSessionNew = false;
       return order;
@@ -11693,20 +11707,34 @@
       poPickFilterQueries = [];
       poPickImportSkus = null;
       const items = ((order && order.items) || []).filter((item) => item && item.sku && (Number(item.qty) || 0) > 0);
-      poLineItems = items.map((item) => toPoLineItem({
-        ...item,
-        sellableQty: item.sellableQty != null
-          ? Number(item.sellableQty)
-          : virtualAllocOf(channelName, item.sku),
-      }));
+      if (items.length) {
+        poLineItems = items.map((item) => toPoLineItem({
+          ...item,
+          sellableQty: item.sellableQty != null
+            ? Number(item.sellableQty)
+            : virtualAllocOf(channelName, item.sku),
+        }));
+      } else if (order && !isOnlineTransferPo(order) && orderFormMode !== "view") {
+        const overseas = isOverseasPo(order);
+        poLineItems = poPickRows.map((cat) => toPoLineItem({
+          ...cat,
+          qty: 0,
+          sellableQty: cat.sellableQty != null ? Number(cat.sellableQty) : virtualAllocOf(channelName, cat.sku),
+          priceWithLabel: "",
+          batch: "",
+          allowEmptyBatch: overseas,
+        }));
+      } else {
+        poLineItems = [];
+      }
       syncPoGoodsToolbar();
       const marginEl = document.getElementById("poMarginOverview");
       if (marginEl) marginEl.classList.remove("hidden");
-      if (poGoodsEditable()) {
-        resetPoEstMarginDisplay();
-      } else {
+      if (orderFormMode === "view") {
         poEstMarginConfirmed = true;
         renderPoEstMargin(order);
+      } else {
+        resetPoEstMarginDisplay();
       }
       renderPoGoodsTable();
     }
@@ -13333,9 +13361,11 @@
       fillOrderEdit(saved, "edit", { wizardStep: 2 });
     });
     document.getElementById("editWizardSave").addEventListener("click", () => {
-      const saved = savePoWizardDraft({ requireGoods: poWizardStep === 2 });
+      const onGoods = isPoWizardGoodsStep();
+      if (onGoods && !guardWizardGoodsAdvance(getWorkspaceOrder())) return;
+      const saved = savePoWizardDraft({ requireGoods: onGoods });
       if (!saved) return;
-      fillOrderEdit(saved, "edit", { wizardStep: poWizardStep + 1 });
+      fillOrderEdit(saved, "edit", { wizardStep: Number(poWizardStep) + 1 });
     });
     document.getElementById("editWizardBack").addEventListener("click", () => {
       const order = getWorkspaceOrder();
