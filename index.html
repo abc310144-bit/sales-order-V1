@@ -3952,7 +3952,7 @@
                 <div class="form-ctrl"><textarea id="editVendorAddress" rows="2" data-lock="1"></textarea></div>
               </div>
               <div class="form-row">
-                <label>貿易條件</label>
+                <label id="editTermsOfDeliveryLabel">貿易條件</label>
                 <div class="form-ctrl">
                   <select id="editTermsOfDelivery">
                     <option value="">請選擇</option>
@@ -7008,6 +7008,10 @@
       "晨曦公司": { region: "境外", shipArea: "香港", mode: "跨境", acceptFlow: "買斷", monthlySettle: false, currency: "TWD", phone: "02-8787-2360", contact: "晨曦窗口", email: "chenxi@example.com", address: "115臺北市南港區三重里三重路19-9號B棟6樓", inWarehouse: "藍田倉", shipOutPoint: "藍田倉(訂單自取)", taxId: "77889900" },
       "百貨-新光三越": { region: "台灣(通路)", shipArea: "台灣", mode: "寄倉", acceptFlow: "寄倉", monthlySettle: true, currency: "TWD", phone: "02-2388-5555", contact: "新光三越專櫃", email: "skm@example.com", address: "台北市信義區松高路19號 新光三越A11專櫃", inWarehouse: "正光廊-營運部主管", shipOutPoint: "正光廊-營運部主管(訂單自取)", taxId: "88990011" },
     };
+    Object.keys(channelProfiles).forEach((name) => {
+      const profile = channelProfiles[name];
+      if (profile.region !== "境外" && !profile.paymentTerms) profile.paymentTerms = "月結 30 天";
+    });
 
     function channelRebatePercent(channelName) {
       const profile = channelProfiles[channelName] || {};
@@ -9285,6 +9289,50 @@
       return !isOverseasPo(order);
     }
 
+    const DEMO_COLLECTION_TERMS = "月結 30 天";
+    const INCOTERM_SELECT_HTML = `<option value="">請選擇</option><option>FOB</option><option>CIF</option><option>EXW</option><option>DDU</option>`;
+
+    function usesCollectionTerms(order) {
+      const kind = poKindOf(order);
+      return kind === "一般通路" || kind === "經銷";
+    }
+
+    function collectionTermsOf(order) {
+      const name = (order && order.channelName) || "";
+      const profile = (typeof channelProfiles !== "undefined" && channelProfiles[name]) || {};
+      return String(profile.paymentTerms || "").trim() || DEMO_COLLECTION_TERMS;
+    }
+
+    function applyCollectionTerms(order) {
+      if (!order || !usesCollectionTerms(order)) return;
+      ensurePartyPo(order);
+      const bag = partyRecord(order);
+      if (bag) bag.termsOfDelivery = collectionTermsOf(order);
+    }
+
+    function fillTermsOfDeliveryControl(order) {
+      const sel = document.getElementById("editTermsOfDelivery");
+      const label = document.getElementById("editTermsOfDeliveryLabel");
+      if (!sel) return;
+      if (usesCollectionTerms(order)) {
+        const val = collectionTermsOf(order);
+        if (label) label.textContent = "收款條件";
+        sel.innerHTML = `<option value="${escapeHtml(val)}">${escapeHtml(val)}</option>`;
+        sel.value = val;
+        return;
+      }
+      if (label) label.textContent = "貿易條件";
+      const current = ((order && partyRecord(order)) || {}).termsOfDelivery || "";
+      sel.innerHTML = INCOTERM_SELECT_HTML;
+      if (current && !Array.from(sel.options).some((opt) => opt.value === current)) {
+        const opt = document.createElement("option");
+        opt.value = current;
+        opt.textContent = current;
+        sel.appendChild(opt);
+      }
+      sel.value = current;
+    }
+
     function poKindOf(order) {
       if (!order) return "一般通路";
       if (order.poKind && order.poKind !== "—") return order.poKind;
@@ -9417,7 +9465,7 @@
         vendorExt: "168",
         vendorAddress: VENDOR_ADDRESS,
         vendorTaxId: VENDOR_TAX_ID,
-        termsOfDelivery: "",
+        termsOfDelivery: (profile.paymentTerms || DEMO_COLLECTION_TERMS),
         termsOfPayment: "",
         lines: catalogPartyLines(channelName || "經銷商-學生營養股份有限公司"),
         poDocNo: `${prefix}-${dateMatch ? dateMatch[1] : stamp}`,
@@ -9432,6 +9480,7 @@
         if (order.dealer[key] === undefined || order.dealer[key] === null) order.dealer[key] = fallback[key];
       });
       if (!order.dealer.lines || !order.dealer.lines.length) order.dealer.lines = fallback.lines;
+      order.dealer.termsOfDelivery = collectionTermsOf(order);
     }
 
     function buildGeneralPo(channelName, operator) {
@@ -9451,7 +9500,7 @@
         vendorExt: "168",
         vendorAddress: VENDOR_ADDRESS,
         vendorTaxId: VENDOR_TAX_ID,
-        termsOfDelivery: "",
+        termsOfDelivery: (profile.paymentTerms || DEMO_COLLECTION_TERMS),
         termsOfPayment: "",
         lines: [],
         poDocNo: "",
@@ -9472,6 +9521,7 @@
       order.general.vendorTel = order.general.vendorTel || VENDOR_TEL;
       order.general.vendorTaxId = VENDOR_TAX_ID;
       if (!order.general.buyerTaxId) order.general.buyerTaxId = channelTaxId(order.channelName);
+      order.general.termsOfDelivery = collectionTermsOf(order);
     }
 
     function ensurePartyPo(order) {
@@ -9541,7 +9591,8 @@
       document.getElementById("editVendorAttn").value = ov.vendorAttn || "";
       document.getElementById("editVendorEmail").value = ov.vendorEmail || "";
       document.getElementById("editVendorAddress").value = VENDOR_ADDRESS;
-      document.getElementById("editTermsOfDelivery").value = ov.termsOfDelivery || "";
+      applyCollectionTerms(order);
+      fillTermsOfDeliveryControl(order);
       const hidePay = hidePartyPayment(order);
       document.getElementById("editTermsOfPaymentRow").classList.toggle("hidden", hidePay);
       document.getElementById("editTermsOfPayment").value = hidePay ? "" : (ov.termsOfPayment || "");
@@ -9592,7 +9643,9 @@
       bag.vendorTel = document.getElementById("editVendorTel").value.trim() || VENDOR_TEL;
       bag.vendorExt = document.getElementById("editVendorExt").value.trim();
       bag.vendorAddress = VENDOR_ADDRESS;
-      bag.termsOfDelivery = document.getElementById("editTermsOfDelivery").value;
+      bag.termsOfDelivery = usesCollectionTerms(order)
+        ? collectionTermsOf(order)
+        : document.getElementById("editTermsOfDelivery").value;
       bag.termsOfPayment = hidePartyPayment(order) ? "" : document.getElementById("editTermsOfPayment").value.trim();
       order.address = bag.buyerAddress;
       order.items = collectEditGoods();
@@ -9773,7 +9826,7 @@
         email: "信箱",
         tel: "電話",
         address: "地址",
-        delivery: "交易條件",
+        delivery: usesCollectionTerms(order) ? "收款條件" : "交易條件",
         sku: "SKU",
         name: "商品名稱",
         pcs: "箱入數",
@@ -9805,7 +9858,7 @@
         email: "Email",
         tel: "Tel",
         address: "Address",
-        delivery: "Terms of Delivery",
+        delivery: usesCollectionTerms(order) ? "收款條件" : "Terms of Delivery",
         payment: "Terms of Payment",
         sku: "SKU",
         name: "Product Name",
@@ -9953,7 +10006,7 @@
       </div>
     </div>
     <div class="terms">
-      <div>${escapeHtml(t.delivery)}：${escapeHtml(bag.termsOfDelivery || "—")}</div>
+      <div>${escapeHtml(t.delivery)}：${escapeHtml(usesCollectionTerms(order) ? collectionTermsOf(order) : (bag.termsOfDelivery || "—"))}</div>
       <div>${escapeHtml(t.currencyLabel)}：${escapeHtml(currency)}</div>
       ${dealer ? "" : `<div>${escapeHtml(t.payment)}：${escapeHtml(bag.termsOfPayment || "TT, 100% prepaid")}</div>`}
     </div>
@@ -13509,6 +13562,11 @@
     function syncPoShipIncotermFromOrder(order) {
       const sel = document.getElementById("poShipIncoterm");
       if (!sel) return;
+      if (usesCollectionTerms(order)) {
+        if (shipFormMode !== "view") sel.value = sel.value || "";
+        sel.disabled = shipFormMode === "view";
+        return;
+      }
       const party = order ? partyRecord(order) : null;
       const terms = (party && party.termsOfDelivery) || "";
       if (terms && !Array.from(sel.options).some((opt) => opt.value === terms)) {
@@ -14947,7 +15005,7 @@
         accReadonlyRow("建檔人信箱", party.vendorEmail || (order.operator ? `${order.operator}@urmart.com` : "")),
         accReadonlyRow("電話", vendorTel),
         accReadonlyRow("地址", party.vendorAddress || VENDOR_ADDRESS, true),
-        accReadonlyRow("貿易條件", party.termsOfDelivery || ""),
+        accReadonlyRow(usesCollectionTerms(order) ? "收款條件" : "貿易條件", usesCollectionTerms(order) ? collectionTermsOf(order) : (party.termsOfDelivery || "")),
       ].join("");
       document.getElementById("accBasicBody").innerHTML =
         `<div>${orderCol}</div><div>${buyerCol}${vendorCol}</div>`;
