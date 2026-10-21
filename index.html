@@ -2556,6 +2556,7 @@
               <thead>
                 <tr>
                   <th>出貨單編號</th>
+                  <th>客戶訂單編號</th>
                   <th>出貨倉庫</th>
                   <th>通路平台</th>
                   <th>配送編號</th>
@@ -4960,7 +4961,7 @@
       if (total) total.textContent = String(data.length);
       if (!body) return;
       if (!data.length) {
-        body.innerHTML = `<tr><td colspan="15" style="text-align:center;color:#8c8c8c;padding:24px;">尚無資料</td></tr>`;
+        body.innerHTML = `<tr><td colspan="16" style="text-align:center;color:#8c8c8c;padding:24px;">尚無資料</td></tr>`;
         return;
       }
       body.innerHTML = data.map((r) => {
@@ -4969,6 +4970,7 @@
         return `
         <tr>
           <td>${escapeHtml(r.orderId)}</td>
+          <td>${r.salesOrderNo ? `<a class="link" data-go="po-view" data-no="${escapeHtml(r.salesOrderNo)}">${escapeHtml(r.salesOrderNo)}</a>` : ""}</td>
           <td>${escapeHtml(r.inWarehouse || r.warehouse || "—")}</td>
           <td>${escapeHtml(r.platform || "—")}</td>
           <td>${escapeHtml(onlineDeliveryNo(r))}</td>
@@ -6283,13 +6285,16 @@
       syncImportModal();
     });
     document.getElementById("importChannelName").addEventListener("change", syncImportTransferHint);
-    document.getElementById("tableBody").addEventListener("click", (e) => {
+    function onShipListPoViewClick(e) {
       if (e.target.closest("[data-ship-view]")) persistDemoData();
-      if (e.target.dataset.go !== "po-view") return;
-      const order = salesOrders.find((item) => item.orderNo === e.target.dataset.no);
+      const link = e.target.closest("[data-go='po-view']");
+      if (!link) return;
+      const order = salesOrders.find((item) => item.orderNo === link.dataset.no);
       if (order) openPoWorkspace({ po: order.orderNo, mode: "view" });
       else showPage("sales");
-    });
+    }
+    document.getElementById("tableBody").addEventListener("click", onShipListPoViewClick);
+    document.getElementById("onlineShippingBody").addEventListener("click", onShipListPoViewClick);
     document.getElementById("salesTableBody").addEventListener("click", (e) => {
       if (e.target.classList.contains("is-disabled")) return;
       const action = e.target.dataset.action;
