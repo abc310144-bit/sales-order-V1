@@ -1693,7 +1693,8 @@
     .goods-pdf-table .col-name { min-width: 220px; white-space: normal; }
     .goods-pdf-table .col-qty input,
     .goods-pdf-table input[data-field="remark"],
-    .goods-pdf-table input[data-field="palletIn"] {
+    .goods-pdf-table input[data-field="palletIn"],
+    .goods-pdf-table input[data-field="grossWeight"] {
       width: 100%;
       min-width: 88px;
       height: 32px;
@@ -4080,6 +4081,7 @@
                         <th class="num col-po-pallet hidden">淨重(KG)</th>
                         <th class="col-po-pallet hidden">板入數</th>
                         <th class="num col-po-pallet hidden">板數</th>
+                        <th class="col-po-pallet hidden">毛重(KG)</th>
                         <th>備註</th>
                         <th class="ops" id="editGoodsOpsHead">操作</th>
                       </tr>
@@ -6599,6 +6601,7 @@
         batch: src.batch || "",
         netWeightG: snapshotNetWeightG(src),
         palletIn: snapshotPalletIn(src),
+        grossWeight: snapshotGrossWeight(src),
       };
       if (Array.isArray(src.exchangeItems) && src.exchangeItems.length) {
         out.exchangeItems = src.exchangeItems.map((ex) => ({
@@ -11495,6 +11498,7 @@
         remark: clipPoRemark(src.remark),
         netWeightG: snapshotNetWeightG(src),
         palletIn: snapshotPalletIn(src),
+        grossWeight: snapshotGrossWeight(src),
         pcsPerCarton: Number(src.pcsPerCarton) || Number((catalogLineBySku(src.sku) || {}).pcsPerCarton) || pcsFromItemRemark(src) || 0,
         qty: Number(src.qty) || 0,
         priceWithLabel: src.priceWithLabel != null && src.priceWithLabel !== "" ? String(src.priceWithLabel) : "",
@@ -11847,6 +11851,14 @@
       return Number(raw);
     }
 
+    /** 這一列的毛重公斤數。空白可；有值只能是大於 0 的正整數。 */
+    function snapshotGrossWeight(src) {
+      const raw = src && src.grossWeight;
+      if (raw == null || String(raw).trim() === "") return "";
+      if (!/^[1-9]\d*$/.test(String(raw).trim())) return "";
+      return Number(raw);
+    }
+
     function lineNetWeightKgText(item, qty) {
       const grams = Number(item && item.netWeightG) || 0;
       const n = Number(qty) || 0;
@@ -11866,10 +11878,14 @@
       const weight = lineNetWeightKgText(item, d.qty);
       const pallets = palletCountText(d.carton, item.palletIn);
       const palletVal = snapshotPalletIn(item) ? String(item.palletIn) : "";
+      const grossVal = snapshotGrossWeight(item) ? String(item.grossWeight) : "";
       const palletCell = editable && poRemarkFieldEditable()
         ? `<td class="col-po-pallet"><input type="number" min="1" step="1" inputmode="numeric" data-field="palletIn" value="${escapeHtml(palletVal)}" /></td>`
         : `<td class="num col-po-pallet">${escapeHtml(palletVal || "-")}</td>`;
-      return `<td class="num col-po-pallet" data-sync="netWeight">${escapeHtml(weight)}</td>${palletCell}<td class="num col-po-pallet" data-sync="palletQty">${escapeHtml(pallets)}</td>`;
+      const grossCell = editable && poRemarkFieldEditable()
+        ? `<td class="col-po-pallet"><input type="number" min="1" step="1" inputmode="numeric" data-field="grossWeight" value="${escapeHtml(grossVal)}" /></td>`
+        : `<td class="num col-po-pallet">${escapeHtml(grossVal || "-")}</td>`;
+      return `<td class="num col-po-pallet" data-sync="netWeight">${escapeHtml(weight)}</td>${palletCell}<td class="num col-po-pallet" data-sync="palletQty">${escapeHtml(pallets)}</td>${grossCell}`;
     }
 
     function goodsDisplayFields(item) {
@@ -13055,6 +13071,32 @@
         refreshOverviewRowDerived(tr, item);
         const palletOrder = getWorkspaceOrder();
         if (palletOrder) palletOrder.items = collectEditGoods();
+        return;
+      }
+      if (field === "grossWeight") {
+        const raw = String(e.target.value || "").trim();
+        if (e.type === "input") {
+          if (raw === "") {
+            item.grossWeight = "";
+            return;
+          }
+          if (!/^[1-9]\d*$/.test(raw)) {
+            e.target.value = snapshotGrossWeight(item) ? String(item.grossWeight) : "";
+            return;
+          }
+          item.grossWeight = Number(raw);
+          return;
+        }
+        if (!/^[1-9]\d*$/.test(raw)) {
+          alert("毛重僅可填寫大於 0 的正整數");
+          item.grossWeight = snapshotGrossWeight(item);
+          e.target.value = item.grossWeight ? String(item.grossWeight) : "";
+          return;
+        }
+        item.grossWeight = Number(raw);
+        e.target.value = String(item.grossWeight);
+        const grossOrder = getWorkspaceOrder();
+        if (grossOrder) grossOrder.items = collectEditGoods();
         return;
       }
       if (field === "qty") {
