@@ -971,6 +971,7 @@
     .recv-list-table .ops { white-space: nowrap; }
     .recv-list-table .ops a + a { margin-left: 8px; }
     .recv-ex-col { white-space: nowrap; min-width: 72px; }
+    #page-order-edit.is-creating .recv-ex-col { display: none !important; }
     .recv-ship-check-col {
       display: none;
       width: 36px;
@@ -6960,6 +6961,7 @@
       page.classList.toggle("is-wizard", poWizardOn);
       page.classList.toggle("is-online-wizard", poWizardOn && online);
       page.classList.toggle("is-wizard-preview", poWizardOn && atLast);
+      page.classList.toggle("is-creating", poWizardOn && poWizardSessionNew);
       page.dataset.wizardStep = String(poWizardStep);
       const show = {};
       if (!poWizardOn) return;
@@ -7013,8 +7015,10 @@
       if (foot) foot.classList.toggle("hidden", !use);
       page.classList.toggle("is-wizard", use);
       page.classList.toggle("is-online-wizard", use && poWizardUsesOnline(order));
+      page.classList.toggle("is-creating", use && poWizardSessionNew);
       if (!use) {
         page.classList.remove("is-wizard-preview");
+        page.classList.remove("is-creating");
         delete page.dataset.wizardStep;
         return;
       }
@@ -7055,7 +7059,6 @@
       if (requireBasic && !validateMarkFileRequired(order)) return null;
       if (requireGoods && !guardWizardGoodsAdvance(order)) return null;
       commitWorkspaceOrder(order, "草稿");
-      poWizardSessionNew = false;
       return order;
     }
 
