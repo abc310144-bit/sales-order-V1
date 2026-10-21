@@ -6987,6 +6987,7 @@
         applyRecipientForm(current);
         loadPoGoodsWorkspace(current);
       }
+      if (atLast) poEstMarginConfirmed = true;
       if (show.goods) renderPoEstMargin(current);
       if (show.fees) loadOrderFees(current);
       const enteringGoods = poWizardStep === 2 && !atLast && poWizardPrevStep !== 2;
@@ -7031,12 +7032,7 @@
         }
         return validateRecipientRequired(order);
       }
-      if (!validatePoGoodsRequired(order)) return false;
-      if (!poEstMarginConfirmed) {
-        alert("請先確認下定商品");
-        return false;
-      }
-      return true;
+      return validateAddedGoodsQty(order);
     }
 
     function savePoWizardDraft(opts) {
@@ -11545,23 +11541,27 @@
       return false;
     }
 
-    function validatePoGoodsRequired(order) {
-      if (isOnlineTransferPo(order)) return validateRecipientRequired(order);
-      const lines = collectEditGoods();
+    /** 精靈第 2 步「儲存」：已新增的每一列都要有大於 0 的預計出貨數量。 */
+    function validateAddedGoodsQty(order) {
+      if (!order || isOnlineTransferPo(order)) return true;
+      const lines = poLineItems || [];
+      const focusGoods = () => {
+        if (poWizardOn) setPoWizardStep(2);
+        else setPoTab("goods");
+      };
       if (!lines.length) {
-        alert("請至少填寫一列 SKU 與預計出貨數量(下訂數量)");
-        if (poWizardOn) setPoWizardStep(2);
-        else setPoTab("goods");
+        alert("請至少新增一筆商品，並填寫大於 0 的預計出貨數量(下訂數量)");
+        focusGoods();
         return false;
       }
-      const noSku = lines.find((row) => !normalizeSku(row.sku));
-      if (noSku) {
-        alert("請填寫 SKU");
-        if (poWizardOn) setPoWizardStep(2);
-        else setPoTab("goods");
+      const missing = lines.filter((row) => !(Number(row.qty) > 0));
+      if (missing.length) {
+        const names = missing.map((row) => normalizeSku(row.sku) || "（未填 SKU）");
+        alert("以下已新增的 SKU，預計出貨數量(下訂數量)須大於 0：\n" + names.join("、"));
+        focusGoods();
         return false;
       }
-      return validateOverseasGoodsBatch(order);
+      return true;
     }
 
     function loadPoGoods(items) {
@@ -11713,16 +11713,6 @@
           sellableQty: item.sellableQty != null
             ? Number(item.sellableQty)
             : virtualAllocOf(channelName, item.sku),
-        }));
-      } else if (order && !isOnlineTransferPo(order) && orderFormMode !== "view") {
-        const overseas = isOverseasPo(order);
-        poLineItems = poPickRows.map((cat) => toPoLineItem({
-          ...cat,
-          qty: 0,
-          sellableQty: cat.sellableQty != null ? Number(cat.sellableQty) : virtualAllocOf(channelName, cat.sku),
-          priceWithLabel: "",
-          batch: "",
-          allowEmptyBatch: overseas,
         }));
       } else {
         poLineItems = [];
