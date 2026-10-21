@@ -1167,6 +1167,8 @@
     #page-order-edit.is-wizard-preview #editGoodsFilterBar,
     #page-order-edit.is-wizard-preview #editGoodsConfirmBar,
     #page-order-edit.is-wizard-preview #editGoodsOpsHead,
+    #page-order-edit.is-wizard-preview #editGoodsBody .ops,
+    #page-order-edit.is-wizard-preview #editGoodsBody [data-del],
     #page-order-edit.is-wizard-preview #poOrderAddFeeBtn,
     #page-order-edit.is-wizard-preview .recv-ops-col,
     #page-order-edit.is-wizard-preview [data-del-fee],
@@ -11615,7 +11617,7 @@
       if (filterBar) filterBar.classList.toggle("hidden", !editable || online);
       if (confirmBar) confirmBar.classList.toggle("hidden", !editable || online);
       if (importBtn) importBtn.classList.toggle("hidden", !editable || online);
-      if (opsHead) opsHead.classList.toggle("hidden", !editable);
+      if (opsHead) opsHead.classList.toggle("hidden", !editable || !poGoodsRowDeletable());
       if (shippedHead) shippedHead.classList.toggle("hidden", !showShipped);
     }
 
@@ -11853,7 +11855,7 @@
       const batchCell = showBatch
         ? `<td class="col-po-batch">${poBatchSelectHtml(item.batch || "", editable)}</td>`
         : "";
-      const opsCell = editable
+      const opsCell = editable && poGoodsRowDeletable()
         ? `<td class="ops"><a data-del="1">刪除</a></td>`
         : "";
       return `
@@ -11993,6 +11995,13 @@
 
     function poGoodsEditable() {
       return !document.getElementById("page-order-edit").classList.contains("is-readonly");
+    }
+
+    function poGoodsRowDeletable() {
+      const page = document.getElementById("page-order-edit");
+      if (!page) return false;
+      if (page.classList.contains("is-readonly") || page.classList.contains("is-wizard-preview")) return false;
+      return poGoodsEditable();
     }
 
     function clipPoRemark(text) {
@@ -13774,6 +13783,7 @@
     document.getElementById("editGoodsBody").addEventListener("change", onPoItemField);
     document.getElementById("editGoodsBody").addEventListener("click", (e) => {
       if (document.getElementById("page-order-edit").classList.contains("is-readonly")) return;
+      if (document.getElementById("page-order-edit").classList.contains("is-wizard-preview")) return;
       const del = e.target.closest("[data-del]");
       if (!del) return;
       const tr = e.target.closest("tr");
