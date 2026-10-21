@@ -3156,6 +3156,10 @@
                         <label>出貨單編號</label>
                         <div class="form-ctrl"><span class="ship-view-val ship-view-id" id="shipViewOrderId">-</span></div>
                       </div>
+                      <div class="form-row online-ship-only">
+                        <label>配送編號</label>
+                        <div class="form-ctrl"><span class="ship-view-val" id="shipViewDeliveryNo">-</span></div>
+                      </div>
                       <div class="form-row">
                         <label>預計拋單日</label>
                         <div class="form-ctrl"><span class="ship-view-val" id="shipViewExpectDate">-</span></div>
@@ -14002,6 +14006,7 @@
       };
       setText("shipViewPoNo", ship.salesOrderNo || "");
       setText("shipViewOrderId", ship.orderId || "");
+      setText("shipViewDeliveryNo", typeof onlineDeliveryNo === "function" ? onlineDeliveryNo(ship) : (ship.deliveryNo || ""));
       setText("shipViewExpectDate", expectDate);
       setText("shipViewOutDate", outDate);
       setText("shipViewArriveDate", arriveDate);
