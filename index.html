@@ -4708,6 +4708,27 @@
             </div>
           </div>
         </div>
+        <div class="form-row hidden" id="channelSupplyEditLabelTaxModeRow">
+          <label class="required">報價稅別</label>
+          <div class="form-ctrl">
+            <div class="radio-group" id="channelSupplyEditLabelTaxModeGroup">
+              <label class="radio-line"><input type="checkbox" id="channelSupplyEditLabelTaxed" data-side-tax="label" data-tax-mode="taxed" checked /> 含稅</label>
+              <label class="radio-line"><input type="checkbox" id="channelSupplyEditLabelUntaxed" data-side-tax="label" data-tax-mode="untaxed" /> 未稅</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-row hidden" id="channelSupplyEditLabelTaxRow">
+          <label for="channelSupplyEditLabelTax">稅額</label>
+          <div class="form-ctrl">
+            <input type="text" id="channelSupplyEditLabelTax" readonly disabled />
+          </div>
+        </div>
+        <div class="form-row hidden" id="channelSupplyEditLabelPeerRow">
+          <label for="channelSupplyEditLabelPeer" id="channelSupplyEditLabelPeerLabel">未稅價格</label>
+          <div class="form-ctrl">
+            <input type="text" id="channelSupplyEditLabelPeer" readonly disabled />
+          </div>
+        </div>
         <div class="form-row hidden" id="channelSupplyEditPriceNoLabelRow">
           <label class="required" for="channelSupplyEditPriceNoLabel">不含標價格</label>
           <div class="form-ctrl">
@@ -4717,7 +4738,28 @@
             </div>
           </div>
         </div>
-        <div class="form-row">
+        <div class="form-row hidden" id="channelSupplyEditNoLabelTaxModeRow">
+          <label class="required">報價稅別</label>
+          <div class="form-ctrl">
+            <div class="radio-group" id="channelSupplyEditNoLabelTaxModeGroup">
+              <label class="radio-line"><input type="checkbox" id="channelSupplyEditNoLabelTaxed" data-side-tax="noLabel" data-tax-mode="taxed" /> 含稅</label>
+              <label class="radio-line"><input type="checkbox" id="channelSupplyEditNoLabelUntaxed" data-side-tax="noLabel" data-tax-mode="untaxed" checked /> 未稅</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-row hidden" id="channelSupplyEditNoLabelTaxRow">
+          <label for="channelSupplyEditNoLabelTax">稅額</label>
+          <div class="form-ctrl">
+            <input type="text" id="channelSupplyEditNoLabelTax" readonly disabled />
+          </div>
+        </div>
+        <div class="form-row hidden" id="channelSupplyEditNoLabelPeerRow">
+          <label for="channelSupplyEditNoLabelPeer" id="channelSupplyEditNoLabelPeerLabel">含稅金額</label>
+          <div class="form-ctrl">
+            <input type="text" id="channelSupplyEditNoLabelPeer" readonly disabled />
+          </div>
+        </div>
+        <div class="form-row" id="channelSupplyEditTaxModeRow">
           <label class="required">報價稅別</label>
           <div class="form-ctrl">
             <div class="radio-group" id="channelSupplyEditTaxModeGroup">
@@ -4726,25 +4768,19 @@
             </div>
           </div>
         </div>
-        <div class="form-row">
+        <div class="form-row" id="channelSupplyEditQuoteRow">
           <label class="required" for="channelSupplyEditQuote" id="channelSupplyEditQuoteLabel">商品報價(TWD)(含稅)</label>
           <div class="form-ctrl">
-            <div class="channel-supply-quote-ctrl">
-              <div class="radio-group hidden" id="channelSupplyEditQuoteLinkGroup">
-                <label class="radio-line"><input type="checkbox" id="channelSupplyEditQuoteLinkLabel" data-quote-link="label" /> 同含標價</label>
-                <label class="radio-line"><input type="checkbox" id="channelSupplyEditQuoteLinkNoLabel" data-quote-link="noLabel" /> 同不含標價</label>
-              </div>
-              <input type="number" id="channelSupplyEditQuote" min="0" step="0.01" />
-            </div>
+            <input type="number" id="channelSupplyEditQuote" min="0" step="0.01" />
           </div>
         </div>
-        <div class="form-row">
+        <div class="form-row" id="channelSupplyEditTaxRow">
           <label for="channelSupplyEditTax">稅額</label>
           <div class="form-ctrl">
             <input type="text" id="channelSupplyEditTax" readonly disabled />
           </div>
         </div>
-        <div class="form-row">
+        <div class="form-row" id="channelSupplyEditQuotePeerRow">
           <label for="channelSupplyEditQuotePeer" id="channelSupplyEditQuotePeerLabel">未稅價格</label>
           <div class="form-ctrl">
             <input type="text" id="channelSupplyEditQuotePeer" readonly disabled />
@@ -6951,6 +6987,7 @@
         onlineSettleSeeded = !!data.onlineSettleSeeded;
         if (data.channelSupplyByChannel && typeof data.channelSupplyByChannel === "object") {
           channelSupplyByChannel = data.channelSupplyByChannel;
+          normalizeOverseasSupplyQuotes();
         }
         return true;
       } catch (err) {
@@ -7424,6 +7461,7 @@
         if (Array.isArray(data.settlementRecords)) settlementRecords = data.settlementRecords;
         if (data.channelSupplyByChannel && typeof data.channelSupplyByChannel === "object") {
           channelSupplyByChannel = data.channelSupplyByChannel;
+          normalizeOverseasSupplyQuotes();
         }
         renderSalesTable(getSalesFiltered());
         renderShippingTable();
@@ -7764,6 +7802,9 @@
         const sell = quote > 0 ? Math.round(quote * 1.35) : null;
         const parts = quote > 0 ? calcChannelSupplyQuote(quote, "taxed") : { taxed: null, untaxed: null, tax: null };
         const noLabel = parsePositiveMoney(item.priceNoLabel != null && item.priceNoLabel !== "" ? item.priceNoLabel : meta.priceNoLabel);
+        const labelAmount = overseas && quote > 0 ? roundChannelSupplyMoney(quote) : null;
+        const labelParts = labelAmount != null ? calcChannelSupplyQuote(labelAmount, "taxed") : { taxed: null, untaxed: null, tax: null };
+        const noParts = overseas && noLabel != null ? calcChannelSupplyQuote(noLabel, "untaxed") : { taxed: null, untaxed: null, tax: null };
         const barcodeSrc = String(meta.productCode || item.productCode || "").replace(/^SET10-/i, "");
         return {
           id: 14500 - idx,
@@ -7773,18 +7814,62 @@
           sellPrice: sell,
           frontRate: "0.000",
           quoteTaxMode: "taxed",
-          quoteTaxed: parts.taxed,
-          quoteUntaxed: parts.untaxed,
-          quoteTaxAmount: parts.tax,
+          quoteTaxed: overseas ? labelParts.taxed : parts.taxed,
+          quoteUntaxed: overseas ? labelParts.untaxed : parts.untaxed,
+          quoteTaxAmount: overseas ? labelParts.tax : parts.tax,
           quoteLink: overseas ? "label" : "",
-          priceLabel: overseas && quote > 0 ? quote : "",
+          priceLabel: labelAmount != null ? labelAmount : "",
           priceNoLabel: overseas && noLabel != null ? noLabel : "",
+          labelTaxMode: overseas ? "taxed" : "",
+          labelTaxed: overseas ? labelParts.taxed : null,
+          labelUntaxed: overseas ? labelParts.untaxed : null,
+          labelTaxAmount: overseas ? labelParts.tax : null,
+          noLabelTaxMode: overseas ? "untaxed" : "",
+          noLabelTaxed: overseas ? noParts.taxed : null,
+          noLabelUntaxed: overseas ? noParts.untaxed : null,
+          noLabelTaxAmount: overseas ? noParts.tax : null,
           backRate: "0.000",
           pcsPerCarton: Number(item.pcsPerCarton) || 0,
           acceptDays: 1,
           channelProductNo: "",
         };
       });
+    }
+
+    function applyOverseasSupplyQuoteDefaults(row) {
+      if (!row) return false;
+      const labelAmount = parsePositiveMoney(row.priceLabel) ?? parsePositiveMoney(row.quoteTaxed);
+      const noAmount = parsePositiveMoney(row.priceNoLabel);
+      const labelParts = labelAmount != null ? calcChannelSupplyQuote(labelAmount, "taxed") : { taxed: null, untaxed: null, tax: null };
+      const noParts = noAmount != null ? calcChannelSupplyQuote(noAmount, "untaxed") : { taxed: null, untaxed: null, tax: null };
+      row.priceLabel = labelAmount != null ? labelAmount : "";
+      row.priceNoLabel = noAmount != null ? noAmount : "";
+      row.labelTaxMode = "taxed";
+      row.labelTaxed = labelParts.taxed;
+      row.labelUntaxed = labelParts.untaxed;
+      row.labelTaxAmount = labelParts.tax;
+      row.noLabelTaxMode = "untaxed";
+      row.noLabelTaxed = noParts.taxed;
+      row.noLabelUntaxed = noParts.untaxed;
+      row.noLabelTaxAmount = noParts.tax;
+      row.quoteTaxMode = "taxed";
+      row.quoteTaxed = labelParts.taxed;
+      row.quoteUntaxed = labelParts.untaxed;
+      row.quoteTaxAmount = labelParts.tax;
+      row.quoteLink = "label";
+      return true;
+    }
+
+    function normalizeOverseasSupplyQuotes() {
+      let changed = false;
+      Object.keys(channelSupplyByChannel).forEach((name) => {
+        if (!isOverseasChannel(name) || !Array.isArray(channelSupplyByChannel[name])) return;
+        channelSupplyByChannel[name].forEach((row) => {
+          if (!row || row.labelTaxMode === "taxed" || row.labelTaxMode === "untaxed") return;
+          if (applyOverseasSupplyQuoteDefaults(row)) changed = true;
+        });
+      });
+      return changed;
     }
 
     function getChannelSupplyFiltered() {
@@ -7842,6 +7927,7 @@
       if (!Array.isArray(channelSupplyByChannel[channelSupplyChannelName])) {
         channelSupplyByChannel[channelSupplyChannelName] = buildChannelSupplyRows(channelSupplyChannelName);
       }
+      if (normalizeOverseasSupplyQuotes()) persistDemoData();
       channelSupplyRows = channelSupplyByChannel[channelSupplyChannelName];
       const meta = document.getElementById("channelSupplyMeta");
       if (meta) meta.textContent = channelSupplyChannelName
@@ -7940,17 +8026,67 @@
       }
     }
 
+    function channelSupplySidePrefix(side) {
+      return side === "noLabel" ? "channelSupplyEditNoLabel" : "channelSupplyEditLabel";
+    }
+
+    function channelSupplySideTaxMode(side) {
+      const untaxed = document.getElementById(channelSupplySidePrefix(side) + "Untaxed");
+      if (untaxed && untaxed.checked) return "untaxed";
+      return "taxed";
+    }
+
+    function refreshChannelSupplySideQuote(side) {
+      const prefix = channelSupplySidePrefix(side);
+      const priceId = side === "noLabel" ? "channelSupplyEditPriceNoLabel" : "channelSupplyEditPriceLabel";
+      const mode = channelSupplySideTaxMode(side);
+      const raw = String((document.getElementById(priceId) || {}).value || "").trim();
+      const parts = calcChannelSupplyQuote(raw, mode);
+      const taxEl = document.getElementById(prefix + "Tax");
+      const peerEl = document.getElementById(prefix + "Peer");
+      const peerLabel = document.getElementById(prefix + "PeerLabel");
+      if (peerLabel) peerLabel.textContent = mode === "untaxed" ? "含稅金額" : "未稅價格";
+      if (taxEl) taxEl.value = parts.tax == null ? "" : String(parts.tax);
+      if (peerEl) {
+        peerEl.value = mode === "untaxed"
+          ? (parts.taxed == null ? "" : String(parts.taxed))
+          : (parts.untaxed == null ? "" : String(parts.untaxed));
+      }
+      return parts;
+    }
+
+    function setChannelSupplySideTaxMode(side, mode) {
+      const next = mode === "untaxed" ? "untaxed" : "taxed";
+      const prefix = channelSupplySidePrefix(side);
+      const taxedEl = document.getElementById(prefix + "Taxed");
+      const untaxedEl = document.getElementById(prefix + "Untaxed");
+      if (taxedEl) taxedEl.checked = next === "taxed";
+      if (untaxedEl) untaxedEl.checked = next === "untaxed";
+      refreshChannelSupplySideQuote(side);
+    }
+
     function syncOverseasSupplyForm() {
       const overseas = isOverseasSupplyForm();
-      document.getElementById("channelSupplyEditPriceLabelRow")?.classList.toggle("hidden", !overseas);
-      document.getElementById("channelSupplyEditPriceNoLabelRow")?.classList.toggle("hidden", !overseas);
-      document.getElementById("channelSupplyEditQuoteLinkGroup")?.classList.toggle("hidden", !overseas);
-      if (!overseas) {
-        setChannelSupplyQuoteLocked(false);
-        const labelEl = document.getElementById("channelSupplyEditQuoteLinkLabel");
-        const noLabelEl = document.getElementById("channelSupplyEditQuoteLinkNoLabel");
-        if (labelEl) labelEl.checked = false;
-        if (noLabelEl) noLabelEl.checked = false;
+      const show = (id, on) => document.getElementById(id)?.classList.toggle("hidden", !on);
+      [
+        "channelSupplyEditPriceLabelRow",
+        "channelSupplyEditLabelTaxModeRow",
+        "channelSupplyEditLabelTaxRow",
+        "channelSupplyEditLabelPeerRow",
+        "channelSupplyEditPriceNoLabelRow",
+        "channelSupplyEditNoLabelTaxModeRow",
+        "channelSupplyEditNoLabelTaxRow",
+        "channelSupplyEditNoLabelPeerRow",
+      ].forEach((id) => show(id, overseas));
+      [
+        "channelSupplyEditTaxModeRow",
+        "channelSupplyEditQuoteRow",
+        "channelSupplyEditTaxRow",
+        "channelSupplyEditQuotePeerRow",
+      ].forEach((id) => show(id, !overseas));
+      if (overseas) {
+        refreshChannelSupplySideQuote("label");
+        refreshChannelSupplySideQuote("noLabel");
       }
     }
 
@@ -8067,7 +8203,8 @@
       document.getElementById("channelSupplyEditPriceLabel").value = "";
       document.getElementById("channelSupplyEditPriceNoLabel").value = "";
       setChannelSupplyEditTaxMode("taxed");
-      setChannelSupplyQuoteLink("");
+      setChannelSupplySideTaxMode("label", "taxed");
+      setChannelSupplySideTaxMode("noLabel", "untaxed");
       document.getElementById("channelSupplyEditQuote").value = "";
       document.getElementById("channelSupplyEditBackRate").value = "0.000";
       document.getElementById("channelSupplyEditPcs").value = "";
@@ -8123,17 +8260,16 @@
       document.getElementById("channelSupplyEditChannelSku").value = row.channelProductNo || "";
       document.getElementById("channelSupplyEditChannelSku").placeholder = "驗證完成 SKU(品號)後才能輸入";
       setChannelSupplySkuLock(true);
-      syncOverseasSupplyForm();
       if (isOverseasSupplyForm()) {
-        const link = row.quoteLink === "noLabel" ? "noLabel" : "label";
-        if ((link === "label" && !document.getElementById("channelSupplyEditPriceLabel").value)
-          && row.quoteTaxed) {
+        if (!document.getElementById("channelSupplyEditPriceLabel").value && row.quoteTaxed) {
           document.getElementById("channelSupplyEditPriceLabel").value = row.quoteTaxed;
         }
-        setChannelSupplyQuoteLink(link);
+        setChannelSupplySideTaxMode("label", row.labelTaxMode === "untaxed" ? "untaxed" : "taxed");
+        setChannelSupplySideTaxMode("noLabel", row.noLabelTaxMode === "taxed" ? "taxed" : "untaxed");
       } else {
         setChannelSupplyQuoteLocked(false);
       }
+      syncOverseasSupplyForm();
       refreshChannelSupplyEditQuoteCalc();
       document.getElementById("channelSupplyEditModal")?.classList.remove("hidden");
     }
@@ -8169,11 +8305,11 @@
         return;
       }
       const overseas = isOverseasSupplyForm();
-      const quoteLink = overseas ? channelSupplyEditQuoteLink() : "";
       const priceLabelRaw = document.getElementById("channelSupplyEditPriceLabel").value.trim();
       const priceNoLabelRaw = document.getElementById("channelSupplyEditPriceNoLabel").value.trim();
       const priceLabel = parsePositiveMoney(priceLabelRaw);
       const priceNoLabel = parsePositiveMoney(priceNoLabelRaw);
+      let payload;
       if (overseas) {
         if (priceLabel == null) {
           alert("請填寫含標價格（僅可輸入正數）");
@@ -8183,30 +8319,61 @@
           alert("請填寫不含標價格（僅可輸入正數）");
           return;
         }
-        if (!quoteLink) {
-          alert("請選擇商品報價：同含標價或同不含標價");
+        const labelMode = channelSupplySideTaxMode("label");
+        const noMode = channelSupplySideTaxMode("noLabel");
+        const labelParts = calcChannelSupplyQuote(priceLabel, labelMode);
+        const noParts = calcChannelSupplyQuote(priceNoLabel, noMode);
+        payload = {
+          sellPrice: Number(sellRaw),
+          frontRate: Number(frontRaw).toFixed(3),
+          quoteTaxMode: labelMode,
+          quoteTaxed: labelParts.taxed,
+          quoteUntaxed: labelParts.untaxed,
+          quoteTaxAmount: labelParts.tax,
+          quoteLink: "label",
+          priceLabel,
+          priceNoLabel,
+          labelTaxMode: labelMode,
+          labelTaxed: labelParts.taxed,
+          labelUntaxed: labelParts.untaxed,
+          labelTaxAmount: labelParts.tax,
+          noLabelTaxMode: noMode,
+          noLabelTaxed: noParts.taxed,
+          noLabelUntaxed: noParts.untaxed,
+          noLabelTaxAmount: noParts.tax,
+          pcsPerCarton: pcsRaw === "" ? 0 : Math.max(0, Math.floor(Number(pcsRaw) || 0)),
+          acceptDays: daysRaw === "" ? 0 : Math.max(0, Math.floor(Number(daysRaw) || 0)),
+          channelProductNo: channelSkuRaw,
+        };
+      } else {
+        if (quoteRaw === "" || !Number.isFinite(Number(quoteRaw)) || Number(quoteRaw) < 0) {
+          alert("請填寫商品報價(TWD)");
           return;
         }
+        const parts = calcChannelSupplyQuote(quoteRaw, mode);
+        payload = {
+          sellPrice: Number(sellRaw),
+          frontRate: Number(frontRaw).toFixed(3),
+          quoteTaxMode: mode,
+          quoteTaxed: parts.taxed,
+          quoteUntaxed: parts.untaxed,
+          quoteTaxAmount: parts.tax,
+          quoteLink: "",
+          priceLabel: "",
+          priceNoLabel: "",
+          labelTaxMode: "",
+          labelTaxed: null,
+          labelUntaxed: null,
+          labelTaxAmount: null,
+          noLabelTaxMode: "",
+          noLabelTaxed: null,
+          noLabelUntaxed: null,
+          noLabelTaxAmount: null,
+          pcsPerCarton: pcsRaw === "" ? 0 : Math.max(0, Math.floor(Number(pcsRaw) || 0)),
+          acceptDays: daysRaw === "" ? 0 : Math.max(0, Math.floor(Number(daysRaw) || 0)),
+          channelProductNo: channelSkuRaw,
+        };
       }
-      if (quoteRaw === "" || !Number.isFinite(Number(quoteRaw)) || Number(quoteRaw) < 0) {
-        alert("請填寫商品報價(TWD)");
-        return;
-      }
-      const parts = calcChannelSupplyQuote(quoteRaw, mode);
-      const payload = {
-        sellPrice: Number(sellRaw),
-        frontRate: Number(frontRaw).toFixed(3),
-        quoteTaxMode: mode,
-        quoteTaxed: parts.taxed,
-        quoteUntaxed: parts.untaxed,
-        quoteTaxAmount: parts.tax,
-        quoteLink,
-        priceLabel: overseas ? priceLabel : "",
-        priceNoLabel: overseas ? priceNoLabel : "",
-        pcsPerCarton: pcsRaw === "" ? 0 : Math.max(0, Math.floor(Number(pcsRaw) || 0)),
-        acceptDays: daysRaw === "" ? 0 : Math.max(0, Math.floor(Number(daysRaw) || 0)),
-        channelProductNo: channelSkuRaw,
-      };
       if (channelSupplyFormMode === "create") {
         const meta = findChannelSupplySkuMeta(skuRaw) || {};
         channelSupplyRows.unshift({
@@ -18468,16 +18635,22 @@
       refreshChannelSupplyEditQuoteCalc();
     });
     document.getElementById("channelSupplyEditQuote")?.addEventListener("input", refreshChannelSupplyEditQuoteCalc);
-    document.getElementById("channelSupplyEditQuoteLinkGroup")?.addEventListener("change", (e) => {
-      const link = e.target?.dataset?.quoteLink;
-      if (!link) return;
-      setChannelSupplyQuoteLink(e.target.checked ? link : "");
+    document.getElementById("channelSupplyEditLabelTaxModeGroup")?.addEventListener("change", (e) => {
+      const mode = e.target?.dataset?.taxMode;
+      if (!mode) return;
+      setChannelSupplySideTaxMode("label", mode);
     });
-    const syncLinkedQuote = () => {
-      if (isOverseasSupplyForm() && channelSupplyEditQuoteLink()) fillLinkedQuoteFromLabel();
-    };
-    document.getElementById("channelSupplyEditPriceLabel")?.addEventListener("input", syncLinkedQuote);
-    document.getElementById("channelSupplyEditPriceNoLabel")?.addEventListener("input", syncLinkedQuote);
+    document.getElementById("channelSupplyEditNoLabelTaxModeGroup")?.addEventListener("change", (e) => {
+      const mode = e.target?.dataset?.taxMode;
+      if (!mode) return;
+      setChannelSupplySideTaxMode("noLabel", mode);
+    });
+    document.getElementById("channelSupplyEditPriceLabel")?.addEventListener("input", () => {
+      if (isOverseasSupplyForm()) refreshChannelSupplySideQuote("label");
+    });
+    document.getElementById("channelSupplyEditPriceNoLabel")?.addEventListener("input", () => {
+      if (isOverseasSupplyForm()) refreshChannelSupplySideQuote("noLabel");
+    });
 
     document.getElementById("channelSettleAccordionBtn").addEventListener("click", () => {
       const btn = document.getElementById("channelSettleAccordionBtn");
