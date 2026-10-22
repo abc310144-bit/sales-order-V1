@@ -1808,6 +1808,10 @@
       line-height: 18px;
       vertical-align: 1px;
     }
+    #editGoodsOverviewTable .col-po-choice select {
+      width: 128px;
+      min-width: 128px;
+    }
     #page-order-edit .form-title,
     #page-order-edit .po-kind-meta,
     #page-order-edit .edit-page-head,
@@ -4099,6 +4103,8 @@
                       <tr>
                         <th>SKU</th>
                         <th>商品名稱</th>
+                        <th class="col-po-choice hidden">類型</th>
+                        <th class="col-po-choice hidden">報價</th>
                         <th class="col-po-batch hidden" id="editGoodsBatchHead">效期_批號</th>
                         <th>箱入數</th>
                         <th class="num col-alloc">當前可賣量</th>
@@ -6725,6 +6731,8 @@
         unit: src.unit || "",
         pcsPerCarton: Number(src.pcsPerCarton) || 0,
         priceNoLabel: src.priceNoLabel ?? "",
+        priceLabel: src.priceLabel ?? "",
+        priceBasis: src.priceBasis === "noLabel" || src.priceBasis === "label" ? src.priceBasis : "",
         priceWithLabel: src.priceWithLabel ?? "",
         quote: src.quote ?? "",
         orderQuote: src.orderQuote ?? "",
@@ -10413,6 +10421,80 @@
       });
     }
 
+    function rebuildOverseasDemoLines(order) {
+      if (!order || !isOverseasPo(order) || order.overseasLineReady) return;
+      const items = order.items || [];
+      items.forEach((item, idx) => {
+        const live = channelProductPriceOf(order.channelName, item.sku);
+        if (item.priceLabel == null || item.priceLabel === "") item.priceLabel = live.priceLabel || "";
+        if (item.priceNoLabel == null || item.priceNoLabel === "") item.priceNoLabel = live.priceNoLabel || "";
+        if (item.priceBasis !== "label" && item.priceBasis !== "noLabel") {
+          item.priceBasis = item.gift ? "label" : (idx % 2 === 0 ? "label" : "noLabel");
+        }
+      });
+      const blocked = orderHasCreatedShips(order.orderNo)
+        || order.status === "已作廢"
+        || order.status === "已取消"
+        || order.status === "已開立出貨單";
+      const src = items[0];
+      if (!blocked && src && !items.some((item) => item.gift)) {
+        items.push({
+          sku: src.sku,
+          name: src.name,
+          productCode: src.productCode || "",
+          unit: src.unit || "",
+          qty: 2,
+          pcsPerCarton: src.pcsPerCarton || 0,
+          batch: src.batch || "",
+          priceLabel: src.priceLabel,
+          priceNoLabel: src.priceNoLabel,
+          priceBasis: "noLabel",
+          gift: true,
+          netWeightG: src.netWeightG,
+          remark: "",
+        });
+      }
+      order.overseasLineReady = true;
+    }
+
+    function ensureOverseasPriceDemo() {
+      salesOrders.forEach(rebuildOverseasDemoLines);
+      if (salesOrders.some((order) => order.orderNo === "SO20261022042")) return;
+      const channelName = "跨境- Cool Cool Trading";
+      const line = (sku, name, qty, basis, gift, pcs, weightG) => {
+        const live = channelProductPriceOf(channelName, sku);
+        return {
+          sku,
+          name,
+          qty,
+          unit: sku === "UM-3305" ? "袋" : "盒",
+          pcsPerCarton: pcs,
+          priceLabel: live.priceLabel || "",
+          priceNoLabel: live.priceNoLabel || "",
+          priceBasis: basis,
+          gift: !!gift,
+          batch: "2027-07-12_健工",
+          netWeightG: weightG,
+        };
+      };
+      const order = extraPo({
+        orderNo: "SO20261022042",
+        poDocNo: "CCT-DEMO-PRICE",
+        channelType: "境外通路",
+        channelName,
+        status: "草稿",
+        operator: "demo.user",
+        createdAt: "2026-10-22 09:00:00",
+      });
+      order.items = [
+        line("UM-3305", "膠原蛋白胜肽", 10, "label", false, 36, 250),
+        line("UM-4412", "電解質補給粉", 4, "noLabel", false, 20, 100),
+        line("UM-4412", "電解質補給粉", 2, "label", true, 20, 100),
+      ];
+      order.overseasLineReady = true;
+      salesOrders.unshift(order);
+    }
+
     function pdfLinesFromOrder(order) {
       hydratePoItemCatalogFields(order);
       const bag = partyRecord(order) || {};
@@ -10427,16 +10509,11 @@
         const qty = Number(item.qty != null ? item.qty : line.orderPcs) || 0;
         const pcs = pcsPerCartonOf(item, line);
         const quote = goodsQuoteOf(item, order);
-        const live = channelProductPriceOf((order && order.channelName) || "", item && item.sku);
         const overseas = isOverseasPo(order);
-        const liveNo = parsePositiveMoney(live.priceNoLabel);
-        const liveLabel = parsePositiveMoney(live.priceLabel);
-        const price = overseas
-          ? (liveNo != null ? liveNo : quote)
-          : quote;
-        const priceLabel = overseas
-          ? (liveLabel != null ? liveLabel : quote)
-          : null;
+        const basis = item.priceBasis === "noLabel" ? "noLabel" : "label";
+        const show = item.gift ? 0 : quote;
+        const price = overseas ? (basis === "noLabel" ? show : null) : quote;
+        const priceLabel = overseas ? (basis === "label" ? show : null) : null;
         const cartons = orderCartonQty(qty, pcs);
         return {
           sku: item.sku || line.sku || "",
@@ -10449,7 +10526,7 @@
           priceLabel,
           price,
           quote,
-          total: Math.round(qty * quote * 100) / 100,
+          total: overseas && item.gift ? 0 : Math.round(qty * quote * 100) / 100,
           remark: remarksForPdfItem(order, item),
           gift: !!item.gift,
         };
@@ -12073,6 +12150,7 @@
     }
 
     salesOrders.forEach(hydratePoItemCatalogFields);
+    ensureOverseasPriceDemo();
     salesOrders.forEach(stripRemovedQtyAdjust);
     salesOrders.forEach((order) => {
       if (order && order.arriveTime == null && order.arriveDate) order.arriveTime = "18:00";
@@ -12302,6 +12380,8 @@
         quote: src.quote || meta.quote,
         orderQuote: src.orderQuote ?? src.priceNoLabel ?? meta.priceNoLabel ?? "0",
         priceNoLabel: src.priceNoLabel ?? meta.priceNoLabel ?? "",
+        priceLabel: src.priceLabel ?? "",
+        priceBasis: src.priceBasis === "noLabel" ? "noLabel" : (src.priceBasis === "label" ? "label" : ""),
         stock: src.stock ?? 0,
         sellableQty: src.sellableQty != null ? Number(src.sellableQty) : undefined,
         remark: clipPoRemark(src.remark),
@@ -12327,6 +12407,9 @@
       });
       document.querySelectorAll("#editGoodsOverviewTable .col-po-quote").forEach((el) => {
         el.classList.toggle("hidden", overseas);
+      });
+      document.querySelectorAll("#editGoodsOverviewTable .col-po-choice").forEach((el) => {
+        el.classList.toggle("hidden", !overseas);
       });
     }
 
@@ -12532,7 +12615,13 @@
           gift: asGift,
         });
         line.gift = asGift;
-        if (overseas) line.batch = "";
+        if (overseas) {
+          line.batch = "";
+          const live = channelProductPriceOf(channelName, line.sku);
+          line.priceLabel = live.priceLabel || "";
+          line.priceNoLabel = live.priceNoLabel || line.priceNoLabel || "";
+          line.priceBasis = "label";
+        }
         poLineItems.push(line);
         byKey[poGoodsLineKey(line, overseas)] = line;
       });
@@ -12621,8 +12710,31 @@
       return goodsQuoteOf(item);
     }
 
+    function ensureOverseasLinePrices(item, channelName) {
+      if (!item) return;
+      const live = channelProductPriceOf(channelName, item.sku);
+      if (item.priceLabel == null || item.priceLabel === "") item.priceLabel = live.priceLabel || "";
+      if (item.priceNoLabel == null || item.priceNoLabel === "") item.priceNoLabel = live.priceNoLabel || "";
+      if (item.priceBasis !== "label" && item.priceBasis !== "noLabel") item.priceBasis = "label";
+    }
+
+    function overseasTypedPrice(item) {
+      if (!item) return null;
+      const raw = item.priceBasis === "noLabel" ? item.priceNoLabel : item.priceLabel;
+      return parsePositiveMoney(raw);
+    }
+
     function goodsQuoteOf(item, order) {
+      if (item && (item.priceBasis === "label" || item.priceBasis === "noLabel")) {
+        const picked = overseasTypedPrice(item);
+        if (picked != null) return picked;
+      }
       order = order || getWorkspaceOrder();
+      if (order && isOverseasPo(order)) {
+        ensureOverseasLinePrices(item, order.channelName);
+        const picked = overseasTypedPrice(item);
+        return picked != null ? picked : 0;
+      }
       const channel = (order && order.channelName) || "";
       const live = channelProductPriceOf(channel, item && item.sku);
       if (live.quote > 0) return live.quote;
@@ -12675,14 +12787,13 @@
     function goodsDisplayFields(item) {
       const qty = Number(item && item.qty) || 0;
       const pcs = pcsPerCartonOf(item);
-      const quote = goodsQuoteOf(item);
-      const link = goodsQuoteLinkOf(item);
-      const cartons = orderCartonQty(qty, pcs);
       const order = getWorkspaceOrder();
-      const live = channelProductPriceOf((order && order.channelName) || "", item && item.sku);
-      const liveNo = parsePositiveMoney(live.priceNoLabel);
-      const liveLabel = parsePositiveMoney(live.priceLabel);
       const overseas = isOverseasPo(order);
+      if (overseas) ensureOverseasLinePrices(item, order.channelName);
+      const quote = goodsQuoteOf(item, order);
+      const link = goodsQuoteLinkOf(item, order);
+      const cartons = orderCartonQty(qty, pcs);
+      const basis = item && item.priceBasis === "noLabel" ? "noLabel" : "label";
       return {
         sku: (item && item.sku) || "",
         name: (item && item.name) || "",
@@ -12691,18 +12802,22 @@
         carton: cartons,
         quote,
         quoteLink: link,
-        priceNo: overseas ? (liveNo != null ? liveNo : quote) : quote,
-        priceLabel: overseas ? (liveLabel != null ? liveLabel : quote) : null,
+        priceNo: overseas ? (basis === "noLabel" ? quote : null) : quote,
+        priceLabel: overseas ? (basis === "label" ? quote : null) : null,
         amount: Math.round(qty * quote * 100) / 100,
         remark: userFacingRemark(item && item.remark),
       };
     }
 
-    function goodsPriceCellText(value) {
+    function goodsPricePlain(value) {
       if (value == null || value === "") return "-";
       const n = Number(value);
       if (!Number.isFinite(n) || n <= 0) return "-";
-      return escapeHtml(pdfMoney(n, 2));
+      return pdfMoney(n, 2);
+    }
+
+    function goodsPriceCellText(value) {
+      return escapeHtml(goodsPricePlain(value));
     }
 
     function goodsPdfRowHtml(item, opts) {
@@ -12719,9 +12834,20 @@
       const qtyCell = editable
         ? `<input type="number" min="1" step="1" data-field="qty" value="${escapeHtml(qtyVal)}"${oversell ? ' class="is-oversell"' : ""} />`
         : escapeHtml(d.qty > 0 ? d.qty : "-");
+      const basis = item && item.priceBasis === "noLabel" ? "noLabel" : "label";
+      const typeText = item && item.gift ? "贈品" : "一般下定商品";
+      const basisText = basis === "noLabel" ? "不含標" : "含標";
+      const choiceCells = overseas
+        ? `<td class="col-po-choice">${goodsEdit
+          ? `<select data-field="lineKind"><option value="goods"${item && item.gift ? "" : " selected"}>一般下定商品</option><option value="gift"${item && item.gift ? " selected" : ""}>贈品</option></select>`
+          : escapeHtml(typeText)}</td>
+          <td class="col-po-choice">${goodsEdit || giftEdit
+          ? `<select data-field="priceBasis"><option value="label"${basis === "label" ? " selected" : ""}>含標</option><option value="noLabel"${basis === "noLabel" ? " selected" : ""}>不含標</option></select>`
+          : escapeHtml(basisText)}</td>`
+        : "";
       const priceCells = overseas
-        ? `<td class="num col-po-price-pair">${goodsPriceCellText(d.priceNo)}</td>
-          <td class="num col-po-price-pair col-price-label">${goodsPriceCellText(d.priceLabel)}</td>`
+        ? `<td class="num col-po-price-pair" data-sync="priceNo">${goodsPriceCellText(d.priceNo)}</td>
+          <td class="num col-po-price-pair col-price-label" data-sync="priceLabel">${goodsPriceCellText(d.priceLabel)}</td>`
         : `<td class="num col-po-quote">${goodsPriceCellText(d.quote)}</td>`;
       const orderNo = (opts && opts.orderNo) || currentEditOrderNo;
       const shippedMap = showShipped && orderNo && orderNo !== "__new__" ? shippedQtyByKey(orderNo) : {};
@@ -12742,6 +12868,7 @@
         <tr data-id="${escapeHtml(item.id)}" data-sku="${escapeHtml(d.sku)}"${item && item.gift ? ' data-gift="1"' : ""}>
           <td>${escapeHtml(d.sku)}</td>
           <td class="col-name">${giftTag}${escapeHtml(d.name)}</td>
+          ${choiceCells}
           ${batchCell}
           <td class="num" data-sync="pcs">${escapeHtml(d.pcs)}</td>
           <td class="num col-alloc">${escapeHtml(sellable)}</td>
@@ -13794,6 +13921,10 @@
       const netWeight = tr.querySelector('[data-sync="netWeight"]');
       if (carton) carton.textContent = d.carton;
       if (amount) amount.textContent = pdfMoney(d.amount, 2);
+      const priceNo = tr.querySelector('[data-sync="priceNo"]');
+      const priceLabel = tr.querySelector('[data-sync="priceLabel"]');
+      if (priceNo) priceNo.textContent = goodsPricePlain(d.priceNo);
+      if (priceLabel) priceLabel.textContent = goodsPricePlain(d.priceLabel);
       if (netWeight) netWeight.textContent = lineNetWeightKgText(item, d.qty);
       const qtyInput = tr.querySelector('[data-field="qty"]');
       if (qtyInput) qtyInput.classList.toggle("is-oversell", isOverviewQtyOversell(item));
@@ -13817,6 +13948,38 @@
       if (!item.gift && !goodsEdit) return;
       const field = e.target.dataset.field;
       if (!field) return;
+      if (field === "lineKind") {
+        if (!goodsEdit) return;
+        const nextGift = e.target.value === "gift";
+        if (nextGift === !!item.gift) return;
+        const prev = !!item.gift;
+        item.gift = nextGift;
+        const order = getWorkspaceOrder();
+        const overseas = isOverseasPo(order);
+        const key = poGoodsLineKey(item, overseas);
+        const dup = poLineItems.find((row) => row.id !== item.id && poGoodsLineKey(row, overseas) === key);
+        if (dup) {
+          item.gift = prev;
+          alert("同一 SKU 與效期已有這一列，請改那一列");
+          renderPoGoodsTable();
+          return;
+        }
+        syncOverviewGoods(order);
+        poEstMarginConfirmed = false;
+        resetPoEstMarginDisplay();
+        renderPoGoodsTable();
+        return;
+      }
+      if (field === "priceBasis") {
+        if (!goodsEdit && !giftEdit) return;
+        item.priceBasis = e.target.value === "noLabel" ? "noLabel" : "label";
+        refreshOverviewRowDerived(tr, item);
+        const order = getWorkspaceOrder();
+        syncOverviewGoods(order);
+        poEstMarginConfirmed = false;
+        resetPoEstMarginDisplay();
+        return;
+      }
       if (field === "remark") {
         const text = clipPoRemark(e.target.value);
         item.remark = text;
@@ -14246,6 +14409,7 @@
     function setOrderFormReadonly(readonly) {
       const page = document.getElementById("page-order-edit");
       page.classList.toggle("is-readonly", readonly);
+      renderPoGoodsTable();
       syncPoGoodsToolbar();
       if (readonly) {
         poEstMarginConfirmed = true;
@@ -14259,7 +14423,7 @@
         el.disabled = readonly || el.hasAttribute("data-lock");
       });
       if (readonly && overseasGiftEditable(getWorkspaceOrder())) {
-        page.querySelectorAll("#poPickFilterInput, #editGoodsBody tr[data-gift='1'] input, #editGoodsBody tr[data-gift='1'] select").forEach((el) => {
+        page.querySelectorAll("#poPickFilterInput, #editGoodsBody tr[data-gift='1'] input, #editGoodsBody tr[data-gift='1'] select:not([data-field='lineKind'])").forEach((el) => {
           el.disabled = false;
         });
       }
@@ -16328,7 +16492,7 @@
     function settleBillTaxedTotal(bill) {
       const lines = (bill && bill.lines) || [];
       if (!lines.length) return accRoundMoney(bill && bill.total);
-      return accRoundMoney(lines.reduce((sum, line) => sum + settleLineTaxFields(line).amount, 0));
+      return accRoundMoney(lines.reduce((sum, line) => sum + (line.gift ? 0 : settleLineTaxFields(line).amount), 0));
     }
 
     function accUnitPrice(item) {
@@ -16406,7 +16570,8 @@
           return {
             key,
             sku: d.sku,
-            name: d.name,
+            name: item.gift ? `贈品 ${d.name}` : d.name,
+            gift: !!item.gift,
             productCode: item.productCode || d.productCode || "",
             pcs: d.pcs,
             qty: d.qty,
@@ -16992,12 +17157,13 @@
             name: line.name,
             priceNo: line.priceNo,
             priceLabel: line.priceLabel,
-            price: line.price,
-            qty: line.qty,
-            amount: line.amount,
-            shipDates: line.shipDates,
-            acceptQty,
-            settledQty,
+          price: line.price,
+          qty: line.qty,
+          amount: line.amount,
+          gift: !!line.gift,
+          shipDates: line.shipDates,
+          acceptQty,
+          settledQty,
             remain,
             status: settleSkuLineStatus(acceptQty, settledQty),
             checked: false,
@@ -17070,7 +17236,7 @@
 
     function renderSettleSummary() {
       const selected = settleSelectedRows();
-      const total = selected.reduce((sum, row) => sum + row.settleQty * row.price, 0);
+      const total = selected.reduce((sum, row) => sum + (row.gift ? 0 : row.settleQty * row.price), 0);
       document.getElementById("settleSummary").innerHTML = selected.length
         ? `已勾選 <strong>${selected.length}</strong> 筆，本次結算金額合計 <strong>${escapeHtml(accMoney(total))}</strong>`
         : "";
@@ -17496,8 +17662,10 @@
       if (!assertSettleSameChannel(selected)) return null;
       const lines = selected.map((row) => {
         const untaxed = accRoundMoney(row.price);
-        const taxed = accRoundMoney(untaxed * (1 + SETTLE_TAX_RATE));
         const qty = Number(row.settleQty) || 0;
+        const order = salesOrders.find((item) => item.orderNo === row.orderNo);
+        const overseas = isOverseasPo(order);
+        const taxed = overseas ? untaxed : accRoundMoney(untaxed * (1 + SETTLE_TAX_RATE));
         return {
           orderNo: row.orderNo,
           channelName: row.channelName,
@@ -17505,6 +17673,7 @@
           sku: row.sku,
           name: row.name,
           qty,
+          gift: !!row.gift,
           price: untaxed,
           priceTaxed: taxed,
           tax: accRoundMoney(taxed - untaxed),
@@ -17512,7 +17681,7 @@
           remark: normalizeSettleRemark(row.remark),
         };
       });
-      const total = accRoundMoney(lines.reduce((sum, line) => sum + line.amount, 0));
+      const total = accRoundMoney(lines.reduce((sum, line) => sum + (line.gift ? 0 : line.amount), 0));
       const channelName = selected[0].channelName || "";
       const order = salesOrders.find((item) => item.orderNo === selected[0].orderNo);
       const channelType = (order && order.channelType) || "";
@@ -17911,6 +18080,7 @@
       const lines = accLinesOf(order);
       const acceptQty = lines.reduce((sum, line) => sum + (Number(line.acceptQty) || 0), 0);
       const remainAmount = lines.reduce((sum, line) => {
+        if (line.gift) return sum;
         const remain = Math.max(0, (Number(line.acceptQty) || 0) - (Number(line.settledQty) || 0));
         return sum + remain * (Number(line.price) || 0);
       }, 0);
@@ -18061,6 +18231,7 @@
           price: line.price,
           qty: line.qty,
           amount: line.amount,
+          gift: !!line.gift,
           shipDates: line.shipDates,
           acceptQty: Number(line.acceptQty) || 0,
           settledQty: Number(line.settledQty) || 0,
@@ -18113,7 +18284,7 @@
         return;
       }
       const selected = settleSelectedRows();
-      const total = selected.reduce((sum, row) => sum + row.settleQty * row.price, 0);
+      const total = selected.reduce((sum, row) => sum + (row.gift ? 0 : row.settleQty * row.price), 0);
       el.innerHTML = selected.length
         ? `已勾選 <strong>${selected.length}</strong> 筆，本次結算金額合計 <strong>${escapeHtml(accMoney(total))}</strong>`
         : "";
