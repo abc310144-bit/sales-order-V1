@@ -10673,109 +10673,276 @@
 </html>`;
     }
 
-    function blankPackingRow() {
-      return Array(13).fill("");
+    function packingXml(text) {
+      return String(text == null ? "" : text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
     }
 
-    function buildPackingListAoa(order) {
+    function packingRef(col, row) {
+      return col + row;
+    }
+
+    function packingCellXml(ref, style, value, formula) {
+      if (formula) {
+        const cached = value == null || value === "" ? "" : "<v>" + value + "</v>";
+        return `<c r="${ref}" s="${style}"><f>${packingXml(formula)}</f>${cached}</c>`;
+      }
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return `<c r="${ref}" s="${style}"><v>${value}</v></c>`;
+      }
+      if (value == null || value === "") return `<c r="${ref}" s="${style}"/>`;
+      return `<c r="${ref}" s="${style}" t="inlineStr"><is><t xml:space="preserve">${packingXml(value)}</t></is></c>`;
+    }
+
+    function packingSum(lines, key) {
+      return Math.round(lines.reduce((sum, line) => sum + (Number(line[key]) || 0), 0) * 1000) / 1000;
+    }
+
+    function buildPackingSheetXml(order) {
       const parties = overseasExportParties(order);
       const lines = overseasExportLines(order);
-      const rows = [];
-      const push = (row) => rows.push(row);
-      const title = blankPackingRow();
-      title[0] = "PACKING LIST";
-      push(title);
-      push(blankPackingRow());
-      push(blankPackingRow());
-      push(blankPackingRow());
-      const noRow = blankPackingRow();
-      noRow[6] = "NO:";
-      push(noRow);
-      const seller = blankPackingRow();
-      seller[0] = "Seller:";
-      seller[1] = parties.sellerName;
-      seller[6] = "Buyer:";
-      seller[7] = parties.buyerName;
-      push(seller);
-      const address = blankPackingRow();
-      address[0] = "Address:";
-      address[1] = parties.sellerAddress;
-      address[6] = "Address:";
-      address[7] = parties.buyerAddress;
-      push(address);
-      push(blankPackingRow());
-      const tel = blankPackingRow();
-      tel[0] = "Tel:";
-      tel[1] = parties.sellerTel;
-      tel[6] = "Tel:";
-      tel[7] = parties.buyerTel;
-      push(tel);
-      const contact = blankPackingRow();
-      contact[6] = "Contact:";
-      contact[7] = parties.buyerAttn;
-      push(contact);
-      const payment = blankPackingRow();
-      payment[0] = "Payment conditions: " + parties.payment;
-      push(payment);
-      const delivery = blankPackingRow();
-      delivery[0] = "Delivery term:";
-      delivery[1] = parties.delivery;
-      push(delivery);
-      push(blankPackingRow());
-      const head = blankPackingRow();
-      head[0] = "Packing No.";
-      head[1] = "S.No";
-      head[2] = "DESCRIPTION";
-      head[5] = "QUANTITY";
-      head[6] = "Carton";
-      head[7] = "Carton/Pallet";
-      head[8] = "pallet";
-      head[9] = "Best Before Date";
-      head[10] = "Pcs per Carton";
-      head[11] = "Net Weight";
-      head[12] = "Gross Weight";
-      push(head);
-      const unit = blankPackingRow();
-      unit[5] = "PCS";
-      unit[10] = "PCS";
-      unit[11] = "(KG)";
-      unit[12] = "(KG)";
-      push(unit);
-      lines.forEach((line) => {
-        const row = blankPackingRow();
-        row[1] = line.sku;
-        row[2] = line.nameEn;
-        row[5] = line.qty;
-        row[6] = line.carton === "" ? "" : line.carton;
-        row[9] = line.bestBefore;
-        row[10] = line.pcs === "" ? "" : line.pcs;
-        row[11] = line.netKg === "" ? "" : line.netKg;
-        push(row);
-      });
-      const total = blankPackingRow();
-      total[0] = "Total";
-      push(total);
-      return {
-        rows,
-        firstData: 16,
-        lastData: lines.length ? 15 + lines.length : 15,
-        totalRow: rows.length,
+      const first = 16;
+      const last = lines.length ? first + lines.length - 1 : 15;
+      const totalRow = lines.length ? last + 1 : 16;
+      const S = { plain: 0, title: 1, info: 2, head: 3, center: 4, text: 5, total: 6 };
+      const cellMap = new Map();
+      const put = (col, row, style, value, formula) => {
+        cellMap.set(col + row, { row, col, xml: packingCellXml(packingRef(col, row), style, value, formula) });
       };
+      const box = (fromCol, toCol, row, style) => {
+        for (let i = fromCol.charCodeAt(0); i <= toCol.charCodeAt(0); i++) {
+          put(String.fromCharCode(i), row, style, "");
+        }
+      };
+      put("A", 1, S.title, "PACKING LIST");
+      box("A", "M", 5, S.info);
+      put("G", 5, S.info, "NO:");
+      box("A", "M", 6, S.info);
+      put("A", 6, S.info, "Seller:");
+      put("B", 6, S.info, parties.sellerName);
+      put("G", 6, S.info, "Buyer:");
+      put("H", 6, S.info, parties.buyerName);
+      [7, 8, 9, 10, 11, 12, 13].forEach((row) => box("A", "M", row, S.info));
+      put("A", 7, S.info, "Address:");
+      put("B", 7, S.info, parties.sellerAddress);
+      put("G", 7, S.info, "Address:");
+      put("H", 7, S.info, parties.buyerAddress);
+      put("A", 9, S.info, "Tel:");
+      put("B", 9, S.info, parties.sellerTel);
+      put("G", 9, S.info, "Tel:");
+      put("H", 9, S.info, parties.buyerTel);
+      put("G", 10, S.info, "Contact:");
+      put("H", 10, S.info, parties.buyerAttn);
+      put("A", 11, S.info, "Payment conditions: " + parties.payment);
+      put("A", 12, S.info, "Delivery term:");
+      put("B", 12, S.info, parties.delivery);
+      const heads = {
+        A14: "Packing No.", B14: "S.No", C14: "DESCRIPTION", F14: "QUANTITY", G14: "Carton",
+        H14: "Carton/Pallet", I14: "pallet", J14: "Best Before Date", K14: "Pcs per Carton",
+        L14: "Net Weight", M14: "Gross Weight", F15: "PCS", K15: "PCS", L15: "(KG)", M15: "(KG)",
+      };
+      box("A", "M", 14, S.head);
+      box("A", "M", 15, S.head);
+      Object.keys(heads).forEach((ref) => put(ref[0], Number(ref.slice(1)), S.head, heads[ref]));
+      lines.forEach((line, index) => {
+        const row = first + index;
+        box("A", "M", row, S.center);
+        put("B", row, S.center, line.sku);
+        put("C", row, S.text, line.nameEn);
+        put("F", row, S.center, line.qty);
+        if (line.carton !== "") put("G", row, S.center, line.carton);
+        put("J", row, S.center, line.bestBefore);
+        if (line.pcs !== "") put("K", row, S.center, line.pcs);
+        if (line.netKg !== "") put("L", row, S.center, line.netKg);
+      });
+      box("A", "M", totalRow, S.total);
+      put("A", totalRow, S.total, "Total");
+      const sumCols = [
+        ["F", packingSum(lines, "qty")],
+        ["G", packingSum(lines, "carton")],
+        ["I", 0],
+        ["L", packingSum(lines, "netKg")],
+        ["M", 0],
+      ];
+      sumCols.forEach(([col, value]) => {
+        if (!lines.length) {
+          put(col, totalRow, S.total, value);
+          return;
+        }
+        put(col, totalRow, S.total, value, "SUM(" + col + first + ":" + col + last + ")");
+      });
+      const byRow = new Map();
+      cellMap.forEach((cell) => {
+        if (!byRow.has(cell.row)) byRow.set(cell.row, []);
+        byRow.get(cell.row).push(cell);
+      });
+      const rowXml = [...byRow.keys()].sort((a, b) => a - b).map((row) => {
+        const height = row === 1 ? 28 : (row === 14 || row === 15 ? 22 : 18);
+        const xml = byRow.get(row)
+          .sort((a, b) => a.col.charCodeAt(0) - b.col.charCodeAt(0))
+          .map((cell) => cell.xml)
+          .join("");
+        return `<row r="${row}" ht="${height}" customHeight="1">${xml}</row>`;
+      }).join("");
+      const merges = [
+        "A1:M4", "H5:M5", "B6:F6", "H6:M6", "A7:A8", "B7:F8", "G7:G8", "H7:M8",
+        "B9:F9", "H9:M9", "H10:M10", "A11:M11", "B12:M12",
+        "A14:A15", "B14:B15", "C14:E15", "G14:G15", "H14:H15", "I14:I15", "J14:J15",
+        "A" + totalRow + ":E" + totalRow,
+      ];
+      lines.forEach((_, index) => {
+        const row = first + index;
+        merges.push("C" + row + ":E" + row);
+      });
+      if (lines.length > 1) merges.push("A" + first + ":A" + last);
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <dimension ref="A1:M${totalRow}"/>
+  <sheetViews><sheetView workbookViewId="0"/></sheetViews>
+  <cols>
+    <col min="1" max="1" width="16" customWidth="1"/>
+    <col min="2" max="2" width="18" customWidth="1"/>
+    <col min="3" max="5" width="16" customWidth="1"/>
+    <col min="6" max="7" width="12" customWidth="1"/>
+    <col min="8" max="8" width="16" customWidth="1"/>
+    <col min="9" max="9" width="12" customWidth="1"/>
+    <col min="10" max="10" width="20" customWidth="1"/>
+    <col min="11" max="13" width="16" customWidth="1"/>
+  </cols>
+  <sheetData>${rowXml}</sheetData>
+  <mergeCells count="${merges.length}">${merges.map((ref) => `<mergeCell ref="${ref}"/>`).join("")}</mergeCells>
+</worksheet>`;
+    }
+
+    function packingStylesXml() {
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="4">
+    <font><sz val="11"/><name val="Calibri"/></font>
+    <font><b/><sz val="20"/><name val="Calibri"/></font>
+    <font><sz val="12"/><name val="Calibri"/></font>
+    <font><b/><sz val="11"/><name val="Calibri"/></font>
+  </fonts>
+  <fills count="2">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+  </fills>
+  <borders count="2">
+    <border><left/><right/><top/><bottom/></border>
+    <border><left style="thin"/><right style="thin"/><top style="thin"/><bottom style="thin"/></border>
+  </borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="7">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+  </cellXfs>
+</styleSheet>`;
+    }
+
+    function crc32Bytes(bytes) {
+      let c = ~0;
+      for (let i = 0; i < bytes.length; i++) {
+        c ^= bytes[i];
+        for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));
+      }
+      return (~c) >>> 0;
+    }
+
+    function zipStored(files) {
+      const encoder = new TextEncoder();
+      const parts = [];
+      const central = [];
+      let offset = 0;
+      files.forEach((file) => {
+        const name = encoder.encode(file.name);
+        const data = file.data;
+        const crc = crc32Bytes(data);
+        const local = new Uint8Array(30 + name.length);
+        const view = new DataView(local.buffer);
+        view.setUint32(0, 0x04034b50, true);
+        view.setUint16(4, 20, true);
+        view.setUint32(14, crc, true);
+        view.setUint32(18, data.length, true);
+        view.setUint32(22, data.length, true);
+        view.setUint16(26, name.length, true);
+        local.set(name, 30);
+        parts.push(local, data);
+        const cen = new Uint8Array(46 + name.length);
+        const cenView = new DataView(cen.buffer);
+        cenView.setUint32(0, 0x02014b50, true);
+        cenView.setUint16(4, 20, true);
+        cenView.setUint16(6, 20, true);
+        cenView.setUint32(16, crc, true);
+        cenView.setUint32(20, data.length, true);
+        cenView.setUint32(24, data.length, true);
+        cenView.setUint16(28, name.length, true);
+        cenView.setUint32(42, offset, true);
+        cen.set(name, 46);
+        central.push(cen);
+        offset += local.length + data.length;
+      });
+      const centralSize = central.reduce((sum, part) => sum + part.length, 0);
+      const end = new Uint8Array(22);
+      const endView = new DataView(end.buffer);
+      endView.setUint32(0, 0x06054b50, true);
+      endView.setUint16(8, files.length, true);
+      endView.setUint16(10, files.length, true);
+      endView.setUint32(12, centralSize, true);
+      endView.setUint32(16, offset, true);
+      return new Blob([...parts, ...central, end], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+    }
+
+    function packingListWorkbookBlob(order) {
+      const encoder = new TextEncoder();
+      const xml = (text) => encoder.encode(text);
+      const files = [
+        { name: "[Content_Types].xml", data: xml(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`) },
+        { name: "_rels/.rels", data: xml(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`) },
+        { name: "xl/workbook.xml", data: xml(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="Packing List" sheetId="1" r:id="rId1"/></sheets>
+  <calcPr calcMode="auto" fullCalcOnLoad="1"/>
+</workbook>`) },
+        { name: "xl/_rels/workbook.xml.rels", data: xml(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`) },
+        { name: "xl/styles.xml", data: xml(packingStylesXml()) },
+        { name: "xl/worksheets/sheet1.xml", data: xml(buildPackingSheetXml(order)) },
+      ];
+      return zipStored(files);
     }
 
     async function downloadPackingList(order) {
-      const XLSX = await loadSheetJs();
-      const built = buildPackingListAoa(order);
-      const ws = XLSX.utils.aoa_to_sheet(built.rows);
-      if (built.lastData >= built.firstData) {
-        ["F", "G", "I", "L", "M"].forEach((col) => {
-          ws[col + built.totalRow] = { t: "n", f: "SUM(" + col + built.firstData + ":" + col + built.lastData + ")" };
-        });
-      }
-      ws["!cols"] = [14, 16, 42, 12, 12, 12, 12, 16, 12, 18, 16, 14, 14].map((wch) => ({ wch }));
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Packing List");
-      XLSX.writeFile(wb, "Packing List " + (order.orderNo || "order") + ".xlsx");
+      const blob = packingListWorkbookBlob(order);
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "Packing List " + (order.orderNo || "order") + ".xlsx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 30000);
     }
 
     function writePrintWindow(win, html) {

@@ -24,7 +24,7 @@ alwaysApply: true
 - 品名用英文。DEMO 假資料在 `mockItemPool.nameEn`。畫面上的商品名稱維持中文。
 - Invoice 單價用畫面上「合計」的計算基數（該列商品報價）。金額 = 該單價 × 下訂數量。
 - 淨重留在境外訂單畫面，並寫進 Packing List 的 Net Weight。板入數、板數、毛重不在訂單上輸入。
-- Packing List 的 `NO:` 與 `Packing No.` 留白。Carton/Pallet、pallet、Gross Weight 匯出空白，由人員在 Excel 自行填寫，不用公式代算。數量、訂購箱數、箱入數、淨重由系統先填上。表尾合計用 SUM，涵蓋數量、箱數、pallet、淨重、毛重。
+- Packing List 用範本同一張框線表格。欄位是 Packing No.、S.No、DESCRIPTION、QUANTITY PCS、Carton、Carton/Pallet、pallet、Best Before Date、Pcs per Carton、Net Weight (KG)、Gross Weight (KG)。`NO:` 與 `Packing No.` 留白。Carton/Pallet、pallet、Gross Weight 空白，由人員自行填寫。數量、訂購箱數、箱入數、淨重由系統先填上。表尾 Total 合併左側儲存格，並加總數量、箱數、pallet、淨重、毛重。
 - Invoice Date 是第一次匯出當天，格式 `2026.10.21`（個位數補零）。Quotation to Date 是該月最後一天，同樣格式。再次匯出沿用第一次的日期。
 - Invoice No：`JY` + 西元後兩碼 + 月日 + 當天順序兩碼。只算有實際匯出的境外訂單。兩張 Invoice 共用一個號碼。再次匯出沿用第一次的號碼。用過的號碼不回收。
 - 銀行固定：Account No. 1182441168868、Account Name Juan Yuan Limited、Bank Name E.SUN Commercial Bank、Swift Code ESUNTWTP。
