@@ -1,26 +1,32 @@
 ---
-description: 境外客戶訂單匯出四份 PDF 的已確認規則（單號與銀行尚未定）
+description: 境外客戶訂單匯出三份 PDF 與一份 Packing List Excel
 alwaysApply: true
 ---
 
-# 境外匯出四份 PDF
+# 境外匯出
 
-境外按匯出時，一次下載四份 PDF：現有客戶訂單、Packing List、廠商 Invoice、報關 Invoice。Excel 只是目前對照用的範本，正式匯出格式是 PDF。單據編號與銀行資料尚未定，先不要做這四份匯出。
+境外按「匯出」一次產出四個檔案：
 
-已確認、做匯出時要遵守：
+- 客戶訂單 PDF（現有那份）
+- 廠商 Invoice PDF
+- 報關 Invoice PDF
+- Packing List Excel
 
-- 賣方、買方用系統現有資料，匯出時翻成英文。用詞和範本稍有不同可以。
-- 貿易條件只帶訂單上選到的選項（FOB、CIF、EXW、DDU），不加地點。
-- 付款條件維持系統現有文案（預設 `TT, 100% prepaid`）。
+經銷、一般通路仍只匯出原本的客戶訂單 PDF。
+
+已確認：
+
+- 賣方、買方用系統現有資料，匯出時翻成英文。賣方公司名譯為 Juan Yuan Limited，地址譯為英文台北地址。用詞和範本稍有不同可以。
+- 貿易條件只帶訂單上選到的選項，不加地點。付款條件維持系統現有文案（預設 `TT, 100% prepaid`）。
 - 明細只列下訂數量大於 0 的商品，不要商品系列分組列。
-- Packing List／Invoice 範本上的條碼欄，帶該列 SKU。
-- Best Before Date 帶效期_批號的日期前段（底線前面的日期，例如 `2026-09-15_藍田` → `2026-09-15`）。
-- 品名用英文。DEMO 先給英文假資料；正式環境商品會有英文品名。畫面上的商品名稱維持現有中文。
-- Invoice 單價用畫面上「合計」的計算基數。目前合計 = 下訂數量 × 該列商品報價。境外通路商品報價預設連結「同含標價」，所以基數是含標這一側的報價，不是「單價（不含標）」。金額 = 該單價 × 下訂數量。
-- 淨重、板入數、板數、毛重的算法見 po-goods-channel-catalog。這四欄目前不進客戶訂單 PDF；Packing List 會用到。
-- 贈品（FOC）先記住：範本裡廠商 Invoice 不含 FOC 列，Packing List 與報關 Invoice 有。功能規劃之後另說，現在不要做贈品標記。
-
-尚未定、先不要自行補：
-
-- Packing List NO、Invoice No、Invoice Date、Quotation to Date 的編碼與日期。
-- 銀行帳戶、戶名、銀行名稱、Swift、簽章區塊。
+- Invoice／Packing List 的條碼欄帶該列 SKU。
+- Best Before Date 帶效期_批號的日期前段（`2026-09-15_藍田` → `2026-09-15`）。
+- 品名用英文。DEMO 假資料在 `mockItemPool.nameEn`。畫面上的商品名稱維持中文。
+- Invoice 單價用畫面上「合計」的計算基數（該列商品報價）。金額 = 該單價 × 下訂數量。
+- 淨重留在境外訂單畫面，並寫進 Packing List 的 Net Weight。板入數、板數、毛重不在訂單上輸入。
+- Packing List 的 `NO:` 與 `Packing No.` 留白。Carton/Pallet、pallet、Gross Weight 匯出空白，由人員在 Excel 自行填寫，不用公式代算。數量、訂購箱數、箱入數、淨重由系統先填上。表尾合計用 SUM，涵蓋數量、箱數、pallet、淨重、毛重。
+- Invoice Date 是第一次匯出當天，格式 `2026.10.21`（個位數補零）。Quotation to Date 是該月最後一天，同樣格式。再次匯出沿用第一次的日期。
+- Invoice No：`JY` + 西元後兩碼 + 月日 + 當天順序兩碼。只算有實際匯出的境外訂單。兩張 Invoice 共用一個號碼。再次匯出沿用第一次的號碼。用過的號碼不回收。
+- 銀行固定：Account No. 1182441168868、Account Name Juan Yuan Limited、Bank Name E.SUN Commercial Bank、Swift Code ESUNTWTP。
+- 簽章 “For and on behalf of / Juan Yuan Limited” 不印，該區留白。
+- 贈品（FOC）尚未做。兩張 Invoice 目前明細相同，功能規劃之後另說。

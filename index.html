@@ -1692,9 +1692,7 @@
     .goods-pdf-table .num { text-align: right; white-space: nowrap; }
     .goods-pdf-table .col-name { min-width: 220px; white-space: normal; }
     .goods-pdf-table .col-qty input,
-    .goods-pdf-table input[data-field="remark"],
-    .goods-pdf-table input[data-field="palletIn"],
-    .goods-pdf-table input[data-field="grossWeight"] {
+    .goods-pdf-table input[data-field="remark"] {
       width: 100%;
       min-width: 88px;
       height: 32px;
@@ -4079,9 +4077,6 @@
                         <th class="num col-po-quote hidden" id="editGoodsQuoteHead">商品報價(TWD)</th>
                         <th>合計</th>
                         <th class="num col-po-pallet hidden">淨重(KG)</th>
-                        <th class="col-po-pallet hidden">板入數</th>
-                        <th class="num col-po-pallet hidden">板數</th>
-                        <th class="col-po-pallet hidden">毛重(KG)</th>
                         <th>備註</th>
                         <th class="ops" id="editGoodsOpsHead">操作</th>
                       </tr>
@@ -6600,8 +6595,6 @@
         expiryAccept: src.expiryAccept || "",
         batch: src.batch || "",
         netWeightG: snapshotNetWeightG(src),
-        palletIn: snapshotPalletIn(src),
-        grossWeight: snapshotGrossWeight(src),
       };
       if (Array.isArray(src.exchangeItems) && src.exchangeItems.length) {
         out.exchangeItems = src.exchangeItems.map((ex) => ({
@@ -7055,8 +7048,7 @@
         }
         return validateRecipientRequired(order);
       }
-      if (!validateAddedGoodsQty(order)) return false;
-      return validateOverseasPalletIn(order);
+      return validateAddedGoodsQty(order);
     }
 
     function savePoWizardDraft(opts) {
@@ -7390,18 +7382,18 @@
     }
 
     const mockItemPool = [
-      { sku: "UM-1001", name: "綜合維他命軟糖 60顆", expiryAccept: "2027-03-31", unit: "盒", qty: 24, pcsPerCarton: 24, weightG: 80 },
-      { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12, pcsPerCarton: 12, weightG: 1000 },
-      { sku: "UM-2108", name: "益生菌隨手包", expiryAccept: "2026-11-30", unit: "盒", qty: 18, pcsPerCarton: 18, weightG: 180 },
-      { sku: "UM-3305", name: "膠原蛋白胜肽", expiryAccept: "2027-01-20", unit: "袋", qty: 36, pcsPerCarton: 36, weightG: 250 },
-      { sku: "UM-4412", name: "電解質補給粉", expiryAccept: "2026-09-30", unit: "盒", qty: 20, pcsPerCarton: 20, weightG: 100 },
-      { sku: "PX-8801", name: "優質高蛋白棒", expiryAccept: "2026-11-30", unit: "盒", qty: 48, pcsPerCarton: 24, weightG: 480 },
-      { sku: "UM-5520", name: "植物蛋白飲 原味", expiryAccept: "2027-02-28", unit: "罐", qty: 16, pcsPerCarton: 16, weightG: 350 },
-      { sku: "UM-6601", name: "蛋白酥脆脆 起司 30g", expiryAccept: "2027-04-30", unit: "盒", qty: 24, pcsPerCarton: 24, weightG: 120 },
-      { sku: "UM-6602", name: "手作蛋白餅乾 原味", expiryAccept: "2027-01-15", unit: "盒", qty: 20, pcsPerCarton: 20, weightG: 200 },
-      { sku: "UM-7703", name: "零卡果凍 蜂蜜檸檬", expiryAccept: "2027-06-30", unit: "箱", qty: 30, pcsPerCarton: 30, weightG: 800 },
-      { sku: "UM-8804", name: "分離乳清 可可 500g", expiryAccept: "2027-03-01", unit: "袋", qty: 12, pcsPerCarton: 12, weightG: 500 },
-      { sku: "UM-9905", name: "植物蛋白棒 花生", expiryAccept: "2027-02-10", unit: "盒", qty: 16, pcsPerCarton: 16, weightG: 160 },
+      { sku: "UM-1001", name: "綜合維他命軟糖 60顆", nameEn: "Multivitamin Gummies 60 pcs", expiryAccept: "2027-03-31", unit: "盒", qty: 24, pcsPerCarton: 24, weightG: 80 },
+      { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", nameEn: "Whey Protein Powder Chocolate 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12, pcsPerCarton: 12, weightG: 1000 },
+      { sku: "UM-2108", name: "益生菌隨手包", nameEn: "Probiotic Sachets", expiryAccept: "2026-11-30", unit: "盒", qty: 18, pcsPerCarton: 18, weightG: 180 },
+      { sku: "UM-3305", name: "膠原蛋白胜肽", nameEn: "Collagen Peptides", expiryAccept: "2027-01-20", unit: "袋", qty: 36, pcsPerCarton: 36, weightG: 250 },
+      { sku: "UM-4412", name: "電解質補給粉", nameEn: "Electrolyte Powder", expiryAccept: "2026-09-30", unit: "盒", qty: 20, pcsPerCarton: 20, weightG: 100 },
+      { sku: "PX-8801", name: "優質高蛋白棒", nameEn: "High Protein Bar", expiryAccept: "2026-11-30", unit: "盒", qty: 48, pcsPerCarton: 24, weightG: 480 },
+      { sku: "UM-5520", name: "植物蛋白飲 原味", nameEn: "Plant Protein Drink Original", expiryAccept: "2027-02-28", unit: "罐", qty: 16, pcsPerCarton: 16, weightG: 350 },
+      { sku: "UM-6601", name: "蛋白酥脆脆 起司 30g", nameEn: "Protein Crisp Cheese 30g", expiryAccept: "2027-04-30", unit: "盒", qty: 24, pcsPerCarton: 24, weightG: 120 },
+      { sku: "UM-6602", name: "手作蛋白餅乾 原味", nameEn: "Handmade Protein Cookie Original", expiryAccept: "2027-01-15", unit: "盒", qty: 20, pcsPerCarton: 20, weightG: 200 },
+      { sku: "UM-7703", name: "零卡果凍 蜂蜜檸檬", nameEn: "Zero Calorie Jelly Honey Lemon", expiryAccept: "2027-06-30", unit: "箱", qty: 30, pcsPerCarton: 30, weightG: 800 },
+      { sku: "UM-8804", name: "分離乳清 可可 500g", nameEn: "Whey Protein Isolate Cocoa 500g", expiryAccept: "2027-03-01", unit: "袋", qty: 12, pcsPerCarton: 12, weightG: 500 },
+      { sku: "UM-9905", name: "植物蛋白棒 花生", nameEn: "Plant Protein Bar Peanut", expiryAccept: "2027-02-10", unit: "盒", qty: 16, pcsPerCarton: 16, weightG: 160 },
     ];
 
     function mockItemsFor(channelName) {
@@ -8154,9 +8146,21 @@
     }
 
     const VENDOR_COMPANY = "饌元股份有限公司";
+    const VENDOR_COMPANY_EN = "Juan Yuan Limited";
     const VENDOR_ADDRESS = "115臺北市南港區三重里三重路19-9號B棟6樓";
+    const VENDOR_ADDRESS_EN = "6F., No. 19-9, Sanchong Rd., Nangang Dist., Taipei City 115, Taiwan (R.O.C.)";
     const VENDOR_TEL = "02-87872360";
     const VENDOR_TAX_ID = "50987654";
+    const OVERSEAS_BANK = {
+      accountNo: "1182441168868",
+      accountName: "Juan Yuan Limited",
+      bankName: "E.SUN Commercial Bank",
+      swift: "ESUNTWTP",
+    };
+    const EXPORT_PARTY_NAME_EN = {
+      "晨曦公司": "Chenxi Co., Ltd.",
+      "晨曦窗口": "Chenxi Contact",
+    };
 
     function channelTaxId(channelName) {
       const profile = channelProfiles[channelName] || {};
@@ -10440,27 +10444,385 @@
 </html>`;
     }
 
-    function exportPartyPoPdf() {
-      const order = getWorkspaceOrder();
-      if (!canExportPoPdf(order)) return;
-      if (orderFormMode !== "view") applyOverseasForm(order);
-      else ensurePartyPo(order);
-      const win = window.open("", "_blank");
-      if (!win) {
-        alert("瀏覽器已封鎖彈出視窗，請允許後再匯出 PDF");
-        return;
+    function pad2(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function dottedDate(date) {
+      return date.getFullYear() + "." + pad2(date.getMonth() + 1) + "." + pad2(date.getDate());
+    }
+
+    function parseDottedDate(text) {
+      const matched = String(text || "").match(/^(\d{4})\.(\d{2})\.(\d{2})$/);
+      if (!matched) return null;
+      return new Date(Number(matched[1]), Number(matched[2]) - 1, Number(matched[3]));
+    }
+
+    function quotationToDate(date) {
+      return dottedDate(new Date(date.getFullYear(), date.getMonth() + 1, 0));
+    }
+
+    function overseasInvoiceIdentity(order, today) {
+      const now = today || new Date();
+      if (order && order.overseasInvoiceNo) {
+        const base = parseDottedDate(order.overseasInvoiceDate) || now;
+        return {
+          no: order.overseasInvoiceNo,
+          date: order.overseasInvoiceDate || dottedDate(base),
+          quotation: order.overseasQuotationDate || quotationToDate(base),
+        };
       }
-      const html = buildPartyPoPrintHtml(order);
+      const prefix = "JY" + String(now.getFullYear()).slice(-2) + pad2(now.getMonth() + 1) + pad2(now.getDate());
+      const taken = salesOrders.filter((item) => item
+        && item.orderNo !== (order && order.orderNo)
+        && String(item.overseasInvoiceNo || "").startsWith(prefix)).length;
+      return {
+        no: prefix + String(taken + 1).padStart(2, "0"),
+        date: dottedDate(now),
+        quotation: quotationToDate(now),
+      };
+    }
+
+    function ensureOverseasInvoiceIdentity(order) {
+      const id = overseasInvoiceIdentity(order, new Date());
+      const changed = order.overseasInvoiceNo !== id.no
+        || order.overseasInvoiceDate !== id.date
+        || order.overseasQuotationDate !== id.quotation;
+      order.overseasInvoiceNo = id.no;
+      order.overseasInvoiceDate = id.date;
+      order.overseasQuotationDate = id.quotation;
+      if (changed) persistDemoData();
+      return id;
+    }
+
+    function exportEnglishName(name) {
+      const text = String(name || "").trim();
+      if (!text) return "";
+      if (text === VENDOR_COMPANY) return VENDOR_COMPANY_EN;
+      if (EXPORT_PARTY_NAME_EN[text]) return EXPORT_PARTY_NAME_EN[text];
+      return text.replace(/^跨境-\s*/, "");
+    }
+
+    function exportEnglishAddress(addr) {
+      const text = String(addr || "").trim();
+      if (!text || text === VENDOR_ADDRESS || text.indexOf("三重路19-9") >= 0) return VENDOR_ADDRESS_EN;
+      return text;
+    }
+
+    function exportEnglishTel(tel, ext) {
+      let text = String(tel || "").trim();
+      if (/^0\d/.test(text)) text = "+886-" + text.slice(1);
+      const extra = String(ext || "").trim();
+      return extra ? text + " # " + extra : text;
+    }
+
+    function productNameEn(sku) {
+      const cat = catalogLineBySku(sku);
+      return (cat && cat.nameEn) || "";
+    }
+
+    function bestBeforeOf(batch) {
+      const text = String(batch || "").trim();
+      if (!text) return "";
+      const head = text.split("_")[0];
+      return /^\d{4}-\d{2}-\d{2}/.test(head) ? head.slice(0, 10) : head;
+    }
+
+    function overseasExportLines(order) {
+      return (order.items || []).filter((item) => (Number(item.qty) || 0) > 0).map((item, index) => {
+        const qty = Number(item.qty) || 0;
+        const pcs = pcsPerCartonOf(item);
+        const unitPrice = goodsQuoteOf(item, order);
+        return {
+          no: index + 1,
+          sku: item.sku || "",
+          nameEn: productNameEn(item.sku) || item.name || "",
+          qty,
+          pcs: pcs || "",
+          carton: orderCartonQty(qty, pcs),
+          bestBefore: bestBeforeOf(item.batch),
+          netKg: lineNetWeightKg(item, qty),
+          unitPrice,
+          amount: Math.round(qty * unitPrice * 100) / 100,
+        };
+      });
+    }
+
+    function overseasExportParties(order) {
+      const bag = partyRecord(order) || {};
+      return {
+        sellerName: VENDOR_COMPANY_EN,
+        sellerAddress: exportEnglishAddress(bag.vendorAddress || VENDOR_ADDRESS),
+        sellerTel: exportEnglishTel(bag.vendorTel || VENDOR_TEL, bag.vendorExt),
+        sellerAttn: exportEnglishName(bag.vendorAttn || order.operator || ""),
+        buyerName: exportEnglishName(bag.buyerName || order.channelName || ""),
+        buyerAddress: exportEnglishAddress(bag.buyerAddress || order.address || ""),
+        buyerTel: exportEnglishTel(bag.buyerTel || ""),
+        buyerAttn: exportEnglishName(bag.buyerAttn || ""),
+        delivery: bag.termsOfDelivery || "",
+        payment: bag.termsOfPayment || "TT, 100% prepaid",
+        currency: channelCurrency(order.channelName || bag.buyerName, "USD"),
+      };
+    }
+
+    function buildOverseasInvoicePrintHtml(order, kind, id) {
+      const parties = overseasExportParties(order);
+      const lines = overseasExportLines(order);
+      const docTitle = kind === "customs" ? "報關 Invoice" : "廠商 Invoice";
+      const total = lines.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+      const rows = lines.length
+        ? lines.map((row) => `<tr>
+            <td class="num">${row.no}</td>
+            <td>${escapeHtml(row.sku)}</td>
+            <td>${escapeHtml(row.nameEn)}</td>
+            <td class="num">${escapeHtml(pdfMoney(row.unitPrice, 2))}</td>
+            <td class="num">${escapeHtml(row.pcs)}</td>
+            <td class="num">${escapeHtml(row.qty)}</td>
+            <td class="num">${escapeHtml(pdfMoney(row.amount, 2))}</td>
+          </tr>`).join("")
+        : `<tr><td colspan="7" class="empty">No line items</td></tr>`;
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>${escapeHtml(docTitle)} ${escapeHtml(id.no)}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f5f5f5; color: #111; font-family: Arial, "Microsoft JhengHei", sans-serif; }
+    .toolbar { position: sticky; top: 0; display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #e8e8e8; }
+    .toolbar button { height: 32px; padding: 0 14px; border: 1px solid #d9d9d9; background: #fff; cursor: pointer; }
+    .toolbar .primary { background: #1677ff; border-color: #1677ff; color: #fff; }
+    .sheet { width: 210mm; min-height: 297mm; margin: 16px auto 32px; padding: 12mm 12mm; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+    h1 { margin: 0 0 12px; font-size: 22px; }
+    .meta { display: flex; gap: 18px; margin-bottom: 12px; font-size: 13px; }
+    .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 12px; font-size: 12px; line-height: 1.5; }
+    .parties p { margin: 0; }
+    .terms { margin-bottom: 12px; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th, td { border: 1px solid #111; padding: 4px 6px; vertical-align: top; }
+    th { background: #f3f3f3; }
+    td.num, th.num { text-align: right; white-space: nowrap; }
+    td.empty { text-align: center; color: #888; }
+    .foot { margin-top: 12px; font-size: 13px; line-height: 1.6; }
+    .bank { margin-top: 18px; font-size: 13px; line-height: 1.6; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none; }
+      .sheet { margin: 0; box-shadow: none; width: auto; min-height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" onclick="window.close()">關閉</button>
+    <button type="button" class="primary" onclick="window.print()">列印／儲存為 PDF</button>
+  </div>
+  <div class="sheet">
+    <h1>Invoice</h1>
+    <div class="meta">
+      <div>Date: ${escapeHtml(id.date)}</div>
+      <div>Quotation to Date: ${escapeHtml(id.quotation)}</div>
+      <div>Invoice No: ${escapeHtml(id.no)}</div>
+    </div>
+    <div class="parties">
+      <div>
+        <p><strong>${escapeHtml(parties.sellerName)}</strong></p>
+        <p>Address : ${escapeHtml(parties.sellerAddress)}</p>
+        <p>Tel : ${escapeHtml(parties.sellerTel)}</p>
+        <p>ATTN: ${escapeHtml(parties.sellerAttn)}</p>
+      </div>
+      <div>
+        <p><strong>${escapeHtml(parties.buyerName)}</strong></p>
+        <p>Address : ${escapeHtml(parties.buyerAddress)}</p>
+        <p>Tel : ${escapeHtml(parties.buyerTel)}</p>
+        <p>ATTN: ${escapeHtml(parties.buyerAttn)}</p>
+      </div>
+    </div>
+    <div class="terms">
+      <div>Terms of Delivery: ${escapeHtml(parties.delivery || "—")}</div>
+      <div>Terms of Payment: ${escapeHtml(parties.payment)}</div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th class="num">No.</th>
+          <th>Barcode</th>
+          <th>Description</th>
+          <th class="num">Unit Price (${escapeHtml(parties.currency)})</th>
+          <th class="num">Pcs / Carton</th>
+          <th class="num">Order Quantity</th>
+          <th class="num">Amount</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="foot">
+      <div>Payment Term : ${escapeHtml(parties.payment)}</div>
+      <div>Trade Terms : ${escapeHtml(parties.delivery || "—")}</div>
+      <div>Amount : ${escapeHtml(parties.currency)}${escapeHtml(pdfMoney(total, 2))}</div>
+    </div>
+    <div class="bank">
+      <div>Payment Detail</div>
+      <div>Account No.: ${escapeHtml(OVERSEAS_BANK.accountNo)}</div>
+      <div>Account Name: ${escapeHtml(OVERSEAS_BANK.accountName)}</div>
+      <div>Bank Name: ${escapeHtml(OVERSEAS_BANK.bankName)}</div>
+      <div>Swift Code: ${escapeHtml(OVERSEAS_BANK.swift)}</div>
+    </div>
+  </div>
+</body>
+</html>`;
+    }
+
+    function blankPackingRow() {
+      return Array(13).fill("");
+    }
+
+    function buildPackingListAoa(order) {
+      const parties = overseasExportParties(order);
+      const lines = overseasExportLines(order);
+      const rows = [];
+      const push = (row) => rows.push(row);
+      const title = blankPackingRow();
+      title[0] = "PACKING LIST";
+      push(title);
+      push(blankPackingRow());
+      push(blankPackingRow());
+      push(blankPackingRow());
+      const noRow = blankPackingRow();
+      noRow[6] = "NO:";
+      push(noRow);
+      const seller = blankPackingRow();
+      seller[0] = "Seller:";
+      seller[1] = parties.sellerName;
+      seller[6] = "Buyer:";
+      seller[7] = parties.buyerName;
+      push(seller);
+      const address = blankPackingRow();
+      address[0] = "Address:";
+      address[1] = parties.sellerAddress;
+      address[6] = "Address:";
+      address[7] = parties.buyerAddress;
+      push(address);
+      push(blankPackingRow());
+      const tel = blankPackingRow();
+      tel[0] = "Tel:";
+      tel[1] = parties.sellerTel;
+      tel[6] = "Tel:";
+      tel[7] = parties.buyerTel;
+      push(tel);
+      const contact = blankPackingRow();
+      contact[6] = "Contact:";
+      contact[7] = parties.buyerAttn;
+      push(contact);
+      const payment = blankPackingRow();
+      payment[0] = "Payment conditions: " + parties.payment;
+      push(payment);
+      const delivery = blankPackingRow();
+      delivery[0] = "Delivery term:";
+      delivery[1] = parties.delivery;
+      push(delivery);
+      push(blankPackingRow());
+      const head = blankPackingRow();
+      head[0] = "Packing No.";
+      head[1] = "S.No";
+      head[2] = "DESCRIPTION";
+      head[5] = "QUANTITY";
+      head[6] = "Carton";
+      head[7] = "Carton/Pallet";
+      head[8] = "pallet";
+      head[9] = "Best Before Date";
+      head[10] = "Pcs per Carton";
+      head[11] = "Net Weight";
+      head[12] = "Gross Weight";
+      push(head);
+      const unit = blankPackingRow();
+      unit[5] = "PCS";
+      unit[10] = "PCS";
+      unit[11] = "(KG)";
+      unit[12] = "(KG)";
+      push(unit);
+      lines.forEach((line) => {
+        const row = blankPackingRow();
+        row[1] = line.sku;
+        row[2] = line.nameEn;
+        row[5] = line.qty;
+        row[6] = line.carton === "" ? "" : line.carton;
+        row[9] = line.bestBefore;
+        row[10] = line.pcs === "" ? "" : line.pcs;
+        row[11] = line.netKg === "" ? "" : line.netKg;
+        push(row);
+      });
+      const total = blankPackingRow();
+      total[0] = "Total";
+      push(total);
+      return {
+        rows,
+        firstData: 16,
+        lastData: lines.length ? 15 + lines.length : 15,
+        totalRow: rows.length,
+      };
+    }
+
+    async function downloadPackingList(order) {
+      const XLSX = await loadSheetJs();
+      const built = buildPackingListAoa(order);
+      const ws = XLSX.utils.aoa_to_sheet(built.rows);
+      if (built.lastData >= built.firstData) {
+        ["F", "G", "I", "L", "M"].forEach((col) => {
+          ws[col + built.totalRow] = { t: "n", f: "SUM(" + col + built.firstData + ":" + col + built.lastData + ")" };
+        });
+      }
+      ws["!cols"] = [14, 16, 42, 12, 12, 12, 12, 16, 12, 18, 16, 14, 14].map((wch) => ({ wch }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Packing List");
+      XLSX.writeFile(wb, "Packing List " + (order.orderNo || "order") + ".xlsx");
+    }
+
+    function writePrintWindow(win, html) {
       const blob = new Blob([html], { type: "text/html;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       win.location.replace(url);
       setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+
+    function markPoExported(order) {
       if (needsStampPo(order) && !hasStampFile(order) && order.status === "未開立出貨單") {
         order.status = "待回壓文件";
         persistDemoData();
         renderSalesTable(getSalesFiltered());
         if (currentEditOrderNo === order.orderNo) syncEditFooter(order, orderFormMode);
       }
+    }
+
+    function exportPartyPoPdf() {
+      const order = getWorkspaceOrder();
+      if (!canExportPoPdf(order)) return;
+      if (orderFormMode !== "view") applyOverseasForm(order);
+      else ensurePartyPo(order);
+      if (isOverseasPo(order)) {
+        const wins = [window.open("", "_blank"), window.open("", "_blank"), window.open("", "_blank")];
+        if (wins.some((win) => !win)) {
+          wins.forEach((win) => { if (win) win.close(); });
+          alert("瀏覽器已封鎖彈出視窗，請允許後再匯出");
+          return;
+        }
+        const id = ensureOverseasInvoiceIdentity(order);
+        writePrintWindow(wins[0], buildPartyPoPrintHtml(order));
+        writePrintWindow(wins[1], buildOverseasInvoicePrintHtml(order, "vendor", id));
+        writePrintWindow(wins[2], buildOverseasInvoicePrintHtml(order, "customs", id));
+        downloadPackingList(order).catch((err) => {
+          alert(err && err.message ? err.message : "Packing List 匯出失敗");
+        });
+        markPoExported(order);
+        return;
+      }
+      const win = window.open("", "_blank");
+      if (!win) {
+        alert("瀏覽器已封鎖彈出視窗，請允許後再匯出 PDF");
+        return;
+      }
+      writePrintWindow(win, buildPartyPoPrintHtml(order));
+      markPoExported(order);
     }
 
     function extraPo(cfg) {
@@ -11497,8 +11859,6 @@
         sellableQty: src.sellableQty != null ? Number(src.sellableQty) : undefined,
         remark: clipPoRemark(src.remark),
         netWeightG: snapshotNetWeightG(src),
-        palletIn: snapshotPalletIn(src),
-        grossWeight: snapshotGrossWeight(src),
         pcsPerCarton: Number(src.pcsPerCarton) || Number((catalogLineBySku(src.sku) || {}).pcsPerCarton) || pcsFromItemRemark(src) || 0,
         qty: Number(src.qty) || 0,
         priceWithLabel: src.priceWithLabel != null && src.priceWithLabel !== "" ? String(src.priceWithLabel) : "",
@@ -11556,19 +11916,6 @@
         }
       }
       return true;
-    }
-
-    /** 境外：下訂數量大於 0 的列，板入數必填且為正整數。 */
-    function validateOverseasPalletIn(order) {
-      if (!isOverseasPo(order)) return true;
-      const lines = (poLineItems || []).filter((row) => (Number(row.qty) || 0) > 0);
-      const missing = lines.filter((row) => !snapshotPalletIn(row));
-      if (!missing.length) return true;
-      const names = missing.map((row) => normalizeSku(row.sku) || "（未填 SKU）");
-      alert("以下商品請填寫大於 0 的正整數板入數：\n" + names.join("、"));
-      if (poWizardOn) setPoWizardStep(2);
-      else setPoTab("goods");
-      return false;
     }
 
     function validatePoTermsRequired(order) {
@@ -11795,7 +12142,6 @@
       }
       if (order) order.items = lines;
       if (!validateOverseasGoodsBatch(order)) return;
-      if (!validateOverseasPalletIn(order)) return;
       poEstMarginConfirmed = true;
       renderPoEstMargin(order);
       alert("已確認下定商品，並試算預估營收／成本／毛利");
@@ -11844,48 +12190,22 @@
       return productMasterWeightG(src && src.sku);
     }
 
-    function snapshotPalletIn(src) {
-      const raw = src && src.palletIn;
-      if (raw == null || String(raw).trim() === "") return "";
-      if (!/^[1-9]\d*$/.test(String(raw).trim())) return "";
-      return Number(raw);
-    }
-
-    /** 這一列的毛重公斤數。空白可；有值只能是大於 0 的正整數。 */
-    function snapshotGrossWeight(src) {
-      const raw = src && src.grossWeight;
-      if (raw == null || String(raw).trim() === "") return "";
-      if (!/^[1-9]\d*$/.test(String(raw).trim())) return "";
-      return Number(raw);
+    function lineNetWeightKg(item, qty) {
+      const grams = Number(item && item.netWeightG) || 0;
+      const n = Number(qty) || 0;
+      if (grams <= 0 || n <= 0) return "";
+      return Math.round(grams * n) / 1000;
     }
 
     function lineNetWeightKgText(item, qty) {
-      const grams = Number(item && item.netWeightG) || 0;
-      const n = Number(qty) || 0;
-      if (grams <= 0 || n <= 0) return "-";
-      const kg = Math.round(grams * n) / 1000;
+      const kg = lineNetWeightKg(item, qty);
+      if (kg === "") return "-";
       return kg.toFixed(3).replace(/\.?0+$/, "");
     }
 
-    function palletCountText(carton, palletIn) {
-      const cartons = Number(carton);
-      const perPallet = snapshotPalletIn({ palletIn });
-      if (!Number.isFinite(cartons) || cartons <= 0 || !perPallet) return "-";
-      return (Math.round((cartons / perPallet) * 100) / 100).toFixed(2);
-    }
-
-    function overseasPalletCellsHtml(item, d, editable) {
+    function overseasPalletCellsHtml(item, d) {
       const weight = lineNetWeightKgText(item, d.qty);
-      const pallets = palletCountText(d.carton, item.palletIn);
-      const palletVal = snapshotPalletIn(item) ? String(item.palletIn) : "";
-      const grossVal = snapshotGrossWeight(item) ? String(item.grossWeight) : "";
-      const palletCell = editable && poRemarkFieldEditable()
-        ? `<td class="col-po-pallet"><input type="number" min="1" step="1" inputmode="numeric" data-field="palletIn" value="${escapeHtml(palletVal)}" /></td>`
-        : `<td class="num col-po-pallet">${escapeHtml(palletVal || "-")}</td>`;
-      const grossCell = editable && poRemarkFieldEditable()
-        ? `<td class="col-po-pallet"><input type="number" min="1" step="1" inputmode="numeric" data-field="grossWeight" value="${escapeHtml(grossVal)}" /></td>`
-        : `<td class="num col-po-pallet">${escapeHtml(grossVal || "-")}</td>`;
-      return `<td class="num col-po-pallet" data-sync="netWeight">${escapeHtml(weight)}</td>${palletCell}<td class="num col-po-pallet" data-sync="palletQty">${escapeHtml(pallets)}</td>${grossCell}`;
+      return `<td class="num col-po-pallet" data-sync="netWeight">${escapeHtml(weight)}</td>`;
     }
 
     function goodsDisplayFields(item) {
@@ -11963,7 +12283,7 @@
           ${shippedCell}
           ${priceCells}
           <td class="num" data-sync="amount">${escapeHtml(pdfMoney(d.amount, 2))}</td>
-          ${overseas ? overseasPalletCellsHtml(item, d, editable) : ""}
+          ${overseas ? overseasPalletCellsHtml(item, d) : ""}
           ${goodsRemarkCellHtml(d.remark, editable)}
           ${opsCell}
         </tr>`;
@@ -13005,11 +13325,9 @@
       const carton = tr.querySelector('[data-sync="carton"]');
       const amount = tr.querySelector('[data-sync="amount"]');
       const netWeight = tr.querySelector('[data-sync="netWeight"]');
-      const palletQty = tr.querySelector('[data-sync="palletQty"]');
       if (carton) carton.textContent = d.carton;
       if (amount) amount.textContent = pdfMoney(d.amount, 2);
       if (netWeight) netWeight.textContent = lineNetWeightKgText(item, d.qty);
-      if (palletQty) palletQty.textContent = palletCountText(d.carton, item.palletIn);
       const qtyInput = tr.querySelector('[data-field="qty"]');
       if (qtyInput) qtyInput.classList.toggle("is-oversell", isOverviewQtyOversell(item));
     }
@@ -13041,62 +13359,6 @@
         }
         item.priceWithLabel = normalized;
         e.target.value = normalized;
-        return;
-      }
-      if (field === "palletIn") {
-        const raw = String(e.target.value || "").trim();
-        if (e.type === "input") {
-          if (raw === "") {
-            item.palletIn = "";
-            refreshOverviewRowDerived(tr, item);
-            return;
-          }
-          if (!/^[1-9]\d*$/.test(raw)) {
-            e.target.value = snapshotPalletIn(item) ? String(item.palletIn) : "";
-            return;
-          }
-          item.palletIn = Number(raw);
-          refreshOverviewRowDerived(tr, item);
-          return;
-        }
-        if (!/^[1-9]\d*$/.test(raw)) {
-          alert("板入數僅可填寫大於 0 的正整數");
-          item.palletIn = snapshotPalletIn(item);
-          e.target.value = item.palletIn ? String(item.palletIn) : "";
-          refreshOverviewRowDerived(tr, item);
-          return;
-        }
-        item.palletIn = Number(raw);
-        e.target.value = String(item.palletIn);
-        refreshOverviewRowDerived(tr, item);
-        const palletOrder = getWorkspaceOrder();
-        if (palletOrder) palletOrder.items = collectEditGoods();
-        return;
-      }
-      if (field === "grossWeight") {
-        const raw = String(e.target.value || "").trim();
-        if (e.type === "input") {
-          if (raw === "") {
-            item.grossWeight = "";
-            return;
-          }
-          if (!/^[1-9]\d*$/.test(raw)) {
-            e.target.value = snapshotGrossWeight(item) ? String(item.grossWeight) : "";
-            return;
-          }
-          item.grossWeight = Number(raw);
-          return;
-        }
-        if (!/^[1-9]\d*$/.test(raw)) {
-          alert("毛重僅可填寫大於 0 的正整數");
-          item.grossWeight = snapshotGrossWeight(item);
-          e.target.value = item.grossWeight ? String(item.grossWeight) : "";
-          return;
-        }
-        item.grossWeight = Number(raw);
-        e.target.value = String(item.grossWeight);
-        const grossOrder = getWorkspaceOrder();
-        if (grossOrder) grossOrder.items = collectEditGoods();
         return;
       }
       if (field === "qty") {
@@ -13397,6 +13659,8 @@
       setBtnEnabled("editSaveDraft", !view && draftLike);
       setBtnEnabled("editSubmit", !view && draftLike && currentRole === "建檔人");
       setBtnEnabled("editExportPdf", canExportPoPdf(order));
+      const exportBtn = document.getElementById("editExportPdf");
+      if (exportBtn) exportBtn.textContent = isOverseasPo(order) ? "匯出" : "匯出 PDF";
       syncStampButton(order);
       syncCopyButton(order);
       const addShipBtn = document.getElementById("editAddShip");
@@ -13525,7 +13789,6 @@
       if (!validatePoDocNoRequired(order)) return;
       if (!validateRecipientRequired(order)) return;
       if (!validateOverseasGoodsBatch(order)) return;
-      if (!validateOverseasPalletIn(order)) return;
       commitWorkspaceOrder(order, "草稿");
       fillOrderEdit(order, "edit");
       alert("已儲存為草稿");
@@ -13538,7 +13801,6 @@
       if (!validatePoDocNoRequired(order)) return;
       if (!validateRecipientRequired(order)) return;
       if (!validateOverseasGoodsBatch(order)) return;
-      if (!validateOverseasPalletIn(order)) return;
       if (!validateMarkFileRequired(order)) return;
       commitWorkspaceOrder(order, "待審核");
       poWizardOn = false;
@@ -13548,7 +13810,6 @@
     });
     document.getElementById("editWizardDraft").addEventListener("click", () => {
       if (orderFormMode === "view") return;
-      if (!validateOverseasPalletIn(getWorkspaceOrder())) return;
       const saved = savePoWizardDraft({});
       if (!saved) return;
       fillOrderEdit(saved, "edit", { wizardStep: poWizardStep });
