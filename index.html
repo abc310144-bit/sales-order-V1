@@ -712,6 +712,11 @@
     }
     .po-pick-filter input:focus { border-color: var(--primary); }
     .po-pick-filter .btn { flex-shrink: 0; }
+    #editGoodsFilterBar input {
+      flex: 0 0 280px;
+      width: 280px;
+      max-width: 100%;
+    }
     .po-goods-pick-table .col-check {
       width: 48px;
       min-width: 48px;
@@ -1791,29 +1796,6 @@
       cursor: pointer;
       pointer-events: auto;
     }
-    .po-add-menu { position: relative; flex-shrink: 0; }
-    .po-add-menu-list {
-      position: absolute;
-      top: 36px;
-      left: 0;
-      z-index: 30;
-      min-width: 148px;
-      background: #fff;
-      border: 1px solid var(--border);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-    }
-    .po-add-menu-list button {
-      display: block;
-      width: 100%;
-      height: 32px;
-      padding: 0 12px;
-      border: 0;
-      background: #fff;
-      text-align: left;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .po-add-menu-list button:hover { background: #f5f5f5; }
     .gift-tag {
       display: inline-block;
       margin-right: 6px;
@@ -4097,13 +4079,8 @@
                 </div>
                 <div class="po-pick-filter" id="editGoodsFilterBar">
                   <input id="poPickFilterInput" type="text" placeholder="輸入 SKU（精準），多個以 , 或 ， 分隔" autocomplete="off" />
-                  <div class="po-add-menu" id="poAddMenu">
-                    <button type="button" class="btn btn-primary" id="poPickFilterSearch">新增</button>
-                    <div class="po-add-menu-list hidden" id="poAddMenuList">
-                      <button type="button" data-add-kind="goods">新增一般商品</button>
-                      <button type="button" data-add-kind="gift">新增贈品</button>
-                    </div>
-                  </div>
+                  <button type="button" class="btn btn-primary" id="poPickFilterSearch">新增</button>
+                  <button type="button" class="btn btn-primary" id="poPickFilterGift">新增贈品</button>
                   <button type="button" class="btn" id="poPickFilterClear">清除</button>
                 </div>
                 <div class="table-wrap ship-items-table-wrap goods-h-scroll po-goods-scroll">
@@ -12299,12 +12276,10 @@
       if (importBtn) importBtn.classList.toggle("hidden", !editable || online);
       if (opsHead) opsHead.classList.toggle("hidden", online || (!editable && !giftEdit) || (editable && !poGoodsRowDeletable() && !giftEdit));
       if (shippedHead) shippedHead.classList.toggle("hidden", !showShipped);
-      const goodsKind = document.querySelector('#poAddMenuList [data-add-kind="goods"]');
-      const giftKind = document.querySelector('#poAddMenuList [data-add-kind="gift"]');
-      if (goodsKind) goodsKind.classList.toggle("hidden", !editable);
-      if (giftKind) giftKind.classList.toggle("hidden", !giftEdit);
-      const menu = document.getElementById("poAddMenuList");
-      if (menu) menu.classList.add("hidden");
+      const goodsBtn = document.getElementById("poPickFilterSearch");
+      const giftBtn = document.getElementById("poPickFilterGift");
+      if (goodsBtn) goodsBtn.classList.toggle("hidden", !editable);
+      if (giftBtn) giftBtn.classList.toggle("hidden", !giftEdit);
     }
 
     function resetPoEstMarginDisplay() {
@@ -14521,28 +14496,11 @@
     document.getElementById("poOversellWarnModal").addEventListener("click", (e) => {
       if (e.target.id === "poOversellWarnModal") closePoOversellWarnModal();
     });
-    document.getElementById("poPickFilterSearch").addEventListener("click", (e) => {
-      e.stopPropagation();
-      const order = getWorkspaceOrder();
-      const menu = document.getElementById("poAddMenuList");
-      if (!isOverseasPo(order)) {
-        applyPoPickFilter("goods");
-        return;
-      }
-      if (menu) menu.classList.toggle("hidden");
+    document.getElementById("poPickFilterSearch").addEventListener("click", () => {
+      applyPoPickFilter("goods");
     });
-    document.getElementById("poAddMenuList").addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-add-kind]");
-      if (!btn) return;
-      e.stopPropagation();
-      document.getElementById("poAddMenuList").classList.add("hidden");
-      applyPoPickFilter(btn.dataset.addKind);
-    });
-    document.addEventListener("click", (e) => {
-      const menu = document.getElementById("poAddMenu");
-      const list = document.getElementById("poAddMenuList");
-      if (!menu || !list || menu.contains(e.target)) return;
-      list.classList.add("hidden");
+    document.getElementById("poPickFilterGift").addEventListener("click", () => {
+      applyPoPickFilter("gift");
     });
     document.getElementById("poPickFilterClear").addEventListener("click", clearPoPickFilter);
     document.getElementById("poPickFilterInput").addEventListener("keydown", (e) => {
