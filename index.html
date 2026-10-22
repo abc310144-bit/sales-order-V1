@@ -2236,6 +2236,16 @@
       gap: 8px;
       width: 100%;
     }
+    #channelSupplyEditOverseasQuote .form-row {
+      grid-template-columns: 168px minmax(0, 1fr);
+    }
+    #channelSupplyEditOverseasQuote .form-row > label {
+      text-align: left;
+    }
+    #channelSupplyEditOverseasQuote .supply-quote-l1 > label { padding-left: 20px; }
+    #channelSupplyEditOverseasQuote .supply-quote-l2 > label { padding-left: 40px; }
+    #channelSupplyEditOverseasQuote .supply-quote-l3 > label { padding-left: 60px; }
+    #channelSupplyEditOverseasQuote .supply-quote-gap { margin-top: 8px; }
     .acc-basic-layout {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
@@ -4699,64 +4709,70 @@
             </div>
           </div>
         </div>
-        <div class="form-row hidden" id="channelSupplyEditPriceLabelRow">
-          <label class="required" for="channelSupplyEditPriceLabel">含標價格</label>
-          <div class="form-ctrl">
-            <div class="fee-suffix-field">
-              <input type="number" id="channelSupplyEditPriceLabel" min="0.01" step="0.01" />
-              <span class="suffix">TWD</span>
+        <div class="hidden" id="channelSupplyEditOverseasQuote">
+          <div class="form-row">
+            <label class="required">商品報價</label>
+            <div class="form-ctrl"></div>
+          </div>
+          <div class="form-row supply-quote-l1" id="channelSupplyEditPriceLabelRow">
+            <label class="required" for="channelSupplyEditPriceLabel">含標</label>
+            <div class="form-ctrl">
+              <div class="fee-suffix-field">
+                <input type="number" id="channelSupplyEditPriceLabel" min="0.01" step="0.01" />
+                <span class="suffix">TWD</span>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="form-row hidden" id="channelSupplyEditLabelTaxModeRow">
-          <label class="required">報價稅別</label>
-          <div class="form-ctrl">
-            <div class="radio-group" id="channelSupplyEditLabelTaxModeGroup">
-              <label class="radio-line"><input type="checkbox" id="channelSupplyEditLabelTaxed" data-side-tax="label" data-tax-mode="taxed" checked /> 含稅</label>
-              <label class="radio-line"><input type="checkbox" id="channelSupplyEditLabelUntaxed" data-side-tax="label" data-tax-mode="untaxed" /> 未稅</label>
+          <div class="form-row supply-quote-l2" id="channelSupplyEditLabelTaxModeRow">
+            <label class="required">稅別</label>
+            <div class="form-ctrl">
+              <div class="radio-group" id="channelSupplyEditLabelTaxModeGroup">
+                <label class="radio-line"><input type="checkbox" id="channelSupplyEditLabelTaxed" data-side-tax="label" data-tax-mode="taxed" checked /> 含稅</label>
+                <label class="radio-line"><input type="checkbox" id="channelSupplyEditLabelUntaxed" data-side-tax="label" data-tax-mode="untaxed" /> 未稅</label>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="form-row hidden" id="channelSupplyEditLabelTaxRow">
-          <label for="channelSupplyEditLabelTax">稅額</label>
-          <div class="form-ctrl">
-            <input type="text" id="channelSupplyEditLabelTax" readonly disabled />
-          </div>
-        </div>
-        <div class="form-row hidden" id="channelSupplyEditLabelPeerRow">
-          <label for="channelSupplyEditLabelPeer" id="channelSupplyEditLabelPeerLabel">未稅價格</label>
-          <div class="form-ctrl">
-            <input type="text" id="channelSupplyEditLabelPeer" readonly disabled />
-          </div>
-        </div>
-        <div class="form-row hidden" id="channelSupplyEditPriceNoLabelRow">
-          <label class="required" for="channelSupplyEditPriceNoLabel">不含標價格</label>
-          <div class="form-ctrl">
-            <div class="fee-suffix-field">
-              <input type="number" id="channelSupplyEditPriceNoLabel" min="0.01" step="0.01" />
-              <span class="suffix">TWD</span>
+          <div class="form-row supply-quote-l3" id="channelSupplyEditLabelTaxRow">
+            <label for="channelSupplyEditLabelTax">稅額</label>
+            <div class="form-ctrl">
+              <input type="text" id="channelSupplyEditLabelTax" readonly disabled />
             </div>
           </div>
-        </div>
-        <div class="form-row hidden" id="channelSupplyEditNoLabelTaxModeRow">
-          <label class="required">報價稅別</label>
-          <div class="form-ctrl">
-            <div class="radio-group" id="channelSupplyEditNoLabelTaxModeGroup">
-              <label class="radio-line"><input type="checkbox" id="channelSupplyEditNoLabelTaxed" data-side-tax="noLabel" data-tax-mode="taxed" /> 含稅</label>
-              <label class="radio-line"><input type="checkbox" id="channelSupplyEditNoLabelUntaxed" data-side-tax="noLabel" data-tax-mode="untaxed" checked /> 未稅</label>
+          <div class="form-row supply-quote-l3" id="channelSupplyEditLabelPeerRow">
+            <label for="channelSupplyEditLabelPeer" id="channelSupplyEditLabelPeerLabel">未稅價格</label>
+            <div class="form-ctrl">
+              <input type="text" id="channelSupplyEditLabelPeer" readonly disabled />
             </div>
           </div>
-        </div>
-        <div class="form-row hidden" id="channelSupplyEditNoLabelTaxRow">
-          <label for="channelSupplyEditNoLabelTax">稅額</label>
-          <div class="form-ctrl">
-            <input type="text" id="channelSupplyEditNoLabelTax" readonly disabled />
+          <div class="form-row supply-quote-l1 supply-quote-gap" id="channelSupplyEditPriceNoLabelRow">
+            <label class="required" for="channelSupplyEditPriceNoLabel">不含標</label>
+            <div class="form-ctrl">
+              <div class="fee-suffix-field">
+                <input type="number" id="channelSupplyEditPriceNoLabel" min="0.01" step="0.01" />
+                <span class="suffix">TWD</span>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="form-row hidden" id="channelSupplyEditNoLabelPeerRow">
-          <label for="channelSupplyEditNoLabelPeer" id="channelSupplyEditNoLabelPeerLabel">含稅金額</label>
-          <div class="form-ctrl">
-            <input type="text" id="channelSupplyEditNoLabelPeer" readonly disabled />
+          <div class="form-row supply-quote-l2" id="channelSupplyEditNoLabelTaxModeRow">
+            <label class="required">稅別</label>
+            <div class="form-ctrl">
+              <div class="radio-group" id="channelSupplyEditNoLabelTaxModeGroup">
+                <label class="radio-line"><input type="checkbox" id="channelSupplyEditNoLabelTaxed" data-side-tax="noLabel" data-tax-mode="taxed" /> 含稅</label>
+                <label class="radio-line"><input type="checkbox" id="channelSupplyEditNoLabelUntaxed" data-side-tax="noLabel" data-tax-mode="untaxed" checked /> 未稅</label>
+              </div>
+            </div>
+          </div>
+          <div class="form-row supply-quote-l3" id="channelSupplyEditNoLabelTaxRow">
+            <label for="channelSupplyEditNoLabelTax">稅額</label>
+            <div class="form-ctrl">
+              <input type="text" id="channelSupplyEditNoLabelTax" readonly disabled />
+            </div>
+          </div>
+          <div class="form-row supply-quote-l3" id="channelSupplyEditNoLabelPeerRow">
+            <label for="channelSupplyEditNoLabelPeer" id="channelSupplyEditNoLabelPeerLabel">含稅金額</label>
+            <div class="form-ctrl">
+              <input type="text" id="channelSupplyEditNoLabelPeer" readonly disabled />
+            </div>
           </div>
         </div>
         <div class="form-row" id="channelSupplyEditTaxModeRow">
@@ -8068,16 +8084,7 @@
     function syncOverseasSupplyForm() {
       const overseas = isOverseasSupplyForm();
       const show = (id, on) => document.getElementById(id)?.classList.toggle("hidden", !on);
-      [
-        "channelSupplyEditPriceLabelRow",
-        "channelSupplyEditLabelTaxModeRow",
-        "channelSupplyEditLabelTaxRow",
-        "channelSupplyEditLabelPeerRow",
-        "channelSupplyEditPriceNoLabelRow",
-        "channelSupplyEditNoLabelTaxModeRow",
-        "channelSupplyEditNoLabelTaxRow",
-        "channelSupplyEditNoLabelPeerRow",
-      ].forEach((id) => show(id, overseas));
+      show("channelSupplyEditOverseasQuote", overseas);
       [
         "channelSupplyEditTaxModeRow",
         "channelSupplyEditQuoteRow",
