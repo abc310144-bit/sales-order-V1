@@ -4540,7 +4540,6 @@
                 <th>商品名稱</th>
                 <th>下訂數量</th>
                 <th>庫存量</th>
-                <th>操作</th>
               </tr>
             </thead>
             <tbody id="poShipStockBody"></tbody>
@@ -14900,8 +14899,6 @@
     document.getElementById("poShipStockClose").addEventListener("click", closePoShipStockModal);
     document.getElementById("poShipStockModal").addEventListener("click", (e) => {
       if (e.target.id === "poShipStockModal") closePoShipStockModal();
-      const confirmBtn = e.target.closest("[data-confirm-ship]");
-      if (confirmBtn && !confirmBtn.disabled) confirmShortageShip(confirmBtn.dataset.confirmShip);
     });
     document.getElementById("editChannelType").addEventListener("change", () => {
       fillChannelNameOptions("editChannelName", document.getElementById("editChannelType").value);
@@ -15786,44 +15783,22 @@
       const body = document.getElementById("poShipStockBody");
       if (!body) return;
       if (!poShipShortage.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="5">沒有庫存不足的品項</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="4">沒有庫存不足的品項</td></tr>`;
         return;
       }
-      body.innerHTML = poShipShortage.map((row) => {
-        const confirmed = shipGoodsHasSku(row.sku);
-        let action = "";
-        if (row.warehouseQty > 0) {
-          action = `<button type="button" class="btn btn-primary" data-confirm-ship="${escapeHtml(row.sku)}"${confirmed ? " disabled" : ""}>確認出貨</button>`;
-        }
-        return `
+      body.innerHTML = poShipShortage.map((row) => `
           <tr>
             <td>${escapeHtml(row.sku)}</td>
             <td>${escapeHtml(row.name)}</td>
             <td class="num">${escapeHtml(row.orderedQty)}</td>
             <td class="num">${escapeHtml(row.warehouseQty)}</td>
-            <td class="ops">${action}</td>
-          </tr>`;
-      }).join("");
+          </tr>`).join("");
     }
 
     function openPoShipStockModal() {
       if (!poShipShortage.length) return;
       renderPoShipStockModal();
       document.getElementById("poShipStockModal").classList.remove("hidden");
-    }
-
-    function confirmShortageShip(sku) {
-      const row = poShipShortage.find((item) => item.sku === sku);
-      if (!row || row.warehouseQty <= 0 || shipGoodsHasSku(sku)) return;
-      const item = poItemToShipLine({
-        ...row.source,
-        qty: row.warehouseQty,
-        stock: row.warehouseQty,
-        useFifo: true,
-      });
-      poShipGoods.push(item);
-      renderPoShipGoodsTable();
-      renderPoShipStockModal();
     }
 
     function renderPoShipFees() {
