@@ -15479,12 +15479,13 @@
         const remaining = remainingQtyOfItem(order, item, shippedMap);
         if (remaining <= 0) return;
         const stock = virtualStockOf(channel, item.sku);
+        const shipQty = stock < remaining ? Math.max(0, stock) : remaining;
         let row;
         if (isOverseasPo(order) && item.batch) {
           const meta = resolveBatchMeta(item.batch);
           row = toPoLineItem({
             ...item,
-            qty: remaining,
+            qty: shipQty,
             stock,
             batch: item.batch,
             expiryType: meta.expiryType,
@@ -15497,7 +15498,7 @@
           row.useFifo = false;
           row.batchLocked = true;
         } else {
-          row = applyFifoExpiry(toPoLineItem({ ...item, qty: remaining, stock, useFifo: true }));
+          row = applyFifoExpiry(toPoLineItem({ ...item, qty: shipQty, stock, useFifo: true }));
           row.useFifo = true;
         }
         goods.push(row);
