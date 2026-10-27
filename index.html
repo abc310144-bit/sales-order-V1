@@ -5491,13 +5491,21 @@
     function canStampPo(order) {
       if (!needsStampPo(order) || !order) return false;
       if (["草稿", "待審核", "已作廢"].includes(order.status)) return false;
-      if (isOverseasPo(order) && !overseasGiftExportReady(order)) return false;
+      if (isOverseasPo(order)) {
+        if (!overseasNeedsFirstShipDocs(order)) return false;
+        if (!overseasFirstShipExportReady(order)) return false;
+        if (!hasStampFile(order)) return true;
+        return !overseasFirstShipStampReady(order);
+      }
       if (!hasStampFile(order)) return true;
-      return isOverseasPo(order) && !overseasGiftStampReady(order);
+      return false;
     }
 
     function canViewStampFile(order) {
-      return needsStampPo(order) && hasStampFile(order) && overseasGiftStampReady(order);
+      if (!needsStampPo(order) || !hasStampFile(order)) return false;
+      if (!isOverseasPo(order)) return true;
+      if (!overseasNeedsFirstShipDocs(order)) return true;
+      return overseasFirstShipStampReady(order);
     }
 
     function canCopyPo(order) {
@@ -5532,8 +5540,8 @@
 
     function canCreateShipFromPo(order) {
       if (!canShipFromPo(order)) return false;
-      if (needsStampPo(order) && !hasStampFile(order)) return false;
-      if (isOverseasPo(order) && !overseasGiftStampReady(order)) return false;
+      if (needsStampPo(order) && !isOverseasPo(order) && !hasStampFile(order)) return false;
+      if (isOverseasPo(order) && !overseasFirstShipStampReady(order)) return false;
       if (needsMarkFile(order) && !hasMarkFile(order)) return false;
       if (isOnlineTransferPo(order) && remainingOnlineShipGroups(order).length === 0) return false;
       return true;
@@ -5697,6 +5705,25 @@
       if (!fp && !order.giftExportedAt) return true;
       const stampAt = Number(order.stampFile && order.stampFile.uploadedAt) || 0;
       return hasStampFile(order) && stampAt >= Number(order.giftExportedAt || 0);
+    }
+
+    function overseasNeedsFirstShipDocs(order) {
+      return isOverseasPo(order) && validShipsOfPo(order && order.orderNo).length === 0;
+    }
+
+    function overseasFirstShipExportReady(order) {
+      if (!overseasNeedsFirstShipDocs(order)) return true;
+      if (order.overseasExportedAt) return overseasGiftExportReady(order);
+      if (hasStampFile(order) && order.status === "未開立出貨單" && overseasGiftExportReady(order)) return true;
+      return false;
+    }
+
+    function overseasFirstShipStampReady(order) {
+      if (!overseasNeedsFirstShipDocs(order)) return true;
+      if (!overseasFirstShipExportReady(order)) return false;
+      if (!order.overseasExportedAt && hasStampFile(order) && order.status === "未開立出貨單") return true;
+      const stampAt = Number(order.stampFile && order.stampFile.uploadedAt) || 0;
+      return hasStampFile(order) && stampAt >= Number(order.overseasExportedAt || 0);
     }
 
     function rememberGiftExport(order) {
@@ -10874,36 +10901,46 @@
       return dottedDate(new Date(date.getFullYear(), date.getMonth() + 1, 0));
     }
 
-    function overseasInvoiceIdentity(order, today) {
+    function collectOverseasInvoiceNos() {
+      const used = new Set();
+      salesOrders.forEach((item) => {
+        if (!item) return;
+        if (item.overseasInvoiceNo) used.add(String(item.overseasInvoiceNo));
+        (item.overseasInvoiceNos || []).forEach((no) => {
+          if (no) used.add(String(no));
+        });
+      });
+      return used;
+    }
+
+    function nextOverseasInvoiceIdentity(today) {
       const now = today || new Date();
-      if (order && order.overseasInvoiceNo) {
-        const base = parseDottedDate(order.overseasInvoiceDate) || now;
-        return {
-          no: order.overseasInvoiceNo,
-          date: order.overseasInvoiceDate || dottedDate(base),
-          quotation: order.overseasQuotationDate || quotationToDate(base),
-        };
-      }
       const prefix = "JY" + String(now.getFullYear()).slice(-2) + pad2(now.getMonth() + 1) + pad2(now.getDate());
-      const taken = salesOrders.filter((item) => item
-        && item.orderNo !== (order && order.orderNo)
-        && String(item.overseasInvoiceNo || "").startsWith(prefix)).length;
+      const used = collectOverseasInvoiceNos();
+      let seq = 1;
+      let no = prefix + String(seq).padStart(2, "0");
+      while (used.has(no)) {
+        seq += 1;
+        no = prefix + String(seq).padStart(2, "0");
+      }
       return {
-        no: prefix + String(taken + 1).padStart(2, "0"),
+        no,
         date: dottedDate(now),
         quotation: quotationToDate(now),
       };
     }
 
     function ensureOverseasInvoiceIdentity(order) {
-      const id = overseasInvoiceIdentity(order, new Date());
-      const changed = order.overseasInvoiceNo !== id.no
-        || order.overseasInvoiceDate !== id.date
-        || order.overseasQuotationDate !== id.quotation;
+      const id = nextOverseasInvoiceIdentity(new Date());
+      if (!Array.isArray(order.overseasInvoiceNos)) order.overseasInvoiceNos = [];
+      if (order.overseasInvoiceNo && !order.overseasInvoiceNos.includes(order.overseasInvoiceNo)) {
+        order.overseasInvoiceNos.push(order.overseasInvoiceNo);
+      }
+      order.overseasInvoiceNos.push(id.no);
       order.overseasInvoiceNo = id.no;
       order.overseasInvoiceDate = id.date;
       order.overseasQuotationDate = id.quotation;
-      if (changed) persistDemoData();
+      persistDemoData();
       return id;
     }
 
@@ -10940,25 +10977,60 @@
       return /^\d{4}-\d{2}-\d{2}/.test(head) ? head.slice(0, 10) : head;
     }
 
+    function overseasExportLineOf(order, item, qty, no) {
+      const pcs = pcsPerCartonOf(item);
+      const unitPrice = goodsQuoteOf(item, order);
+      return {
+        no,
+        sku: item.sku || "",
+        nameEn: productNameEn(item.sku) || item.name || "",
+        qty,
+        pcs: pcs || "",
+        carton: orderCartonQty(qty, pcs),
+        bestBefore: bestBeforeOf(item.batch),
+        netKg: lineNetWeightKg(item, qty),
+        unitPrice,
+        amount: Math.round(qty * unitPrice * 100) / 100,
+        gift: !!item.gift,
+      };
+    }
+
     function overseasExportLines(order) {
-      return (order.items || []).filter((item) => (Number(item.qty) || 0) > 0).map((item, index) => {
-        const qty = Number(item.qty) || 0;
-        const pcs = pcsPerCartonOf(item);
-        const unitPrice = goodsQuoteOf(item, order);
-        return {
-          no: index + 1,
-          sku: item.sku || "",
-          nameEn: productNameEn(item.sku) || item.name || "",
-          qty,
-          pcs: pcs || "",
-          carton: orderCartonQty(qty, pcs),
-          bestBefore: bestBeforeOf(item.batch),
-          netKg: lineNetWeightKg(item, qty),
-          unitPrice,
-          amount: Math.round(qty * unitPrice * 100) / 100,
-          gift: !!item.gift,
-        };
+      return (order.items || []).filter((item) => (Number(item.qty) || 0) > 0).map((item, index) => (
+        overseasExportLineOf(order, item, Number(item.qty) || 0, index + 1)
+      ));
+    }
+
+    /** 報關 Invoice、Packing List：還沒出的數量，且不超過目前庫存。同一 SKU 先補較早到期的那一列。 */
+    function overseasShippableExportLines(order) {
+      const items = (order.items || []).filter((item) => item && (Number(item.qty) || 0) > 0);
+      const shippedMap = shippedQtyByKey(order && order.orderNo);
+      const groups = new Map();
+      items.forEach((item, index) => {
+        const sku = normalizeSku(item.sku).toLowerCase();
+        if (!groups.has(sku)) groups.set(sku, []);
+        groups.get(sku).push({ item, index });
       });
+      const picked = [];
+      groups.forEach((list) => {
+        list.sort((a, b) => {
+          const da = parseBatchDate(a.item.batch);
+          const db = parseBatchDate(b.item.batch);
+          const ta = da ? da.getTime() : Number.MAX_SAFE_INTEGER;
+          const tb = db ? db.getTime() : Number.MAX_SAFE_INTEGER;
+          if (ta !== tb) return ta - tb;
+          return a.index - b.index;
+        });
+        let stock = virtualStockOf(order.channelName, list[0].item.sku);
+        list.forEach(({ item, index }) => {
+          const remaining = remainingQtyOfItem(order, item, shippedMap);
+          const qty = Math.max(0, Math.min(remaining, Math.max(0, stock)));
+          stock = Math.max(0, stock - qty);
+          if (qty > 0) picked.push({ item, index, qty });
+        });
+      });
+      picked.sort((a, b) => a.index - b.index);
+      return picked.map((row, index) => overseasExportLineOf(order, row.item, row.qty, index + 1));
     }
 
     function overseasExportParties(order) {
@@ -10980,7 +11052,7 @@
 
     function buildOverseasInvoicePrintHtml(order, kind, id) {
       const parties = overseasExportParties(order);
-      const lines = overseasExportLines(order);
+      const lines = kind === "customs" ? overseasShippableExportLines(order) : overseasExportLines(order);
       const docTitle = kind === "customs" ? "報關 Invoice" : "廠商 Invoice";
       const priced = lines.map((row) => {
         const giftFree = kind !== "customs" && row.gift;
@@ -11124,7 +11196,7 @@
 
     function buildPackingSheetXml(order) {
       const parties = overseasExportParties(order);
-      const lines = overseasExportLines(order);
+      const lines = overseasShippableExportLines(order);
       const first = 16;
       const last = lines.length ? first + lines.length - 1 : 15;
       const totalRow = lines.length ? last + 1 : 16;
@@ -11376,8 +11448,13 @@
 
     function markPoExported(order) {
       rememberGiftExport(order);
+      if (isOverseasPo(order)) order.overseasExportedAt = Date.now();
       let statusChanged = false;
       if (needsStampPo(order) && !hasStampFile(order) && order.status === "未開立出貨單") {
+        order.status = "待回壓文件";
+        statusChanged = true;
+      }
+      if (isOverseasPo(order) && overseasNeedsFirstShipDocs(order) && order.status === "未開立出貨單") {
         order.status = "待回壓文件";
         statusChanged = true;
       }
@@ -16444,10 +16521,11 @@
     function shipCreateBlockReason(po) {
       if (!po) return "請選擇客戶訂單編號";
       if (canCreateShipFromPo(po)) return "";
-      if (isOverseasPo(po) && !overseasGiftExportReady(po) && !["草稿", "待審核", "已作廢"].includes(po.status)) {
-        return "贈品有異動，請先匯出才能新增出貨單";
+      if (isOverseasPo(po) && overseasNeedsFirstShipDocs(po) && !overseasFirstShipExportReady(po) && !["草稿", "待審核", "已作廢"].includes(po.status)) {
+        const giftChanged = giftFingerprint(po) && po.giftExportedAt && !overseasGiftExportReady(po);
+        return giftChanged ? "贈品有異動，請先匯出才能新增出貨單" : "請先匯出才能新增出貨單";
       }
-      if (isOverseasPo(po) && !overseasGiftStampReady(po) && !["草稿", "待審核", "已作廢"].includes(po.status)) {
+      if (isOverseasPo(po) && overseasNeedsFirstShipDocs(po) && !overseasFirstShipStampReady(po) && !["草稿", "待審核", "已作廢"].includes(po.status)) {
         return "請先回壓最新匯出檔才能新增出貨單";
       }
       if (needsStampPo(po) && !hasStampFile(po) && !["草稿", "待審核", "已作廢"].includes(po.status)) {
