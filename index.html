@@ -3631,7 +3631,8 @@
           <div class="demo-hint">
             <strong>DEMO 提示｜取消規則（未接藍田 API）</strong><br />
             藍田訂單狀態為 <strong>WAITING</strong> → 可直接取消。<br />
-            藍田狀態為 <strong>VERIFIED / PROCESSING / DONE</strong> → 不可取消。
+            藍田狀態為 <strong>VERIFIED / PROCESSING / DONE</strong> → 不可取消。<br />
+            已建立出貨單，且該出貨單<strong>已拋單</strong>或<strong>尚未取消</strong> → 不可作廢原先的客戶訂單。
           </div>
 
           <section class="filter" id="salesFilterPanel">
@@ -12530,6 +12531,7 @@
         cost: src.cost || meta.cost,
         quote: src.quote || meta.quote,
         orderQuote: src.orderQuote ?? src.priceNoLabel ?? meta.priceNoLabel ?? "0",
+        quoteFrozen: src.quoteFrozen != null && src.quoteFrozen !== "" ? Number(src.quoteFrozen) : undefined,
         priceNoLabel: src.priceNoLabel ?? meta.priceNoLabel ?? "",
         priceLabel: src.priceLabel ?? "",
         priceBasis: src.priceBasis === "noLabel" ? "noLabel" : (src.priceBasis === "label" ? "label" : ""),
@@ -12712,6 +12714,7 @@
         next.priceBasis = keepBasis;
         if (keepBatch) next.batch = keepBatch;
       }
+      if (isDealerPo(order)) freezeDealerLineQuote(next, channelName);
       Object.keys(item).forEach((key) => { delete item[key]; });
       Object.assign(item, next);
     }
@@ -13016,12 +13019,30 @@
       return parsePositiveMoney(raw);
     }
 
+    /** 經銷：SKU 對到當下，依供應商品「商品報價」與報價稅別算出金額並凍結在這一列。 */
+    function freezeDealerLineQuote(item, channelName) {
+      if (!item) return;
+      if (channelName && !Array.isArray(channelSupplyByChannel[channelName])) {
+        channelSupplyByChannel[channelName] = buildChannelSupplyRows(channelName);
+      }
+      const live = channelProductPriceOf(channelName, item.sku);
+      const n = Number(live && live.quote);
+      const frozen = Number.isFinite(n) && n > 0 ? roundChannelSupplyMoney(n) : 0;
+      item.quote = String(frozen);
+      item.orderQuote = String(frozen);
+      item.quoteFrozen = frozen;
+    }
+
     function goodsQuoteOf(item, order) {
+      order = order || getWorkspaceOrder();
+      if (order && isDealerPo(order) && item && item.quoteFrozen != null && item.quoteFrozen !== "") {
+        const frozen = Number(item.quoteFrozen);
+        if (Number.isFinite(frozen)) return frozen;
+      }
       if (item && (item.priceBasis === "label" || item.priceBasis === "noLabel")) {
         const picked = overseasTypedPrice(item);
         if (picked != null) return picked;
       }
-      order = order || getWorkspaceOrder();
       if (order && isOverseasPo(order)) {
         ensureOverseasLinePrices(item, order.channelName);
         const picked = overseasTypedPrice(item);
@@ -13140,7 +13161,7 @@
       const priceCells = overseas
         ? `<td class="num col-po-price-pair" data-sync="priceNo">${goodsPriceCellText(d.priceNo)}</td>
           <td class="num col-po-price-pair col-price-label" data-sync="priceLabel">${goodsPriceCellText(d.priceLabel)}</td>`
-        : `<td class="num col-po-quote">${goodsPriceCellText(d.quote)}</td>`;
+        : `<td class="num col-po-quote" data-sync="quote">${goodsPriceCellText(d.quote)}</td>`;
       const orderNo = (opts && opts.orderNo) || currentEditOrderNo;
       const shippedMap = showShipped && orderNo && orderNo !== "__new__" ? shippedQtyByKey(orderNo) : {};
       const shippedQty = shippedQtyOfPoLine({ orderNo }, item, shippedMap);
@@ -14251,6 +14272,8 @@
       const priceLabel = tr.querySelector('[data-sync="priceLabel"]');
       if (priceNo) priceNo.textContent = goodsPricePlain(d.priceNo);
       if (priceLabel) priceLabel.textContent = goodsPricePlain(d.priceLabel);
+      const quoteCell = tr.querySelector('[data-sync="quote"]');
+      if (quoteCell) quoteCell.textContent = goodsPricePlain(d.quote);
       if (netWeight) netWeight.textContent = lineNetWeightKgText(item, d.qty);
       const qtyInput = tr.querySelector('[data-field="qty"]');
       if (qtyInput) qtyInput.classList.toggle("is-oversell", isOverviewQtyOversell(item));
@@ -14292,6 +14315,9 @@
           item.sku = "";
           item.name = "";
           item.sellableQty = undefined;
+          item.quote = "0";
+          item.orderQuote = "0";
+          delete item.quoteFrozen;
           refreshPoSkuRow(tr, item);
         }
         return;
@@ -16659,8 +16685,10 @@
       return "WAITING";
     }
 
+    /** 已建立出貨單，且該張已拋單或尚未取消（狀態不是訂單取消）→ 不可作廢客戶訂單。 */
     function canVoidOrder(order) {
       if (!order || order.status === "已作廢" || order.status === "待審核") return false;
+      if (validShipsOfPo(order.orderNo).length > 0) return false;
       return getLantianStatus(order) === "WAITING";
     }
 
@@ -16695,6 +16723,10 @@
 
     function openVoidModal(order) {
       if (!canVoidOrder(order)) {
+        if (order && validShipsOfPo(order.orderNo).length > 0) {
+          alert("此客戶訂單已有出貨單，且出貨單已拋單或尚未取消，不可作廢");
+          return;
+        }
         alert(`此客戶訂單不可取消（藍田狀態為 ${getLantianStatus(order)}）`);
         return;
       }
