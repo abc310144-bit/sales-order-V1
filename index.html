@@ -16245,6 +16245,15 @@
       return confirm("尚未回壓出口報單，是否仍要完成驗收？");
     }
 
+    function applyDemoShipStatusOverrides() {
+      const ship = rows.find((row) => row.orderId === "VN00010531");
+      if (!ship || ship.demoStatusLock === "待驗收") return;
+      ship.status = "待驗收";
+      ship.demoStatusLock = "待驗收";
+      ship.acceptance = null;
+      ship.acceptNote = "";
+    }
+
     function normalizeNonOnlineShipStatuses() {
       rows.forEach((ship) => {
         if (ship.online) return;
@@ -19581,6 +19590,7 @@
     });
 
     normalizeNonOnlineShipStatuses();
+    applyDemoShipStatusOverrides();
     seedAcceptanceDemo();
     seedConsignSettleDemo();
     seedOnlineTransferSettleDemo();
