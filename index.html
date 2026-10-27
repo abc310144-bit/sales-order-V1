@@ -2602,7 +2602,7 @@
               <table class="settle-table">
                 <thead>
                   <tr>
-                    <th class="col-check"></th>
+                    <th class="col-check"><input type="checkbox" id="shipAcceptCheckAll" aria-label="全選" /></th>
                     <th>SKU</th>
                     <th>商品名稱</th>
                     <th>箱入數</th>
@@ -16350,6 +16350,11 @@
       const body = document.getElementById("shipAcceptBody");
       if (!body || !shipAcceptDraft) return;
       const { lines, readonly } = shipAcceptDraft;
+      const all = document.getElementById("shipAcceptCheckAll");
+      if (all) {
+        all.disabled = !!readonly || !lines.length;
+        all.checked = lines.length > 0 && lines.every((line) => line.checked);
+      }
       if (!lines.length) {
         body.innerHTML = `<tr class="empty-row"><td colspan="8">此出貨單無商品</td></tr>`;
         return;
@@ -19543,6 +19548,15 @@
         });
       };
       reader.readAsDataURL(file);
+    });
+    document.getElementById("shipAcceptCheckAll").addEventListener("change", (e) => {
+      if (!shipAcceptDraft || shipAcceptDraft.readonly) return;
+      const on = e.target.checked;
+      shipAcceptDraft.lines.forEach((line) => {
+        line.checked = on;
+        line.acceptQty = on ? (line.acceptQty || line.shipQty) : 0;
+      });
+      renderShipAcceptTable();
     });
     document.getElementById("shipAcceptBody").addEventListener("change", (e) => {
       if (!shipAcceptDraft || shipAcceptDraft.readonly) return;
