@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>客戶訂單管理｜功能測試清單</title>
+  <style>
+    :root {
+      --ink: #1f1f1f;
+      --muted: #595959;
+      --line: #e6e6e6;
+      --bg: #f5f6f8;
+      --card: #fff;
+      --accent: #1677ff;
+      --ok: #389e0d;
+      --ok-bg: #f6ffed;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.5;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      padding: 16px 24px 12px;
+    }
+    h1 { margin: 0 0 4px; font-size: 20px; font-weight: 650; }
+    .sub { margin: 0; color: var(--muted); font-size: 13px; }
+    .bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-top: 12px;
+    }
+    .progress {
+      flex: 1 1 220px;
+      height: 8px;
+      background: #f0f0f0;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress > span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--ok);
+    }
+    .count { font-weight: 650; min-width: 128px; }
+    .filters, .tools { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      border: 1px solid #d9d9d9;
+      background: #fff;
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+    }
+    button.active { color: var(--accent); border-color: var(--accent); background: #e6f4ff; }
+    button.danger { color: #cf1322; }
+    main { max-width: 920px; margin: 0 auto; padding: 16px; }
+    .note {
+      background: #fffbe6;
+      border: 1px solid #ffe58f;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .sec-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+      padding: 12px 14px;
+      background: #fafafa;
+      border-bottom: 1px solid var(--line);
+    }
+    .sec-head h2 { margin: 0; font-size: 15px; }
+    .sec-count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li { border-top: 1px solid var(--line); }
+    li:first-child { border-top: 0; }
+    label.item {
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      gap: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+    label.item:hover { background: #fafafa; }
+    li.done label.item { background: var(--ok-bg); }
+    input[type="checkbox"] { width: 16px; height: 16px; margin-top: 3px; accent-color: var(--ok); }
+    .title { font-size: 14px; }
+    li.done .title { color: #135200; }
+    .expect { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }
+    li.hidden { display: none; }
+    section.hidden { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>客戶訂單管理｜功能測試清單</h1>
+    <p class="sub">勾選存在這台瀏覽器。重新整理不會消失；換瀏覽器或清除網站資料才會重置。</p>
+    <div class="bar">
+      <div class="count" id="count">已測 0 / 0</div>
+      <div class="progress" aria-hidden="true"><span id="bar"></span></div>
+      <div class="filters" id="filters">
+        <button type="button" class="active" data-filter="all">全部</button>
+        <button type="button" data-filter="open">未測</button>
+        <button type="button" data-filter="done">已測</button>
+      </div>
+      <div class="tools">
+        <button type="button" id="copyBtn">複製進度</button>
+        <button type="button" class="danger" id="resetBtn">清除全部勾選</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="note">
+      右上角切換「建檔人／主管」。建立、匯入、檢視會開新分頁。可直接用現成單：SO20260825003 草稿、SO20260826001 待審核、SO20260826002 部分出貨、SO20260823007 已開立出貨單、SO20260824005 已作廢、SO20260825004 線上-轉單。
+    </div>
+    <div id="list"></div>
+  </main>
+  <script>
+    const KEY = "po-func-test-checklist-v1";
+    const sections = [
+      {
+        title: "1. 列表與篩選",
+        items: [
+          ["列表欄位齊全", "有客戶訂單編號、客戶訂單單號、合作通路類型、通路名稱、狀態、完成說明、作廢說明、操作人、建立時間、操作。"],
+          ["編號可模糊查", "客戶訂單編號輸入部分字，套用後只留下包含該字的單。"],
+          ["單號可模糊查", "客戶訂單單號輸入部分字，套用後只留下包含該字的單。"],
+          ["操作人可模糊查", "操作人輸入部分字，套用後只留下該操作人的單。"],
+          ["查無資料", "條件對不到任何單時，列表是空的，總筆數為 0。"],
+          ["一般通路才出現合作通路類型", "客戶訂單類型選一般通路，才出現合作通路類型（台灣本地通路、台灣線上通路）。改選經銷或境外後，這個欄位消失。"],
+          ["台灣本地的通路名稱", "一般通路＋台灣本地通路，名稱有實體-全聯、寶雅、迪卡儂、PW健身工廠、百貨-新光三越。"],
+          ["台灣線上的通路名稱", "一般通路＋台灣線上通路，名稱有線上-轉單、線上-蝦皮商城。"],
+          ["經銷的通路名稱", "類型選經銷，名稱有經銷商-絢綻國際企業社、經銷商-學生營養股份有限公司。"],
+          ["境外的通路名稱", "類型選境外通路，名稱有跨境- Cool Cool Trading、Sheng Siong、Aeon Japan、晨曦公司。"],
+          ["七種狀態都篩得到", "狀態分別選草稿、待審核、待回壓文件、未開立出貨單、部分出貨、已開立出貨單、已作廢，結果只留該狀態。"],
+          ["建立時間區間", "起迄都有值時，只留下區間內建立的單。"],
+          ["清除篩選", "按清除篩選條件後，條件清空，列表回到全部。"],
+          ["每頁筆數", "每頁改 20、50、100，「總共 N 筆」與畫面列數一致。"],
+          ["作廢說明超過 15 字", "列表只顯示前 15 字加 ...，滑過可看全文。選「其他」作廢的單才會有自填說明。"]
+        ]
+      },
+      {
+        title: "2. 列表操作按鈕",
+        items: [
+          ["草稿可編輯可作廢", "建檔人看草稿：編輯、檢視、作廢都可點。"],
+          ["待審核只能檢視", "待審核的編輯與作廢是灰的，只剩檢視。"],
+          ["審核後可檢視可作廢", "待回壓文件、未開立出貨單、部分出貨、已開立出貨單：編輯灰掉，檢視與作廢可點。"],
+          ["已作廢只能檢視", "已作廢的編輯與作廢都是灰的，只剩檢視。"],
+          ["只有線上轉單可批次勾選", "線上-轉單且狀態是未開立出貨單或部分出貨時，列首可勾，勾了出現「批次建立出貨單」。其他類型沒有這個核取方塊。"]
+        ]
+      },
+      {
+        title: "3. 建立：一般通路／台灣本地",
+        items: [
+          ["未選類型不能確定", "建立視窗沒選類型就按確定，提示「請先選擇客戶訂單類型」。"],
+          ["未選合作通路類型", "選了一般通路但沒選合作通路類型，提示「請選擇合作通路類型」。"],
+          ["未選通路名稱", "沒選通路名稱就確定，提示「請選擇通路名稱」。"],
+          ["確定後進建立精靈", "一般通路 → 台灣本地通路 → 實體-全聯 → 確定。新分頁直接進四段精靈：建立基本資料、建立下定商品、費用填寫、訂單預覽。不會先列出整份供應商品。"],
+          ["客戶訂單單號必填", "單號空白按「儲存此分頁」，提示「請輸入客戶訂單單號」，停在基本資料。"],
+          ["單號最多 30 字", "輸入超過 30 字時，欄位不再接受多出來的字。"],
+          ["預計到貨日預設加 2 天", "新建本地單的預計到貨日期是建立日加 2 天。到貨時間是 24 小時制的時、分。"],
+          ["地址隨通路帶入", "選通路後，到貨地址帶出該通路地址。"],
+          ["買斷寄倉要上傳麥頭", "全聯、寶雅、迪卡儂、PW、新光三越出現上傳麥頭。沒上傳就儲存此分頁或送出，提示「買斷／寄倉通路請先上傳麥頭」。"],
+          ["麥頭檔案格式", "麥頭只收 jpg、png、webp。上傳後可點檔名下載。"],
+          ["換成不必麥頭的通路", "通路改成線上-轉單這類轉單通路後，麥頭區塊消失。"],
+          ["下定商品自己填 SKU", "不會一次列出該通路全部商品。輸入 UM-1001 可帶出品名。"],
+          ["數量須大於 0", "有列但數量不是大於 0 的正整數，按儲存會指出那些 SKU。"],
+          ["要先確認下定商品", "沒按「確認下定商品」就進下一步，提示「請先確認下定商品」。按了之後出現預估營收、成本、毛利。"],
+          ["費用可進預覽", "費用可新增一筆，再進預覽。預覽頁欄位不可改。"],
+          ["可儲存為草稿", "儲存為草稿後狀態仍是草稿，列表可再編輯，精靈停在目前步驟，提示「已儲存為草稿」。"],
+          ["建檔人可送出申請", "預覽頁送出申請後狀態變待審核，畫面改成檢視，提示「已送出申請」。"],
+          ["主管不能送出申請", "右上角改主管後，建立頁的送出申請是停用的。"]
+        ]
+      },
+      {
+        title: "4. 建立：線上-轉單",
+        items: [
+          ["步驟是三段", "一般通路 → 台灣線上通路 → 線上-轉單。步驟為訂單基本資料、設定訂單內容、預覽。沒有費用步驟，也沒有客戶訂單單號。"],
+          ["訂單內容必填", "缺平台訂單編號、收件人、三碼郵遞區號、地址、電話、運送方式、SKU、效期_批號或正整數數量時，停在該列並提示。"],
+          ["平台訂單編號格式", "最多 50 字，只允許中文、英文、數字、底線、連字號。同一張單編號不可重複。"],
+          ["SKU 須綁定線上轉單", "未綁定「線上-轉單」的 SKU 不能送出。"],
+          ["確認後才能預覽並送出", "按確認下定商品後才能進預覽。送出後狀態為待審核。"]
+        ]
+      },
+      {
+        title: "5. 建立：線上-蝦皮商城",
+        items: [
+          ["仍是四段且單號必填", "線上-蝦皮商城走四段精靈，含費用。客戶訂單單號必填。"],
+          ["不必麥頭也不進待回壓", "不必上傳麥頭。審核通過後直接是未開立出貨單，不是待回壓文件。"]
+        ]
+      },
+      {
+        title: "6. 建立：經銷",
+        items: [
+          ["收款條件必填", "例如經銷商-絢綻。沒選收款條件就儲存此分頁，提示「請選擇收款條件」。"],
+          ["單號不是必填", "經銷的客戶訂單單號可以空白儲存。"],
+          ["商品確認後才試算", "自填 SKU，按確認下定商品後才出現預估營收、成本、毛利。"],
+          ["審核通過進待回壓文件", "送出後是待審核。主管審核通過後變成待回壓文件。"]
+        ]
+      },
+      {
+        title: "7. 建立：境外通路",
+        items: [
+          ["買方賣方帶入", "例如跨境- Cool Cool Trading。買方帶出統編、負責人、信箱、電話、地址。賣方公司名稱與統編不可改。"],
+          ["貿易條件必填", "沒選貿易條件，提示「請選擇貿易條件」。"],
+          ["每列要選效期批號", "下定商品沒選效期_批號就不能儲存或送出，提示指出該 SKU。"],
+          ["淨重板入數板數", "合計後方有淨重（假資料）、板入數（只可正整數）、板數（箱入數除以板入數，自動計算）。"],
+          ["可改成贈品", "列可改成贈品，贈品與一般下定商品分開計。"],
+          ["先匯出再回壓才能出貨", "審核通過後是待回壓文件。還沒有出貨單時，要先匯出，再回壓文件，回壓時間晚於這次匯出，「新增出貨單」才可按。"],
+          ["出貨後贈品仍可改", "已開出貨單後，一般下定商品鎖定。贈品在整單出完前仍可改。贈品改過要重新匯出再回壓，才能再開出貨單。"]
+        ]
+      },
+      {
+        title: "8. 匯入",
+        items: [
+          ["匯入必填沒過不建單", "沒選類型、一般通路沒選合作通路類型、沒選通路、沒選檔，各自提示，不會建單。"],
+          ["轉單測試檔可匯入", "線上-轉單用轉單匯入測試範例.xlsx。成功後開新分頁，狀態草稿，訂單內容帶入檔內平台訂單與商品。"],
+          ["轉單整檔錯誤不匯入", "空平台訂單編號、編號格式不符、SKU 或數量空、數量不是大於 0 的正整數、SKU 未綁定、同一平台訂單缺收件欄位、郵遞區號不是三碼、超過 1000 筆，整檔不匯入，提示指到列號或平台訂單編號。"],
+          ["非轉單匯入用假商品", "本地、經銷、境外選任一檔可匯入並開草稿精靈。商品用該通路假資料，不照檔案逐列寫入。"]
+        ]
+      },
+      {
+        title: "9. 審核",
+        items: [
+          ["建檔人不能審", "用檢視打開待審核單（例如 SO20260826001）。建檔人的審核通過、審核不通過都停用，整張不可改。"],
+          ["主管可以審", "改成主管後，兩顆按鈕可按。"],
+          ["審核不通過回草稿", "審核不通過後狀態回到草稿，建檔人可再編輯、再送出。"],
+          ["一般通路審核通過", "一般通路（含線上）審核通過後是未開立出貨單。"],
+          ["經銷境外審核通過", "經銷或境外審核通過後是待回壓文件。"]
+        ]
+      },
+      {
+        title: "10. 回壓、複製、出貨",
+        items: [
+          ["經銷回壓後才能出貨", "待回壓文件可按回壓文件（PDF 或圖片）。成功後按鈕改檢視文件，狀態改未開立出貨單，新增出貨單才可按。沒回壓時新增出貨單停用。"],
+          ["買斷寄倉不必再回壓", "一般通路買斷／寄倉在草稿就有麥頭。審核通過後檢視頁可直接新增出貨單。"],
+          ["可開出貨的狀態", "未開立出貨單、部分出貨可以新增出貨單。已開立出貨單、已作廢、待審核、草稿不可。"],
+          ["出貨單頁籤", "只有已經開過出貨單才出現出貨單頁籤。出貨單編號可開新分頁檢視。"],
+          ["出一部分變部分出貨", "有效出貨單只出了部分數量，客戶訂單變部分出貨。"],
+          ["出完變已開立出貨單", "有效出貨單把下定數量出完，客戶訂單變已開立出貨單。"],
+          ["訂單取消不回寫", "狀態是訂單取消的出貨單不算有效出貨，不把客戶訂單改成已出貨或已完成。"],
+          ["可複製的狀態", "待回壓文件、未開立出貨單、部分出貨、已開立出貨單可複製。確定後產生另一張草稿，原單不變。"],
+          ["不可複製的狀態", "草稿、待審核、已作廢沒有複製按鈕。"]
+        ]
+      },
+      {
+        title: "11. 主管確認完成",
+        items: [
+          ["建檔人看到但不能按", "檢視部分出貨單（例如 SO20260826002）。建檔人看得到確認完成，但是停用。"],
+          ["主管可確認完成", "主管可按。說明預設「以實收為主」，可改，最多 40 字。"],
+          ["完成後鎖住出貨", "確定後狀態變已開立出貨單，列表完成說明顯示該段文字，不能再新增出貨單。"],
+          ["其他狀態沒有此按鈕", "未開立出貨單、已開立出貨單不會出現確認完成。"]
+        ]
+      },
+      {
+        title: "12. 作廢",
+        items: [
+          ["待審核與已作廢不能作廢", "這兩種狀態的作廢是灰的。"],
+          ["其他狀態可作廢", "視窗文案是「作廢客戶訂單將一併取消所有相應出貨單」。"],
+          ["沒選原因不能確定", "沒選原因按確定，提示「請選擇作廢原因」。"],
+          ["三個原因", "可選：庫存不足，不接收分批出貨；通路倉庫位置不足；其他。"],
+          ["其他要另填 30 字內", "選其他後空白按確定，提示「請輸入作廢原因」。有填時最多 30 字。"],
+          ["作廢後出貨單變訂單取消", "確定後訂單變已作廢，所屬出貨單變訂單取消，之後不再依出貨單把狀態改回去。"],
+          ["列表顯示作廢說明", "列表作廢說明顯示所選原因；選其他則顯示自填文字。"]
+        ]
+      },
+      {
+        title: "13. 線上轉單換貨與批次出貨",
+        items: [
+          ["換貨出現條件", "只在線上-轉單，狀態是草稿、待審核或未開立出貨單，而且還沒有有效出貨單。建檔人與主管都可以。"],
+          ["換貨內容檢查", "換貨至少一筆。SKU 須綁定線上-轉單，數量為正整數。"],
+          ["已出貨不能換貨", "已有有效出貨單後，換貨與取消換貨都不可用。"],
+          ["批次沒勾不能送", "沒勾可出貨的線上-轉單就按批次建立，提示「請先勾選可出貨的線上-轉單」。"],
+          ["批次要選運送方式", "沒選運送方式，提示「請選擇運送方式」。選項有新竹物流、黑猫、全盛貨運(邱哥)、宅配通。"],
+          ["批次依收件人開出貨單", "確定後，每張單把尚未出貨的商品依收件人各開出貨單，並提示建立張數。"]
+        ]
+      },
+      {
+        title: "14. 檢視鎖定",
+        items: [
+          ["非草稿不可改", "待審核以後的單，基本資料、下定商品、費用都不可改。"],
+          ["費用頁籤出現條件", "費用頁籤只在檢視、且不是線上-轉單時出現。"],
+          ["匯出按鈕", "經銷、境外在待回壓文件之後可匯出。境外按鈕文字是「匯出」，其餘是「匯出 PDF」。草稿與待審核不能匯出。"]
+        ]
+      }
+    ];
+
+    const saved = new Set(JSON.parse(localStorage.getItem(KEY) || "[]"));
+    const list = document.getElementById("list");
+    let filter = "all";
+
+    sections.forEach((section, si) => {
+      const sec = document.createElement("section");
+      sec.dataset.section = String(si);
+      sec.innerHTML = `<div class="sec-head"><h2></h2><div class="sec-count"></div></div><ul></ul>`;
+      sec.querySelector("h2").textContent = section.title;
+      const ul = sec.querySelector("ul");
+      section.items.forEach((item, ii) => {
+        const id = `s${si + 1}-${String(ii + 1).padStart(2, "0")}`;
+        const li = document.createElement("li");
+        li.dataset.id = id;
+        li.dataset.title = item[0];
+        li.dataset.expect = item[1];
+        li.dataset.section = section.title;
+        if (saved.has(id)) li.classList.add("done");
+        li.innerHTML = `<label class="item"><input type="checkbox" /><span><span class="title"></span><span class="expect"></span></span></label>`;
+        const box = li.querySelector("input");
+        box.checked = saved.has(id);
+        li.querySelector(".title").textContent = item[0];
+        li.querySelector(".expect").textContent = item[1];
+        box.addEventListener("change", () => {
+          li.classList.toggle("done", box.checked);
+          if (box.checked) saved.add(id);
+          else saved.delete(id);
+          localStorage.setItem(KEY, JSON.stringify([...saved]));
+          paint();
+        });
+        ul.appendChild(li);
+      });
+      list.appendChild(sec);
+    });
+
+    function paint() {
+      const rows = [...document.querySelectorAll("li")];
+      const done = rows.filter((li) => li.classList.contains("done")).length;
+      document.getElementById("count").textContent = `已測 ${done} / ${rows.length}`;
+      document.getElementById("bar").style.width = `${rows.length ? (done / rows.length) * 100 : 0}%`;
+      document.querySelectorAll("section").forEach((sec) => {
+        const items = [...sec.querySelectorAll("li")];
+        const n = items.filter((li) => li.classList.contains("done")).length;
+        sec.querySelector(".sec-count").textContent = `${n} / ${items.length}`;
+        let visible = 0;
+        items.forEach((li) => {
+          const show = filter === "all" || (filter === "done" ? li.classList.contains("done") : !li.classList.contains("done"));
+          li.classList.toggle("hidden", !show);
+          if (show) visible += 1;
+        });
+        sec.classList.toggle("hidden", visible === 0);
+      });
+    }
+
+    document.getElementById("filters").addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      filter = btn.dataset.filter;
+      document.querySelectorAll("#filters button").forEach((el) => el.classList.toggle("active", el === btn));
+      paint();
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      if (!saved.size) return;
+      if (!confirm("清除全部勾選？已測紀錄會從這台瀏覽器刪除。")) return;
+      saved.clear();
+      localStorage.removeItem(KEY);
+      document.querySelectorAll("li").forEach((li) => {
+        li.classList.remove("done");
+        li.querySelector("input").checked = false;
+      });
+      paint();
+    });
+
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      const lines = ["客戶訂單管理功能測試進度", ""];
+      document.querySelectorAll("section").forEach((sec) => {
+        lines.push(sec.querySelector("h2").textContent);
+        sec.querySelectorAll("li").forEach((li) => {
+          lines.push(`${li.classList.contains("done") ? "[x]" : "[ ]"} ${li.dataset.title}`);
+        });
+        lines.push("");
+      });
+      const text = lines.join("\n");
+      try {
+        await navigator.clipboard.writeText(text);
+        document.getElementById("copyBtn").textContent = "已複製";
+      } catch (err) {
+        document.getElementById("copyBtn").textContent = "複製失敗";
+      }
+      setTimeout(() => { document.getElementById("copyBtn").textContent = "複製進度"; }, 1200);
+    });
+
+    paint();
+  </script>
+</body>
+</html>
