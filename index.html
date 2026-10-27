@@ -9123,7 +9123,7 @@
       return `<label class="recv-field${wide ? " is-wide" : ""}"><span>${escapeHtml(label)}</span>${control}</label>`;
     }
 
-    function recvBlockOuterHtml(row, rowsHtml, platform, editable) {
+    function recvBlockOuterHtml(row, rowsHtml, editable) {
       const gid = row.groupId || "";
       const head = `
         <div class="recv-block-bar">
@@ -9131,7 +9131,6 @@
           ${editable ? '<button type="button" class="btn recv-del-recipient" data-recv-act="del-recipient">刪除收件人</button>' : ""}
         </div>
         <div class="recv-head">
-          ${recvFieldHtml("通路平台", `<input type="text" data-recv="platform" readonly value="${escapeHtml(platform || row.platform || "")}" />`)}
           ${recvFieldHtml("平台訂單編號", `<input type="text" data-recv="platformOrderNo" maxlength="50" value="${escapeHtml(row.platformOrderNo || "")}" />`)}
           ${recvFieldHtml("預計到貨日期", `<input type="date" data-recv="arriveDate" value="${escapeHtml(toDateInput(row.arriveDate) || "")}" />`)}
           ${recvFieldHtml("預計到貨時間", `<input type="time" data-recv="arriveTime" value="${escapeHtml(toTimeInput(row.arriveTime) || "")}" />`)}
@@ -9280,7 +9279,7 @@
         }
         blockMap[row.groupId].parts.push(html);
       });
-      body.innerHTML = blocks.map((block) => recvBlockOuterHtml(block.row, block.parts.join(""), platform, editable)).join("");
+      body.innerHTML = blocks.map((block) => recvBlockOuterHtml(block.row, block.parts.join(""), editable)).join("");
       refreshRecvItemDeleteButtons();
       syncRecipientPanel(order);
       const recvConfirm = document.getElementById("recvConfirmGoodsBar");
@@ -9463,7 +9462,7 @@
         exchangeItems: [],
       };
       const itemHtml = recvItemRowHtml(row, platform, true, canExchangeOnPo(getWorkspaceOrder()), false);
-      body.insertAdjacentHTML("beforeend", recvBlockOuterHtml(row, itemHtml, platform, true));
+      body.insertAdjacentHTML("beforeend", recvBlockOuterHtml(row, itemHtml, true));
       refreshRecvItemDeleteButtons();
       const created = body.querySelectorAll(".recv-block");
       const focusEl = created[created.length - 1] && created[created.length - 1].querySelector('[data-recv="platformOrderNo"]');
@@ -9609,13 +9608,6 @@
       for (let i = 0; i < list.length; i++) {
         const rec = list[i];
         const prefix = list.length > 1 ? `訂單內容第 ${i + 1} 筆：` : "";
-        if (!rec.platform) {
-          alert(prefix + "請先選擇買方通路名稱（將同步至通路平台）");
-          if (poWizardOn) setPoWizardStep(1);
-          else setPoTab("basic");
-          document.getElementById("editOverseasChannelName").focus();
-          return false;
-        }
         if (!rec.platformOrderNo) {
           alert(prefix + "請輸入平台訂單編號");
           focusRecvOrWizard(i, "platformOrderNo");
@@ -10033,8 +10025,7 @@
           const tbody = block && block.querySelector("tbody");
           if (!block || !tbody) return;
           const gid = block.getAttribute("data-recv-group");
-          const platformEl = block.querySelector('[data-recv="platform"]');
-          const platform = (platformEl && platformEl.value) || buyerChannelNameOf(getWorkspaceOrder()) || "線上-轉單";
+          const platform = buyerChannelNameOf(getWorkspaceOrder()) || "線上-轉單";
           const row = {
             groupId: gid,
             itemKey: newRecvItemKey(gid),
