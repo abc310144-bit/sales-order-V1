@@ -882,6 +882,85 @@
       max-width: 100%;
       overflow: hidden;
     }
+    .recv-panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .recv-panel-head .goods-title { margin: 0; }
+    .recv-panel-actions { display: flex; align-items: center; gap: 12px; }
+    .recv-ship-all { display: none; align-items: center; gap: 6px; font-size: 13px; }
+    #page-order-edit.can-recv-ship-check .recv-ship-all { display: inline-flex; }
+    .recv-block {
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .recv-head {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px 12px;
+      padding: 12px;
+      background: #fafafa;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .recv-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .recv-field > span { font-weight: 700; font-size: 13px; color: var(--text); }
+    .recv-field.is-wide { grid-column: span 2; }
+    .recv-field input,
+    .recv-field select,
+    .recv-field textarea {
+      width: 100%;
+      min-height: 32px;
+      box-sizing: border-box;
+      font-size: 13px;
+      padding: 4px 8px;
+    }
+    .recv-field textarea { min-height: 32px; resize: vertical; }
+    .recv-field input[readonly] { background: #f5f5f5; color: var(--text-2); }
+    .recv-block-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px 0;
+      background: #fafafa;
+    }
+    .recv-block-bar strong { font-size: 14px; }
+    .recv-del-recipient { height: 32px; }
+    .recv-goods-wrap { overflow-x: auto; }
+    .recv-goods-table { width: 100%; min-width: 960px; border-collapse: collapse; }
+    .recv-goods-table th,
+    .recv-goods-table td {
+      border-bottom: 1px solid var(--border-light);
+      padding: 8px 10px;
+      font-size: 13px;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    .recv-goods-table th { font-weight: 600; background: #fff; text-align: left; }
+    .recv-goods-table input,
+    .recv-goods-table select,
+    .recv-goods-table textarea {
+      width: 100%;
+      min-height: 32px;
+      box-sizing: border-box;
+      font-size: 13px;
+      padding: 4px 8px;
+    }
+    .recv-goods-table input[readonly] { background: #f5f5f5; color: var(--text-2); }
+    .recv-block-foot { padding: 10px 12px 12px; }
+    .recv-add-item {
+      width: 100%;
+      height: 36px;
+      border: 1px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      font-size: 14px;
+    }
     .recv-table-wrap {
       display: block;
       overflow-x: auto;
@@ -943,6 +1022,7 @@
     .recv-list-table [data-recv="sellableQty"] { min-width: 100px; }
     .recv-list-table [data-recv="qty"] { min-width: 88px; }
     .recv-list-table input.is-oversell,
+    .recv-goods-table input.is-oversell,
     .recv-exchange-table input.is-oversell {
       color: #cf1322;
     }
@@ -1007,10 +1087,12 @@
       cursor: pointer;
       background: #fff;
     }
-    .recv-list-table tr.recv-item-row.is-exchanged > td {
+    .recv-list-table tr.recv-item-row.is-exchanged > td,
+    .recv-goods-table tr.recv-item-row.is-exchanged > td {
       background: #e8e8e8;
     }
-    .recv-list-table tr.recv-ex-block > td {
+    .recv-list-table tr.recv-ex-block > td,
+    .recv-goods-table tr.recv-ex-block > td {
       background: #f5f5f5;
       padding: 10px 14px 12px;
       border-top: 0;
@@ -1067,6 +1149,7 @@
       overflow-x: hidden;
     }
     @media (max-width: 1100px) {
+      .recv-head { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .po-basic-layout.has-recipient {
         grid-template-columns: 1fr;
       }
@@ -1180,6 +1263,12 @@
     #page-order-edit.is-wizard-preview #editGoodsBody [data-del],
     #page-order-edit.is-wizard-preview #poOrderAddFeeBtn,
     #page-order-edit.is-wizard-preview .recv-ops-col,
+    #page-order-edit.is-wizard-preview .recv-add-recipient,
+    #page-order-edit.is-wizard-preview .recv-add-item,
+    #page-order-edit.is-wizard-preview .recv-del-recipient,
+    #page-order-edit.is-readonly .recv-add-recipient,
+    #page-order-edit.is-readonly .recv-add-item,
+    #page-order-edit.is-readonly .recv-del-recipient,
     #page-order-edit.is-wizard-preview [data-del-fee],
     #page-order-edit.is-readonly #poOrderAddFeeBtn,
     #page-order-edit.is-readonly [data-del-fee] { display: none !important; }
@@ -4005,35 +4094,17 @@
             </div>
               </div>
             <aside class="po-recipient-panel hidden" id="editRecipientPanel">
-              <h3 class="goods-title">訂單內容</h3>
-              <div class="table-wrap recv-table-wrap">
-                <table class="ship-items-table recv-list-table">
-                  <thead>
-                    <tr>
-                      <th class="recv-ship-check-col col-check"><input type="checkbox" id="recvShipCheckAll" aria-label="全選要出貨的商品" /></th>
-                      <th class="recv-ex-col">換貨</th>
-                      <th>通路平台</th>
-                      <th>平台訂單編號</th>
-                      <th>預計到貨日期</th>
-                      <th>應出貨日</th>
-                      <th>收件人姓名</th>
-                      <th>郵遞區號</th>
-                      <th>地址</th>
-                      <th>電話</th>
-                      <th>SKU</th>
-                      <th>商品名稱</th>
-                      <th>效期_批號</th>
-                      <th class="num">當前可賣量</th>
-                      <th class="num">預計出貨數量(下訂數量)</th>
-                      <th class="num">合計</th>
-                      <th>運送方式</th>
-                      <th>備註</th>
-                      <th class="recv-ops-col">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody id="editRecvBody"></tbody>
-                </table>
+              <div class="recv-panel-head">
+                <h3 class="goods-title">訂單內容</h3>
+                <div class="recv-panel-actions">
+                  <label class="recv-ship-all" id="recvShipAllWrap">
+                    <input type="checkbox" id="recvShipCheckAll" aria-label="全選要出貨的商品" />
+                    全選要出貨的商品
+                  </label>
+                  <button type="button" class="btn btn-primary recv-add-recipient" id="recvAddRecipientBtn" data-recv-act="add-recipient">新增收件人</button>
+                </div>
               </div>
+              <div id="editRecvBody"></div>
               <div class="filter-actions hidden" id="recvConfirmGoodsBar" style="justify-content:flex-end;margin-top:12px">
                 <button type="button" class="btn btn-primary" id="recvConfirmGoodsBtn">確認下定商品</button>
               </div>
@@ -8519,7 +8590,19 @@
       "address", "tel", "orderAmount", "shipMethod",
     ];
     const RECV_PRODUCT_FIELDS = ["sku", "itemName", "batch", "qty"];
-    const RECV_COL_COUNT = 19;
+    const RECV_COL_COUNT = 10;
+    const RECV_GOODS_HEAD = `<tr>
+            <th class="recv-ship-check-col col-check">出貨</th>
+            <th class="recv-ex-col">換貨</th>
+            <th>SKU</th>
+            <th>商品名稱</th>
+            <th>效期_批號</th>
+            <th class="num">當前可賣量</th>
+            <th class="num">預計出貨數量(下訂數量)</th>
+            <th class="num">合計</th>
+            <th>備註</th>
+            <th class="recv-ops-col">操作</th>
+          </tr>`;
     let nextRecvGroupId = 1;
     let nextRecvItemSeq = 1;
 
@@ -9017,30 +9100,52 @@
         </tr>`;
     }
 
-    function recvItemOpsHtml(editable, showDelete, child) {
+    function recvItemOpsHtml(editable, showDelete) {
       if (!editable) return `<td class="ops recv-ops-col"></td>`;
-      const delAct = child ? "del-item" : "del-recipient";
-      return `<td class="ops recv-ops-col">
-            <a href="#" data-recv-act="add-item">新增品項</a>
-            ${child ? "" : '<a href="#" data-recv-act="add-recipient">新增收件人</a>'}
-            ${showDelete ? `<a href="#" data-recv-act="${delAct}">刪除</a>` : ""}
-          </td>`;
+      return `<td class="ops recv-ops-col">${showDelete ? '<a href="#" data-recv-act="del-item">刪除</a>' : ""}</td>`;
     }
 
     function refreshRecvItemDeleteButtons() {
       const body = document.getElementById("editRecvBody");
       if (!body || orderFormMode === "view") return;
-      const rows = body.querySelectorAll("tr.recv-item-row");
-      rows.forEach((tr, idx) => {
-        const ops = tr.querySelector("td.recv-ops-col");
-        if (!ops) return;
-        const child = tr.classList.contains("is-recv-child");
-        const delAct = child ? "del-item" : "del-recipient";
-        ops.innerHTML = `
-            <a href="#" data-recv-act="add-item">新增品項</a>
-            ${child ? "" : '<a href="#" data-recv-act="add-recipient">新增收件人</a>'}
-            ${idx > 0 ? `<a href="#" data-recv-act="${delAct}">刪除</a>` : ""}`;
+      body.querySelectorAll(".recv-block").forEach((block, blockIndex) => {
+        const del = block.querySelector("[data-recv-act='del-recipient']");
+        if (del) del.classList.toggle("hidden", blockIndex === 0);
+        block.querySelectorAll("tr.recv-item-row").forEach((tr, idx) => {
+          const ops = tr.querySelector("td.recv-ops-col");
+          if (!ops) return;
+          ops.innerHTML = idx > 0 ? '<a href="#" data-recv-act="del-item">刪除</a>' : "";
+        });
       });
+    }
+
+    function recvFieldHtml(label, control, wide) {
+      return `<label class="recv-field${wide ? " is-wide" : ""}"><span>${escapeHtml(label)}</span>${control}</label>`;
+    }
+
+    function recvBlockOuterHtml(row, rowsHtml, platform, editable) {
+      const gid = row.groupId || "";
+      const head = `
+        <div class="recv-block-bar">
+          <strong>收件人</strong>
+          ${editable ? '<button type="button" class="btn recv-del-recipient" data-recv-act="del-recipient">刪除收件人</button>' : ""}
+        </div>
+        <div class="recv-head">
+          ${recvFieldHtml("通路平台", `<input type="text" data-recv="platform" readonly value="${escapeHtml(platform || row.platform || "")}" />`)}
+          ${recvFieldHtml("平台訂單編號", `<input type="text" data-recv="platformOrderNo" maxlength="50" value="${escapeHtml(row.platformOrderNo || "")}" />`)}
+          ${recvFieldHtml("預計到貨日期", `<input type="date" data-recv="arriveDate" value="${escapeHtml(toDateInput(row.arriveDate) || "")}" />`)}
+          ${recvFieldHtml("預計到貨時間", `<input type="time" data-recv="arriveTime" value="${escapeHtml(toTimeInput(row.arriveTime) || "")}" />`)}
+          ${recvFieldHtml("應出貨日", `<input type="date" data-recv="shipDate" value="${escapeHtml(toDateInput(row.shipDate) || "")}" />`)}
+          ${recvFieldHtml("收件人姓名", `<input type="text" data-recv="name" maxlength="50" value="${escapeHtml(row.name || "")}" />`)}
+          ${recvFieldHtml("郵遞區號", `<input type="text" data-recv="zip" maxlength="3" inputmode="numeric" placeholder="三碼" value="${escapeHtml(row.zip || "")}" />`)}
+          ${recvFieldHtml("地址", `<textarea data-recv="address" rows="1">${escapeHtml(row.address || "")}</textarea>`, true)}
+          ${recvFieldHtml("電話", `<input type="text" data-recv="tel" maxlength="30" value="${escapeHtml(row.tel || "")}" />`)}
+          ${recvFieldHtml("運送方式", recvSelectHtml(RECV_SHIP_OPTS, row.shipMethod || "", "shipMethod"))}
+        </div>`;
+      const add = editable
+        ? `<div class="recv-block-foot"><button type="button" class="recv-add-item" data-recv-act="add-item">新增商品明細列</button></div>`
+        : "";
+      return `<section class="recv-block" data-recv-group="${escapeHtml(gid)}">${head}<div class="recv-goods-wrap"><table class="recv-goods-table"><thead>${RECV_GOODS_HEAD}</thead><tbody>${rowsHtml}</tbody></table></div>${add}</section>`;
     }
 
     function refreshRecvExDeleteButtons(exTbody) {
@@ -9078,28 +9183,12 @@
         }
         return `<td class="recv-ex-col"></td>`;
       })();
-      const child = !!(row && row.child);
-      const ops = recvItemOpsHtml(editable, !!showDelete, child);
+      const ops = recvItemOpsHtml(editable, !!showDelete);
       const ro = productLocked ? " readonly" : "";
-      const gap = `<td class="recv-child-gap"></td>`;
-      const leadCells = child
-        ? gap.repeat(8)
-        : `<td><input type="text" data-recv="platform" readonly value="${escapeHtml(platform || row.platform || "")}" /></td>
-          <td><input type="text" data-recv="platformOrderNo" maxlength="50" value="${escapeHtml(row.platformOrderNo || "")}" /></td>
-          <td><input type="date" data-recv="arriveDate" value="${escapeHtml(toDateInput(row.arriveDate) || "")}" /></td>
-          <td><input type="date" data-recv="shipDate" value="${escapeHtml(toDateInput(row.shipDate) || "")}" /></td>
-          <td><input type="text" data-recv="name" maxlength="50" value="${escapeHtml(row.name || "")}" /></td>
-          <td><input type="text" data-recv="zip" maxlength="3" inputmode="numeric" placeholder="三碼" value="${escapeHtml(row.zip || "")}" /></td>
-          <td class="recv-col-address"><textarea data-recv="address" rows="1">${escapeHtml(row.address || "")}</textarea></td>
-          <td><input type="text" data-recv="tel" maxlength="30" value="${escapeHtml(row.tel || "")}" /></td>`;
-      const shipCell = child
-        ? gap
-        : `<td>${recvSelectHtml(RECV_SHIP_OPTS, row.shipMethod || "", "shipMethod")}</td>`;
       const main = `
-        <tr class="recv-item-row${hasEx ? " is-exchanged" : ""}${child ? " is-recv-child" : ""}" data-recv-group="${escapeHtml(row.groupId)}" data-recv-item="${escapeHtml(row.itemKey)}" data-recv-arrive-time="${escapeHtml(row.arriveTime || "")}">
+        <tr class="recv-item-row${hasEx ? " is-exchanged" : ""}" data-recv-group="${escapeHtml(row.groupId)}" data-recv-item="${escapeHtml(row.itemKey)}">
           ${recvShipCheckTd(shipMeta && shipMeta.origin)}
           ${exCell}
-          ${leadCells}
           <td class="recv-sku-cell">
             <input type="text" data-recv="sku" autocomplete="off" value="${escapeHtml(row.sku || "")}"${ro} />
             <div class="recv-sku-hits hidden" data-recv-sku-hits></div>
@@ -9109,7 +9198,6 @@
           <td class="num"><input type="text" data-recv="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
           <td class="num"><input type="number" data-recv="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${qtyOver ? "is-oversell" : ""}"${ro} /></td>
           <td class="num"><input type="number" data-recv="orderAmount" min="0" step="0.01" readonly value="${row.orderAmount === 0 || row.orderAmount ? escapeHtml(String(row.orderAmount)) : ""}" /></td>
-          ${shipCell}
           ${recvRemarkCellHtml(row, editable)}
           ${ops}
         </tr>`;
@@ -9149,7 +9237,9 @@
       const onlyOneRecipient = list.length <= 1;
       const pools = {};
       const groupSeen = {};
-      body.innerHTML = flat.map((row, rowIndex) => {
+      const blocks = [];
+      const blockMap = {};
+      flat.forEach((row) => {
         const isFirstInGroup = !groupSeen[row.groupId];
         if (isFirstInGroup) groupSeen[row.groupId] = true;
         row.child = !isFirstInGroup;
@@ -9183,8 +9273,15 @@
             locked: !showShipCheck,
           }))
           : [];
-        return recvItemRowHtml(row, platform, editable, canExchange, rowIndex > 0, { origin, exchanges });
-      }).join("");
+        const html = recvItemRowHtml(row, platform, editable, canExchange, !isFirstInGroup, { origin, exchanges });
+        if (!blockMap[row.groupId]) {
+          blockMap[row.groupId] = { row, parts: [] };
+          blocks.push(blockMap[row.groupId]);
+        }
+        blockMap[row.groupId].parts.push(html);
+      });
+      body.innerHTML = blocks.map((block) => recvBlockOuterHtml(block.row, block.parts.join(""), platform, editable)).join("");
+      refreshRecvItemDeleteButtons();
       syncRecipientPanel(order);
       const recvConfirm = document.getElementById("recvConfirmGoodsBar");
       if (recvConfirm) {
@@ -9204,8 +9301,9 @@
     }
 
     function readRecvSharedFromTr(tr) {
+      const scope = (tr && tr.closest && tr.closest(".recv-block")) || tr;
       const get = (field) => {
-        const el = tr.querySelector(`[data-recv="${field}"]`);
+        const el = scope && scope.querySelector(`[data-recv="${field}"]`);
         if (!el) return "";
         if (el.matches("input, textarea, select")) return String(el.value || "").trim();
         return String(el.textContent || "").trim();
@@ -9214,7 +9312,7 @@
         platform: get("platform"),
         platformOrderNo: get("platformOrderNo").slice(0, 50),
         arriveDate: get("arriveDate"),
-        arriveTime: tr.getAttribute("data-recv-arrive-time") || "",
+        arriveTime: get("arriveTime"),
         shipDate: get("shipDate"),
         name: get("name"),
         zip: get("zip"),
@@ -9340,17 +9438,36 @@
       if (!poWizardOn) setPoTab("basic");
       const body = document.getElementById("editRecvBody");
       if (!body) return;
-      const groups = [];
-      const seen = new Set();
-      Array.from(body.querySelectorAll("tr[data-recv-group]")).forEach((tr) => {
-        const gid = tr.getAttribute("data-recv-group");
-        if (seen.has(gid)) return;
-        seen.add(gid);
-        groups.push(tr);
-      });
-      const tr = groups[groupIdx];
-      const el = tr && tr.querySelector(`[data-recv="${field}"]`);
+      const block = body.querySelectorAll(".recv-block")[groupIdx];
+      const el = block && block.querySelector(`[data-recv="${field}"]`);
       if (el) el.focus();
+    }
+
+    function appendRecvRecipientBlock() {
+      const body = document.getElementById("editRecvBody");
+      if (!body || orderFormMode === "view") return;
+      const newGid = `g${nextRecvGroupId++}`;
+      const platform = buyerChannelNameOf(getWorkspaceOrder()) || "線上-轉單";
+      const row = {
+        groupId: newGid,
+        itemKey: newRecvItemKey(newGid),
+        child: false,
+        ...emptyRecipient(),
+        platform,
+        sku: "",
+        itemName: "",
+        expiryAccept: "",
+        batch: "",
+        qty: "",
+        remark: "",
+        exchangeItems: [],
+      };
+      const itemHtml = recvItemRowHtml(row, platform, true, canExchangeOnPo(getWorkspaceOrder()), false);
+      body.insertAdjacentHTML("beforeend", recvBlockOuterHtml(row, itemHtml, platform, true));
+      refreshRecvItemDeleteButtons();
+      const created = body.querySelectorAll(".recv-block");
+      const focusEl = created[created.length - 1] && created[created.length - 1].querySelector('[data-recv="platformOrderNo"]');
+      if (focusEl) focusEl.focus();
     }
 
     function focusRecvItemField(trOrGroupIdx, field) {
@@ -9899,56 +10016,29 @@
           persistViewExchangeRow(recvItemTrFromEl(tbody));
           return;
         }
-        const tr = act.closest("tr.recv-item-row");
-        if (!tr) return;
         if (action === "add-recipient") {
-          const gid = tr.getAttribute("data-recv-group");
-          const newGid = `g${nextRecvGroupId++}`;
-          const platform = buyerChannelNameOf(getWorkspaceOrder()) || "線上-轉單";
-          const row = {
-            groupId: newGid,
-            itemKey: newRecvItemKey(newGid),
-            child: false,
-            ...emptyRecipient(),
-            platform,
-            sku: "",
-            itemName: "",
-            expiryAccept: "",
-            batch: "",
-            qty: "",
-            remark: "",
-            exchangeItems: [],
-          };
-          const nodes = gid
-            ? Array.from(body.querySelectorAll(`tr[data-recv-group="${CSS.escape(gid)}"]`))
-            : [];
-          const insertAfter = nodes.length ? nodes[nodes.length - 1] : tr;
-          insertAfter.insertAdjacentHTML("afterend", recvItemRowHtml(row, platform, true, canExchangeOnPo(getWorkspaceOrder()), true));
-          refreshRecvItemDeleteButtons();
-          const created = insertAfter.nextElementSibling;
-          const focusEl = created && created.querySelector('[data-recv="platformOrderNo"]');
-          if (focusEl) focusEl.focus();
+          appendRecvRecipientBlock();
           return;
         }
         if (action === "del-recipient") {
-          const gid = tr.getAttribute("data-recv-group");
-          const first = body.querySelector("tr.recv-item-row");
-          if (!gid || first === tr) return;
-          body.querySelectorAll(`tr[data-recv-group="${CSS.escape(gid)}"]`).forEach((el) => el.remove());
+          const block = act.closest(".recv-block");
+          const blocks = body.querySelectorAll(".recv-block");
+          if (!block || blocks.length <= 1 || blocks[0] === block) return;
+          block.remove();
           refreshRecvItemDeleteButtons();
           return;
         }
         if (action === "add-item") {
-          const shared = readRecvSharedFromTr(tr);
-          const gid = tr.getAttribute("data-recv-group");
-          const platform = shared.platform || buyerChannelNameOf(getWorkspaceOrder()) || "線上-轉單";
-          const canExchange = canExchangeOnPo(getWorkspaceOrder());
+          const block = act.closest(".recv-block");
+          const tbody = block && block.querySelector("tbody");
+          if (!block || !tbody) return;
+          const gid = block.getAttribute("data-recv-group");
+          const platformEl = block.querySelector('[data-recv="platform"]');
+          const platform = (platformEl && platformEl.value) || buyerChannelNameOf(getWorkspaceOrder()) || "線上-轉單";
           const row = {
             groupId: gid,
             itemKey: newRecvItemKey(gid),
             child: true,
-            arriveTime: tr.getAttribute("data-recv-arrive-time") || "",
-            ...shared,
             sku: "",
             itemName: "",
             expiryAccept: "",
@@ -9958,20 +10048,16 @@
             remark: "",
             exchangeItems: [],
           };
-          let insertAfter = tr;
-          const itemKey = tr.getAttribute("data-recv-item");
-          if (itemKey) {
-            const block = body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`);
-            if (block) insertAfter = block;
-          }
-          insertAfter.insertAdjacentHTML("afterend", recvItemRowHtml(row, platform, true, canExchange, true));
+          tbody.insertAdjacentHTML("beforeend", recvItemRowHtml(row, platform, true, canExchangeOnPo(getWorkspaceOrder()), true));
           refreshRecvItemDeleteButtons();
           syncRecvGroupAmount(gid);
-          const created = insertAfter.nextElementSibling;
-          const focusEl = created && created.querySelector('[data-recv="sku"]');
+          const created = tbody.querySelectorAll("tr.recv-item-row");
+          const focusEl = created[created.length - 1] && created[created.length - 1].querySelector('[data-recv="sku"]');
           if (focusEl) focusEl.focus();
           return;
         }
+        const tr = act.closest("tr.recv-item-row");
+        if (!tr) return;
         if (action === "del-item") {
           const gid = tr.getAttribute("data-recv-group");
           const itemKey = tr.getAttribute("data-recv-item") || "";
@@ -10021,6 +10107,13 @@
       const panel = document.getElementById("editRecipientPanel");
       if (panel && panel.dataset.recvShipBound !== "1") {
         panel.dataset.recvShipBound = "1";
+        panel.addEventListener("click", (e) => {
+          const act = e.target.closest("#recvAddRecipientBtn");
+          if (!act) return;
+          e.preventDefault();
+          if (orderFormMode === "view") return;
+          appendRecvRecipientBlock();
+        });
         panel.addEventListener("change", (e) => {
           if (e.target && e.target.id === "recvShipCheckAll") {
             const on = e.target.checked;
