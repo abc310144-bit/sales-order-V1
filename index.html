@@ -7650,18 +7650,18 @@
     }
 
     const mockItemPool = [
-      { sku: "UM-1001", name: "綜合維他命軟糖 60顆", nameEn: "Multivitamin Gummies 60 pcs", expiryAccept: "2027-03-31", unit: "盒", qty: 24, pcsPerCarton: 24, weightG: 80 },
-      { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", nameEn: "Whey Protein Powder Chocolate 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12, pcsPerCarton: 12, weightG: 1000 },
-      { sku: "UM-2108", name: "益生菌隨手包", nameEn: "Probiotic Sachets", expiryAccept: "2026-11-30", unit: "盒", qty: 18, pcsPerCarton: 18, weightG: 180 },
-      { sku: "UM-3305", name: "膠原蛋白胜肽", nameEn: "Collagen Peptides", expiryAccept: "2027-01-20", unit: "袋", qty: 36, pcsPerCarton: 36, weightG: 250 },
-      { sku: "UM-4412", name: "電解質補給粉", nameEn: "Electrolyte Powder", expiryAccept: "2026-09-30", unit: "盒", qty: 20, pcsPerCarton: 20, weightG: 100 },
-      { sku: "PX-8801", name: "優質高蛋白棒", nameEn: "High Protein Bar", expiryAccept: "2026-11-30", unit: "盒", qty: 48, pcsPerCarton: 24, weightG: 480 },
-      { sku: "UM-5520", name: "植物蛋白飲 原味", nameEn: "Plant Protein Drink Original", expiryAccept: "2027-02-28", unit: "罐", qty: 16, pcsPerCarton: 16, weightG: 350 },
-      { sku: "UM-6601", name: "蛋白酥脆脆 起司 30g", nameEn: "Protein Crisp Cheese 30g", expiryAccept: "2027-04-30", unit: "盒", qty: 24, pcsPerCarton: 24, weightG: 120 },
-      { sku: "UM-6602", name: "手作蛋白餅乾 原味", nameEn: "Handmade Protein Cookie Original", expiryAccept: "2027-01-15", unit: "盒", qty: 20, pcsPerCarton: 20, weightG: 200 },
-      { sku: "UM-7703", name: "零卡果凍 蜂蜜檸檬", nameEn: "Zero Calorie Jelly Honey Lemon", expiryAccept: "2027-06-30", unit: "箱", qty: 30, pcsPerCarton: 30, weightG: 800 },
-      { sku: "UM-8804", name: "分離乳清 可可 500g", nameEn: "Whey Protein Isolate Cocoa 500g", expiryAccept: "2027-03-01", unit: "袋", qty: 12, pcsPerCarton: 12, weightG: 500 },
-      { sku: "UM-9905", name: "植物蛋白棒 花生", nameEn: "Plant Protein Bar Peanut", expiryAccept: "2027-02-10", unit: "盒", qty: 16, pcsPerCarton: 16, weightG: 160 },
+      { sku: "UM-1001", name: "綜合維他命軟糖 60顆", nameEn: "Multivitamin Gummies 60 pcs", expiryAccept: "2027-03-31", unit: "盒", qty: 24, pcsPerCarton: 24, weightG: 80, boxLengthCm: 24, boxWidthCm: 18, boxHeightCm: 12 },
+      { sku: "UM-1002", name: "乳清蛋白粉 巧克力 1kg", nameEn: "Whey Protein Powder Chocolate 1kg", expiryAccept: "2026-12-15", unit: "罐", qty: 12, pcsPerCarton: 12, weightG: 1000, boxLengthCm: 32, boxWidthCm: 24, boxHeightCm: 28 },
+      { sku: "UM-2108", name: "益生菌隨手包", nameEn: "Probiotic Sachets", expiryAccept: "2026-11-30", unit: "盒", qty: 18, pcsPerCarton: 18, weightG: 180, boxLengthCm: 28, boxWidthCm: 20, boxHeightCm: 16 },
+      { sku: "UM-3305", name: "膠原蛋白胜肽", nameEn: "Collagen Peptides", expiryAccept: "2027-01-20", unit: "袋", qty: 36, pcsPerCarton: 36, weightG: 250, boxLengthCm: 36, boxWidthCm: 26, boxHeightCm: 18 },
+      { sku: "UM-4412", name: "電解質補給粉", nameEn: "Electrolyte Powder", expiryAccept: "2026-09-30", unit: "盒", qty: 20, pcsPerCarton: 20, weightG: 100, boxLengthCm: 22, boxWidthCm: 16, boxHeightCm: 14 },
+      { sku: "PX-8801", name: "優質高蛋白棒", nameEn: "High Protein Bar", expiryAccept: "2026-11-30", unit: "盒", qty: 48, pcsPerCarton: 24, weightG: 480, boxLengthCm: 40, boxWidthCm: 30, boxHeightCm: 20 },
+      { sku: "UM-5520", name: "植物蛋白飲 原味", nameEn: "Plant Protein Drink Original", expiryAccept: "2027-02-28", unit: "罐", qty: 16, pcsPerCarton: 16, weightG: 350, boxLengthCm: 30, boxWidthCm: 22, boxHeightCm: 24 },
+      { sku: "UM-6601", name: "蛋白酥脆脆 起司 30g", nameEn: "Protein Crisp Cheese 30g", expiryAccept: "2027-04-30", unit: "盒", qty: 24, pcsPerCarton: 24, weightG: 120, boxLengthCm: 26, boxWidthCm: 18, boxHeightCm: 15 },
+      { sku: "UM-6602", name: "手作蛋白餅乾 原味", nameEn: "Handmade Protein Cookie Original", expiryAccept: "2027-01-15", unit: "盒", qty: 20, pcsPerCarton: 20, weightG: 200, boxLengthCm: 34, boxWidthCm: 24, boxHeightCm: 12 },
+      { sku: "UM-7703", name: "零卡果凍 蜂蜜檸檬", nameEn: "Zero Calorie Jelly Honey Lemon", expiryAccept: "2027-06-30", unit: "箱", qty: 30, pcsPerCarton: 30, weightG: 800, boxLengthCm: 42, boxWidthCm: 32, boxHeightCm: 22 },
+      { sku: "UM-8804", name: "分離乳清 可可 500g", nameEn: "Whey Protein Isolate Cocoa 500g", expiryAccept: "2027-03-01", unit: "袋", qty: 12, pcsPerCarton: 12, weightG: 500, boxLengthCm: 38, boxWidthCm: 28, boxHeightCm: 18 },
+      { sku: "UM-9905", name: "植物蛋白棒 花生", nameEn: "Plant Protein Bar Peanut", expiryAccept: "2027-02-10", unit: "盒", qty: 16, pcsPerCarton: 16, weightG: 160, boxLengthCm: 25, boxWidthCm: 18, boxHeightCm: 14 },
     ];
 
     function mockItemsFor(channelName) {
@@ -11292,6 +11292,39 @@
       return Math.round(lines.reduce((sum, line) => sum + (Number(line[key]) || 0), 0) * 1000) / 1000;
     }
 
+    const PALLET_LENGTH_CM = 100;
+    const PALLET_WIDTH_CM = 120;
+    const PALLET_HEIGHT_CM = 160;
+
+    function boxSizeOf(sku) {
+      const cat = catalogLineBySku(sku);
+      const length = Number(cat && cat.boxLengthCm);
+      const width = Number(cat && cat.boxWidthCm);
+      const height = Number(cat && cat.boxHeightCm);
+      if (!(length > 0) || !(width > 0) || !(height > 0)) return null;
+      return { length, width, height };
+    }
+
+    function cartonPerPalletOf(size) {
+      if (!size) return "";
+      const along = Math.floor(PALLET_LENGTH_CM / size.length);
+      const high = Math.floor(PALLET_HEIGHT_CM / size.height);
+      const across = Math.floor(PALLET_WIDTH_CM / size.width);
+      if (along <= 0 || high <= 0 || across <= 0) return "";
+      return along * high * across;
+    }
+
+    function cartonPerPalletFormula(size) {
+      return `INT(${PALLET_LENGTH_CM}/${size.length})*INT(${PALLET_HEIGHT_CM}/${size.height})*INT(${PALLET_WIDTH_CM}/${size.width})`;
+    }
+
+    function palletCountOf(carton, perPallet) {
+      const cartons = Number(carton);
+      const each = Number(perPallet);
+      if (!(cartons > 0) || !(each > 0)) return "";
+      return Math.ceil(cartons / each);
+    }
+
     function buildPackingSheetXml(order) {
       const parties = overseasExportParties(order);
       const lines = overseasShippableExportLines(order);
@@ -11345,6 +11378,13 @@
         put("C", row, S.text, line.gift ? "*FOC " + line.nameEn : line.nameEn);
         put("F", row, S.center, line.qty);
         if (line.carton !== "") put("G", row, S.center, line.carton);
+        const size = boxSizeOf(line.sku);
+        const perPallet = cartonPerPalletOf(size);
+        const pallets = palletCountOf(line.carton, perPallet);
+        if (perPallet !== "" && pallets !== "") {
+          put("H", row, S.center, perPallet, cartonPerPalletFormula(size));
+          put("I", row, S.center, pallets, "CEILING(G" + row + "/H" + row + ",1)");
+        }
         put("J", row, S.center, line.bestBefore);
         if (line.pcs !== "") put("K", row, S.center, line.pcs);
         if (line.netKg !== "") put("L", row, S.center, line.netKg);
@@ -11354,7 +11394,7 @@
       const sumCols = [
         ["F", packingSum(lines, "qty")],
         ["G", packingSum(lines, "carton")],
-        ["I", 0],
+        ["I", lines.reduce((sum, line) => sum + (Number(palletCountOf(line.carton, cartonPerPalletOf(boxSizeOf(line.sku)))) || 0), 0)],
         ["L", packingSum(lines, "netKg")],
         ["M", 0],
       ];
