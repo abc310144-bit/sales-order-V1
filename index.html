@@ -3207,7 +3207,8 @@
             品運於「結帳單建立」送出的結算包會出現於此。財務檢視核對金額；<strong>月結</strong>且待開發票時可於檢視頁右上選擇回壓發票或 ezpay 開發票。<br />
             <strong>待開發票</strong>可由財務於檢視頁「駁回」（必填原因≤20字）→ 狀態改「已駁回」、整包數量加回路徑結算，已駁回僅供檢視、開票按鈕置灰。<br />
             <strong>已開發票</strong>可由財務於檢視頁「刪除發票」→ 清除發票資料、狀態回「待開發票」後可再開票。<br />
-            <strong>非月結</strong>僅供核對金額，不顯示開票按鈕，狀態維持待開發票。
+            <strong>非月結</strong>僅供核對金額，不顯示開票按鈕，狀態維持待開發票。<br />
+            境外範例：結算包 <strong>20260818082</strong>（客戶訂單 SO20260816021、出貨單 VN00010482）已回壓出口報單。身分切到財務後，在該筆檢視頁可開。結帳單建立把狀態改成「已結算」可看到同一張出貨單。
           </div>
           <section class="filter" id="monthlyBillFilterPanel">
             <div class="filter-grid">
@@ -19414,7 +19415,7 @@
 
     /** 境外結算示範：同一客戶訂單兩張已驗收出貨單，一張有出口報單、一張尚未回壓。 */
     function seedOverseasSettleDemo() {
-      if (overseasSettleSeeded) return;
+      if (!overseasSettleSeeded) {
       overseasSettleSeeded = true;
       const order = salesOrders.find((item) => item.orderNo === "SO20260816021");
       const markAccepted = (ship, acceptedAt, withFile) => {
@@ -19469,6 +19470,70 @@
         rows.push(bare);
         markAccepted(bare, "2026-08-18 15:00:00", false);
       }
+      }
+      ensureOverseasExportBillDemo();
+    }
+
+    /** 財務結算假資料：VN00010482 整張已結，檢視頁可開出貨單上的出口報單。 */
+    function ensureOverseasExportBillDemo() {
+      const BILL_ID = "20260818082";
+      const order = salesOrders.find((item) => item.orderNo === "SO20260816021");
+      const ship = shipByOrderId("VN00010482");
+      if (!order || !ship || ship.status !== "已驗收") return;
+      if (!hasExportDeclFile(ship)) {
+        const file = demoStampPlaceholder({ orderNo: ship.salesOrderNo, poDocNo: ship.orderId });
+        file.name = `出口報單-${ship.orderId}.pdf`;
+        ship.exportDeclFile = file;
+      }
+      const already = settlementRecords.some((rec) => String(rec.id) === BILL_ID)
+        || settlementRecords.some((rec) => rec.shipNo === ship.orderId && rec.status !== "已駁回");
+      if (already) return;
+      const source = shipSettleLines(order, ship).filter((line) => (Number(line.acceptQty) || 0) > 0);
+      if (!source.length) return;
+      const lines = source.map((line) => {
+        const untaxed = accRoundMoney(line.price);
+        const qty = Number(line.acceptQty) || 0;
+        return {
+          orderNo: order.orderNo,
+          shipNo: ship.orderId,
+          channelName: order.channelName,
+          key: line.key,
+          sku: line.sku,
+          name: line.name,
+          qty,
+          gift: !!line.gift,
+          price: untaxed,
+          priceTaxed: untaxed,
+          tax: 0,
+          amount: accRoundMoney(untaxed * qty),
+          remark: "",
+        };
+      });
+      lines.forEach((line) => {
+        const target = ensureShipSettleLedgerItem(ship, line);
+        target.acceptQty = Math.max(Number(target.acceptQty) || 0, Number(line.qty) || 0);
+        target.settledQty = Math.max(Number(target.settledQty) || 0, Number(line.qty) || 0);
+      });
+      const total = accRoundMoney(lines.reduce((sum, line) => sum + (line.gift ? 0 : line.amount), 0));
+      settlementRecords.push(normalizeSettlementRecord({
+        id: BILL_ID,
+        createdAt: "2026-08-18 16:30:00",
+        operator: "建檔人",
+        type: "買斷",
+        channelName: order.channelName,
+        channelType: order.channelType || "境外通路",
+        shipNo: ship.orderId,
+        status: "待開發票",
+        monthly: false,
+        invoiceNo: "",
+        invoiceDate: "",
+        invoiceAmount: null,
+        fileName: "",
+        fileType: "",
+        fileData: "",
+        total,
+        lines,
+      }));
     }
 
     document.getElementById("accAccordionBtn").addEventListener("click", () => {
