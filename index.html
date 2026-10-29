@@ -1097,7 +1097,7 @@
       padding: 10px 14px 12px;
       border-top: 0;
     }
-    .recv-ex-inner { max-width: 880px; }
+    .recv-ex-inner { max-width: 1080px; }
     .recv-ex-title {
       font-size: 12px;
       color: var(--text-2);
@@ -1125,6 +1125,7 @@
     }
     .recv-exchange-table [data-recv-ex="sku"] { min-width: 120px; }
     .recv-exchange-table [data-recv-ex="itemName"] { min-width: 160px; }
+    .recv-exchange-table [data-recv-ex="batch"] { min-width: 160px; }
     .recv-exchange-table [data-recv-ex="sellableQty"] { min-width: 100px; }
     .recv-exchange-table [data-recv-ex="qty"] { min-width: 80px; }
     .recv-ex-label { color: var(--text-2); font-size: 12px; }
@@ -1137,9 +1138,11 @@
       cursor: pointer;
     }
     #page-order-edit.is-readonly.can-exchange .recv-exchange-table input[data-recv-ex="sku"],
-    #page-order-edit.is-readonly.can-exchange .recv-exchange-table input[data-recv-ex="qty"] {
+    #page-order-edit.is-readonly.can-exchange .recv-exchange-table input[data-recv-ex="qty"],
+    #page-order-edit.is-readonly.can-exchange .recv-exchange-table select[data-recv-ex="batch"] {
       background: #fff;
       cursor: text;
+      pointer-events: auto;
     }
     #page-order-edit .po-pane[data-po-pane="basic"] {
       overflow-x: hidden;
@@ -6492,6 +6495,12 @@
           alert(`第 ${i + 2} 列：SKU ${row.sku} 未綁定「線上-轉單」通路商品，整檔不匯入` + (samples ? `\n可參考：${samples}` : ""));
           return null;
         }
+        const batchRaw = String(row.batch || "").trim();
+        if (batchRaw && !recvBatchList().includes(batchRaw)) {
+          alert(`第 ${i + 2} 列：批號「${batchRaw}」不在可選清單，整檔不匯入。留空則依先進先出。`);
+          return null;
+        }
+        row.batch = batchRaw;
         if (!groups.has(platformOrderNo)) {
           groups.set(platformOrderNo, { rows: [], meta: row });
         }
@@ -6527,6 +6536,7 @@
             platformOrderNo,
             expiry: row.expiry || "",
             batch: row.batch || "",
+            allowEmptyBatch: !String(row.batch || "").trim(),
           });
         });
         allItems.push(...items);
@@ -8643,7 +8653,7 @@
     function enableRecvExchangeInputs() {
       const body = document.getElementById("editRecvBody");
       if (!body) return;
-      body.querySelectorAll('tr.recv-ex-block [data-recv-ex="sku"], tr.recv-ex-block [data-recv-ex="qty"]').forEach((el) => {
+      body.querySelectorAll('tr.recv-ex-block [data-recv-ex="sku"], tr.recv-ex-block [data-recv-ex="qty"], tr.recv-ex-block [data-recv-ex="batch"]').forEach((el) => {
         el.disabled = false;
         el.readOnly = false;
       });
@@ -8731,15 +8741,6 @@
       return [];
     }
 
-    function recvDefaultBatch() {
-      if (typeof closestFifoLot === "function") {
-        const lot = closestFifoLot();
-        return lot && lot.batch ? lot.batch : "";
-      }
-      const list = recvBatchList();
-      return list[0] || "";
-    }
-
     function expiryDateFromBatch(batch) {
       if (typeof parseBatchDate === "function") {
         const d = parseBatchDate(batch);
@@ -8763,18 +8764,21 @@
       return `<select data-recv="${field}">${opts.join("")}</select>`;
     }
 
-    function recvBatchSelectHtml(value) {
+    function recvBatchSelectHtml(value, opts) {
       const batches = recvBatchList();
       const cur = value || "";
-      const opts = ['<option value="">請選擇</option>']
+      const exchange = !!(opts && opts.exchange);
+      const disabled = !!(opts && opts.disabled);
+      const options = ['<option value="">先進先出</option>']
         .concat(batches.map((opt) => {
           const sel = opt === cur ? " selected" : "";
           return `<option value="${escapeHtml(opt)}"${sel}>${escapeHtml(opt)}</option>`;
         }));
       if (cur && !batches.includes(cur)) {
-        opts.push(`<option value="${escapeHtml(cur)}" selected>${escapeHtml(cur)}</option>`);
+        options.push(`<option value="${escapeHtml(cur)}" selected>${escapeHtml(cur)}</option>`);
       }
-      return `<select data-recv="batch">${opts.join("")}</select>`;
+      const attr = exchange ? 'data-recv-ex="batch"' : 'data-recv="batch"';
+      return `<select ${attr}${disabled ? " disabled" : ""}>${options.join("")}</select>`;
     }
 
     function flattenRecipientDisplayRows(list) {
@@ -9079,6 +9083,7 @@
             <div class="recv-sku-hits hidden" data-recv-sku-hits></div>
           </td>
           <td><input type="text" data-recv-ex="itemName" readonly value="${escapeHtml((ex && ex.name) || "")}" /></td>
+          <td>${recvBatchSelectHtml((ex && ex.batch) || "", { exchange: true, disabled: !editable })}</td>
           <td class="num"><input type="text" data-recv-ex="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
           <td class="num"><input type="number" data-recv-ex="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${over ? "is-oversell" : ""}" ${editable ? "" : "readonly"} /></td>
           ${ops}
@@ -9099,6 +9104,7 @@
                     <th class="recv-ship-check-col col-check"></th>
                     <th>SKU</th>
                     <th>商品名稱</th>
+                    <th>效期_批號</th>
                     <th class="num">當前可賣量</th>
                     <th class="num">預計出貨數量(下訂數量)</th>
                     <th class="ops recv-ex-ops">操作</th>
@@ -9369,6 +9375,7 @@
         const sku = normalizeSku(get("sku"));
         const qtyRaw = get("qty");
         const qty = qtyRaw === "" ? "" : Number(qtyRaw);
+        const batch = get("batch");
         const catalog = bound[String(sku || "").toLowerCase()];
         return {
           sku,
@@ -9376,8 +9383,8 @@
           qty: Number.isFinite(qty) ? qty : "",
           unit: (catalog && catalog.unit) || "",
           pcsPerCarton: Number(catalog && catalog.pcsPerCarton) || 0,
-          expiryAccept: (catalog && catalog.expiryAccept) || "",
-          batch: "",
+          expiryAccept: expiryDateFromBatch(batch) || (catalog && catalog.expiryAccept) || "",
+          batch,
         };
       }).filter((ex) => ex.sku || ex.qty || ex.name);
     }
@@ -9676,11 +9683,6 @@
             focusRecvOrWizard(i, "sku");
             return false;
           }
-          if (!it.batch) {
-            alert(ip + "請選擇效期_批號");
-            focusRecvOrWizard(i, "batch");
-            return false;
-          }
           const qty = Number(it.qty);
           if (!Number.isInteger(qty) || qty <= 0) {
             alert(ip + "預計出貨數量(下訂數量)須為正整數");
@@ -9793,18 +9795,10 @@
       const skuEl = tr.querySelector('[data-recv="sku"]');
       const nameEl = tr.querySelector('[data-recv="itemName"]');
       const expEl = tr.querySelector('[data-recv="expiryAccept"]');
-      const batchEl = tr.querySelector('[data-recv="batch"]');
       if (skuEl) skuEl.value = catalogRow.sku || "";
       if (nameEl) nameEl.value = catalogRow.name || "";
-      const batch = recvDefaultBatch();
-      if (batchEl && batch) {
-        if (![...batchEl.options].some((o) => o.value === batch)) {
-          batchEl.appendChild(new Option(batch, batch, true, true));
-        }
-        batchEl.value = batch;
-      }
-      if (expEl) {
-        expEl.value = toDateInput(catalogRow.expiryAccept) || expiryDateFromBatch(batch) || "";
+      if (expEl && !expEl.value) {
+        expEl.value = toDateInput(catalogRow.expiryAccept) || "";
       }
       fillRecvSellable(tr, catalogRow.sku || "", false);
       hideRecvSkuHits(tr);
@@ -9927,6 +9921,10 @@
         }
         if (exField === "qty") {
           syncRecvOversell(el.closest("tr[data-ex-row]"), true);
+          persistViewExchangeRow(recvItemTrFromEl(el));
+          return;
+        }
+        if (exField === "batch") {
           persistViewExchangeRow(recvItemTrFromEl(el));
           return;
         }
