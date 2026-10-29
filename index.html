@@ -9723,6 +9723,39 @@
       return body.querySelector(`tr.recv-item-row[data-recv-item="${CSS.escape(itemKey)}"]`);
     }
 
+    function exchangeItemsSignature(list) {
+      return JSON.stringify(normalizeExchangeItems(list)
+        .filter((ex) => ex.sku && Number(ex.qty) > 0)
+        .map((ex) => ({
+          sku: ex.sku,
+          qty: Number(ex.qty) || 0,
+          batch: ex.batch || "",
+        })));
+    }
+
+    function confirmedExchangeSignature(itemTr) {
+      if (!itemTr) return "[]";
+      const raw = itemTr.getAttribute("data-ex-confirmed") || "";
+      if (!raw) return "[]";
+      try {
+        return exchangeItemsSignature(JSON.parse(decodeURIComponent(raw)));
+      } catch (err) {
+        return "[]";
+      }
+    }
+
+    /** 已審核通過的線上轉單，建檔人變更換貨後要再送審，通過後才能開出貨單。 */
+    function reopenApprovedExchange(order, beforeSig, afterSig) {
+      if (!order || order.status !== "未開立出貨單" || currentRole !== "建檔人") return false;
+      if (beforeSig === afterSig) return false;
+      order.status = "待審核";
+      persistDemoData();
+      renderSalesTable(getSalesFiltered());
+      if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "view");
+      alert("換貨內容已變更，狀態改為待審核。主管審核通過後才能新增出貨單。");
+      return true;
+    }
+
     function persistViewExchangeRow(itemTr) {
       const order = getWorkspaceOrder();
       if (!order || !isViewExchangeMode(order) || !itemTr) return false;
@@ -10200,9 +10233,11 @@
             alert(`換貨合計須等於原商品合計 ${recvMoneyText(origin)}，目前為 ${recvMoneyText(sum)}`);
             return;
           }
+          const beforeSig = confirmedExchangeSignature(itemTr);
           block.setAttribute("data-ex-draft", "0");
           stashConfirmedExchange(itemTr, checked);
           persistViewExchangeRow(itemTr);
+          if (reopenApprovedExchange(order, beforeSig, exchangeItemsSignature(checked))) return;
           syncExchangeBlockMoney(block);
           return;
         }
@@ -10214,8 +10249,10 @@
           }
           const itemTr = act.closest("tr.recv-item-row");
           if (!itemTr) return;
+          const beforeSig = confirmedExchangeSignature(itemTr);
           removeExchangeBlock(itemTr);
           persistViewExchangeRow(itemTr);
+          reopenApprovedExchange(order, beforeSig, "[]");
           return;
         }
         if (action === "add-ex") {
