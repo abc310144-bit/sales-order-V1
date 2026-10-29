@@ -20,7 +20,7 @@ alwaysApply: true
 - 貿易條件只帶訂單上選到的選項，不加地點。付款條件維持系統現有文案（預設 `TT, 100% prepaid`）。
 - 明細只列下訂數量大於 0 的商品，不要商品系列分組列。
 - Invoice／Packing List 的條碼欄帶該列 SKU。
-- Best Before Date 帶效期_批號的日期前段（`2026-09-15_藍田` → `2026-09-15`）。
+- Best Before Date 帶效期_批號的日期前段（`2026-09-15_藍田` → `2026-09-15`）。客戶訂單 PDF、廠商 Invoice、報關 Invoice 都加這一欄，欄名與取值跟 Packing List 一樣。沒選批號則留白。Invoice 放在 Description 下一欄；客戶訂單 PDF 放在 Product Name 下一欄。經銷、一般通路的客戶訂單 PDF 不加。數量、贈品金額邏輯不變。同一 SKU 不同效期維持兩列，各寫自己的效期。
 - 品名用英文。DEMO 假資料在 `mockItemPool.nameEn`。畫面上的商品名稱維持中文。
 - Invoice 單價用畫面上「合計」的計算基數（該列商品報價）。客戶訂單 PDF、廠商 Invoice 的金額 = 該單價 × 下訂數量。報關 Invoice、Packing List 的數量與金額用這次還能出的數量。
 - 淨重留在境外訂單畫面，並寫進 Packing List 的 Net Weight。板入數、板數、毛重不在訂單上輸入。

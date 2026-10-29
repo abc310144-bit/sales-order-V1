@@ -10996,6 +10996,7 @@
           total: overseas && item.gift ? 0 : Math.round(qty * quote * 100) / 100,
           remark: remarksForPdfItem(order, item),
           gift: !!item.gift,
+          bestBefore: overseas ? bestBeforeOfItem(item) : "",
         };
       });
       const ordered = rows.filter((row) => Number(row.orderPcs) > 0);
@@ -11078,6 +11079,7 @@
         pcs: "Pcs/CTN",
         qty: "Order Pcs",
         carton: "Order Carton",
+        bestBefore: "Best Before Date",
         priceNoLabel: "Price " + currency + " (No Label)",
         priceLabel: "Price " + currency + " (Label)",
         quote: "Product Quote (TWD)",
@@ -11095,12 +11097,13 @@
       const priceHeadHtml = overseas
         ? `<th class="num">${escapeHtml(t.priceNoLabel)}</th><th class="num">${escapeHtml(t.priceLabel)}</th>`
         : `<th class="num">${escapeHtml(t.quote)}</th>`;
-      const colCount = overseas ? 9 : 8;
+      const colCount = overseas ? 10 : 8;
       const rowsHtml = lines.length
         ? lines.map((row) => `
             <tr>
               <td>${escapeHtml(row.sku)}</td>
               <td class="name">${escapeHtml(row.gift ? "贈品 " + row.name : row.name)}</td>
+              ${overseas ? `<td>${escapeHtml(row.bestBefore || "")}</td>` : ""}
               <td class="num">${escapeHtml(row.pcsPerCarton)}</td>
               <td class="num">${escapeHtml(row.orderPcs)}</td>
               <td class="num">${escapeHtml(row.orderCarton)}</td>
@@ -11228,6 +11231,7 @@
         <tr>
           <th>${escapeHtml(t.sku)}</th>
           <th>${escapeHtml(t.name)}</th>
+          ${overseas ? `<th>${escapeHtml(t.bestBefore)}</th>` : ""}
           <th class="num">${escapeHtml(t.pcs)}</th>
           <th class="num">${escapeHtml(t.qty)}</th>
           <th class="num">${escapeHtml(t.carton)}</th>
@@ -11344,6 +11348,10 @@
       return /^\d{4}-\d{2}-\d{2}/.test(head) ? head.slice(0, 10) : head;
     }
 
+    function bestBeforeOfItem(item) {
+      return bestBeforeOf((item && item.batch) || "") || bestBeforeOf((item && item.expiryAccept) || "");
+    }
+
     function overseasExportLineOf(order, item, qty, no) {
       const pcs = pcsPerCartonOf(item);
       const unitPrice = goodsQuoteOf(item, order);
@@ -11354,7 +11362,7 @@
         qty,
         pcs: pcs || "",
         carton: orderCartonQty(qty, pcs),
-        bestBefore: bestBeforeOf(item.batch),
+        bestBefore: bestBeforeOfItem(item),
         netKg: lineNetWeightKg(item, qty),
         unitPrice,
         amount: Math.round(qty * unitPrice * 100) / 100,
@@ -11435,12 +11443,13 @@
             <td class="num">${row.gift ? "FOC" : row.no}</td>
             <td>${escapeHtml(row.sku)}</td>
             <td>${escapeHtml(row.nameEn)}</td>
+            <td>${escapeHtml(row.bestBefore || "")}</td>
             <td class="num">${escapeHtml(pdfMoney(row.showPrice, 2))}</td>
             <td class="num">${escapeHtml(row.pcs)}</td>
             <td class="num">${escapeHtml(row.qty)}</td>
             <td class="num">${escapeHtml(pdfMoney(row.showAmount, 2))}</td>
           </tr>`).join("")
-        : `<tr><td colspan="7" class="empty">No line items</td></tr>`;
+        : `<tr><td colspan="8" class="empty">No line items</td></tr>`;
       return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11508,6 +11517,7 @@
           <th class="num">No.</th>
           <th>Barcode</th>
           <th>Description</th>
+          <th>Best Before Date</th>
           <th class="num">Unit Price (${escapeHtml(parties.currency)})</th>
           <th class="num">Pcs / Carton</th>
           <th class="num">Order Quantity</th>
