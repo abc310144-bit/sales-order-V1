@@ -24,6 +24,7 @@ alwaysApply: true
 - 品名用英文。DEMO 假資料在 `mockItemPool.nameEn`。畫面上的商品名稱維持中文。
 - Invoice 單價用畫面上「合計」的計算基數（該列商品報價）。客戶訂單 PDF、廠商 Invoice 的金額 = 該單價 × 下訂數量。報關 Invoice、Packing List 的數量與金額用這次還能出的數量。
 - 淨重留在境外訂單畫面，並寫進 Packing List 的 Net Weight。板入數、板數、毛重不在訂單上輸入。
+- 商品毛重的來源是商品管理的「重量」欄。ERP 上這個欄位目前填的是重量，不是毛重，要先請 JERRY 更新商品重量的填寫數值。數值改成毛重之前，不要把這個欄位寫進 Packing List 的 Gross Weight。
 - Packing List 用範本同一張框線表格。欄位是 Packing No.、S.No、DESCRIPTION、QUANTITY PCS、Carton、Carton/Pallet、pallet、Best Before Date、Pcs per Carton、Net Weight (KG)、Gross Weight (KG)。`NO:` 與 `Packing No.` 留白。Carton/Pallet、pallet、Gross Weight 空白，由人員自行填寫。數量、訂購箱數、箱入數、淨重由系統先填上。表尾 Total 合併左側儲存格，並加總數量、箱數、pallet、淨重、毛重。
 - 客戶訂單 PDF、廠商 Invoice 的明細是訂單上數量大於 0 的全部品項，數量用下訂數量。出貨單增減、取消，都不改這兩份的品項和數量。
 - 報關 Invoice、Packing List 的明細是這次還能出的數量：還沒進有效出貨單的剩餘，且不超過目前庫存。庫存是 0 的不列入。同一 SKU 有多個效期時，庫存先補較早到期的那一列。出貨單存檔後剩餘減少，再匯出就只剩還沒出的；剩餘是 0 時這兩份沒有商品列。出貨單取消後數量回到訂單，再匯出跟著加回來。
