@@ -894,7 +894,7 @@
     .recv-ship-all { display: none; align-items: center; gap: 6px; font-size: 13px; }
     #page-order-edit.can-recv-ship-check .recv-ship-all { display: inline-flex; }
     .recv-block {
-      border: 1px solid var(--border-light);
+      border: 1px solid var(--border);
       border-radius: 8px;
       margin-bottom: 16px;
       background: #fff;
@@ -929,7 +929,33 @@
       padding: 10px 12px 0;
       background: #fafafa;
     }
-    .recv-block-bar strong { font-size: 14px; }
+    .recv-block-bar strong {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    .recv-no {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 11px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .recv-item-no-col {
+      width: 52px;
+      min-width: 52px;
+      text-align: center;
+      font-weight: 700;
+    }
+    .recv-goods-table th.recv-item-no-col { text-align: center; font-weight: 600; }
     .recv-del-recipient { height: 32px; }
     .recv-goods-wrap { overflow-x: auto; }
     .recv-goods-table { width: 100%; min-width: 960px; border-collapse: collapse; }
@@ -8613,10 +8639,11 @@
       "address", "tel", "orderAmount", "shipMethod",
     ];
     const RECV_PRODUCT_FIELDS = ["sku", "itemName", "batch", "qty"];
-    const RECV_COL_COUNT = 10;
+    const RECV_COL_COUNT = 11;
     const RECV_GOODS_HEAD = `<tr>
             <th class="recv-ship-check-col col-check">出貨</th>
             <th class="recv-ex-col">換貨</th>
+            <th class="recv-item-no-col">編號</th>
             <th>SKU</th>
             <th>商品名稱</th>
             <th>效期_批號</th>
@@ -9124,8 +9151,22 @@
       return `<td class="ops recv-ops-col">${showDelete ? '<a href="#" data-recv-act="del-item">刪除</a>' : ""}</td>`;
     }
 
+    function refreshRecvBlockNumbers() {
+      const body = document.getElementById("editRecvBody");
+      if (!body) return;
+      body.querySelectorAll(".recv-block").forEach((block, blockIndex) => {
+        const no = block.querySelector("[data-recv-no]");
+        if (no) no.textContent = String(blockIndex + 1);
+        block.querySelectorAll("tr.recv-item-row").forEach((tr, idx) => {
+          const itemNo = tr.querySelector("[data-recv-item-no]");
+          if (itemNo) itemNo.textContent = String(idx + 1);
+        });
+      });
+    }
+
     function refreshRecvItemDeleteButtons() {
       const body = document.getElementById("editRecvBody");
+      refreshRecvBlockNumbers();
       if (!body || orderFormMode === "view") return;
       body.querySelectorAll(".recv-block").forEach((block, blockIndex) => {
         const del = block.querySelector("[data-recv-act='del-recipient']");
@@ -9146,7 +9187,7 @@
       const gid = row.groupId || "";
       const head = `
         <div class="recv-block-bar">
-          <strong>收件人</strong>
+          <strong><span class="recv-no" data-recv-no>1</span>收件人</strong>
           ${editable ? '<button type="button" class="btn recv-del-recipient" data-recv-act="del-recipient">刪除收件人</button>' : ""}
         </div>
         <div class="recv-head">
@@ -9207,6 +9248,7 @@
         <tr class="recv-item-row${hasEx ? " is-exchanged" : ""}" data-recv-group="${escapeHtml(row.groupId)}" data-recv-item="${escapeHtml(row.itemKey)}">
           ${recvShipCheckTd(shipMeta && shipMeta.origin)}
           ${exCell}
+          <td class="recv-item-no-col" data-recv-item-no>1</td>
           <td class="recv-sku-cell">
             <input type="text" data-recv="sku" autocomplete="off" value="${escapeHtml(row.sku || "")}"${ro} />
             <div class="recv-sku-hits hidden" data-recv-sku-hits></div>
