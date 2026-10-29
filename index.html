@@ -3206,9 +3206,9 @@
             <strong>DEMO 提示｜財務結算</strong><br />
             品運於「結帳單建立」送出的結算包會出現於此。財務檢視核對金額；<strong>月結</strong>且待開發票時可於檢視頁右上選擇回壓發票或 ezpay 開發票。<br />
             <strong>待開發票</strong>可由財務於檢視頁「駁回」（必填原因≤20字）→ 狀態改「已駁回」、整包數量加回路徑結算，已駁回僅供檢視、開票按鈕置灰。<br />
-            <strong>已開發票</strong>可由財務於檢視頁「刪除發票」→ 清除發票資料、狀態回「待開發票」後可再開票。<br />
+            <strong>已開發票</strong>可由財務於檢視頁「刪除發票」→ 清除發票資料、財務結算狀態回「待開發票」後可再開票。結帳單建立的狀態不因此退回，數量也不加回。<br />
             <strong>非月結</strong>僅供核對金額，不顯示開票按鈕，狀態維持待開發票。<br />
-            境外範例：結算包 <strong>20260818082</strong>（客戶訂單 SO20260816021、出貨單 VN00010482）已回壓出口報單。身分切到財務後，在該筆檢視頁可開。結帳單建立把狀態改成「已結算」可看到同一張出貨單。
+            境外範例：結算包 <strong>20260818082</strong>（客戶訂單 SO20260816021、出貨單 VN00010482）已回壓出口報單。身分切到財務後，在該筆檢視頁可開。這張尚未開立發票，結帳單建立狀態仍是待結算。
           </div>
           <section class="filter" id="monthlyBillFilterPanel">
             <div class="filter-grid">
@@ -17080,6 +17080,7 @@
       });
       const shipInfo = accShipInfoByKey(order.orderNo);
       const baseMap = settleBaseQtyByKey(order);
+      const invoicedMap = invoicedQtyByKey(order.orderNo, "");
       return (order.items || [])
         .filter((item) => (Number(item.qty) || 0) > 0)
         .map((item) => {
@@ -17106,9 +17107,10 @@
             amount: accRoundMoney(d.qty * price),
             shippedQty: ship.qty,
             shipDates: ship.dates,
-            acceptQty,
-            settledQty: Number(s.settledQty) || 0,
-            remark: s.remark != null ? String(s.remark) : d.remark,
+          acceptQty,
+          settledQty: Number(s.settledQty) || 0,
+          invoicedQty: Number(invoicedMap[key]) || 0,
+          remark: s.remark != null ? String(s.remark) : d.remark,
           };
         });
     }
@@ -17125,15 +17127,50 @@
       return isOrderAccepted(order) ? "已驗收" : "待驗收";
     }
 
-    /** 銷貨單狀態：待結算｜部分結算｜已結算 */
+    /** 已開票才計入結帳單建立狀態。刪除發票仍保留；駁回（已駁回）才排除。 */
+    function billCountsAsInvoiced(bill) {
+      if (!bill || bill.status === "已駁回") return false;
+      return !!(bill.invoiceCounted || bill.status === "已開發票");
+    }
+
+    function invoicedQtyByKey(orderNo, shipNo) {
+      const map = {};
+      const wantShip = shipNo || "";
+      (settlementRecords || []).forEach((bill) => {
+        if (!billCountsAsInvoiced(bill)) return;
+        (bill.lines || []).forEach((line) => {
+          if ((line.orderNo || "") !== orderNo) return;
+          const lineShip = line.shipNo || bill.shipNo || "";
+          if (wantShip) {
+            if (lineShip !== wantShip) return;
+          } else if (lineShip) {
+            return;
+          }
+          const key = line.key;
+          if (!key) return;
+          map[key] = (map[key] || 0) + (Number(line.qty) || 0);
+        });
+      });
+      return map;
+    }
+
+    /** 未開票＝待結算；開了一部分＝部分結算；可結數量都已開票＝已結算。 */
+    function settleStatusFromInvoice(acceptQty, invoicedQty) {
+      const accept = Math.max(0, Number(acceptQty) || 0);
+      const invoiced = Math.max(0, Number(invoicedQty) || 0);
+      if (invoiced <= 0) return "待結算";
+      if (accept > 0 && invoiced < accept) return "部分結算";
+      return "已結算";
+    }
+
+    /** 銷貨單狀態：待結算｜部分結算｜已結算（依已開票數量，不依已送出數量） */
     function settleStatusOf(order) {
       if (!isSettlementSourceOrder(order)) return "";
       const lines = accLinesOf(order);
-      const remain = lines.reduce((sum, line) => sum + Math.max(0, (Number(line.acceptQty) || 0) - line.settledQty), 0);
-      const settled = lines.reduce((sum, line) => sum + line.settledQty, 0);
-      if (remain <= 0) return "已結算";
-      if (settled > 0) return "部分結算";
-      return "待結算";
+      const accept = lines.reduce((sum, line) => sum + (Number(line.acceptQty) || 0), 0);
+      const invoiced = lines.reduce((sum, line) => sum + (Number(line.invoicedQty) || 0), 0);
+      if (accept <= 0 && invoiced <= 0) return "";
+      return settleStatusFromInvoice(accept, invoiced);
     }
 
     function fillAccChannelOptions() {
@@ -17685,6 +17722,7 @@
         base[key] = (base[key] || 0) + qty;
       });
       const shipped = String(ship.shipped || "").trim();
+      const invoicedMap = invoicedQtyByKey(order.orderNo, ship.orderId);
       return Object.keys(base).map((key) => {
         const item = (order.items || []).find((row) => itemKey(row) === key) || {};
         const savedRow = saved[key] || {};
@@ -17693,6 +17731,7 @@
         const price = hasItem ? accUnitPrice(item) : 0;
         const acceptQty = Number(base[key]) || 0;
         const settledQty = Number(savedRow.settledQty) || 0;
+        const invoicedQty = Number(invoicedMap[key]) || 0;
         const orderQty = d ? d.qty : acceptQty;
         return {
           key,
@@ -17708,18 +17747,17 @@
           shipDates: shipped ? [shipped] : [],
           acceptQty,
           settledQty,
+          invoicedQty,
           remark: savedRow.remark != null ? String(savedRow.remark) : (d ? d.remark : ""),
         };
       });
     }
 
     function qtySettleStatus(lines) {
-      const remain = (lines || []).reduce((sum, line) => sum + Math.max(0, (Number(line.acceptQty) || 0) - (Number(line.settledQty) || 0)), 0);
-      const settled = (lines || []).reduce((sum, line) => sum + (Number(line.settledQty) || 0), 0);
-      if (remain <= 0 && settled <= 0) return "";
-      if (remain <= 0) return "已結算";
-      if (settled > 0) return "部分結算";
-      return "待結算";
+      const accept = (lines || []).reduce((sum, line) => sum + (Number(line.acceptQty) || 0), 0);
+      const invoiced = (lines || []).reduce((sum, line) => sum + (Number(line.invoicedQty) || 0), 0);
+      if (accept <= 0 && invoiced <= 0) return "";
+      return settleStatusFromInvoice(accept, invoiced);
     }
 
     function ensureSettleLedgerItem(order, line) {
@@ -17747,14 +17785,12 @@
       return target;
     }
 
-    /** 寄倉結算 SKU 列狀態：依該列已結／剩餘 */
-    function settleSkuLineStatus(acceptQty, settledQty) {
+    /** 寄倉結算 SKU 列狀態：依該列已開票數量 */
+    function settleSkuLineStatus(acceptQty, invoicedQty) {
       const accept = Math.max(0, Number(acceptQty) || 0);
-      const settled = Math.max(0, Number(settledQty) || 0);
-      const remain = Math.max(0, accept - settled);
-      if (remain <= 0 && settled > 0) return "已結算";
-      if (settled > 0 && remain > 0) return "部分結算";
-      return "待結算";
+      const invoiced = Math.max(0, Number(invoicedQty) || 0);
+      if (accept <= 0 && invoiced <= 0) return "待結算";
+      return settleStatusFromInvoice(accept, invoiced);
     }
 
     function buildSettlePool() {
@@ -17765,7 +17801,8 @@
         accLinesOf(order).forEach((line) => {
           const acceptQty = Number(line.acceptQty) || 0;
           const settledQty = Number(line.settledQty) || 0;
-          if (acceptQty <= 0 && settledQty <= 0) return;
+          const invoicedQty = Number(line.invoicedQty) || 0;
+          if (acceptQty <= 0 && settledQty <= 0 && invoicedQty <= 0) return;
           const remain = Math.max(0, acceptQty - settledQty);
           pool.push({
             id: settleRowKey(order.orderNo, line.key),
@@ -17784,8 +17821,9 @@
           shipDates: line.shipDates,
           acceptQty,
           settledQty,
+          invoicedQty,
             remain,
-            status: settleSkuLineStatus(acceptQty, settledQty),
+            status: settleSkuLineStatus(acceptQty, invoicedQty),
             checked: false,
             settleQty: 0,
             remark: "",
@@ -17887,7 +17925,7 @@
           <td>${escapeHtml(row.name)}</td>
           <td class="num">${escapeHtml(row.qty)}</td>
           <td class="num">${escapeHtml(accMoney(row.amount))}</td>
-          <td>${statusTag(row.status || settleSkuLineStatus(row.acceptQty, row.settledQty))}</td>
+          <td>${statusTag(row.status || settleSkuLineStatus(row.acceptQty, row.invoicedQty))}</td>
           <td>${escapeHtml(row.createdAt)}</td>
           <td>${row.shipDates.length ? row.shipDates.map(escapeHtml).join("<br />") : "-"}</td>
           <td class="num">${escapeHtml(row.acceptQty)}${row.settledQty > 0 ? `<span class="acc-sub is-settled">已結：${escapeHtml(row.settledQty)}</span>` : ""}</td>
@@ -18179,6 +18217,7 @@
         channelName,
         channelType,
         status,
+        invoiceCounted: !!(rec.invoiceCounted || status === "已開發票"),
         monthly: rec.monthly != null ? !!rec.monthly : isMonthlySettleChannel(channelName),
         operator: rec.operator || "",
         shipNo: rec.shipNo || "",
@@ -18401,6 +18440,7 @@
         bill.fileName = "";
         bill.fileType = "";
         bill.fileData = "";
+        bill.invoiceCounted = true;
         bill.status = "已開發票";
         persistDemoData();
         closeSettleInvoiceModal();
@@ -18434,6 +18474,7 @@
       bill.fileName = settleInvoiceFile.name;
       bill.fileType = settleInvoiceFile.type || "";
       bill.fileData = fileData;
+      bill.invoiceCounted = true;
       bill.status = "已開發票";
       persistDemoData();
       closeSettleInvoiceModal();
@@ -18655,7 +18696,8 @@
         alert("僅已開發票結算包可刪除發票");
         return;
       }
-      if (!confirm("確定刪除此結算包的已開發票？刪除後狀態將改為待開發票。")) return;
+      if (!confirm("確定刪除此結算包的已開發票？財務結算改回待開發票，結帳單建立的狀態與已扣數量不變。")) return;
+      bill.invoiceCounted = true;
       bill.invoiceNo = "";
       bill.invoiceDate = "";
       bill.invoiceAmount = null;
@@ -19362,7 +19404,7 @@
 
     /**
      * 線上出貨（轉單）↔ 銷貨單「轉單」模式：已配達出貨單才進可結。
-     * SO20260808029 兩張已配達 → 部分結算＋財務結算包類型「轉單」；
+     * SO20260808029 已送出一部分但結算包尚未開票 → 結帳單建立仍是待結算；
      * SO20260824032／22033 僅部分已配達 → 待結算
      */
     function seedOnlineTransferSettleDemo() {
