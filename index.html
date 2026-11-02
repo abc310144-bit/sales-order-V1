@@ -3159,6 +3159,7 @@
                     <option>待結算</option>
                     <option>已結算</option>
                     <option>經財務駁回</option>
+                    <option>已作廢</option>
                   </select>
                 </div>
                 <div class="field">
@@ -17537,7 +17538,7 @@
 
     /** 已開票才計入結帳單建立狀態。刪除發票仍保留；駁回（已駁回）才排除。 */
     function billCountsAsInvoiced(bill) {
-      if (!bill || bill.status === "經財務駁回" || bill.status === "已駁回") return false;
+      if (!bill || bill.status === "經財務駁回" || bill.status === "已駁回" || bill.status === "已作廢") return false;
       if (bill.status === "已結算" || bill.status === "已開發票") return true;
       return !!bill.invoiceCounted;
     }
@@ -20256,8 +20257,38 @@
           <td class="num">${escapeHtml(accMoney(settleBillTaxedTotal(rec)))}</td>
           <td>${escapeHtml(rec.createdAt || "—")}</td>
           <td>${escapeHtml(rec.rejectReason || "—")}</td>
-          <td class="ops"><a data-channel-bill-view="${escapeHtml(rec.id)}">檢視</a></td>
+          <td class="ops"><a data-channel-bill-view="${escapeHtml(rec.id)}">檢視</a> ${channelBillVoidLink(rec)}</td>
         </tr>`).join("");
+    }
+
+    function channelBillCanVoid(bill) {
+      return !!bill && bill.status === "待結算";
+    }
+
+    function channelBillVoidTitle(bill) {
+      if (!bill || bill.status === "已結算") return "已送出結算不可作廢";
+      if (bill.status === "已作廢") return "已作廢";
+      if (bill.status === "經財務駁回" || bill.status === "已駁回") return "已駁回不可作廢";
+      return "";
+    }
+
+    function channelBillVoidLink(rec) {
+      const can = channelBillCanVoid(rec);
+      const title = can ? "" : channelBillVoidTitle(rec);
+      return `<a data-channel-bill-void="${escapeHtml(rec.id)}" class="${can ? "" : "is-disabled"}"${title ? ` title="${escapeHtml(title)}"` : ""}${can ? "" : " aria-disabled=\"true\""}>作廢</a>`;
+    }
+
+    function voidChannelBill(billId) {
+      const bill = settlementRecords.find((rec) => String(rec.id) === String(billId));
+      if (!bill || !channelBillCanVoid(bill)) {
+        alert(channelBillVoidTitle(bill) || "此結帳單不可作廢");
+        return;
+      }
+      restoreSettlementPackageQty(bill);
+      bill.status = "已作廢";
+      bill.invoiceCounted = false;
+      persistDemoData();
+      renderChannelBillList();
     }
 
     function channelBillIsShipFlow() {
@@ -20881,6 +20912,11 @@
       return channelBillWizard.on && channelBillWizard.step <= 1 && settleDetailMode === "edit" && isOverseasChannel(channelBillWizard.channel);
     }
 
+    function channelBillPreviewExportFile() {
+      if (settleDetailMode !== "preview" || !channelBillWizard.on || !isOverseasChannel(channelBillWizard.channel)) return null;
+      return exportDeclReady(channelBillExportDecl) ? channelBillExportDecl : null;
+    }
+
     function channelBillViewExportFile() {
       if (settleDetailMode !== "view") return null;
       const bill = settlementRecords.find((rec) => String(rec.id) === String(channelBillWizard.viewId));
@@ -20897,7 +20933,8 @@
       if (!btn || !viewBtn || !delBtn) return;
       const editing = channelBillExportDeclEditing();
       const viewFile = channelBillViewExportFile();
-      const hasFile = editing ? exportDeclReady(channelBillExportDecl) : !!viewFile;
+      const previewFile = channelBillPreviewExportFile();
+      const hasFile = editing ? exportDeclReady(channelBillExportDecl) : !!(viewFile || previewFile);
       const canChange = editing && channelBillCheckedShipCount() > 0;
       btn.classList.toggle("hidden", !editing);
       btn.disabled = !canChange;
@@ -20909,7 +20946,10 @@
       delBtn.title = canChange ? "" : "請先勾選出貨單";
       const actions = document.getElementById("channelSettleDetailActions");
       const importBtn = document.getElementById("channelSettleImportBtn");
-      if (settleDetailMode === "view") {
+      if (settleDetailMode === "preview") {
+        if (importBtn) importBtn.classList.add("hidden");
+        if (actions) actions.classList.toggle("hidden", !previewFile);
+      } else if (settleDetailMode === "view") {
         if (importBtn) importBtn.classList.add("hidden");
         if (actions) actions.classList.toggle("hidden", !viewFile);
         if (right) right.classList.add("hidden");
@@ -20929,7 +20969,7 @@
     }
 
     function viewChannelBillExportDecl() {
-      if (channelBillExportDeclEditing()) {
+      if (channelBillExportDeclEditing() || settleDetailMode === "preview") {
         if (!exportDeclReady(channelBillExportDecl)) return;
         openExportDeclPayload(channelBillExportDecl, { orderNo: channelBillWizard.channel, poDocNo: "出口報單" });
         return;
@@ -21306,6 +21346,12 @@
       renderChannelBillList();
     });
     document.getElementById("channelSettleBody").addEventListener("click", (e) => {
+      if (e.target.classList.contains("is-disabled")) return;
+      const voidId = e.target.dataset.channelBillVoid;
+      if (voidId) {
+        voidChannelBill(voidId);
+        return;
+      }
       const id = e.target.dataset.channelBillView;
       if (id) openChannelBillView(id);
     });
