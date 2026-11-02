@@ -1329,16 +1329,21 @@
       margin-top: 28px;
       padding: 16px 0 8px;
     }
-    #channelBillFoot { justify-content: space-between; }
     .po-wizard-foot.hidden { display: none; }
-    .po-wizard-foot-left,
     .po-wizard-foot-right {
       display: flex;
       justify-content: flex-end;
       flex-wrap: wrap;
       gap: 8px;
     }
-    .po-wizard-foot-left { justify-content: flex-start; }
+    .bill-export-decl {
+      display: flex;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .bill-export-decl.hidden { display: none; }
     .po-pane {
       min-height: 240px;
       min-width: 0;
@@ -3287,12 +3292,12 @@
               <tbody id="channelSettleDetailBody"></tbody>
             </table>
           </div>
+          <div class="bill-export-decl hidden" id="channelBillExportDeclSlot">
+            <button type="button" class="btn hidden" id="channelBillExportDeclBtn">匯入出口報單</button>
+            <button type="button" class="btn hidden" id="channelBillExportDeclViewBtn">檢視出口報單</button>
+            <button type="button" class="btn hidden" id="channelBillExportDeclDeleteBtn">刪除出口報單</button>
+          </div>
           <div id="channelBillFoot" class="po-wizard-foot">
-            <div class="po-wizard-foot-left" id="channelBillExportDeclSlot">
-              <button type="button" class="btn hidden" id="channelBillExportDeclBtn">匯入出口報單</button>
-              <button type="button" class="btn hidden" id="channelBillExportDeclViewBtn">檢視出口報單</button>
-              <button type="button" class="btn hidden" id="channelBillExportDeclDeleteBtn">刪除出口報單</button>
-            </div>
             <div class="po-wizard-foot-right">
               <button type="button" class="btn hidden" id="channelBillBackStep">返回</button>
               <button type="button" class="btn btn-primary" id="channelBillSavePage">儲存此分頁</button>
@@ -20911,9 +20916,11 @@
       delBtn.classList.toggle("hidden", !(editing && hasFile));
       delBtn.disabled = !(editing && hasFile && canChange);
       delBtn.title = canChange ? "" : "請先勾選出貨單";
+      const slot = document.getElementById("channelBillExportDeclSlot");
+      if (slot) slot.classList.toggle("hidden", !(editing || viewFile));
       if (settleDetailMode === "view") {
         if (right) right.classList.add("hidden");
-        if (foot) foot.classList.toggle("hidden", !viewFile);
+        if (foot) foot.classList.add("hidden");
       } else if (right) {
         right.classList.remove("hidden");
       }
