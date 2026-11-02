@@ -2509,7 +2509,9 @@
     th.col-expand, td.col-expand { width: 40px; text-align: center; }
     tr.bill-parent td { background: #fafafa; font-weight: 500; }
     tr.bill-child td { background: #fff; font-weight: 400; }
-    tr.bill-child td.bill-sku { padding-left: 28px; }
+    tr.bill-child td.bill-child-main { white-space: nowrap; }
+    tr.bill-child .bill-sku { display: inline-block; min-width: 88px; font-weight: 500; }
+    tr.bill-child .bill-name { margin-left: 16px; }
     .settle-table.is-grouped { min-width: 1280px; }
     .settle-table .num,
     .acc-goods-table .num { text-align: right; }
@@ -20738,8 +20740,8 @@
         <tr class="bill-child" data-bill-child="${escapeHtml(channelBillGroupKey(row))}" data-settle-id="${escapeHtml(row.id)}">
           <td class="col-expand"></td>
           ${checkCell}
-          <td class="bill-sku">${escapeHtml(row.sku || "—")}</td>
-          <td>${escapeHtml(row.name || "—")}</td>
+          <td class="bill-indent"></td>
+          <td class="bill-child-main"><span class="bill-sku">${escapeHtml(row.sku || "—")}</span><span class="bill-name">${escapeHtml(row.name || "—")}</span></td>
           <td class="num">${escapeHtml(row.acceptQty)}</td>
           ${qtyCell}
           <td class="num" data-cell="settleAmt">${escapeHtml(accMoney(channelBillLineTaxed(row, qty)))}</td>
