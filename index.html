@@ -1336,14 +1336,6 @@
       flex-wrap: wrap;
       gap: 8px;
     }
-    .bill-export-decl {
-      display: flex;
-      justify-content: flex-start;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 16px;
-    }
-    .bill-export-decl.hidden { display: none; }
     .po-pane {
       min-height: 240px;
       min-width: 0;
@@ -3213,6 +3205,9 @@
               <div class="po-kind-meta" id="channelSettleDetailMeta"></div>
             </div>
             <div class="acc-head-actions" id="channelSettleDetailActions">
+              <button type="button" class="btn hidden" id="channelBillExportDeclBtn">匯入出口報單</button>
+              <button type="button" class="btn hidden" id="channelBillExportDeclViewBtn">檢視出口報單</button>
+              <button type="button" class="btn hidden" id="channelBillExportDeclDeleteBtn">刪除出口報單</button>
               <button type="button" class="btn btn-primary" id="channelSettleImportBtn">匯入結算品項</button>
             </div>
           </div>
@@ -3291,11 +3286,6 @@
               </thead>
               <tbody id="channelSettleDetailBody"></tbody>
             </table>
-          </div>
-          <div class="bill-export-decl hidden" id="channelBillExportDeclSlot">
-            <button type="button" class="btn hidden" id="channelBillExportDeclBtn">匯入出口報單</button>
-            <button type="button" class="btn hidden" id="channelBillExportDeclViewBtn">檢視出口報單</button>
-            <button type="button" class="btn hidden" id="channelBillExportDeclDeleteBtn">刪除出口報單</button>
           </div>
           <div id="channelBillFoot" class="po-wizard-foot">
             <div class="po-wizard-foot-right">
@@ -19509,6 +19499,7 @@
       document.getElementById("channelSettleDetailMeta").textContent =
         `客戶訂單編號：${order.orderNo}${overseas ? `｜出貨單編號：${ship.orderId}` : ""}｜通路：${order.channelName || "—"}｜狀態：${status}`;
       document.getElementById("channelSettleDetailActions").classList.toggle("hidden", readonly);
+      document.getElementById("channelSettleImportBtn")?.classList.remove("hidden");
       renderChannelSettleDetailTable();
       showPage("channel-settle-detail");
     }
@@ -20916,13 +20907,16 @@
       delBtn.classList.toggle("hidden", !(editing && hasFile));
       delBtn.disabled = !(editing && hasFile && canChange);
       delBtn.title = canChange ? "" : "請先勾選出貨單";
-      const slot = document.getElementById("channelBillExportDeclSlot");
-      if (slot) slot.classList.toggle("hidden", !(editing || viewFile));
+      const actions = document.getElementById("channelSettleDetailActions");
+      const importBtn = document.getElementById("channelSettleImportBtn");
       if (settleDetailMode === "view") {
+        if (importBtn) importBtn.classList.add("hidden");
+        if (actions) actions.classList.toggle("hidden", !viewFile);
         if (right) right.classList.add("hidden");
         if (foot) foot.classList.add("hidden");
-      } else if (right) {
-        right.classList.remove("hidden");
+      } else {
+        if (importBtn) importBtn.classList.remove("hidden");
+        if (right) right.classList.remove("hidden");
       }
     }
 
