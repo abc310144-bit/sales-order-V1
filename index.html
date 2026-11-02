@@ -18538,6 +18538,7 @@
     let channelBillPickOrders = [];
     let channelBillPickShips = [];
     let channelBillExpanded = new Set();
+    let channelBillGroupRemarks = {};
 
     function isChannelSettleConsignMode() {
       return channelSettleMode === "consign";
@@ -18814,6 +18815,7 @@
           tax: accRoundMoney(taxed - untaxed),
           amount: accRoundMoney(taxed * qty),
           remark: normalizeSettleRemark(row.remark),
+          groupRemark: normalizeSettleRemark(channelBillGroupRemarks[channelBillGroupKey(row)]),
         };
       });
       const total = accRoundMoney(lines.reduce((sum, line) => sum + (line.gift ? 0 : line.amount), 0));
@@ -20717,10 +20719,12 @@
       });
     }
 
-    function channelBillSharedRemark(rows) {
-      const remarks = (rows || []).map((row) => normalizeSettleRemark(row.remark));
-      if (!remarks.length) return "";
-      return remarks.every((item) => item === remarks[0]) ? remarks[0] : "";
+    function channelBillParentRemark(group) {
+      if (settleDetailMode === "view") {
+        const saved = (group.rows || []).map((row) => normalizeSettleRemark(row.groupRemark)).find(Boolean);
+        return saved || "";
+      }
+      return normalizeSettleRemark(channelBillGroupRemarks[group.key]);
     }
 
     function channelBillChildRowHtml(row) {
@@ -20763,13 +20767,13 @@
         const settleable = group.rows.filter((row) => row.remain > 0);
         const checkedCount = settleable.filter((row) => row.checked).length;
         const allOn = settleable.length > 0 && checkedCount === settleable.length;
-        const sharedRemark = channelBillSharedRemark(group.rows);
+        const parentRemark = channelBillParentRemark(group);
         const checkCell = readonly
           ? ""
           : `<td class="col-check"><input type="checkbox" data-bill-group-check="${escapeHtml(group.key)}" aria-label="選取出貨單商品"${allOn ? " checked" : ""} /></td>`;
         const remarkCell = readonly
-          ? `<td>${sharedRemark ? escapeHtml(sharedRemark) : "—"}</td>`
-          : `<td><input type="text" maxlength="${SETTLE_REMARK_MAX}" data-bill-group-remark="${escapeHtml(group.key)}" value="${escapeHtml(sharedRemark)}" placeholder="最多 ${SETTLE_REMARK_MAX} 字" /></td>`;
+          ? `<td>${parentRemark ? escapeHtml(parentRemark) : "—"}</td>`
+          : `<td><input type="text" maxlength="${SETTLE_REMARK_MAX}" data-bill-group-remark="${escapeHtml(group.key)}" value="${escapeHtml(parentRemark)}" placeholder="最多 ${SETTLE_REMARK_MAX} 字" /></td>`;
         const parent = `
           <tr class="bill-parent" data-bill-parent="${escapeHtml(group.key)}">
             <td class="col-expand"><button type="button" class="bill-expand${open ? " is-open" : ""}" data-bill-toggle="${escapeHtml(group.key)}" aria-expanded="${open ? "true" : "false"}" aria-label="展開出貨商品"><svg viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" d="M4.5 2.5 8 6 4.5 9.5"/></svg></button></td>
@@ -20921,6 +20925,7 @@
     function startChannelBillWizard(channelName) {
       const flow = channelAcceptFlow(channelName);
       channelBillWizard = { on: true, step: 1, channel: channelName, flow, viewId: "" };
+      channelBillGroupRemarks = {};
       settleDetailMode = "edit";
       settleDetailOrderNo = "";
       settleDetailShipNo = "";
@@ -20979,6 +20984,7 @@
           checked: true,
           settleQty: Number(line.qty) || 0,
           remark: line.remark || "",
+          groupRemark: line.groupRemark || "",
         };
       });
       document.getElementById("channelSettleDetailTitle").textContent = "檢視結帳單";
@@ -21388,14 +21394,7 @@
         const key = e.target.dataset.billGroupRemark || "";
         const next = String(e.target.value || "").slice(0, SETTLE_REMARK_MAX);
         if (next !== e.target.value) e.target.value = next;
-        settleRows.forEach((row) => {
-          if (channelBillGroupKey(row) === key) row.remark = next;
-        });
-        document.querySelectorAll("#channelSettleDetailBody tr.bill-child").forEach((tr) => {
-          if (tr.dataset.billChild !== key) return;
-          const input = tr.querySelector("input[data-settle-remark]");
-          if (input && input.value !== next) input.value = next;
-        });
+        channelBillGroupRemarks[key] = next;
         return;
       }
       if (e.target.matches("input[data-settle-remark]")) {
@@ -21404,12 +21403,6 @@
         const next = String(e.target.value || "").slice(0, SETTLE_REMARK_MAX);
         if (next !== e.target.value) e.target.value = next;
         row.remark = next;
-        const key = channelBillGroupKey(row);
-        const parentInput = document.querySelector(`#channelSettleDetailBody input[data-bill-group-remark="${CSS.escape(key)}"]`);
-        if (parentInput) {
-          const shared = channelBillSharedRemark(settleRows.filter((item) => channelBillGroupKey(item) === key));
-          if (parentInput.value !== shared) parentInput.value = shared;
-        }
         return;
       }
       if (!e.target.matches("input[data-settle-qty]")) return;
