@@ -20615,7 +20615,7 @@
       if (!summary) return;
       if (isSettleDetailReadonly() && settleDetailMode === "view") {
         const amount = settleRows.reduce((sum, row) => sum + channelBillLineTaxed(row, row.settleQty), 0);
-        summary.innerHTML = `共 <strong>${settleRows.length}</strong> 筆商品，結算金額合計 <strong>${escapeHtml(accMoney(amount))}</strong>`;
+        summary.innerHTML = `<div class="bill-total"><span class="bill-total-label">本次總結算金額</span><span class="bill-total-num">${escapeHtml(accMoney(amount))}</span></div>`;
         return;
       }
       if (settleDetailMode === "preview") {
