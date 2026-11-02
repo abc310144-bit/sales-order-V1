@@ -2464,6 +2464,8 @@
       flex-wrap: wrap;
     }
     .monthly-bill-section .form-ctrl input[readonly] { flex: 1; min-width: 180px; }
+    #monthlyBillInvDiff { margin-left: 8px; color: #389e0d; }
+    #monthlyBillInvDiff.is-mismatch { color: #cf1322; font-weight: 600; }
     .monthly-bill-detail-lines { margin-top: 24px; }
     .acc-file-ops a { margin-right: 12px; }
     .acc-diff-list {
@@ -3028,26 +3030,27 @@
         </div>
 
         <div class="page" id="page-channel-settle">
-          <div class="channel-settle-mode" id="channelSettleModeGroup" role="group" aria-label="結算類型">
-            <label class="radio-line"><input type="checkbox" id="channelSettleModeBuyout" data-channel-settle-mode="buyout" checked /> 買斷</label>
-            <label class="radio-line"><input type="checkbox" id="channelSettleModeTransfer" data-channel-settle-mode="transfer" /> 轉單</label>
-            <label class="radio-line"><input type="checkbox" id="channelSettleModeConsign" data-channel-settle-mode="consign" /> 寄倉</label>
+          <div class="sales-toolbar">
+            <button type="button" class="accordion-btn" id="channelSettleAccordionBtn" aria-expanded="true">
+              <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+              篩選條件
+            </button>
+            <div class="sales-toolbar-actions">
+              <button type="button" class="btn btn-primary" id="channelBillCreateBtn">建立結帳單</button>
+            </div>
           </div>
-
-          <div id="channelSettleBuyoutPanel">
-            <div class="sales-toolbar">
-              <button type="button" class="accordion-btn" id="channelSettleAccordionBtn" aria-expanded="true">
-                <svg class="acc-arrow" viewBox="0 0 12 12"><path fill="currentColor" d="M2.5 4.5 6 8l3.5-3.5"/></svg>
-                篩選條件
-              </button>
-            </div>
-            <div class="demo-hint" id="channelSettleOrderHint">
-              <strong>DEMO 提示｜買斷</strong><br />
-              本模式篩選／列表<strong>僅含買斷</strong>。一般買斷依客戶訂單結算；<strong>境外通路依出貨單</strong>結算，一張出貨單一筆。品運勾選後「送出結算」扣可結數量，並產生結算包到財務「財務結算」（境外勾選多張出貨單時，每張各成一包）。<br />
-              初次進入預設「待結算」。一包須為<strong>同一通路</strong>。轉單請改勾「轉單」；寄倉請改勾「寄倉」。發票回壓／ezpay 由財務在「財務結算」處理。
-            </div>
+          <div class="demo-hint" id="channelSettleOrderHint">
+            <strong>DEMO 提示｜結帳單建立</strong><br />
+            本頁列出已建立的結帳單。按右上「建立結帳單」選通路（類型依通路自動帶出），第一步勾選訂單或商品並可改數量，按「儲存此分頁」進預覽；「送出結算申請」才產生結帳單、扣可結數量，狀態為待結算。<br />
+            月結：財務回壓或 ezpay 後為已結算，待結算可駁回。不需財務開票（線上、跨境）：送出時帶假發票，財務「確認結算」後為已結算，待結算可駁回。駁回後狀態為經財務駁回、數量加回。<br />
+            可測單號：買斷月結待結算 <strong>20260822002</strong>（寶雅）、已結算 <strong>20260822003</strong>、駁回 <strong>20260822001</strong>；買斷跨境金額不符 <strong>20260818082</strong>（Cool Cool）；轉單月結已結算 <strong>20260821001</strong>（絢綻）、待結算 <strong>20260821002</strong>；轉單非月結待結算 <strong>20260810029</strong>（線上-轉單，金額相符）、已結算 <strong>20260826032</strong>；寄倉已結算 <strong>20260820001</strong>（新光）、待結算 <strong>20260828008</strong>（PW）。
+          </div>
             <section class="filter" id="channelSettleFilterPanel">
               <div class="filter-grid">
+                <div class="field">
+                  <label>結帳單號</label>
+                  <input id="channelSettleFilterBillNo" type="text" placeholder="支援模糊查詢" />
+                </div>
                 <div class="field">
                   <label>通路</label>
                   <select id="channelSettleFilterChannel">
@@ -3055,24 +3058,30 @@
                   </select>
                 </div>
                 <div class="field">
-                  <label>驗收時間</label>
+                  <label>結算類型</label>
+                  <select id="channelSettleFilterType">
+                    <option value="">請選擇</option>
+                    <option>買斷</option>
+                    <option>轉單</option>
+                    <option>寄倉</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>狀態</label>
+                  <select id="channelSettleFilterStatus">
+                    <option value="">請選擇</option>
+                    <option>待結算</option>
+                    <option>已結算</option>
+                    <option>經財務駁回</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>建立時間</label>
                   <div class="range">
                     <input id="channelSettleFilterFrom" type="date" />
                     <span class="sep">→</span>
                     <input id="channelSettleFilterTo" type="date" />
                   </div>
-                </div>
-                <div class="field">
-                  <label>狀態</label>
-                  <select id="channelSettleFilterStatus">
-                    <option value="待結算">待結算</option>
-                    <option value="部分結算">部分結算</option>
-                    <option value="已結算">已結算</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label>客戶訂單編號</label>
-                  <input id="channelSettleFilterOrderNo" type="text" placeholder="支援模糊查詢" />
                 </div>
               </div>
               <div class="filter-actions">
@@ -3080,140 +3089,61 @@
                 <button class="btn btn-primary" type="button" id="channelSettleFilterApply">套用</button>
               </div>
             </section>
-            <div class="table-meta sales-table-meta">
-              <div class="sales-batch-actions">
-                <button type="button" class="btn btn-primary hidden" id="channelSettleBatchBtn">送出結算</button>
-              </div>
-              <div class="sales-table-meta-right">總共 <span id="channelSettleTotal">0</span> 筆</div>
+            <div class="table-meta">
+              總共 <span id="channelSettleTotal">0</span> 筆
             </div>
             <div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th class="col-check"><input type="checkbox" id="channelSettleCheckAll" aria-label="全選" /></th>
-                    <th>客戶訂單編號</th>
-                    <th>出貨單編號</th>
+                    <th>結帳單號</th>
                     <th>通路</th>
+                    <th>結算類型</th>
                     <th>狀態</th>
-                    <th class="num">實際驗收數量</th>
-                    <th class="num">剩餘可結金額</th>
-                    <th>驗收時間</th>
+                    <th class="num">結算金額</th>
+                    <th>建立時間</th>
+                    <th>駁回原因</th>
                     <th>操作</th>
                   </tr>
                 </thead>
                 <tbody id="channelSettleBody"></tbody>
               </table>
             </div>
-          </div>
-
-          <div id="channelSettleConsignPanel" class="hidden">
-            <div class="acc-page-head">
-              <div>
-                <h2 class="form-title">寄倉</h2>
-                <div class="po-kind-meta">僅寄倉通路、狀態為「待結算／部分結算」且尚有可結數量的 SKU；勾選後設定本次結算數量並送出結算（同一通路）。</div>
-              </div>
-              <div class="acc-head-actions">
-                <button type="button" class="btn btn-primary" id="settleImportBtn">匯入結算商品</button>
-                <button type="button" class="btn btn-primary" id="settleConfirmBtn">送出結算</button>
-              </div>
-            </div>
-            <div class="demo-hint">
-              <strong>DEMO 提示｜寄倉</strong><br />
-              僅<strong>寄倉通路</strong>；與「出貨單管理」對應——出貨單<strong>驗收完成（已驗收）</strong>後，SKU 才進本列表。線上出貨屬轉單，請改勾「轉單」。<br />
-              依 SKU 批次結算；送出後扣可結數量並產生一包到財務「財務結算」。一包僅限同一通路。<br />
-              假資料：通路下拉可選「實體-PW健身工廠」「百貨-新光三越」；單號 <code>SO20260826008</code>／<code>SO20260827034</code>／<code>SO20260815022</code>（對應出貨 VN10473／10472、10510、10484／10485）。
-            </div>
-            <section class="filter">
-              <div class="filter-grid">
-                <div class="field">
-                  <label>通路</label>
-                  <select id="settleFilterChannel">
-                    <option value="">請選擇</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label>建立時間</label>
-                  <div class="range">
-                    <input id="settleFilterCreatedFrom" type="date" />
-                    <span class="sep">→</span>
-                    <input id="settleFilterCreatedTo" type="date" />
-                  </div>
-                </div>
-                <div class="field">
-                  <label>實際出貨時間</label>
-                  <div class="range">
-                    <input id="settleFilterShippedFrom" type="date" />
-                    <span class="sep">→</span>
-                    <input id="settleFilterShippedTo" type="date" />
-                  </div>
-                </div>
-                <div class="field">
-                  <label>SKU</label>
-                  <input id="settleFilterSku" type="text" placeholder="支援模糊查詢，多個以 , 分隔" />
-                </div>
-                <div class="field">
-                  <label>客戶訂單編號</label>
-                  <input id="settleFilterOrderNo" type="text" placeholder="支援模糊查詢" />
-                </div>
-                <div class="field">
-                  <label>狀態</label>
-                  <select id="settleFilterStatus">
-                    <option value="待結算">待結算</option>
-                    <option value="部分結算">部分結算</option>
-                    <option value="已結算">已結算</option>
-                  </select>
-                </div>
-              </div>
-              <div class="filter-actions">
-                <button class="btn" type="button" id="settleFilterClear">清除篩選條件</button>
-                <button class="btn btn-primary" type="button" id="settleFilterApply">套用</button>
-              </div>
-            </section>
-            <div class="table-meta sales-table-meta">
-              <div class="settle-summary" id="settleSummary"></div>
-              <div class="sales-table-meta-right">總共 <span id="settleTotal">0</span> 筆</div>
-            </div>
-            <div class="table-wrap">
-              <table class="settle-table">
-                <thead>
-                  <tr>
-                    <th class="col-check"><input type="checkbox" id="settleCheckAll" aria-label="全選" /></th>
-                    <th>客戶訂單編號</th>
-                    <th>通路</th>
-                    <th>SKU</th>
-                    <th>商品名稱</th>
-                    <th class="num">訂購數量(pcs)</th>
-                    <th class="num">合計</th>
-                    <th>狀態</th>
-                    <th>建立時間</th>
-                    <th>實際出貨時間</th>
-                    <th class="num">實際驗收數量</th>
-                    <th>本次結算數量</th>
-                    <th class="num">本次結算金額</th>
-                    <th class="num">剩餘可結數量</th>
-                    <th class="num">剩餘可結金額</th>
-                    <th>備註</th>
-                  </tr>
-                </thead>
-                <tbody id="settleTableBody"></tbody>
-              </table>
-            </div>
-          </div>
         </div>
 
         <div class="page" id="page-channel-settle-detail">
           <div class="acc-page-head">
             <div>
               <a class="link" id="channelSettleDetailBack">← 返回結帳單建立</a>
-              <h2 class="form-title" id="channelSettleDetailTitle">結算</h2>
+              <h2 class="form-title" id="channelSettleDetailTitle">建立結帳單</h2>
               <div class="po-kind-meta" id="channelSettleDetailMeta"></div>
             </div>
             <div class="acc-head-actions" id="channelSettleDetailActions">
               <button type="button" class="btn btn-primary" id="channelSettleImportBtn">匯入結算品項</button>
-              <button type="button" class="btn btn-primary" id="channelSettleConfirmBtn">送出結算</button>
             </div>
           </div>
+          <nav class="po-wizard" id="channelBillWizard" aria-label="建立步驟"></nav>
           <div class="settle-summary" id="channelSettleDetailSummary"></div>
+          <section class="filter" id="channelBillDraftFilter">
+            <div class="filter-grid">
+              <div class="field">
+                <label>客戶訂單編號</label>
+                <input id="channelBillDraftOrderNo" type="text" placeholder="支援模糊查詢" />
+              </div>
+              <div class="field">
+                <label>出貨單編號</label>
+                <input id="channelBillDraftShipNo" type="text" placeholder="支援模糊查詢" />
+              </div>
+              <div class="field">
+                <label>SKU</label>
+                <input id="channelBillDraftSku" type="text" placeholder="支援模糊查詢" />
+              </div>
+            </div>
+            <div class="filter-actions">
+              <button class="btn" type="button" id="channelBillDraftClear">清除篩選條件</button>
+              <button class="btn btn-primary" type="button" id="channelBillDraftApply">套用</button>
+            </div>
+          </section>
           <div class="table-meta">
             總共 <span id="channelSettleDetailTotal">0</span> 筆
           </div>
@@ -3222,15 +3152,10 @@
               <thead>
                 <tr>
                   <th class="col-check"><input type="checkbox" id="channelSettleDetailCheckAll" aria-label="全選" /></th>
-                  <th>通路</th>
+                  <th>客戶訂單編號</th>
+                  <th>出貨單編號</th>
                   <th>SKU</th>
                   <th>商品名稱</th>
-                  <th class="num">單價（不含稅）</th>
-                  <th class="num">單價（含稅）</th>
-                  <th class="num">訂購數量(pcs)</th>
-                  <th class="num">合計</th>
-                  <th>建立時間</th>
-                  <th>實際出貨時間</th>
                   <th class="num">實際驗收數量</th>
                   <th>本次結算數量</th>
                   <th class="num">本次結算金額</th>
@@ -3241,6 +3166,13 @@
               </thead>
               <tbody id="channelSettleDetailBody"></tbody>
             </table>
+          </div>
+          <div id="channelBillFoot" class="po-wizard-foot">
+            <div class="po-wizard-foot-right">
+              <button type="button" class="btn hidden" id="channelBillBackStep">返回</button>
+              <button type="button" class="btn btn-primary" id="channelBillSavePage">儲存此分頁</button>
+              <button type="button" class="btn btn-primary hidden" id="channelBillSubmit">送出結算申請</button>
+            </div>
           </div>
         </div>
 
@@ -3253,11 +3185,10 @@
           </div>
           <div class="demo-hint">
             <strong>DEMO 提示｜財務結算</strong><br />
-            品運於「結帳單建立」送出的結算包會出現於此。財務檢視核對金額；<strong>月結</strong>且待開發票時可於檢視頁右上選擇回壓發票或 ezpay 開發票。<br />
-            <strong>待開發票</strong>可由財務於檢視頁「駁回」（必填原因≤20字）→ 狀態改「已駁回」、整包數量加回路徑結算，已駁回僅供檢視、開票按鈕置灰。<br />
-            <strong>已開發票</strong>可由財務於檢視頁「刪除發票」→ 清除發票資料、財務結算狀態回「待開發票」後可再開票。結帳單建立的狀態不因此退回，數量也不加回。<br />
-            <strong>非月結</strong>僅供核對金額，不顯示開票按鈕，狀態維持待開發票。<br />
-            境外範例：結算包 <strong>20260818082</strong>（客戶訂單 SO20260816021、出貨單 VN00010482）已回壓出口報單。身分切到財務後，在該筆檢視頁可開。這張尚未開立發票，結帳單建立狀態仍是待結算。
+            品運送出的結帳單會出現於此，狀態與結帳單建立相同：待結算、已結算、經財務駁回。<br />
+            <strong>月結</strong>且待結算：可「回壓／開立發票」（完成後已結算）或「駁回」。已結算可「刪除發票」，狀態回到待結算、數量不加回，之後可再開發票。<br />
+            <strong>不需財務開票</strong>（線上、跨境）：送出時已帶發票資料。待結算可「確認結算」或「駁回」。發票金額與結算金額不同時，檢視頁會標示。已結算後不能駁回、不能刪發票。<br />
+            駁回須填原因（最多 20 字），狀態改經財務駁回，數量加回。跨境 <strong>20260818082</strong> 發票金額故意不符，且可看出口報單。線上 <strong>20260810029</strong> 發票金額與結算金額相同。
           </div>
           <section class="filter" id="monthlyBillFilterPanel">
             <div class="filter-grid">
@@ -3295,9 +3226,9 @@
                 <label>狀態</label>
                 <select id="monthlyBillFilterStatus">
                   <option value="">請選擇</option>
-                  <option value="待開發票">待開發票</option>
-                  <option value="已開發票">已開發票</option>
-                  <option value="已駁回">已駁回</option>
+                  <option value="待結算">待結算</option>
+                  <option value="已結算">已結算</option>
+                  <option value="經財務駁回">經財務駁回</option>
                 </select>
               </div>
             </div>
@@ -3341,6 +3272,7 @@
             <div class="acc-head-actions hidden" id="monthlyBillDetailActions">
               <button type="button" class="btn" id="monthlyBillRejectBtn">駁回</button>
               <button type="button" class="btn" id="monthlyBillDeleteInvoiceBtn">刪除發票</button>
+              <button type="button" class="btn btn-primary hidden" id="monthlyBillConfirmBtn">確認結算</button>
               <button type="button" class="btn btn-primary" id="monthlyBillInvoiceBtn">回壓／開立發票</button>
             </div>
           </div>
@@ -3393,7 +3325,7 @@
             </div>
             <div class="form-row">
               <label>發票金額</label>
-              <div class="form-ctrl"><input type="text" id="monthlyBillInvAmount" readonly /></div>
+              <div class="form-ctrl"><input type="text" id="monthlyBillInvAmount" readonly /><span id="monthlyBillInvDiff"></span></div>
             </div>
             <div class="form-row">
               <label>發票檔案</label>
@@ -4512,6 +4444,35 @@
     </div>
   </div>
 
+  <div class="modal-mask hidden" id="channelBillCreateModal">
+    <div class="modal-card type-pick-card" role="dialog" aria-labelledby="channelBillCreateTitle">
+      <div class="modal-head">
+        <h2 id="channelBillCreateTitle">建立結帳單</h2>
+        <button type="button" class="modal-close" id="channelBillCreateClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label class="required">通路名稱</label>
+          <div class="form-ctrl">
+            <select id="channelBillChannel">
+              <option value="">請選擇</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>結算類型</label>
+          <div class="form-ctrl">
+            <input type="text" id="channelBillFlow" readonly placeholder="選擇通路後自動帶出" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="channelBillCreateCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="channelBillCreateConfirm">確定</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-mask hidden" id="voidModal">
     <div class="modal-card void-card" role="dialog" aria-labelledby="voidTitle">
       <div class="modal-head">
@@ -5416,11 +5377,6 @@
 
     document.querySelectorAll("[data-page]").forEach((el) => {
       el.addEventListener("click", () => {
-        if (el.dataset.page === "channel-settle" && typeof setChannelSettleMode === "function") {
-          channelSettleMode = "buyout";
-          if (typeof resetChannelSettleBuyoutFilters === "function") resetChannelSettleBuyoutFilters();
-          if (typeof resetChannelSettleConsignFilters === "function") resetChannelSettleConsignFilters();
-        }
         showPage(el.dataset.page);
       });
     });
@@ -17533,8 +17489,9 @@
 
     /** 已開票才計入結帳單建立狀態。刪除發票仍保留；駁回（已駁回）才排除。 */
     function billCountsAsInvoiced(bill) {
-      if (!bill || bill.status === "已駁回") return false;
-      return !!(bill.invoiceCounted || bill.status === "已開發票");
+      if (!bill || bill.status === "經財務駁回" || bill.status === "已駁回") return false;
+      if (bill.status === "已結算" || bill.status === "已開發票") return true;
+      return !!bill.invoiceCounted;
     }
 
     function invoicedQtyByKey(orderNo, shipNo) {
@@ -18001,6 +17958,7 @@
     }
 
     function settleImportField(key) {
+      if (key.includes("出貨單")) return "shipNo";
       if (key.includes("客戶訂單編號") || key.includes("採購單編號") || (key.includes("訂單編號") && !key.includes("平台") && !key.includes("出貨"))) return "orderNo";
       if (key.includes("通路商品") || key === "商品品號") return "productCode";
       if (/^SKU$/i.test(key) || key === "品號") return "sku";
@@ -18450,7 +18408,7 @@
         return;
       }
       const ok = accImportTarget === "settle"
-        ? (settleDetailOrderNo ? applyChannelSettleImport(matrix) : applySettleImport(matrix))
+        ? (channelBillWizard.on ? applyChannelBillImport(matrix) : (settleDetailOrderNo ? applyChannelSettleImport(matrix) : applySettleImport(matrix)))
         : applyAcceptImport(matrix);
       if (!ok) return;
       closeAccImportModal();
@@ -18458,6 +18416,7 @@
     }
 
     let channelSettleMode = "buyout"; // buyout | transfer | consign
+    let channelBillWizard = { on: false, step: 1, channel: "", flow: "", viewId: "" };
 
     function isChannelSettleConsignMode() {
       return channelSettleMode === "consign";
@@ -18521,21 +18480,7 @@
     }
 
     function applyChannelSettleModeUi() {
-      const buyout = document.getElementById("channelSettleModeBuyout");
-      const transfer = document.getElementById("channelSettleModeTransfer");
-      const consign = document.getElementById("channelSettleModeConsign");
-      if (buyout) buyout.checked = channelSettleMode === "buyout";
-      if (transfer) transfer.checked = channelSettleMode === "transfer";
-      if (consign) consign.checked = channelSettleMode === "consign";
-      const orderMode = isChannelSettleOrderMode();
-      document.getElementById("channelSettleBuyoutPanel")?.classList.toggle("hidden", !orderMode);
-      document.getElementById("channelSettleConsignPanel")?.classList.toggle("hidden", channelSettleMode !== "consign");
-      if (orderMode) {
-        updateChannelSettleOrderHint();
-        renderChannelSettleTable(getChannelSettleFiltered());
-      } else {
-        applySettleFilters();
-      }
+      renderChannelBillList();
     }
 
     function setChannelSettleMode(mode) {
@@ -18611,17 +18556,17 @@
         const flow = channelAcceptFlow(channelName);
         type = flow === "寄倉" ? "寄倉" : (flow === "轉單" ? "轉單" : "買斷");
       }
-      const hasInvoice = !!(rec.invoiceNo || rec.invoiceDate || rec.fileData);
-      let status = rec.status || (hasInvoice ? "已開發票" : "待開發票");
-      if (status === "待開票") status = "待開發票";
-      if (status === "已開票") status = "已開發票";
+      let status = rec.status || "待結算";
+      if (status === "待開發票" || status === "待開票") status = "待結算";
+      if (status === "已開發票" || status === "已開票") status = "已結算";
+      if (status === "已駁回") status = "經財務駁回";
       return {
         ...rec,
         type,
         channelName,
         channelType,
         status,
-        invoiceCounted: !!(rec.invoiceCounted || status === "已開發票"),
+        invoiceCounted: !!(rec.invoiceCounted || status === "已結算"),
         monthly: rec.monthly != null ? !!rec.monthly : isMonthlySettleChannel(channelName),
         operator: rec.operator || "",
         shipNo: rec.shipNo || "",
@@ -18650,16 +18595,16 @@
       }
       const bill = settlementRecords.find((rec) => String(rec.id) === String(billId));
       if (!bill) return;
-      if (bill.status === "已駁回") {
-        alert("此結算包已駁回，不可開立發票");
+      if (bill.status === "經財務駁回" || bill.status === "已駁回") {
+        alert("此結帳單已駁回，不可開立發票");
         return;
       }
-      if (bill.status === "已開發票") {
-        alert("此結算包已開發票，不可再開立");
+      if (bill.status === "已結算" || bill.status === "已開發票") {
+        alert("此結帳單已結算，不可再開立");
         return;
       }
-      if (bill.status !== "待開發票") {
-        alert("僅待開發票結算包可開立發票");
+      if (bill.status !== "待結算") {
+        alert("僅待結算結帳單可開立發票");
         return;
       }
       if (!bill.monthly) {
@@ -18726,7 +18671,8 @@
 
     function commitSettlementGroup(selected) {
       if (!selected.length) return null;
-      const shipNo = selected[0].shipNo || "";
+      const shipNos = [...new Set(selected.map((row) => row.shipNo).filter(Boolean))];
+      const shipNo = shipNos.find((no) => hasExportDeclFile(shipByOrderId(no))) || shipNos[0] || "";
       const lines = selected.map((row) => {
         const untaxed = accRoundMoney(row.price);
         const qty = Number(row.settleQty) || 0;
@@ -18761,11 +18707,8 @@
         channelName,
         channelType,
         shipNo,
-        status: "待開發票",
-        monthly: isChannelSettleConsignMode()
-          && document.getElementById("page-channel-settle")?.classList.contains("active")
-          ? true
-          : isMonthlySettleChannel(channelName),
+        status: "待結算",
+        monthly: isMonthlySettleChannel(channelName),
         invoiceNo: "",
         invoiceDate: "",
         invoiceAmount: null,
@@ -18828,8 +18771,8 @@
         closeSettleInvoiceModal();
         return;
       }
-      if (bill.status === "已開發票") {
-        alert("此結算包已開發票，不可再開立");
+      if (bill.status === "已結算" || bill.status === "已開發票") {
+        alert("此結帳單已結算，不可再開立");
         closeSettleInvoiceModal();
         return;
       }
@@ -18845,7 +18788,7 @@
         bill.fileType = "";
         bill.fileData = "";
         bill.invoiceCounted = true;
-        bill.status = "已開發票";
+        bill.status = "已結算";
         persistDemoData();
         closeSettleInvoiceModal();
         alert("已以 ezpay 開立發票（DEMO）");
@@ -18879,7 +18822,7 @@
       bill.fileType = settleInvoiceFile.type || "";
       bill.fileData = fileData;
       bill.invoiceCounted = true;
-      bill.status = "已開發票";
+      bill.status = "已結算";
       persistDemoData();
       closeSettleInvoiceModal();
       alert("發票回壓完成");
@@ -18996,22 +18939,26 @@
         }
       }
       const isFinance = isFinanceRole();
-      const canReject = isFinance && status === "待開發票";
-      const canInvoice = isFinance && bill.monthly && status === "待開發票";
-      const canDeleteInvoice = isFinance && status === "已開發票";
+      const pending = status === "待結算";
+      const canReject = isFinance && pending;
+      const canInvoice = isFinance && bill.monthly && pending;
+      const canConfirm = isFinance && !bill.monthly && pending;
+      const canDeleteInvoice = isFinance && bill.monthly && status === "已結算";
       const actions = document.getElementById("monthlyBillDetailActions");
       if (actions) actions.classList.toggle("hidden", !isFinance);
       const rejectBtn = document.getElementById("monthlyBillRejectBtn");
       if (rejectBtn) rejectBtn.classList.toggle("hidden", !canReject);
       const deleteInvBtn = document.getElementById("monthlyBillDeleteInvoiceBtn");
       if (deleteInvBtn) deleteInvBtn.classList.toggle("hidden", !canDeleteInvoice);
+      const confirmBtn = document.getElementById("monthlyBillConfirmBtn");
+      if (confirmBtn) confirmBtn.classList.toggle("hidden", !canConfirm);
       const invoiceBtn = document.getElementById("monthlyBillInvoiceBtn");
       if (invoiceBtn) {
-        invoiceBtn.classList.toggle("hidden", canDeleteInvoice);
+        invoiceBtn.classList.toggle("hidden", !bill.monthly || canDeleteInvoice);
         invoiceBtn.disabled = !canInvoice;
-        invoiceBtn.title = status === "已駁回"
+        invoiceBtn.title = status === "經財務駁回"
           ? "已駁回不可開立發票"
-          : (status === "已開發票" ? "已開發票" : (canInvoice ? "回壓／開立發票" : "僅待開發票且月結可開立"));
+          : (status === "已結算" ? "已結算" : (canInvoice ? "回壓／開立發票" : "僅待結算的月結結帳單可開立"));
       }
       const body = document.getElementById("monthlyBillDetailBody");
       const lines = bill.lines || [];
@@ -19038,15 +18985,23 @@
         }).join("");
       }
       const invSection = document.getElementById("monthlyBillInvoiceSection");
-      const issued = status === "已開發票" || !!(bill.invoiceNo || bill.invoiceDate || bill.fileData);
+      const issued = !!(bill.invoiceNo || bill.invoiceDate || bill.fileData || (bill.invoiceAmount != null && bill.invoiceAmount !== ""));
       invSection.classList.toggle("hidden", !issued);
       if (issued) {
         document.getElementById("monthlyBillInvNo").value = bill.invoiceNo || "-";
         document.getElementById("monthlyBillInvDate").value = bill.invoiceDate || "-";
         document.getElementById("monthlyBillInvAmount").value =
           bill.invoiceAmount != null && bill.invoiceAmount !== "" ? accMoney(bill.invoiceAmount) : "-";
+        const diffEl = document.getElementById("monthlyBillInvDiff");
+        if (diffEl) {
+          const taxedTotal = settleBillTaxedTotal(bill);
+          const hasAmount = bill.invoiceAmount != null && bill.invoiceAmount !== "";
+          const mismatch = hasAmount && accRoundMoney(bill.invoiceAmount) !== accRoundMoney(taxedTotal);
+          diffEl.textContent = !hasAmount ? "" : (mismatch ? `與結算金額 ${accMoney(taxedTotal)} 不一致` : "與結算金額一致");
+          diffEl.classList.toggle("is-mismatch", mismatch);
+        }
         const fileEl = document.getElementById("monthlyBillInvFileName");
-        fileEl.textContent = bill.fileName || (bill.fileData ? "發票檔案" : "無檔案（ezpay 自動開立）");
+        fileEl.textContent = bill.fileName || (bill.fileData ? "發票檔案" : (bill.autoInvoice ? "無檔案（自動開立）" : "無檔案（ezpay 自動開立）"));
         fileEl.classList.toggle("empty", !bill.fileData);
         const previewBtn = document.getElementById("monthlyBillPreviewInvoiceBtn");
         previewBtn.disabled = !bill.fileData;
@@ -19096,11 +19051,11 @@
       }
       const bill = settlementRecords.find((rec) => String(rec.id) === String(monthlyBillViewId));
       if (!bill) return;
-      if (bill.status !== "已開發票") {
-        alert("僅已開發票結算包可刪除發票");
+      if (!bill.monthly || bill.status !== "已結算") {
+        alert("僅月結且已結算的結帳單可刪除發票");
         return;
       }
-      if (!confirm("確定刪除此結算包的已開發票？財務結算改回待開發票，結帳單建立的狀態與已扣數量不變。")) return;
+      if (!confirm("確定刪除此結帳單的發票？狀態回到待結算，可再開發票。已扣數量不加回。")) return;
       bill.invoiceCounted = true;
       bill.invoiceNo = "";
       bill.invoiceDate = "";
@@ -19108,7 +19063,8 @@
       bill.fileName = "";
       bill.fileType = "";
       bill.fileData = "";
-      bill.status = "待開發票";
+      bill.autoInvoice = false;
+      bill.status = "待結算";
       persistDemoData();
       alert("已刪除發票");
       openMonthlyBillDetail(bill.id);
@@ -19149,8 +19105,8 @@
       }
       const bill = settlementRecords.find((rec) => String(rec.id) === String(monthlyBillViewId));
       if (!bill) return;
-      if (bill.status !== "待開發票") {
-        alert("僅待開發票結算包可駁回");
+      if (bill.status !== "待結算") {
+        alert("僅待結算結帳單可駁回");
         return;
       }
       document.getElementById("settleRejectReason").value = "";
@@ -19171,8 +19127,8 @@
         closeSettleRejectModal();
         return;
       }
-      if (bill.status !== "待開發票") {
-        alert("僅待開發票結算包可駁回");
+      if (bill.status !== "待結算") {
+        alert("僅待結算結帳單可駁回");
         closeSettleRejectModal();
         return;
       }
@@ -19186,7 +19142,8 @@
         return;
       }
       restoreSettlementPackageQty(bill);
-      bill.status = "已駁回";
+      bill.status = "經財務駁回";
+      bill.invoiceCounted = false;
       bill.rejectReason = reason.slice(0, 20);
       bill.rejectedBy = currentRole || "財務";
       bill.rejectedAt = nowStamp();
@@ -19386,7 +19343,7 @@
     }
 
     function isSettleDetailReadonly() {
-      return settleDetailMode === "view";
+      return settleDetailMode === "view" || settleDetailMode === "preview";
     }
 
     function buildOrderSettleRows(orderNo, shipNo) {
@@ -20171,6 +20128,521 @@
       if (isOverseasSupplyForm()) refreshChannelSupplySideQuote("noLabel");
     });
 
+    function channelBillLineTaxed(row, qty) {
+      if (!row || row.gift) return 0;
+      const untaxed = accRoundMoney(row.price);
+      const order = salesOrders.find((item) => item.orderNo === row.orderNo);
+      const taxed = isOverseasPo(order) ? untaxed : accRoundMoney(untaxed * (1 + SETTLE_TAX_RATE));
+      return accRoundMoney(taxed * (Number(qty) || 0));
+    }
+
+    function fillAutoInvoice(record, amount) {
+      if (!record) return;
+      record.invoiceNo = `EV${String(record.id).slice(-8)}`;
+      record.invoiceDate = String(record.createdAt || nowStamp()).slice(0, 10);
+      record.invoiceAmount = accRoundMoney(amount);
+      record.autoInvoice = true;
+      record.fileName = "";
+      record.fileType = "";
+      record.fileData = "";
+      record.invoiceCounted = record.status === "已結算";
+    }
+
+    function renderChannelBillList() {
+      const billNo = ((document.getElementById("channelSettleFilterBillNo") || {}).value || "").trim().toLowerCase();
+      const channel = (document.getElementById("channelSettleFilterChannel") || {}).value || "";
+      const type = (document.getElementById("channelSettleFilterType") || {}).value || "";
+      const status = (document.getElementById("channelSettleFilterStatus") || {}).value || "";
+      const from = (document.getElementById("channelSettleFilterFrom") || {}).value || "";
+      const to = (document.getElementById("channelSettleFilterTo") || {}).value || "";
+      const channelSelect = document.getElementById("channelSettleFilterChannel");
+      if (channelSelect) {
+        const names = [...new Set(settlementRecords.map((rec) => rec.channelName).filter(Boolean))].sort();
+        const current = channelSelect.value;
+        channelSelect.innerHTML = `<option value="">請選擇</option>` + names
+          .map((name) => `<option${name === current ? " selected" : ""}>${escapeHtml(name)}</option>`).join("");
+      }
+      const data = settlementRecords.filter((rec) => {
+        if (billNo && !String(rec.id || "").toLowerCase().includes(billNo)) return false;
+        if (channel && rec.channelName !== channel) return false;
+        if (type && rec.type !== type) return false;
+        if (status && rec.status !== status) return false;
+        if ((from || to) && !inDateRange(rec.createdAt, from, to)) return false;
+        return true;
+      }).slice().sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+      const body = document.getElementById("channelSettleBody");
+      const total = document.getElementById("channelSettleTotal");
+      if (total) total.textContent = String(data.length);
+      if (!body) return;
+      if (!data.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="8">查無資料</td></tr>`;
+        return;
+      }
+      body.innerHTML = data.map((rec) => `
+        <tr>
+          <td>${escapeHtml(rec.id)}</td>
+          <td>${escapeHtml(rec.channelName || "—")}</td>
+          <td>${escapeHtml(rec.type || "—")}</td>
+          <td>${statusTag(rec.status || "待結算")}</td>
+          <td class="num">${escapeHtml(accMoney(settleBillTaxedTotal(rec)))}</td>
+          <td>${escapeHtml(rec.createdAt || "—")}</td>
+          <td>${escapeHtml(rec.rejectReason || "—")}</td>
+          <td class="ops"><a data-channel-bill-view="${escapeHtml(rec.id)}">檢視</a></td>
+        </tr>`).join("");
+    }
+
+    function buildChannelBillDraftRows(channelName, flow) {
+      const rows = [];
+      if (flow === "寄倉") {
+        buildSettlePool().filter((row) => row.channelName === channelName && row.remain > 0).forEach((row) => {
+          rows.push({ ...row, shipNo: row.shipNo || "", checked: false, settleQty: 0, remark: "" });
+        });
+        return rows;
+      }
+      settlementSourceOrders().filter((order) => order.channelName === channelName).forEach((order) => {
+        if (isOverseasPo(order)) {
+          overseasAcceptedShips(order).forEach((ship) => {
+            buildOrderSettleRows(order.orderNo, ship.orderId).forEach((line) => {
+              if (line.remain > 0) rows.push(line);
+            });
+          });
+          return;
+        }
+        buildOrderSettleRows(order.orderNo).forEach((line) => {
+          if (line.remain > 0) rows.push(line);
+        });
+      });
+      return rows;
+    }
+
+    function channelBillVisibleRows() {
+      if (settleDetailMode === "view") return settleRows;
+      if (settleDetailMode === "preview") return settleRows.filter((row) => row.checked && row.settleQty > 0);
+      const orderNo = ((document.getElementById("channelBillDraftOrderNo") || {}).value || "").trim().toLowerCase();
+      const shipNo = ((document.getElementById("channelBillDraftShipNo") || {}).value || "").trim().toLowerCase();
+      const sku = ((document.getElementById("channelBillDraftSku") || {}).value || "").trim().toLowerCase();
+      return settleRows.filter((row) => {
+        if (orderNo && !String(row.orderNo || "").toLowerCase().includes(orderNo)) return false;
+        if (shipNo && !String(row.shipNo || "").toLowerCase().includes(shipNo)) return false;
+        if (sku && !String(row.sku || "").toLowerCase().includes(sku)) return false;
+        return true;
+      });
+    }
+
+    function renderChannelBillWizardNav() {
+      const nav = document.getElementById("channelBillWizard");
+      if (!nav) return;
+      nav.classList.toggle("hidden", !channelBillWizard.on);
+      if (!channelBillWizard.on) {
+        nav.innerHTML = "";
+        return;
+      }
+      const labels = channelBillWizard.flow === "寄倉" ? ["選擇商品", "結帳單預覽"] : ["選擇訂單", "結帳單預覽"];
+      nav.innerHTML = labels.map((label, i) => {
+        const n = i + 1;
+        const state = n < channelBillWizard.step ? "is-done" : (n === channelBillWizard.step ? "is-active" : "");
+        const line = i < labels.length - 1 ? `<div class="po-wizard-line"></div>` : "";
+        return `<div class="po-wizard-step ${state}"><div class="po-wizard-node"><div class="po-wizard-dot">${n}</div><div class="po-wizard-label">${escapeHtml(label)}</div></div>${line}</div>`;
+      }).join("");
+      const atFirst = channelBillWizard.step <= 1;
+      document.getElementById("channelBillBackStep")?.classList.toggle("hidden", atFirst);
+      document.getElementById("channelBillSavePage")?.classList.toggle("hidden", !atFirst);
+      document.getElementById("channelBillSubmit")?.classList.toggle("hidden", atFirst);
+      document.getElementById("channelBillFoot")?.classList.remove("hidden");
+      document.getElementById("channelSettleDetailActions")?.classList.toggle("hidden", !atFirst);
+      document.getElementById("channelBillDraftFilter")?.classList.toggle("hidden", !atFirst);
+    }
+
+    function renderChannelBillDraft() {
+      const body = document.getElementById("channelSettleDetailBody");
+      const data = channelBillVisibleRows();
+      const total = document.getElementById("channelSettleDetailTotal");
+      const all = document.getElementById("channelSettleDetailCheckAll");
+      const readonly = isSettleDetailReadonly();
+      if (total) total.textContent = String(data.length);
+      if (all) {
+        const settleable = data.filter((row) => row.remain > 0);
+        all.disabled = readonly || !settleable.length;
+        all.checked = !readonly && settleable.length > 0 && settleable.every((row) => row.checked);
+      }
+      const summary = document.getElementById("channelSettleDetailSummary");
+      if (summary) {
+        if (readonly && settleDetailMode === "view") {
+          const amount = settleRows.reduce((sum, row) => sum + channelBillLineTaxed(row, row.settleQty), 0);
+          summary.innerHTML = `共 <strong>${settleRows.length}</strong> 筆，結算金額合計 <strong>${escapeHtml(accMoney(amount))}</strong>`;
+        } else if (settleDetailMode === "preview" || channelBillWizard.on) {
+          const selected = settleSelectedRows();
+          const amount = selected.reduce((sum, row) => sum + channelBillLineTaxed(row, row.settleQty), 0);
+          summary.innerHTML = selected.length
+            ? `已勾選 <strong>${selected.length}</strong> 筆，本次結算金額合計（含稅） <strong>${escapeHtml(accMoney(amount))}</strong>`
+            : "";
+        } else {
+          summary.innerHTML = "";
+        }
+      }
+      if (!body) return;
+      if (!data.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="11">${settleDetailMode === "preview" ? "尚未選擇結算品項" : "此通路目前沒有可結算品項"}</td></tr>`;
+        return;
+      }
+      body.innerHTML = data.map((row) => {
+        const qty = row.checked ? row.settleQty : 0;
+        const remainQty = Math.max(0, row.remain - qty);
+        const canFill = !readonly && row.remain > 0;
+        const remark = normalizeSettleRemark(row.remark);
+        const remarkCell = readonly
+          ? `<td>${remark ? escapeHtml(remark) : "—"}</td>`
+          : `<td><input type="text" maxlength="${SETTLE_REMARK_MAX}" data-settle-remark="1" value="${escapeHtml(remark)}" placeholder="最多 ${SETTLE_REMARK_MAX} 字"${canFill ? "" : " disabled"} /></td>`;
+        const qtyCell = readonly
+          ? `<td class="num">${escapeHtml(row.settleQty || 0)}</td>`
+          : `<td><input type="number" min="0" max="${escapeHtml(row.remain)}" step="1" data-settle-qty="1" value="${escapeHtml(row.settleQty)}"${canFill && row.checked ? "" : " disabled"} />${canFill ? `<span class="acc-sub">可結上限：${escapeHtml(row.remain)}</span>` : `<span class="acc-sub">無可結數量</span>`}</td>`;
+        return `
+        <tr data-settle-id="${escapeHtml(row.id)}">
+          <td class="col-check"><input type="checkbox" data-settle-check="1"${row.checked ? " checked" : ""}${canFill ? "" : " disabled"} /></td>
+          <td>${escapeHtml(row.orderNo || "—")}</td>
+          <td>${escapeHtml(row.shipNo || "—")}</td>
+          <td>${escapeHtml(row.sku || "—")}</td>
+          <td>${escapeHtml(row.name || "—")}</td>
+          <td class="num">${settleDetailMode === "view" ? "—" : escapeHtml(row.acceptQty)}</td>
+          ${qtyCell}
+          <td class="num">${escapeHtml(accMoney(channelBillLineTaxed(row, qty)))}</td>
+          <td class="num">${settleDetailMode === "view" ? "—" : escapeHtml(remainQty)}</td>
+          <td class="num">${settleDetailMode === "view" ? "—" : escapeHtml(accMoney(channelBillLineTaxed(row, remainQty)))}</td>
+          ${remarkCell}
+        </tr>`;
+      }).join("");
+    }
+
+    function openChannelBillCreateModal() {
+      const select = document.getElementById("channelBillChannel");
+      const names = Object.keys(channelProfiles).sort();
+      select.innerHTML = `<option value="">請選擇</option>` + names
+        .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+      document.getElementById("channelBillFlow").value = "";
+      document.getElementById("channelBillCreateModal").classList.remove("hidden");
+    }
+
+    function closeChannelBillCreateModal() {
+      document.getElementById("channelBillCreateModal").classList.add("hidden");
+    }
+
+    function syncChannelBillFlowLabel() {
+      const name = document.getElementById("channelBillChannel").value;
+      document.getElementById("channelBillFlow").value = name ? channelAcceptFlow(name) : "";
+    }
+
+    function startChannelBillWizard(channelName) {
+      const flow = channelAcceptFlow(channelName);
+      channelBillWizard = { on: true, step: 1, channel: channelName, flow, viewId: "" };
+      settleDetailMode = "edit";
+      settleDetailOrderNo = "";
+      settleDetailShipNo = "";
+      settleRows = buildChannelBillDraftRows(channelName, flow);
+      ["channelBillDraftOrderNo", "channelBillDraftShipNo", "channelBillDraftSku"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
+      const monthly = isMonthlySettleChannel(channelName);
+      document.getElementById("channelSettleDetailTitle").textContent = "建立結帳單";
+      document.getElementById("channelSettleDetailMeta").textContent =
+        `通路：${channelName}｜結算類型：${flow}｜${monthly ? "月結，送出後為待結算，由財務開立發票" : "不需財務開票，送出後為待結算並帶入發票資料，由財務確認結算"}`;
+      renderChannelBillWizardNav();
+      renderChannelBillDraft();
+      showPage("channel-settle-detail");
+    }
+
+    function openChannelBillView(billId) {
+      const bill = settlementRecords.find((rec) => String(rec.id) === String(billId));
+      if (!bill) {
+        alert("找不到結帳單");
+        return;
+      }
+      channelBillWizard = { on: false, step: 1, channel: bill.channelName || "", flow: bill.type || "", viewId: String(bill.id) };
+      settleDetailMode = "view";
+      settleRows = (bill.lines || []).map((line, index) => ({
+        id: `${bill.id}|${index}`,
+        orderNo: line.orderNo || "",
+        shipNo: line.shipNo || "",
+        channelName: line.channelName || bill.channelName || "",
+        sku: line.sku || "",
+        name: line.name || "",
+        price: line.price,
+        gift: !!line.gift,
+        acceptQty: line.qty,
+        remain: 0,
+        checked: true,
+        settleQty: Number(line.qty) || 0,
+        remark: line.remark || "",
+      }));
+      document.getElementById("channelSettleDetailTitle").textContent = "檢視結帳單";
+      document.getElementById("channelSettleDetailMeta").textContent =
+        `結帳單號：${bill.id}｜通路：${bill.channelName || "—"}｜結算類型：${bill.type || "—"}｜狀態：${bill.status || "—"}${bill.rejectReason ? `｜駁回原因：${bill.rejectReason}` : ""}`;
+      document.getElementById("channelBillWizard")?.classList.add("hidden");
+      document.getElementById("channelBillFoot")?.classList.add("hidden");
+      document.getElementById("channelSettleDetailActions")?.classList.add("hidden");
+      document.getElementById("channelBillDraftFilter")?.classList.add("hidden");
+      renderChannelBillDraft();
+      showPage("channel-settle-detail");
+    }
+
+    function saveChannelBillPage() {
+      const selected = settleSelectedRows();
+      if (!selected.length) {
+        alert("請先勾選並設定本次結算數量");
+        return;
+      }
+      const bad = selected.find((row) => {
+        const qty = Number(row.settleQty);
+        return !Number.isInteger(qty) || qty <= 0 || qty > row.remain;
+      });
+      if (bad) {
+        alert(`${bad.orderNo} / ${bad.sku} 的本次結算數量須為大於 0、且不超過可結上限的整數`);
+        return;
+      }
+      channelBillWizard.step = 2;
+      settleDetailMode = "preview";
+      renderChannelBillWizardNav();
+      renderChannelBillDraft();
+    }
+
+    function backChannelBillStep() {
+      channelBillWizard.step = 1;
+      settleDetailMode = "edit";
+      renderChannelBillWizardNav();
+      renderChannelBillDraft();
+    }
+
+    function submitChannelBill() {
+      const selected = settleSelectedRows();
+      if (!selected.length) {
+        alert("請先勾選並設定本次結算數量");
+        return;
+      }
+      if (!assertSettleSameChannel(selected)) return;
+      const record = commitSettlementGroup(selected);
+      if (!record) return;
+      if (!record.monthly) fillAutoInvoice(record, settleBillTaxedTotal(record));
+      else record.invoiceCounted = false;
+      persistDemoData();
+      alert(`已送出結算申請（${record.id}），狀態為待結算。請至財務「財務結算」核對`);
+      channelBillWizard = { on: false, step: 1, channel: "", flow: "", viewId: "" };
+      settleRows = [];
+      settleDetailMode = "edit";
+      showPage("channel-settle");
+    }
+
+    function applyChannelBillImport(matrix) {
+      const { records, found } = recordsFromHeaderMatrix(matrix, settleImportField, ["orderNo", "sku", "qty", "shipNo"]);
+      if (!found.orderNo || !found.sku || !found.qty) {
+        alert("檔案缺少必要欄位：客戶訂單編號、SKU、本次結算數量");
+        return false;
+      }
+      if (!records.length) {
+        alert("檔案沒有可匯入的結算列");
+        return false;
+      }
+      const errors = [];
+      const seen = new Set();
+      const picks = [];
+      records.forEach((rec, i) => {
+        const rowNo = i + 2;
+        const orderNo = String(rec.orderNo || "").trim();
+        const sku = normalizeSku(rec.sku);
+        const shipNo = String(rec.shipNo || "").trim();
+        if (!orderNo || !sku || rec.qty === "") {
+          errors.push(`第 ${rowNo} 列：客戶訂單編號、SKU、本次結算數量為必填`);
+          return;
+        }
+        if (!isPositiveIntQty(rec.qty)) {
+          errors.push(`第 ${rowNo} 列：${orderNo} / ${sku} 本次結算數量須為大於 0 的正整數`);
+          return;
+        }
+        const id = `${orderNo.toLowerCase()}|${sku.toLowerCase()}|${shipNo.toLowerCase()}`;
+        if (seen.has(id)) {
+          errors.push(`第 ${rowNo} 列：${orderNo} / ${sku} 重複`);
+          return;
+        }
+        seen.add(id);
+        const matches = settleRows.filter((row) => {
+          if (String(row.orderNo || "").toLowerCase() !== orderNo.toLowerCase()) return false;
+          if (normalizeSku(row.sku).toLowerCase() !== sku.toLowerCase()) return false;
+          if (shipNo && String(row.shipNo || "").toLowerCase() !== shipNo.toLowerCase()) return false;
+          return true;
+        });
+        if (matches.length !== 1) {
+          errors.push(`第 ${rowNo} 列：${orderNo} / ${sku} 不在此通路可結清單，或對到多筆，請加出貨單編號`);
+          return;
+        }
+        if (Number(rec.qty) > matches[0].remain) {
+          errors.push(`第 ${rowNo} 列：${orderNo} / ${sku} 本次結算數量 ${rec.qty} 超過剩餘可結數量 ${matches[0].remain}`);
+          return;
+        }
+        picks.push({ row: matches[0], qty: Number(rec.qty) });
+      });
+      if (errors.length) {
+        alert(`匯入失敗，整檔不匯入：\n${errors.slice(0, 20).join("\n")}${errors.length > 20 ? `\n…共 ${errors.length} 筆錯誤` : ""}`);
+        return false;
+      }
+      const pickedIds = new Set(picks.map((pick) => pick.row.id));
+      settleRows.forEach((row) => {
+        row.checked = false;
+        row.settleQty = 0;
+      });
+      picks.forEach((pick) => {
+        pick.row.checked = true;
+        pick.row.settleQty = pick.qty;
+      });
+      pickedIds.forEach(() => {});
+      renderChannelBillDraft();
+      return true;
+    }
+
+    function pushFixedSettleBill(spec) {
+      if (settlementRecords.some((rec) => String(rec.id) === String(spec.id))) return;
+      const order = salesOrders.find((item) => item.orderNo === spec.orderNo);
+      if (!order) return;
+      const ship = spec.shipNo ? shipByOrderId(spec.shipNo) : null;
+      const source = ship ? shipSettleLines(order, ship) : accLinesOf(order);
+      const overseas = isOverseasPo(order);
+      const lines = [];
+      source.forEach((line) => {
+        const remain = Math.max(0, (Number(line.acceptQty) || 0) - (Number(line.settledQty) || 0));
+        let qty = Math.floor(remain * (Number(spec.ratio) || 0));
+        if (qty <= 0 && remain > 0) qty = 1;
+        if (qty > remain) qty = remain;
+        if (qty <= 0) return;
+        const untaxed = accRoundMoney(line.price);
+        const taxed = overseas ? untaxed : accRoundMoney(untaxed * (1 + SETTLE_TAX_RATE));
+        lines.push({
+          orderNo: order.orderNo,
+          shipNo: spec.shipNo || "",
+          channelName: order.channelName,
+          key: line.key,
+          sku: line.sku,
+          name: line.name,
+          qty,
+          gift: !!line.gift,
+          price: untaxed,
+          priceTaxed: taxed,
+          tax: accRoundMoney(taxed - untaxed),
+          amount: accRoundMoney(taxed * qty),
+          remark: "",
+        });
+        if (spec.status !== "經財務駁回") {
+          if (ship) {
+            const target = ensureShipSettleLedgerItem(ship, line);
+            target.settledQty = (Number(target.settledQty) || 0) + qty;
+          } else {
+            const target = ensureSettleLedgerItem(order, {
+              key: line.key,
+              sku: line.sku,
+              name: line.name,
+              acceptQty: line.acceptQty,
+              qty: line.qty || qty,
+            });
+            target.settledQty = (Number(target.settledQty) || 0) + qty;
+          }
+        }
+      });
+      if (!lines.length) return;
+      const total = accRoundMoney(lines.reduce((sum, line) => sum + (line.gift ? 0 : line.amount), 0));
+      const monthly = isMonthlySettleChannel(order.channelName);
+      const issued = spec.status === "已結算" && monthly;
+      const record = normalizeSettlementRecord({
+        id: spec.id,
+        createdAt: spec.createdAt,
+        operator: "建檔人",
+        type: channelAcceptFlow(order.channelName),
+        channelName: order.channelName,
+        channelType: order.channelType || "",
+        shipNo: spec.shipNo || "",
+        status: spec.status,
+        monthly,
+        invoiceNo: issued ? String(spec.id).slice(-10) : "",
+        invoiceDate: issued ? String(spec.createdAt).slice(0, 10) : "",
+        invoiceAmount: issued ? total : null,
+        fileName: issued ? `${String(spec.id).slice(-10)}.png` : "",
+        fileType: issued ? "image/png" : "",
+        fileData: issued
+          ? "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+          : "",
+        total,
+        lines,
+      });
+      if (!monthly && (spec.invoiceMode === "match" || spec.status === "已結算")) {
+        fillAutoInvoice(record, total);
+        record.status = spec.status;
+        record.invoiceCounted = spec.status === "已結算";
+      }
+      if (record.status !== "已結算") record.invoiceCounted = false;
+      settlementRecords.push(record);
+    }
+
+    function ensureDemoAcceptedShip(shipId) {
+      const ship = rows.find((row) => String(row.id) === String(shipId));
+      if (!ship || ship.status === "已驗收") return;
+      const lines = (ship.items || []).filter((item) => (Number(item.qty) || 0) > 0);
+      if (!lines.length) return;
+      ship.status = "已驗收";
+      ship.audit = ship.audit || "審核通過";
+      if (!String(ship.shipped || "").trim()) ship.shipped = "2026-08-12 11:00:00";
+      ship.acceptance = {
+        acceptedAt: "2026-08-12 11:30:00",
+        acceptedBy: "建檔人",
+        items: lines.map((item) => ({
+          key: itemKey(item),
+          sku: item.sku || "",
+          name: item.name || "",
+          acceptQty: Number(item.qty) || 0,
+          settledQty: 0,
+          remark: "",
+        })),
+      };
+    }
+
+    function ensureSettleBillFixtures() {
+      ensureDemoAcceptedShip("10495");
+      const labeled = settlementRecords.find((rec) => String(rec.id) === "20260821001");
+      if (labeled) labeled.type = channelAcceptFlow(labeled.channelName);
+      settlementRecords.forEach((bill) => {
+        if (bill.monthly || bill.status === "經財務駁回") return;
+        const total = settleBillTaxedTotal(bill);
+        if (!bill.invoiceNo) {
+          fillAutoInvoice(bill, String(bill.id) === "20260818082" ? accRoundMoney(total + 500) : total);
+          if (bill.status !== "已結算") bill.invoiceCounted = false;
+          return;
+        }
+        if (String(bill.id) === "20260818082" && accRoundMoney(bill.invoiceAmount) === accRoundMoney(total)) {
+          bill.invoiceAmount = accRoundMoney(total + 500);
+          bill.autoInvoice = true;
+          if (bill.status !== "已結算") bill.invoiceCounted = false;
+        }
+      });
+      pushFixedSettleBill({ id: "20260822003", orderNo: "SO20260809028", ratio: 0.2, status: "已結算", createdAt: "2026-08-22 16:00:00" });
+      pushFixedSettleBill({ id: "20260821001", orderNo: "SO20260813024", ratio: 0.4, status: "已結算", createdAt: "2026-08-21 10:30:00" });
+      pushFixedSettleBill({ id: "20260821002", orderNo: "SO20260813024", ratio: 0.5, status: "待結算", createdAt: "2026-08-21 15:00:00" });
+      pushFixedSettleBill({ id: "20260826032", orderNo: "SO20260824032", ratio: 0.4, status: "已結算", createdAt: "2026-08-26 11:00:00", invoiceMode: "match" });
+      pushFixedSettleBill({ id: "20260828008", orderNo: "SO20260826008", ratio: 0.3, status: "待結算", createdAt: "2026-08-28 15:00:00" });
+    }
+
+    function confirmNonMonthlySettle() {
+      if (!isFinanceRole()) {
+        alert("僅財務可確認結算");
+        return;
+      }
+      const bill = settlementRecords.find((rec) => String(rec.id) === String(monthlyBillViewId));
+      if (!bill || bill.monthly || bill.status !== "待結算") {
+        alert("僅待結算、且不需開立發票的結帳單可確認");
+        return;
+      }
+      bill.status = "已結算";
+      bill.invoiceCounted = true;
+      persistDemoData();
+      alert("已確認結算");
+      openMonthlyBillDetail(bill.id);
+      renderMonthlyBillTable(getMonthlyBillFiltered());
+    }
+
     document.getElementById("channelSettleAccordionBtn").addEventListener("click", () => {
       const btn = document.getElementById("channelSettleAccordionBtn");
       const collapsed = document.getElementById("channelSettleFilterPanel").classList.toggle("hidden");
@@ -20178,56 +20650,60 @@
       btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
     });
     document.getElementById("channelSettleFilterApply").addEventListener("click", () => {
-      renderChannelSettleTable(getChannelSettleFiltered());
+      renderChannelBillList();
     });
     document.getElementById("channelSettleFilterClear").addEventListener("click", () => {
-      document.getElementById("channelSettleFilterChannel").value = "";
-      document.getElementById("channelSettleFilterOrderNo").value = "";
-      document.getElementById("channelSettleFilterStatus").value = "待結算";
-      document.getElementById("channelSettleFilterFrom").value = "";
-      document.getElementById("channelSettleFilterTo").value = "";
-      renderChannelSettleTable(getChannelSettleFiltered());
-    });
-    document.getElementById("channelSettleCheckAll").addEventListener("change", (e) => {
-      const data = getChannelSettleFiltered();
-      if (e.target.checked) data.forEach((row) => channelSettleChecked.add(channelSettleRowKey(row)));
-      else channelSettleChecked = new Set();
-      renderChannelSettleTable(data);
-    });
-    document.getElementById("channelSettleBatchBtn").addEventListener("click", startChannelSettleBatchConfirm);
-    document.getElementById("channelSettleBody").addEventListener("change", (e) => {
-      if (!e.target.matches("input[data-channel-settle-check]")) return;
-      const key = e.target.closest("tr")?.dataset.channelSettleKey;
-      if (!key) return;
-      if (e.target.checked) channelSettleChecked.add(key);
-      else channelSettleChecked.delete(key);
-      syncChannelSettleBatchUi(getChannelSettleFiltered());
+      ["channelSettleFilterBillNo", "channelSettleFilterChannel", "channelSettleFilterType", "channelSettleFilterStatus", "channelSettleFilterFrom", "channelSettleFilterTo"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
+      renderChannelBillList();
     });
     document.getElementById("channelSettleBody").addEventListener("click", (e) => {
-      const viewNo = e.target.dataset.channelSettleView;
-      const settleNo = e.target.dataset.channelSettleEdit;
-      const shipNo = e.target.dataset.channelSettleShip || "";
-      if (viewNo) openChannelSettleDetail(viewNo, "view", shipNo);
-      if (settleNo) openChannelSettleDetail(settleNo, "settle", shipNo);
+      const id = e.target.dataset.channelBillView;
+      if (id) openChannelBillView(id);
     });
-    document.getElementById("channelSettleDetailBack").addEventListener("click", () => {
-      settleDetailOrderNo = "";
-      settleDetailShipNo = "";
-      settleDetailMode = "settle";
+    document.getElementById("channelBillCreateBtn").addEventListener("click", openChannelBillCreateModal);
+    document.getElementById("channelBillCreateClose").addEventListener("click", closeChannelBillCreateModal);
+    document.getElementById("channelBillCreateCancel").addEventListener("click", closeChannelBillCreateModal);
+    document.getElementById("channelBillCreateConfirm").addEventListener("click", () => {
+      const name = document.getElementById("channelBillChannel").value;
+      if (!name) {
+        alert("請選擇通路名稱");
+        return;
+      }
+      closeChannelBillCreateModal();
+      startChannelBillWizard(name);
+    });
+    document.getElementById("channelBillChannel").addEventListener("change", syncChannelBillFlowLabel);
+    document.getElementById("channelBillCreateModal").addEventListener("click", (e) => {
+      if (e.target.id === "channelBillCreateModal") closeChannelBillCreateModal();
+    });
+    document.getElementById("channelSettleDetailBack").addEventListener("click", (e) => {
+      e.preventDefault();
+      channelBillWizard = { on: false, step: 1, channel: "", flow: "", viewId: "" };
       settleRows = [];
+      settleDetailMode = "edit";
       showPage("channel-settle");
     });
     document.getElementById("channelSettleImportBtn").addEventListener("click", () => {
-      if (isSettleDetailReadonly()) return;
+      if (!channelBillWizard.on || channelBillWizard.step !== 1) return;
       openAccImportModal("settle");
     });
-    document.getElementById("channelSettleConfirmBtn").addEventListener("click", () => {
-      if (isSettleDetailReadonly()) return;
-      startSettleConfirm();
+    document.getElementById("channelBillSavePage").addEventListener("click", saveChannelBillPage);
+    document.getElementById("channelBillBackStep").addEventListener("click", backChannelBillStep);
+    document.getElementById("channelBillSubmit").addEventListener("click", submitChannelBill);
+    document.getElementById("channelBillDraftApply").addEventListener("click", renderChannelBillDraft);
+    document.getElementById("channelBillDraftClear").addEventListener("click", () => {
+      ["channelBillDraftOrderNo", "channelBillDraftShipNo", "channelBillDraftSku"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
+      renderChannelBillDraft();
     });
     document.getElementById("channelSettleDetailCheckAll").addEventListener("change", (e) => {
       if (isSettleDetailReadonly()) return;
-      settleRows.forEach((row) => {
+      channelBillVisibleRows().forEach((row) => {
         if (row.remain <= 0) {
           row.checked = false;
           row.settleQty = 0;
@@ -20236,7 +20712,7 @@
         row.checked = e.target.checked;
         row.settleQty = e.target.checked ? (row.settleQty || row.remain) : 0;
       });
-      renderChannelSettleDetailTable();
+      renderChannelBillDraft();
     });
     document.getElementById("channelSettleDetailBody").addEventListener("change", (e) => {
       if (!e.target.matches("input[data-settle-check]")) return;
@@ -20245,7 +20721,7 @@
       if (!row || row.remain <= 0) return;
       row.checked = e.target.checked;
       row.settleQty = row.checked ? (row.settleQty || row.remain) : 0;
-      renderChannelSettleDetailTable();
+      renderChannelBillDraft();
     });
     document.getElementById("channelSettleDetailBody").addEventListener("input", (e) => {
       if (isSettleDetailReadonly()) return;
@@ -20268,144 +20744,7 @@
         e.target.value = String(qty);
       }
       row.settleQty = qty;
-      updateSettleRowCells(tr, row);
-      const all = document.getElementById("channelSettleDetailCheckAll");
-      if (all) {
-        const settleable = settleRows.filter((r) => r.remain > 0);
-        all.checked = settleable.length > 0 && settleable.every((r) => r.checked);
-      }
-    });
-    document.querySelectorAll(".acc-tab").forEach((el) => {
-      el.addEventListener("click", () => setAccTab(el.dataset.accTab));
-    });
-    document.getElementById("accAcceptBtn").addEventListener("click", startAcceptance);
-    document.getElementById("accImportBtn").addEventListener("click", () => {
-      const order = accOrderOf(accViewOrderNo);
-      if (order && accEditable(order)) openAccImportModal("accept");
-    });
-    document.getElementById("accGoodsFilterSearch").addEventListener("click", applyAccGoodsFilter);
-    document.getElementById("accGoodsFilterInput").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") applyAccGoodsFilter();
-    });
-    document.getElementById("accGoodsFilterClear").addEventListener("click", () => {
-      accGoodsQueries = [];
-      document.getElementById("accGoodsFilterInput").value = "";
-      const order = accOrderOf(accViewOrderNo);
-      if (order) renderAccGoods(order);
-    });
-
-    function applyAccGoodsFilter() {
-      const order = accOrderOf(accViewOrderNo);
-      if (!order) return;
-      accGoodsQueries = parsePoItemQueries(document.getElementById("accGoodsFilterInput").value);
-      if (accEditable(order)) {
-        accVisibleLines().forEach((line) => accSetChecked(line, true));
-      }
-      renderAccGoods(order);
-    }
-
-    document.getElementById("accGoodsCheckAll").addEventListener("change", (e) => {
-      const order = accOrderOf(accViewOrderNo);
-      if (!order || !accEditable(order)) return;
-      accVisibleLines().forEach((line) => accSetChecked(line, e.target.checked));
-      renderAccGoods(order);
-    });
-    document.getElementById("accGoodsBody").addEventListener("change", (e) => {
-      if (!e.target.matches("input[data-acc-check]")) return;
-      const order = accOrderOf(accViewOrderNo);
-      const line = accLineByKey(e.target.closest("tr").dataset.accKey);
-      if (!order || !line || !accEditable(order)) return;
-      accSetChecked(line, e.target.checked);
-      renderAccGoods(order);
-    });
-    document.getElementById("accGoodsBody").addEventListener("input", (e) => {
-      const field = e.target.dataset.accField;
-      if (!field) return;
-      const line = accLineByKey(e.target.closest("tr").dataset.accKey);
-      if (!line) return;
-      if (field === "qty") {
-        line.inputQty = e.target.value;
-        e.target.classList.toggle("is-diff", accLineIsDiff(line));
-      } else if (field === "remark") {
-        line.remark = e.target.value;
-      }
-    });
-    document.getElementById("accSettleRecordBody").addEventListener("click", (e) => {
-      if (e.target.dataset.invoicePreview) previewInvoice(e.target.dataset.invoicePreview);
-      if (e.target.dataset.invoiceDownload) downloadInvoice(e.target.dataset.invoiceDownload);
-    });
-
-    document.getElementById("accDiffClose").addEventListener("click", closeAccDiffModal);
-    document.getElementById("accDiffCancel").addEventListener("click", closeAccDiffModal);
-    document.getElementById("accDiffConfirm").addEventListener("click", confirmAccDiff);
-
-    document.getElementById("accImportClose").addEventListener("click", closeAccImportModal);
-    document.getElementById("accImportPick").addEventListener("click", () => document.getElementById("accImportFile").click());
-    document.getElementById("accImportFile").addEventListener("change", (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-      accImportFile = file;
-      const nameEl = document.getElementById("accImportFileName");
-      nameEl.textContent = file.name;
-      nameEl.classList.add("has-file");
-      document.getElementById("accImportConfirm").disabled = false;
-    });
-    document.getElementById("accImportConfirm").addEventListener("click", confirmAccImport);
-
-    document.getElementById("channelSettleModeGroup").addEventListener("change", (e) => {
-      const picked = e.target.closest("input[data-channel-settle-mode]");
-      if (!picked) return;
-      if (!picked.checked) {
-        picked.checked = true;
-        return;
-      }
-      setChannelSettleMode(picked.dataset.channelSettleMode);
-    });
-    document.getElementById("settleFilterApply").addEventListener("click", applySettleFilters);
-    document.getElementById("settleFilterClear").addEventListener("click", clearSettleFilters);
-    document.getElementById("settleImportBtn").addEventListener("click", () => openAccImportModal("settle"));
-    document.getElementById("settleConfirmBtn").addEventListener("click", startSettleConfirm);
-    document.getElementById("settleCheckAll").addEventListener("change", (e) => {
-      settleRows.forEach((row) => {
-        if (row.remain <= 0) {
-          row.checked = false;
-          row.settleQty = 0;
-          return;
-        }
-        row.checked = e.target.checked;
-        row.settleQty = e.target.checked ? (row.settleQty || row.remain) : 0;
-      });
-      renderSettleTable();
-    });
-    document.getElementById("settleTableBody").addEventListener("change", (e) => {
-      if (!e.target.matches("input[data-settle-check]")) return;
-      const row = settleRowById(e.target.closest("tr").dataset.settleId);
-      if (!row || row.remain <= 0) return;
-      row.checked = e.target.checked;
-      row.settleQty = row.checked ? (row.settleQty || row.remain) : 0;
-      renderSettleTable();
-    });
-    document.getElementById("settleTableBody").addEventListener("input", (e) => {
-      if (e.target.matches("input[data-settle-remark]")) {
-        const row = settleRowById(e.target.closest("tr").dataset.settleId);
-        if (!row) return;
-        const next = String(e.target.value || "").slice(0, SETTLE_REMARK_MAX);
-        if (next !== e.target.value) e.target.value = next;
-        row.remark = next;
-        return;
-      }
-      if (!e.target.matches("input[data-settle-qty]")) return;
-      const tr = e.target.closest("tr");
-      const row = settleRowById(tr.dataset.settleId);
-      if (!row) return;
-      const raw = String(e.target.value).trim();
-      let qty = /^\d+$/.test(raw) ? Number(raw) : 0;
-      if (qty > row.remain) {
-        qty = row.remain;
-        e.target.value = String(qty);
-      }
-      row.settleQty = qty;
-      updateSettleRowCells(tr, row);
+      renderChannelBillDraft();
     });
 
     document.getElementById("settleInvoiceMethodGroup").addEventListener("change", (e) => {
@@ -20456,7 +20795,7 @@
       document.getElementById("monthlyBillFilterCreator").value = "";
       document.getElementById("monthlyBillFilterFrom").value = "";
       document.getElementById("monthlyBillFilterTo").value = "";
-      document.getElementById("monthlyBillFilterStatus").value = "待開發票";
+      document.getElementById("monthlyBillFilterStatus").value = "";
       renderMonthlyBillTable(getMonthlyBillFiltered());
     });
     document.getElementById("monthlyBillBody").addEventListener("click", (e) => {
@@ -20470,9 +20809,10 @@
     document.getElementById("monthlyBillInvoiceBtn").addEventListener("click", () => {
       if (!monthlyBillViewId) return;
       const bill = settlementRecords.find((rec) => String(rec.id) === String(monthlyBillViewId));
-      if (!bill || bill.status !== "待開發票" || !bill.monthly) return;
+      if (!bill || bill.status !== "待結算" || !bill.monthly) return;
       openSettleInvoiceModalForBill(monthlyBillViewId);
     });
+    document.getElementById("monthlyBillConfirmBtn").addEventListener("click", confirmNonMonthlySettle);
     document.getElementById("monthlyBillDeleteInvoiceBtn").addEventListener("click", () => {
       confirmDeleteSettleInvoice();
     });
@@ -20602,6 +20942,8 @@
     seedConsignSettleDemo();
     seedOnlineTransferSettleDemo();
     seedOverseasSettleDemo();
+    settlementRecords = settlementRecords.map(normalizeSettlementRecord);
+    ensureSettleBillFixtures();
     settlementRecords = settlementRecords.map(normalizeSettlementRecord);
     persistDemoData();
     renderShippingTable();
