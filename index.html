@@ -2444,6 +2444,71 @@
       color: var(--text-3);
     }
     .acc-sub.is-settled { color: #531dab; }
+    .bill-filter-note {
+      margin: 0 0 12px;
+      color: var(--text-2);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .bill-multi { position: relative; }
+    .bill-multi-btn {
+      width: 100%;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      background: #fff;
+      text-align: left;
+      padding: 0 11px;
+      font-size: 14px;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .bill-multi-panel {
+      position: absolute;
+      z-index: 30;
+      left: 0;
+      right: 0;
+      top: calc(100% + 4px);
+      background: #fff;
+      border: 1px solid var(--border);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+      padding: 8px;
+    }
+    .bill-multi-list { max-height: 220px; overflow: auto; }
+    .bill-multi-opt {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 2px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .field .bill-multi-opt input {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 auto;
+      padding: 0;
+    }
+    .bill-multi-empty { color: var(--text-3); font-size: 13px; padding: 6px 2px; }
+    .bill-expand {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--text-2);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .bill-expand svg { width: 12px; height: 12px; pointer-events: none; transition: transform 0.15s; }
+    .bill-expand.is-open svg { transform: rotate(90deg); }
+    th.col-expand, td.col-expand { width: 40px; text-align: center; }
+    tr.bill-parent td { background: #fafafa; font-weight: 500; }
+    tr.bill-child td { background: #fff; font-weight: 400; }
+    tr.bill-child td.bill-sku { padding-left: 28px; }
+    .settle-table.is-grouped { min-width: 1280px; }
     .settle-table .num,
     .acc-goods-table .num { text-align: right; }
     .settle-summary {
@@ -3041,7 +3106,7 @@
           </div>
           <div class="demo-hint" id="channelSettleOrderHint">
             <strong>DEMO 提示｜結帳單建立</strong><br />
-            本頁列出已建立的結帳單。按右上「建立結帳單」選通路（類型依通路自動帶出），第一步勾選訂單或商品並可改數量，按「儲存此分頁」進預覽；「送出結算申請」才產生結帳單、扣可結數量，狀態為待結算。<br />
+            本頁列出已建立的結帳單。按右上「建立結帳單」選通路（類型依通路自動帶出）。買斷、轉單第一步先篩選出貨單（未按套用不列出），一列一張出貨單，展開後勾選商品，可改數量。寄倉維持一列一項商品，勾選後帶入可結數量。按「儲存此分頁」進預覽；「送出結算申請」才產生結帳單、扣可結數量，狀態為待結算。<br />
             月結：財務回壓或 ezpay 後為已結算，待結算可駁回。不需財務開票（線上、跨境）：送出時帶假發票，財務「確認結算」後為已結算，待結算可駁回。駁回後狀態為經財務駁回、數量加回。<br />
             可測單號：買斷月結待結算 <strong>20260822002</strong>（寶雅）、已結算 <strong>20260822003</strong>、駁回 <strong>20260822001</strong>；買斷跨境金額不符 <strong>20260818082</strong>（Cool Cool）；轉單月結已結算 <strong>20260821001</strong>（絢綻）、待結算 <strong>20260821002</strong>；轉單非月結待結算 <strong>20260810029</strong>（線上-轉單，金額相符）、已結算 <strong>20260826032</strong>；寄倉已結算 <strong>20260820001</strong>（新光）、待結算 <strong>20260828008</strong>（PW）。
           </div>
@@ -3125,16 +3190,31 @@
           <nav class="po-wizard" id="channelBillWizard" aria-label="建立步驟"></nav>
           <div class="settle-summary" id="channelSettleDetailSummary"></div>
           <section class="filter" id="channelBillDraftFilter">
+            <p class="bill-filter-note hidden" id="channelBillFilterNote">選擇條件後按「套用」才會列出出貨單。只填一邊時，另一邊不限制；兩邊都空白按套用，會列出此通路全部可結出貨單。清除後表格回到空白。</p>
             <div class="filter-grid">
               <div class="field">
                 <label>客戶訂單編號</label>
-                <input id="channelBillDraftOrderNo" type="text" placeholder="支援模糊查詢" />
+                <input id="channelBillDraftOrderNo" class="bill-filter-text" type="text" placeholder="支援模糊查詢" />
+                <div class="bill-multi hidden" id="channelBillOrderMulti">
+                  <button type="button" class="bill-multi-btn" data-bill-multi-btn="order">請選擇</button>
+                  <div class="bill-multi-panel hidden" data-bill-multi-panel="order">
+                    <input type="text" data-bill-multi-q="order" placeholder="模糊搜尋" autocomplete="off" />
+                    <div class="bill-multi-list" data-bill-multi-list="order"></div>
+                  </div>
+                </div>
               </div>
               <div class="field">
                 <label>出貨單編號</label>
-                <input id="channelBillDraftShipNo" type="text" placeholder="支援模糊查詢" />
+                <input id="channelBillDraftShipNo" class="bill-filter-text" type="text" placeholder="支援模糊查詢" />
+                <div class="bill-multi hidden" id="channelBillShipMulti">
+                  <button type="button" class="bill-multi-btn" data-bill-multi-btn="ship">請選擇</button>
+                  <div class="bill-multi-panel hidden" data-bill-multi-panel="ship">
+                    <input type="text" data-bill-multi-q="ship" placeholder="模糊搜尋" autocomplete="off" />
+                    <div class="bill-multi-list" data-bill-multi-list="ship"></div>
+                  </div>
+                </div>
               </div>
-              <div class="field">
+              <div class="field" id="channelBillSkuField">
                 <label>SKU</label>
                 <input id="channelBillDraftSku" type="text" placeholder="支援模糊查詢" />
               </div>
@@ -3148,8 +3228,8 @@
             總共 <span id="channelSettleDetailTotal">0</span> 筆
           </div>
           <div class="table-wrap">
-            <table class="settle-table">
-              <thead>
+            <table class="settle-table" id="channelSettleDetailTable">
+              <thead id="channelSettleDetailHead">
                 <tr>
                   <th class="col-check"><input type="checkbox" id="channelSettleDetailCheckAll" aria-label="全選" /></th>
                   <th>客戶訂單編號</th>
@@ -18417,6 +18497,10 @@
 
     let channelSettleMode = "buyout"; // buyout | transfer | consign
     let channelBillWizard = { on: false, step: 1, channel: "", flow: "", viewId: "" };
+    let channelBillApplied = false;
+    let channelBillPickOrders = [];
+    let channelBillPickShips = [];
+    let channelBillExpanded = new Set();
 
     function isChannelSettleConsignMode() {
       return channelSettleMode === "consign";
@@ -20191,6 +20275,104 @@
         </tr>`).join("");
     }
 
+    function channelBillIsShipFlow() {
+      return channelBillWizard.flow === "買斷" || channelBillWizard.flow === "轉單";
+    }
+
+    function channelBillGroupMode() {
+      return channelBillIsShipFlow() && settleDetailMode !== "preview";
+    }
+
+    function channelBillGroupKey(row) {
+      return `${row.orderNo || ""}|${row.shipNo || ""}`;
+    }
+
+    function channelBillShownQty(row) {
+      if (settleDetailMode === "view") return Number(row.settleQty) || 0;
+      return row.checked ? (Number(row.settleQty) || 0) : 0;
+    }
+
+    function channelBillShownRemain(row) {
+      if (settleDetailMode === "view") return Math.max(0, Number(row.remain) || 0);
+      return Math.max(0, (Number(row.remain) || 0) - channelBillShownQty(row));
+    }
+
+    function channelBillSettleShips(order) {
+      const flow = channelAcceptFlow(order.channelName);
+      return validShipsOfPo(order.orderNo).filter((ship) => {
+        if (flow === "轉單") return isTransferSettleShip(ship);
+        return ship.status === "已驗收";
+      }).slice().sort((a, b) => String(a.shipped || a.created || a.orderId || "").localeCompare(String(b.shipped || b.created || b.orderId || "")));
+    }
+
+    /** 依出貨單拆可結品項。訂單層已結數量依出貨單順序分攤，避免舊結帳單重複結。 */
+    function channelBillAdjustedLines(order) {
+      if (!order) return [];
+      const pool = {};
+      ((order.acceptance && order.acceptance.items) || []).forEach((item) => {
+        if (!item.key) return;
+        pool[item.key] = Number(item.settledQty) || 0;
+      });
+      const rows = [];
+      channelBillSettleShips(order).forEach((ship) => {
+        const settleableAt = String((ship.acceptance && ship.acceptance.acceptedAt) || ship.shipped || ship.created || "").trim();
+        shipSettleLines(order, ship).forEach((line) => {
+          const acceptQty = Number(line.acceptQty) || 0;
+          const shipSettled = Number(line.settledQty) || 0;
+          const room = Math.max(0, acceptQty - shipSettled);
+          const take = Math.min(room, Math.max(0, Number(pool[line.key]) || 0));
+          if (line.key) pool[line.key] = Math.max(0, (Number(pool[line.key]) || 0) - take);
+          const settledQty = shipSettled + take;
+          const remain = Math.max(0, acceptQty - settledQty);
+          rows.push({
+            id: settleRowKey(order.orderNo, line.key, ship.orderId),
+            orderNo: order.orderNo,
+            shipNo: ship.orderId,
+            channelName: order.channelName,
+            createdAt: settleableAt || order.createdAt,
+            key: line.key,
+            sku: line.sku,
+            name: line.name,
+            productCode: line.productCode || "",
+            priceNo: line.priceNo,
+            priceLabel: line.priceLabel,
+            price: line.price,
+            qty: line.qty,
+            amount: line.amount,
+            gift: !!line.gift,
+            shipDates: line.shipDates || [],
+            acceptQty,
+            settledQty,
+            remain,
+            checked: false,
+            settleQty: 0,
+            remark: "",
+          });
+        });
+      });
+      return rows;
+    }
+
+    function channelBillLiveMetrics(order, shipNo, key, sku) {
+      if (!order) return null;
+      if (shipNo) {
+        const found = channelBillAdjustedLines(order).find((row) => row.shipNo === shipNo && (row.key === key || row.sku === sku));
+        if (found) return { acceptQty: found.acceptQty, remain: found.remain };
+        const ship = shipByOrderId(shipNo);
+        if (ship) {
+          const raw = shipSettleLines(order, ship).find((row) => row.key === key || row.sku === sku);
+          if (raw) {
+            const acceptQty = Number(raw.acceptQty) || 0;
+            return { acceptQty, remain: Math.max(0, acceptQty - (Number(raw.settledQty) || 0)) };
+          }
+        }
+      }
+      const acc = accLinesOf(order).find((row) => row.key === key) || accLinesOf(order).find((row) => row.sku === sku);
+      if (!acc) return null;
+      const acceptQty = Number(acc.acceptQty) || 0;
+      return { acceptQty, remain: Math.max(0, acceptQty - (Number(acc.settledQty) || 0)) };
+    }
+
     function buildChannelBillDraftRows(channelName, flow) {
       const rows = [];
       if (flow === "寄倉") {
@@ -20200,15 +20382,7 @@
         return rows;
       }
       settlementSourceOrders().filter((order) => order.channelName === channelName).forEach((order) => {
-        if (isOverseasPo(order)) {
-          overseasAcceptedShips(order).forEach((ship) => {
-            buildOrderSettleRows(order.orderNo, ship.orderId).forEach((line) => {
-              if (line.remain > 0) rows.push(line);
-            });
-          });
-          return;
-        }
-        buildOrderSettleRows(order.orderNo).forEach((line) => {
+        channelBillAdjustedLines(order).forEach((line) => {
           if (line.remain > 0) rows.push(line);
         });
       });
@@ -20218,6 +20392,14 @@
     function channelBillVisibleRows() {
       if (settleDetailMode === "view") return settleRows;
       if (settleDetailMode === "preview") return settleRows.filter((row) => row.checked && row.settleQty > 0);
+      if (channelBillIsShipFlow()) {
+        if (!channelBillApplied) return [];
+        return settleRows.filter((row) => {
+          if (channelBillPickOrders.length && !channelBillPickOrders.includes(row.orderNo)) return false;
+          if (channelBillPickShips.length && !channelBillPickShips.includes(row.shipNo)) return false;
+          return true;
+        });
+      }
       const orderNo = ((document.getElementById("channelBillDraftOrderNo") || {}).value || "").trim().toLowerCase();
       const shipNo = ((document.getElementById("channelBillDraftShipNo") || {}).value || "").trim().toLowerCase();
       const sku = ((document.getElementById("channelBillDraftSku") || {}).value || "").trim().toLowerCase();
@@ -20229,12 +20411,106 @@
       });
     }
 
+    function channelBillGroupsOf(rows) {
+      const map = new Map();
+      rows.forEach((row) => {
+        const key = channelBillGroupKey(row);
+        if (!map.has(key)) map.set(key, { key, orderNo: row.orderNo || "", shipNo: row.shipNo || "", rows: [] });
+        map.get(key).rows.push(row);
+      });
+      return [...map.values()];
+    }
+
+    function channelBillColCount() {
+      if (channelBillGroupMode()) return settleDetailMode === "view" ? 9 : 10;
+      if (channelBillIsShipFlow() && settleDetailMode === "preview") return 10;
+      return 11;
+    }
+
+    function channelBillEmptyText() {
+      if (settleDetailMode === "preview") return "尚未選擇結算品項";
+      if (channelBillIsShipFlow() && settleDetailMode !== "view" && !channelBillApplied) return "請設定篩選條件後按「套用」";
+      if (channelBillIsShipFlow() && settleDetailMode !== "view") return "查無符合的出貨單";
+      return "此通路目前沒有可結算品項";
+    }
+
+    function channelBillShipLink(shipNo) {
+      const no = String(shipNo || "").trim();
+      if (!no) return "—";
+      return `<a class="link" href="?ship=${encodeURIComponent(no)}&mode=view" target="_blank" rel="noopener" data-ship-view="1">${escapeHtml(no)}</a>`;
+    }
+
+    function channelBillMultiOptions(kind) {
+      const seen = new Set();
+      const list = [];
+      settleRows.forEach((row) => {
+        const value = kind === "order" ? String(row.orderNo || "") : String(row.shipNo || "");
+        if (!value || seen.has(value)) return;
+        seen.add(value);
+        list.push(value);
+      });
+      list.sort();
+      return list;
+    }
+
+    function refreshChannelBillMultiLabels() {
+      [["order", channelBillPickOrders], ["ship", channelBillPickShips]].forEach(([kind, list]) => {
+        const btn = document.querySelector(`[data-bill-multi-btn="${kind}"]`);
+        if (!btn) return;
+        btn.textContent = !list.length ? "請選擇" : (list.length === 1 ? list[0] : `已選 ${list.length} 筆`);
+      });
+    }
+
+    function renderChannelBillMultiList(kind) {
+      const listEl = document.querySelector(`[data-bill-multi-list="${kind}"]`);
+      if (!listEl) return;
+      const q = ((document.querySelector(`[data-bill-multi-q="${kind}"]`) || {}).value || "").trim().toLowerCase();
+      const picked = new Set(kind === "order" ? channelBillPickOrders : channelBillPickShips);
+      const options = channelBillMultiOptions(kind).filter((value) => !q || value.toLowerCase().includes(q));
+      listEl.innerHTML = options.length
+        ? options.map((value) => `<label class="bill-multi-opt"><input type="checkbox" data-bill-multi-pick="${kind}" value="${escapeHtml(value)}"${picked.has(value) ? " checked" : ""} /><span>${escapeHtml(value)}</span></label>`).join("")
+        : `<div class="bill-multi-empty">沒有符合的編號</div>`;
+    }
+
+    function setChannelBillPick(kind, value, on) {
+      const list = kind === "order" ? channelBillPickOrders : channelBillPickShips;
+      const index = list.indexOf(value);
+      if (on && index < 0) list.push(value);
+      if (!on && index >= 0) list.splice(index, 1);
+      refreshChannelBillMultiLabels();
+    }
+
+    function resetChannelBillDraftFilter() {
+      channelBillApplied = false;
+      channelBillPickOrders = [];
+      channelBillPickShips = [];
+      channelBillExpanded = new Set();
+      ["channelBillDraftOrderNo", "channelBillDraftShipNo", "channelBillDraftSku"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
+      document.querySelectorAll("[data-bill-multi-q]").forEach((el) => { el.value = ""; });
+      document.querySelectorAll("[data-bill-multi-panel]").forEach((el) => el.classList.add("hidden"));
+      refreshChannelBillMultiLabels();
+    }
+
+    function syncChannelBillFilterChrome() {
+      const grouped = channelBillIsShipFlow() && channelBillWizard.on && channelBillWizard.step <= 1;
+      document.getElementById("channelBillSkuField")?.classList.toggle("hidden", grouped);
+      document.getElementById("channelBillFilterNote")?.classList.toggle("hidden", !grouped);
+      document.querySelectorAll(".bill-filter-text").forEach((el) => el.classList.toggle("hidden", grouped));
+      document.querySelectorAll(".bill-multi").forEach((el) => el.classList.toggle("hidden", !grouped));
+      if (!grouped) document.querySelectorAll("[data-bill-multi-panel]").forEach((el) => el.classList.add("hidden"));
+      refreshChannelBillMultiLabels();
+    }
+
     function renderChannelBillWizardNav() {
       const nav = document.getElementById("channelBillWizard");
       if (!nav) return;
       nav.classList.toggle("hidden", !channelBillWizard.on);
       if (!channelBillWizard.on) {
         nav.innerHTML = "";
+        syncChannelBillFilterChrome();
         return;
       }
       const labels = channelBillWizard.flow === "寄倉" ? ["選擇商品", "結帳單預覽"] : ["選擇訂單", "結帳單預覽"];
@@ -20251,66 +20527,285 @@
       document.getElementById("channelBillFoot")?.classList.remove("hidden");
       document.getElementById("channelSettleDetailActions")?.classList.toggle("hidden", !atFirst);
       document.getElementById("channelBillDraftFilter")?.classList.toggle("hidden", !atFirst);
+      syncChannelBillFilterChrome();
     }
 
-    function renderChannelBillDraft() {
-      const body = document.getElementById("channelSettleDetailBody");
-      const data = channelBillVisibleRows();
-      const total = document.getElementById("channelSettleDetailTotal");
-      const all = document.getElementById("channelSettleDetailCheckAll");
-      const readonly = isSettleDetailReadonly();
-      if (total) total.textContent = String(data.length);
-      if (all) {
-        const settleable = data.filter((row) => row.remain > 0);
-        all.disabled = readonly || !settleable.length;
-        all.checked = !readonly && settleable.length > 0 && settleable.every((row) => row.checked);
-      }
+    function renderChannelBillSummary() {
       const summary = document.getElementById("channelSettleDetailSummary");
-      if (summary) {
-        if (readonly && settleDetailMode === "view") {
-          const amount = settleRows.reduce((sum, row) => sum + channelBillLineTaxed(row, row.settleQty), 0);
-          summary.innerHTML = `共 <strong>${settleRows.length}</strong> 筆，結算金額合計 <strong>${escapeHtml(accMoney(amount))}</strong>`;
-        } else if (settleDetailMode === "preview" || channelBillWizard.on) {
-          const selected = settleSelectedRows();
-          const amount = selected.reduce((sum, row) => sum + channelBillLineTaxed(row, row.settleQty), 0);
-          summary.innerHTML = selected.length
-            ? `已勾選 <strong>${selected.length}</strong> 筆，本次結算金額合計（含稅） <strong>${escapeHtml(accMoney(amount))}</strong>`
-            : "";
-        } else {
-          summary.innerHTML = "";
-        }
-      }
-      if (!body) return;
-      if (!data.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="11">${settleDetailMode === "preview" ? "尚未選擇結算品項" : "此通路目前沒有可結算品項"}</td></tr>`;
+      if (!summary) return;
+      if (isSettleDetailReadonly() && settleDetailMode === "view") {
+        const amount = settleRows.reduce((sum, row) => sum + channelBillLineTaxed(row, row.settleQty), 0);
+        summary.innerHTML = `共 <strong>${settleRows.length}</strong> 筆商品，結算金額合計 <strong>${escapeHtml(accMoney(amount))}</strong>`;
         return;
       }
-      body.innerHTML = data.map((row) => {
-        const qty = row.checked ? row.settleQty : 0;
-        const remainQty = Math.max(0, row.remain - qty);
-        const canFill = !readonly && row.remain > 0;
-        const remark = normalizeSettleRemark(row.remark);
-        const remarkCell = readonly
-          ? `<td>${remark ? escapeHtml(remark) : "—"}</td>`
-          : `<td><input type="text" maxlength="${SETTLE_REMARK_MAX}" data-settle-remark="1" value="${escapeHtml(remark)}" placeholder="最多 ${SETTLE_REMARK_MAX} 字"${canFill ? "" : " disabled"} /></td>`;
-        const qtyCell = readonly
-          ? `<td class="num">${escapeHtml(row.settleQty || 0)}</td>`
-          : `<td><input type="number" min="0" max="${escapeHtml(row.remain)}" step="1" data-settle-qty="1" value="${escapeHtml(row.settleQty)}"${canFill && row.checked ? "" : " disabled"} />${canFill ? `<span class="acc-sub">可結上限：${escapeHtml(row.remain)}</span>` : `<span class="acc-sub">無可結數量</span>`}</td>`;
-        return `
+      if (settleDetailMode === "preview" || channelBillWizard.on) {
+        const selected = settleSelectedRows();
+        const amount = selected.reduce((sum, row) => sum + channelBillLineTaxed(row, row.settleQty), 0);
+        summary.innerHTML = selected.length
+          ? `已勾選 <strong>${selected.length}</strong> 筆，本次結算金額合計（含稅） <strong>${escapeHtml(accMoney(amount))}</strong>`
+          : "";
+        return;
+      }
+      summary.innerHTML = "";
+    }
+
+    function renderChannelBillHead() {
+      const head = document.getElementById("channelSettleDetailHead");
+      const table = document.getElementById("channelSettleDetailTable");
+      if (table) table.classList.toggle("is-grouped", channelBillGroupMode());
+      if (!head) return;
+      if (channelBillGroupMode() && settleDetailMode === "view") {
+        head.innerHTML = `<tr>
+          <th class="col-expand"></th>
+          <th>客戶訂單編號</th>
+          <th>出貨單編號</th>
+          <th class="num">實際驗收數量</th>
+          <th class="num">本次結算數量</th>
+          <th class="num">本次結算金額</th>
+          <th class="num">剩餘可結數量</th>
+          <th class="num">剩餘可結金額</th>
+          <th>備註</th>
+        </tr>`;
+        return;
+      }
+      if (channelBillGroupMode()) {
+        head.innerHTML = `<tr>
+          <th class="col-expand"></th>
+          <th class="col-check"><input type="checkbox" id="channelSettleDetailCheckAll" aria-label="全選" /></th>
+          <th>客戶訂單編號</th>
+          <th>出貨單編號</th>
+          <th class="num">實際驗收數量</th>
+          <th class="num">本次結算數量</th>
+          <th class="num">本次結算金額</th>
+          <th class="num">剩餘可結數量</th>
+          <th class="num">剩餘可結金額</th>
+          <th>備註</th>
+        </tr>`;
+        return;
+      }
+      if (channelBillIsShipFlow() && settleDetailMode === "preview") {
+        head.innerHTML = `<tr>
+          <th>客戶訂單編號</th>
+          <th>出貨單編號</th>
+          <th>SKU</th>
+          <th>商品名稱</th>
+          <th class="num">實際驗收數量</th>
+          <th class="num">本次結算數量</th>
+          <th class="num">本次結算金額</th>
+          <th class="num">剩餘可結數量</th>
+          <th class="num">剩餘可結金額</th>
+          <th>備註</th>
+        </tr>`;
+        return;
+      }
+      head.innerHTML = `<tr>
+        <th class="col-check"><input type="checkbox" id="channelSettleDetailCheckAll" aria-label="全選" /></th>
+        <th>客戶訂單編號</th>
+        <th>出貨單編號</th>
+        <th>SKU</th>
+        <th>商品名稱</th>
+        <th class="num">實際驗收數量</th>
+        <th>本次結算數量</th>
+        <th class="num">本次結算金額</th>
+        <th class="num">剩餘可結數量</th>
+        <th class="num">剩餘可結金額</th>
+        <th>備註</th>
+      </tr>`;
+    }
+
+    function syncChannelBillCheckAll(data) {
+      const all = document.getElementById("channelSettleDetailCheckAll");
+      if (!all) return;
+      const readonly = isSettleDetailReadonly();
+      const settleable = data.filter((row) => row.remain > 0);
+      const checked = settleable.filter((row) => row.checked);
+      all.disabled = readonly || !settleable.length;
+      all.checked = !readonly && settleable.length > 0 && checked.length === settleable.length;
+      all.indeterminate = !readonly && checked.length > 0 && checked.length < settleable.length;
+    }
+
+    function syncChannelBillParentChecks() {
+      document.querySelectorAll("#channelSettleDetailBody [data-bill-group-check]").forEach((box) => {
+        const key = box.dataset.billGroupCheck;
+        const kids = settleRows.filter((row) => channelBillGroupKey(row) === key && channelBillVisibleRows().includes(row));
+        const settleable = kids.filter((row) => row.remain > 0);
+        const checked = settleable.filter((row) => row.checked);
+        box.checked = settleable.length > 0 && checked.length === settleable.length;
+        box.indeterminate = checked.length > 0 && checked.length < settleable.length;
+      });
+    }
+
+    function channelBillChildRowHtml(row) {
+      const readonly = isSettleDetailReadonly();
+      const qty = channelBillShownQty(row);
+      const remainQty = channelBillShownRemain(row);
+      const canFill = !readonly && row.remain > 0;
+      const remark = normalizeSettleRemark(row.remark);
+      const remarkCell = readonly
+        ? `<td>${remark ? escapeHtml(remark) : "—"}</td>`
+        : `<td><input type="text" maxlength="${SETTLE_REMARK_MAX}" data-settle-remark="1" value="${escapeHtml(remark)}" placeholder="最多 ${SETTLE_REMARK_MAX} 字"${canFill ? "" : " disabled"} /></td>`;
+      const qtyCell = readonly
+        ? `<td class="num">${escapeHtml(row.settleQty || 0)}</td>`
+        : `<td><input type="number" min="0" max="${escapeHtml(row.remain)}" step="1" data-settle-qty="1" value="${escapeHtml(row.settleQty)}"${canFill && row.checked ? "" : " disabled"} /><span class="acc-sub">${canFill ? `可結上限：${escapeHtml(row.remain)}` : "無可結數量"}</span></td>`;
+      const checkCell = readonly ? "" : `<td class="col-check"><input type="checkbox" data-settle-check="1"${row.checked ? " checked" : ""}${canFill ? "" : " disabled"} /></td>`;
+      return `
+        <tr class="bill-child" data-bill-child="${escapeHtml(channelBillGroupKey(row))}" data-settle-id="${escapeHtml(row.id)}">
+          <td class="col-expand"></td>
+          ${checkCell}
+          <td class="bill-sku">${escapeHtml(row.sku || "—")}</td>
+          <td>${escapeHtml(row.name || "—")}</td>
+          <td class="num">${escapeHtml(row.acceptQty)}</td>
+          ${qtyCell}
+          <td class="num" data-cell="settleAmt">${escapeHtml(accMoney(channelBillLineTaxed(row, qty)))}</td>
+          <td class="num" data-cell="remainQty">${escapeHtml(remainQty)}</td>
+          <td class="num" data-cell="remainAmt">${escapeHtml(accMoney(channelBillLineTaxed(row, remainQty)))}</td>
+          ${remarkCell}
+        </tr>`;
+    }
+
+    function channelBillGroupedRowsHtml(groups) {
+      const readonly = isSettleDetailReadonly();
+      return groups.map((group) => {
+        const open = channelBillExpanded.has(group.key);
+        const accept = group.rows.reduce((sum, row) => sum + (Number(row.acceptQty) || 0), 0);
+        const qty = group.rows.reduce((sum, row) => sum + channelBillShownQty(row), 0);
+        const amount = group.rows.reduce((sum, row) => sum + channelBillLineTaxed(row, channelBillShownQty(row)), 0);
+        const remainQty = group.rows.reduce((sum, row) => sum + channelBillShownRemain(row), 0);
+        const remainAmt = group.rows.reduce((sum, row) => sum + channelBillLineTaxed(row, channelBillShownRemain(row)), 0);
+        const settleable = group.rows.filter((row) => row.remain > 0);
+        const checkedCount = settleable.filter((row) => row.checked).length;
+        const allOn = settleable.length > 0 && checkedCount === settleable.length;
+        const checkCell = readonly
+          ? ""
+          : `<td class="col-check"><input type="checkbox" data-bill-group-check="${escapeHtml(group.key)}" aria-label="選取出貨單商品"${allOn ? " checked" : ""} /></td>`;
+        const parent = `
+          <tr class="bill-parent" data-bill-parent="${escapeHtml(group.key)}">
+            <td class="col-expand"><button type="button" class="bill-expand${open ? " is-open" : ""}" data-bill-toggle="${escapeHtml(group.key)}" aria-expanded="${open ? "true" : "false"}" aria-label="展開出貨商品"><svg viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" d="M4.5 2.5 8 6 4.5 9.5"/></svg></button></td>
+            ${checkCell}
+            <td>${escapeHtml(group.orderNo || "—")}</td>
+            <td>${channelBillShipLink(group.shipNo)}</td>
+            <td class="num" data-cell="accept">${escapeHtml(accept)}</td>
+            <td class="num" data-cell="settleQty">${escapeHtml(qty)}</td>
+            <td class="num" data-cell="settleAmt">${escapeHtml(accMoney(amount))}</td>
+            <td class="num" data-cell="remainQty">${escapeHtml(remainQty)}</td>
+            <td class="num" data-cell="remainAmt">${escapeHtml(accMoney(remainAmt))}</td>
+            <td>—</td>
+          </tr>`;
+        if (!open) return parent;
+        return parent + group.rows.map((row) => channelBillChildRowHtml(row)).join("");
+      }).join("");
+    }
+
+    function channelBillPreviewRowHtml(row) {
+      const qty = Number(row.settleQty) || 0;
+      const remainQty = channelBillShownRemain(row);
+      const remark = normalizeSettleRemark(row.remark);
+      return `
+        <tr data-settle-id="${escapeHtml(row.id)}">
+          <td>${escapeHtml(row.orderNo || "—")}</td>
+          <td>${channelBillShipLink(row.shipNo)}</td>
+          <td>${escapeHtml(row.sku || "—")}</td>
+          <td>${escapeHtml(row.name || "—")}</td>
+          <td class="num">${escapeHtml(row.acceptQty)}</td>
+          <td class="num">${escapeHtml(qty)}</td>
+          <td class="num" data-cell="settleAmt">${escapeHtml(accMoney(channelBillLineTaxed(row, qty)))}</td>
+          <td class="num" data-cell="remainQty">${escapeHtml(remainQty)}</td>
+          <td class="num" data-cell="remainAmt">${escapeHtml(accMoney(channelBillLineTaxed(row, remainQty)))}</td>
+          <td>${remark ? escapeHtml(remark) : "—"}</td>
+        </tr>`;
+    }
+
+    function channelBillFlatRowHtml(row) {
+      const readonly = isSettleDetailReadonly();
+      const dashMetrics = settleDetailMode === "view";
+      const qty = channelBillShownQty(row);
+      const remainQty = channelBillShownRemain(row);
+      const canFill = !readonly && row.remain > 0;
+      const remark = normalizeSettleRemark(row.remark);
+      const remarkCell = readonly
+        ? `<td>${remark ? escapeHtml(remark) : "—"}</td>`
+        : `<td><input type="text" maxlength="${SETTLE_REMARK_MAX}" data-settle-remark="1" value="${escapeHtml(remark)}" placeholder="最多 ${SETTLE_REMARK_MAX} 字"${canFill ? "" : " disabled"} /></td>`;
+      const qtyCell = readonly
+        ? `<td class="num">${escapeHtml(row.settleQty || 0)}</td>`
+        : `<td><input type="number" min="0" max="${escapeHtml(row.remain)}" step="1" data-settle-qty="1" value="${escapeHtml(row.settleQty)}"${canFill && row.checked ? "" : " disabled"} />${canFill ? `<span class="acc-sub">可結上限：${escapeHtml(row.remain)}</span>` : `<span class="acc-sub">無可結數量</span>`}</td>`;
+      return `
         <tr data-settle-id="${escapeHtml(row.id)}">
           <td class="col-check"><input type="checkbox" data-settle-check="1"${row.checked ? " checked" : ""}${canFill ? "" : " disabled"} /></td>
           <td>${escapeHtml(row.orderNo || "—")}</td>
           <td>${escapeHtml(row.shipNo || "—")}</td>
           <td>${escapeHtml(row.sku || "—")}</td>
           <td>${escapeHtml(row.name || "—")}</td>
-          <td class="num">${settleDetailMode === "view" ? "—" : escapeHtml(row.acceptQty)}</td>
+          <td class="num">${dashMetrics ? "—" : escapeHtml(row.acceptQty)}</td>
           ${qtyCell}
-          <td class="num">${escapeHtml(accMoney(channelBillLineTaxed(row, qty)))}</td>
-          <td class="num">${settleDetailMode === "view" ? "—" : escapeHtml(remainQty)}</td>
-          <td class="num">${settleDetailMode === "view" ? "—" : escapeHtml(accMoney(channelBillLineTaxed(row, remainQty)))}</td>
+          <td class="num" data-cell="settleAmt">${escapeHtml(accMoney(channelBillLineTaxed(row, qty)))}</td>
+          <td class="num" data-cell="remainQty">${dashMetrics ? "—" : escapeHtml(remainQty)}</td>
+          <td class="num" data-cell="remainAmt">${dashMetrics ? "—" : escapeHtml(accMoney(channelBillLineTaxed(row, remainQty)))}</td>
           ${remarkCell}
         </tr>`;
-      }).join("");
+    }
+
+    function paintChannelBillLine(row) {
+      const tr = [...document.querySelectorAll("#channelSettleDetailBody tr[data-settle-id]")].find((el) => el.dataset.settleId === row.id);
+      if (!tr) {
+        renderChannelBillDraft();
+        return;
+      }
+      const qty = channelBillShownQty(row);
+      const remainQty = channelBillShownRemain(row);
+      const amt = tr.querySelector("[data-cell='settleAmt']");
+      const rq = tr.querySelector("[data-cell='remainQty']");
+      const ra = tr.querySelector("[data-cell='remainAmt']");
+      if (amt) amt.textContent = accMoney(channelBillLineTaxed(row, qty));
+      if (rq) rq.textContent = String(remainQty);
+      if (ra) ra.textContent = accMoney(channelBillLineTaxed(row, remainQty));
+      if (channelBillGroupMode()) {
+        const key = channelBillGroupKey(row);
+        const parent = [...document.querySelectorAll("#channelSettleDetailBody tr[data-bill-parent]")].find((el) => el.dataset.billParent === key);
+        if (parent) {
+          const kids = channelBillVisibleRows().filter((item) => channelBillGroupKey(item) === key);
+          const shownQty = kids.reduce((sum, item) => sum + channelBillShownQty(item), 0);
+          const amount = kids.reduce((sum, item) => sum + channelBillLineTaxed(item, channelBillShownQty(item)), 0);
+          const shownRemain = kids.reduce((sum, item) => sum + channelBillShownRemain(item), 0);
+          const remainAmt = kids.reduce((sum, item) => sum + channelBillLineTaxed(item, channelBillShownRemain(item)), 0);
+          const setCell = (cell, text) => {
+            const el = parent.querySelector(`[data-cell="${cell}"]`);
+            if (el) el.textContent = text;
+          };
+          setCell("settleQty", String(shownQty));
+          setCell("settleAmt", accMoney(amount));
+          setCell("remainQty", String(shownRemain));
+          setCell("remainAmt", accMoney(remainAmt));
+        }
+        syncChannelBillParentChecks();
+      }
+      renderChannelBillSummary();
+      syncChannelBillCheckAll(channelBillVisibleRows());
+    }
+
+    function renderChannelBillDraft() {
+      const body = document.getElementById("channelSettleDetailBody");
+      const data = channelBillVisibleRows();
+      const total = document.getElementById("channelSettleDetailTotal");
+      const grouped = channelBillGroupMode();
+      renderChannelBillHead();
+      renderChannelBillSummary();
+      if (total) total.textContent = String(grouped ? channelBillGroupsOf(data).length : data.length);
+      syncChannelBillCheckAll(data);
+      if (!body) return;
+      if (!data.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="${channelBillColCount()}">${channelBillEmptyText()}</td></tr>`;
+        return;
+      }
+      if (grouped) {
+        body.innerHTML = channelBillGroupedRowsHtml(channelBillGroupsOf(data));
+        syncChannelBillParentChecks();
+        return;
+      }
+      if (channelBillIsShipFlow() && settleDetailMode === "preview") {
+        body.innerHTML = data.map((row) => channelBillPreviewRowHtml(row)).join("");
+        return;
+      }
+      body.innerHTML = data.map((row) => channelBillFlatRowHtml(row)).join("");
     }
 
     function openChannelBillCreateModal() {
@@ -20338,10 +20833,7 @@
       settleDetailOrderNo = "";
       settleDetailShipNo = "";
       settleRows = buildChannelBillDraftRows(channelName, flow);
-      ["channelBillDraftOrderNo", "channelBillDraftShipNo", "channelBillDraftSku"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.value = "";
-      });
+      resetChannelBillDraftFilter();
       const monthly = isMonthlySettleChannel(channelName);
       document.getElementById("channelSettleDetailTitle").textContent = "建立結帳單";
       document.getElementById("channelSettleDetailMeta").textContent =
@@ -20359,21 +20851,44 @@
       }
       channelBillWizard = { on: false, step: 1, channel: bill.channelName || "", flow: bill.type || "", viewId: String(bill.id) };
       settleDetailMode = "view";
-      settleRows = (bill.lines || []).map((line, index) => ({
-        id: `${bill.id}|${index}`,
-        orderNo: line.orderNo || "",
-        shipNo: line.shipNo || "",
-        channelName: line.channelName || bill.channelName || "",
-        sku: line.sku || "",
-        name: line.name || "",
-        price: line.price,
-        gift: !!line.gift,
-        acceptQty: line.qty,
-        remain: 0,
-        checked: true,
-        settleQty: Number(line.qty) || 0,
-        remark: line.remark || "",
-      }));
+      channelBillExpanded = new Set();
+      const shipFlow = channelBillWizard.flow === "買斷" || channelBillWizard.flow === "轉單";
+      const orderCache = new Map();
+      settleRows = (bill.lines || []).map((line, index) => {
+        let acceptQty = Number(line.qty) || 0;
+        let remain = 0;
+        let shipNo = line.shipNo || "";
+        if (shipFlow) {
+          const orderNo = line.orderNo || "";
+          if (!orderCache.has(orderNo)) orderCache.set(orderNo, salesOrders.find((item) => item.orderNo === orderNo) || null);
+          const order = orderCache.get(orderNo);
+          if (!shipNo && order) {
+            const ships = channelBillSettleShips(order);
+            if (ships.length === 1) shipNo = ships[0].orderId || "";
+          }
+          const live = channelBillLiveMetrics(order, shipNo, line.key, line.sku);
+          if (live) {
+            acceptQty = live.acceptQty;
+            remain = live.remain;
+          }
+        }
+        return {
+          id: `${bill.id}|${index}`,
+          orderNo: line.orderNo || "",
+          shipNo,
+          channelName: line.channelName || bill.channelName || "",
+          key: line.key || "",
+          sku: line.sku || "",
+          name: line.name || "",
+          price: line.price,
+          gift: !!line.gift,
+          acceptQty,
+          remain,
+          checked: true,
+          settleQty: Number(line.qty) || 0,
+          remark: line.remark || "",
+        };
+      });
       document.getElementById("channelSettleDetailTitle").textContent = "檢視結帳單";
       document.getElementById("channelSettleDetailMeta").textContent =
         `結帳單號：${bill.id}｜通路：${bill.channelName || "—"}｜結算類型：${bill.type || "—"}｜狀態：${bill.status || "—"}${bill.rejectReason ? `｜駁回原因：${bill.rejectReason}` : ""}`;
@@ -20483,7 +20998,6 @@
         alert(`匯入失敗，整檔不匯入：\n${errors.slice(0, 20).join("\n")}${errors.length > 20 ? `\n…共 ${errors.length} 筆錯誤` : ""}`);
         return false;
       }
-      const pickedIds = new Set(picks.map((pick) => pick.row.id));
       settleRows.forEach((row) => {
         row.checked = false;
         row.settleQty = 0;
@@ -20492,7 +21006,13 @@
         pick.row.checked = true;
         pick.row.settleQty = pick.qty;
       });
-      pickedIds.forEach(() => {});
+      if (channelBillIsShipFlow()) {
+        channelBillApplied = true;
+        channelBillPickOrders = [];
+        channelBillPickShips = [];
+        channelBillExpanded = new Set(picks.map((pick) => channelBillGroupKey(pick.row)));
+        refreshChannelBillMultiLabels();
+      }
       renderChannelBillDraft();
       return true;
     }
@@ -20693,24 +21213,71 @@
     document.getElementById("channelBillSavePage").addEventListener("click", saveChannelBillPage);
     document.getElementById("channelBillBackStep").addEventListener("click", backChannelBillStep);
     document.getElementById("channelBillSubmit").addEventListener("click", submitChannelBill);
-    document.getElementById("channelBillDraftApply").addEventListener("click", renderChannelBillDraft);
-    document.getElementById("channelBillDraftClear").addEventListener("click", () => {
-      ["channelBillDraftOrderNo", "channelBillDraftShipNo", "channelBillDraftSku"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.value = "";
-      });
+    document.getElementById("channelBillDraftApply").addEventListener("click", () => {
+      if (channelBillIsShipFlow()) channelBillApplied = true;
       renderChannelBillDraft();
     });
-    document.getElementById("channelSettleDetailCheckAll").addEventListener("change", (e) => {
+    document.getElementById("channelBillDraftClear").addEventListener("click", () => {
+      resetChannelBillDraftFilter();
+      renderChannelBillDraft();
+    });
+    document.getElementById("channelBillDraftFilter").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-bill-multi-btn]");
+      if (!btn) return;
+      const kind = btn.dataset.billMultiBtn;
+      const panel = document.querySelector(`[data-bill-multi-panel="${kind}"]`);
+      const willOpen = panel.classList.contains("hidden");
+      document.querySelectorAll("[data-bill-multi-panel]").forEach((el) => el.classList.add("hidden"));
+      if (!willOpen) return;
+      panel.classList.remove("hidden");
+      renderChannelBillMultiList(kind);
+    });
+    document.getElementById("channelBillDraftFilter").addEventListener("input", (e) => {
+      const q = e.target.closest("[data-bill-multi-q]");
+      if (!q) return;
+      renderChannelBillMultiList(q.dataset.billMultiQ);
+    });
+    document.getElementById("channelBillDraftFilter").addEventListener("change", (e) => {
+      const pick = e.target.closest("[data-bill-multi-pick]");
+      if (!pick) return;
+      setChannelBillPick(pick.dataset.billMultiPick, pick.value, pick.checked);
+    });
+    document.addEventListener("click", (e) => {
+      if (e.target.closest(".bill-multi")) return;
+      document.querySelectorAll("[data-bill-multi-panel]").forEach((el) => el.classList.add("hidden"));
+    });
+    document.getElementById("channelSettleDetailTable").addEventListener("click", (e) => {
+      if (e.target.closest("[data-ship-view]")) persistDemoData();
+      const btn = e.target.closest("[data-bill-toggle]");
+      if (!btn) return;
+      const key = btn.dataset.billToggle;
+      if (channelBillExpanded.has(key)) channelBillExpanded.delete(key);
+      else channelBillExpanded.add(key);
+      renderChannelBillDraft();
+    });
+    document.getElementById("channelSettleDetailTable").addEventListener("change", (e) => {
       if (isSettleDetailReadonly()) return;
-      channelBillVisibleRows().forEach((row) => {
-        if (row.remain <= 0) {
-          row.checked = false;
-          row.settleQty = 0;
-          return;
-        }
-        row.checked = e.target.checked;
-        row.settleQty = e.target.checked ? (row.settleQty || row.remain) : 0;
+      if (e.target.id === "channelSettleDetailCheckAll") {
+        channelBillVisibleRows().forEach((row) => {
+          if (row.remain <= 0) {
+            row.checked = false;
+            row.settleQty = 0;
+            return;
+          }
+          row.checked = e.target.checked;
+          row.settleQty = e.target.checked ? row.remain : 0;
+        });
+        renderChannelBillDraft();
+        return;
+      }
+      const groupBox = e.target.closest("[data-bill-group-check]");
+      if (!groupBox) return;
+      const key = groupBox.dataset.billGroupCheck;
+      const on = groupBox.checked;
+      settleRows.forEach((row) => {
+        if (channelBillGroupKey(row) !== key || row.remain <= 0) return;
+        row.checked = on;
+        row.settleQty = on ? row.remain : 0;
       });
       renderChannelBillDraft();
     });
@@ -20720,7 +21287,7 @@
       const row = settleRowById(e.target.closest("tr").dataset.settleId);
       if (!row || row.remain <= 0) return;
       row.checked = e.target.checked;
-      row.settleQty = row.checked ? (row.settleQty || row.remain) : 0;
+      row.settleQty = row.checked ? row.remain : 0;
       renderChannelBillDraft();
     });
     document.getElementById("channelSettleDetailBody").addEventListener("input", (e) => {
@@ -20744,7 +21311,7 @@
         e.target.value = String(qty);
       }
       row.settleQty = qty;
-      renderChannelBillDraft();
+      paintChannelBillLine(row);
     });
 
     document.getElementById("settleInvoiceMethodGroup").addEventListener("change", (e) => {
