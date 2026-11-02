@@ -2516,6 +2516,23 @@
       font-size: 14px;
     }
     .settle-summary strong { color: var(--primary); }
+    .bill-total {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin: 2px 0 10px;
+    }
+    .bill-total-label {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-2);
+    }
+    .bill-total-num {
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1;
+      color: #f5222d;
+    }
     .monthly-bill-section {
       margin-top: 20px;
       max-width: 640px;
@@ -20593,7 +20610,13 @@
         summary.innerHTML = `共 <strong>${settleRows.length}</strong> 筆商品，結算金額合計 <strong>${escapeHtml(accMoney(amount))}</strong>`;
         return;
       }
-      if (settleDetailMode === "preview" || channelBillWizard.on) {
+      if (settleDetailMode === "preview") {
+        const selected = settleSelectedRows();
+        const amount = selected.reduce((sum, row) => sum + channelBillLineTaxed(row, row.settleQty), 0);
+        summary.innerHTML = `<div class="bill-total"><span class="bill-total-label">本次總結算金額</span><span class="bill-total-num">${escapeHtml(accMoney(amount))}</span></div>`;
+        return;
+      }
+      if (channelBillWizard.on) {
         const selected = settleSelectedRows();
         const amount = selected.reduce((sum, row) => sum + channelBillLineTaxed(row, row.settleQty), 0);
         summary.innerHTML = selected.length
