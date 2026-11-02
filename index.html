@@ -3106,7 +3106,7 @@
           </div>
           <div class="demo-hint" id="channelSettleOrderHint">
             <strong>DEMO 提示｜結帳單建立</strong><br />
-            本頁列出已建立的結帳單。按右上「建立結帳單」選通路（類型依通路自動帶出）。買斷、轉單第一步先篩選出貨單（未按套用不列出），一列一張出貨單，展開後勾選商品，可改數量。寄倉維持一列一項商品，勾選後帶入可結數量。按「儲存此分頁」進預覽；「送出結算申請」才產生結帳單、扣可結數量，狀態為待結算。<br />
+            本頁列出已建立的結帳單。按右上「建立結帳單」選通路（類型依通路自動帶出）。買斷、轉單第一步先篩選出貨單（未按套用不列出），一列一張出貨單，展開後勾選商品，可改數量。寄倉維持一列一項商品，未按套用不列出；可再以客戶訂單建立時間、實際出貨時間縮小。勾選後帶入可結數量。按「儲存此分頁」進預覽；「送出結算申請」才產生結帳單、扣可結數量，狀態為待結算。<br />
             月結：財務回壓或 ezpay 後為已結算，待結算可駁回。不需財務開票（線上、跨境）：送出時帶假發票，財務「確認結算」後為已結算，待結算可駁回。駁回後狀態為經財務駁回、數量加回。<br />
             可測單號：買斷月結待結算 <strong>20260822002</strong>（寶雅）、已結算 <strong>20260822003</strong>、駁回 <strong>20260822001</strong>；買斷跨境金額不符 <strong>20260818082</strong>（Cool Cool）；轉單月結已結算 <strong>20260821001</strong>（絢綻）、待結算 <strong>20260821002</strong>；轉單非月結待結算 <strong>20260810029</strong>（線上-轉單，金額相符）、已結算 <strong>20260826032</strong>；寄倉已結算 <strong>20260820001</strong>（新光）、待結算 <strong>20260828008</strong>（PW）。
           </div>
@@ -3217,6 +3217,22 @@
               <div class="field" id="channelBillSkuField">
                 <label>SKU</label>
                 <input id="channelBillDraftSku" type="text" placeholder="支援模糊查詢" />
+              </div>
+              <div class="field hidden" id="channelBillOrderDateField">
+                <label>客戶訂單編號建立時間</label>
+                <div class="range">
+                  <input id="channelBillDraftOrderFrom" type="date" />
+                  <span class="sep">→</span>
+                  <input id="channelBillDraftOrderTo" type="date" />
+                </div>
+              </div>
+              <div class="field hidden" id="channelBillShippedDateField">
+                <label>實際出貨時間</label>
+                <div class="range">
+                  <input id="channelBillDraftShippedFrom" type="date" />
+                  <span class="sep">→</span>
+                  <input id="channelBillDraftShippedTo" type="date" />
+                </div>
               </div>
             </div>
             <div class="filter-actions">
@@ -20389,6 +20405,27 @@
       return rows;
     }
 
+    function consignShipHasKey(ship, key) {
+      if (!ship || !key) return false;
+      const accepted = (ship.acceptance && ship.acceptance.items) || [];
+      if (accepted.some((line) => (line.key || itemKey(line)) === key)) return true;
+      return (ship.items || []).some((line) => itemKey(line) === key);
+    }
+
+    /** 出貨單編號與實際出貨時間要落在同一張已驗收、且含該 SKU 的出貨單。 */
+    function consignDraftShipMatch(row, shipQuery, from, to) {
+      const order = salesOrders.find((item) => item.orderNo === row.orderNo);
+      if (!order) return false;
+      const q = String(shipQuery || "").trim().toLowerCase();
+      return validShipsOfPo(order.orderNo).some((ship) => {
+        if (ship.status !== "已驗收") return false;
+        if (!consignShipHasKey(ship, row.key)) return false;
+        if (q && !String(ship.orderId || "").toLowerCase().includes(q)) return false;
+        if ((from || to) && !inDateRange(ship.shipped, from, to)) return false;
+        return true;
+      });
+    }
+
     function channelBillVisibleRows() {
       if (settleDetailMode === "view") return settleRows;
       if (settleDetailMode === "preview") return settleRows.filter((row) => row.checked && row.settleQty > 0);
@@ -20400,13 +20437,19 @@
           return true;
         });
       }
+      if (!channelBillApplied) return [];
       const orderNo = ((document.getElementById("channelBillDraftOrderNo") || {}).value || "").trim().toLowerCase();
       const shipNo = ((document.getElementById("channelBillDraftShipNo") || {}).value || "").trim().toLowerCase();
       const sku = ((document.getElementById("channelBillDraftSku") || {}).value || "").trim().toLowerCase();
+      const orderFrom = (document.getElementById("channelBillDraftOrderFrom") || {}).value || "";
+      const orderTo = (document.getElementById("channelBillDraftOrderTo") || {}).value || "";
+      const shippedFrom = (document.getElementById("channelBillDraftShippedFrom") || {}).value || "";
+      const shippedTo = (document.getElementById("channelBillDraftShippedTo") || {}).value || "";
       return settleRows.filter((row) => {
         if (orderNo && !String(row.orderNo || "").toLowerCase().includes(orderNo)) return false;
-        if (shipNo && !String(row.shipNo || "").toLowerCase().includes(shipNo)) return false;
         if (sku && !String(row.sku || "").toLowerCase().includes(sku)) return false;
+        if ((orderFrom || orderTo) && !inDateRange(row.createdAt, orderFrom, orderTo)) return false;
+        if ((shipNo || shippedFrom || shippedTo) && !consignDraftShipMatch(row, shipNo, shippedFrom, shippedTo)) return false;
         return true;
       });
     }
@@ -20429,8 +20472,9 @@
 
     function channelBillEmptyText() {
       if (settleDetailMode === "preview") return "尚未選擇結算品項";
-      if (channelBillIsShipFlow() && settleDetailMode !== "view" && !channelBillApplied) return "請設定篩選條件後按「套用」";
+      if (channelBillWizard.on && settleDetailMode !== "view" && !channelBillApplied) return "請設定篩選條件後按「套用」";
       if (channelBillIsShipFlow() && settleDetailMode !== "view") return "查無符合的出貨單";
+      if (channelBillWizard.on && settleDetailMode !== "view") return "查無符合的商品";
       return "此通路目前沒有可結算品項";
     }
 
@@ -20485,7 +20529,7 @@
       channelBillPickOrders = [];
       channelBillPickShips = [];
       channelBillExpanded = new Set();
-      ["channelBillDraftOrderNo", "channelBillDraftShipNo", "channelBillDraftSku"].forEach((id) => {
+      ["channelBillDraftOrderNo", "channelBillDraftShipNo", "channelBillDraftSku", "channelBillDraftOrderFrom", "channelBillDraftOrderTo", "channelBillDraftShippedFrom", "channelBillDraftShippedTo"].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.value = "";
       });
@@ -20496,8 +20540,19 @@
 
     function syncChannelBillFilterChrome() {
       const grouped = channelBillIsShipFlow() && channelBillWizard.on && channelBillWizard.step <= 1;
+      const consign = channelBillWizard.on && channelBillWizard.flow === "寄倉" && channelBillWizard.step <= 1;
       document.getElementById("channelBillSkuField")?.classList.toggle("hidden", grouped);
-      document.getElementById("channelBillFilterNote")?.classList.toggle("hidden", !grouped);
+      document.getElementById("channelBillOrderDateField")?.classList.toggle("hidden", !consign);
+      document.getElementById("channelBillShippedDateField")?.classList.toggle("hidden", !consign);
+      const note = document.getElementById("channelBillFilterNote");
+      if (note) {
+        note.classList.toggle("hidden", !(grouped || consign));
+        if (consign) {
+          note.textContent = "按「套用」才會列出商品。客戶訂單編號、出貨單編號、SKU、客戶訂單建立時間、實際出貨時間要同時符合；日期沒填則不限該日期。條件都空白按套用，會列出此通路全部可結商品。清除後表格回到空白。";
+        } else if (grouped) {
+          note.textContent = "選擇條件後按「套用」才會列出出貨單。只填一邊時，另一邊不限制；兩邊都空白按套用，會列出此通路全部可結出貨單。清除後表格回到空白。";
+        }
+      }
       document.querySelectorAll(".bill-filter-text").forEach((el) => el.classList.toggle("hidden", grouped));
       document.querySelectorAll(".bill-multi").forEach((el) => el.classList.toggle("hidden", !grouped));
       if (!grouped) document.querySelectorAll("[data-bill-multi-panel]").forEach((el) => el.classList.add("hidden"));
@@ -21006,8 +21061,8 @@
         pick.row.checked = true;
         pick.row.settleQty = pick.qty;
       });
+      channelBillApplied = true;
       if (channelBillIsShipFlow()) {
-        channelBillApplied = true;
         channelBillPickOrders = [];
         channelBillPickShips = [];
         channelBillExpanded = new Set(picks.map((pick) => channelBillGroupKey(pick.row)));
@@ -21214,7 +21269,7 @@
     document.getElementById("channelBillBackStep").addEventListener("click", backChannelBillStep);
     document.getElementById("channelBillSubmit").addEventListener("click", submitChannelBill);
     document.getElementById("channelBillDraftApply").addEventListener("click", () => {
-      if (channelBillIsShipFlow()) channelBillApplied = true;
+      channelBillApplied = true;
       renderChannelBillDraft();
     });
     document.getElementById("channelBillDraftClear").addEventListener("click", () => {
