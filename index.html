@@ -1329,13 +1329,16 @@
       margin-top: 28px;
       padding: 16px 0 8px;
     }
+    #channelBillFoot { justify-content: space-between; }
     .po-wizard-foot.hidden { display: none; }
+    .po-wizard-foot-left,
     .po-wizard-foot-right {
       display: flex;
       justify-content: flex-end;
       flex-wrap: wrap;
       gap: 8px;
     }
+    .po-wizard-foot-left { justify-content: flex-start; }
     .po-pane {
       min-height: 240px;
       min-width: 0;
@@ -2812,8 +2815,6 @@
               <div class="po-kind-meta" id="shipAcceptMeta"></div>
             </div>
             <div class="acc-head-actions" id="shipAcceptActions">
-              <button type="button" class="btn hidden" id="shipExportDeclBtn">回壓出口報單</button>
-              <button type="button" class="btn hidden" id="shipExportDeclDeleteBtn">刪除出口報單</button>
               <button type="button" class="btn btn-primary" id="shipAcceptSubmitBtn">驗收</button>
             </div>
           </div>
@@ -3129,7 +3130,7 @@
           </div>
           <div class="demo-hint" id="channelSettleOrderHint">
             <strong>DEMO 提示｜結帳單建立</strong><br />
-            本頁列出已建立的結帳單。按右上「建立結帳單」選通路（類型依通路自動帶出）。買斷、轉單第一步先篩選出貨單（未按套用不列出），一列一張出貨單，展開後勾選商品，可改數量。寄倉維持一列一項商品，未按套用不列出；可再以客戶訂單建立時間、實際出貨時間縮小。勾選後帶入可結數量。按「儲存此分頁」進預覽；「送出結算申請」才產生結帳單、扣可結數量，狀態為待結算。<br />
+            本頁列出已建立的結帳單。按右上「建立結帳單」選通路（類型依通路自動帶出）。買斷、轉單第一步先篩選出貨單（未按套用不列出），一列一張出貨單，展開後勾選商品，可改數量。寄倉維持一列一項商品，未按套用不列出；可再以客戶訂單建立時間、實際出貨時間縮小。勾選後帶入可結數量。按「儲存此分頁」進預覽；「送出結算申請」才產生結帳單、扣可結數量，狀態為待結算。境外第一步左下可匯入一份出口報單（一張結帳單一份，可含多張出貨單）；沒匯入仍可送出，送出後不可改。檢視與財務結算看這一份。假資料 <strong>20260818082</strong> 已附出口報單。<br />
             月結：財務回壓或 ezpay 後為已結算，待結算可駁回。不需財務開票（線上、跨境）：送出時帶假發票，財務「確認結算」後為已結算，待結算可駁回。駁回後狀態為經財務駁回、數量加回。<br />
             可測單號：買斷月結待結算 <strong>20260822002</strong>（寶雅）、已結算 <strong>20260822003</strong>、駁回 <strong>20260822001</strong>；買斷跨境金額不符 <strong>20260818082</strong>（Cool Cool）；轉單月結已結算 <strong>20260821001</strong>（絢綻）、待結算 <strong>20260821002</strong>；轉單非月結待結算 <strong>20260810029</strong>（線上-轉單，金額相符）、已結算 <strong>20260826032</strong>；寄倉已結算 <strong>20260820001</strong>（新光）、待結算 <strong>20260828008</strong>（PW）。
           </div>
@@ -3287,6 +3288,11 @@
             </table>
           </div>
           <div id="channelBillFoot" class="po-wizard-foot">
+            <div class="po-wizard-foot-left" id="channelBillExportDeclSlot">
+              <button type="button" class="btn hidden" id="channelBillExportDeclBtn">匯入出口報單</button>
+              <button type="button" class="btn hidden" id="channelBillExportDeclViewBtn">檢視出口報單</button>
+              <button type="button" class="btn hidden" id="channelBillExportDeclDeleteBtn">刪除出口報單</button>
+            </div>
             <div class="po-wizard-foot-right">
               <button type="button" class="btn hidden" id="channelBillBackStep">返回</button>
               <button type="button" class="btn btn-primary" id="channelBillSavePage">儲存此分頁</button>
@@ -6902,7 +6908,10 @@
 
     function sanitizeSettlementForStore(record) {
       const data = String(record.fileData || "");
-      return { ...record, fileData: data.length <= SETTLE_FILE_STORE_LIMIT ? data : "" };
+      const copy = { ...record, fileData: data.length <= SETTLE_FILE_STORE_LIMIT ? data : "" };
+      const decl = copy.exportDeclFile && String(copy.exportDeclFile.data || "");
+      if (decl && decl.length > SETTLE_FILE_STORE_LIMIT) copy.exportDeclFile = null;
+      return copy;
     }
 
     function persistDemoData() {
@@ -16761,59 +16770,20 @@
     }
 
     let shipAcceptDraft = null; // { orderId, readonly, lines: [...] }
-    let pendingExportDeclShipId = "";
-
-    function hasExportDeclFile(ship) {
-      return !!(ship && ship.exportDeclFile && ship.exportDeclFile.data);
-    }
+    let channelBillExportDecl = null;
 
     function shipPoOf(ship) {
       if (!ship) return null;
       return salesOrders.find((item) => item.orderNo === ship.salesOrderNo) || null;
     }
 
-    function needsExportDecl(ship) {
-      return isOverseasPo(shipPoOf(ship));
+    function exportDeclReady(file) {
+      return !!(file && file.data);
     }
 
-    function canUploadExportDecl(ship) {
-      return needsExportDecl(ship) && !!ship && ship.status === "待驗收";
-    }
-
-    function canViewExportDecl(ship) {
-      return needsExportDecl(ship) && hasExportDeclFile(ship);
-    }
-
-    function canDeleteExportDecl(ship) {
-      return canUploadExportDecl(ship) && hasExportDeclFile(ship);
-    }
-
-    function syncExportDeclButtons(ship) {
-      const btn = document.getElementById("shipExportDeclBtn");
-      const delBtn = document.getElementById("shipExportDeclDeleteBtn");
-      if (!btn || !delBtn) return;
-      const overseas = needsExportDecl(ship);
-      const hasFile = hasExportDeclFile(ship);
-      const pending = !!(ship && ship.status === "待驗收");
-      const accepted = !!(ship && ship.status === "已驗收");
-      btn.classList.toggle("hidden", !overseas || (accepted && !hasFile));
-      if (overseas && hasFile) {
-        btn.textContent = "檢視出口報單";
-        btn.disabled = false;
-      } else if (overseas && pending) {
-        btn.textContent = "回壓出口報單";
-        btn.disabled = false;
-      } else {
-        btn.textContent = "回壓出口報單";
-        btn.disabled = true;
-      }
-      delBtn.classList.toggle("hidden", !canDeleteExportDecl(ship));
-      delBtn.disabled = !canDeleteExportDecl(ship);
-    }
-
-    function openExportDeclFile(ship) {
-      if (!canViewExportDecl(ship)) return;
-      stampFileToPdfBytes(shipPoOf(ship) || {}, ship.exportDeclFile).then((bytes) => {
+    function openExportDeclPayload(file, label) {
+      if (!exportDeclReady(file)) return;
+      stampFileToPdfBytes(label || {}, file).then((bytes) => {
         const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
         const win = window.open(url, "_blank");
         if (!win) alert("瀏覽器已封鎖彈出視窗，請允許後再檢視文件");
@@ -16821,40 +16791,6 @@
       }).catch(() => {
         alert("無法開啟文件，請重新上傳 PDF 或圖片");
       });
-    }
-
-    function openExportDeclFilePicker(ship) {
-      if (!canUploadExportDecl(ship) || hasExportDeclFile(ship)) return;
-      pendingExportDeclShipId = ship.orderId || "";
-      const input = document.getElementById("exportDeclFileInput");
-      if (!input) return;
-      input.value = "";
-      input.click();
-    }
-
-    function applyExportDeclToShip(ship, fileData) {
-      if (!canUploadExportDecl(ship)) return;
-      ship.exportDeclFile = fileData;
-      if (!persistDemoData()) {
-        alert("DEMO 儲存空間不足，出口報單可能未寫入本機。請改傳較小的 PDF 或圖片");
-      }
-      syncExportDeclButtons(ship);
-      renderShippingTable(getShippingFiltered ? getShippingFiltered() : undefined);
-    }
-
-    function deleteExportDeclFromShip(ship) {
-      if (!canDeleteExportDecl(ship)) return;
-      if (!confirm("確定刪除已上傳的出口報單？刪除後可重新上傳。")) return;
-      ship.exportDeclFile = null;
-      persistDemoData();
-      syncExportDeclButtons(ship);
-      renderShippingTable(getShippingFiltered ? getShippingFiltered() : undefined);
-    }
-
-    /** 境外未回壓出口報單：彈窗提醒，確定仍可繼續驗收 */
-    function confirmOverseasExportDeclOrContinue(ship) {
-      if (!needsExportDecl(ship) || hasExportDeclFile(ship)) return true;
-      return confirm("尚未回壓出口報單，是否仍要完成驗收？");
     }
 
     function applyDemoShipStatusOverrides() {
@@ -16953,7 +16889,6 @@
       document.getElementById("shipAcceptSubmitBtn").classList.toggle("hidden", readonly);
       document.getElementById("shipAcceptHint").classList.toggle("hidden", readonly);
       document.getElementById("shipAcceptTitle").firstChild.textContent = readonly ? "檢視驗收 " : "驗收 ";
-      syncExportDeclButtons(ship);
       renderShipAcceptTable();
       showPage("ship-accept");
     }
@@ -17026,7 +16961,6 @@
       if (!shipAcceptDraft || shipAcceptDraft.readonly) return;
       const ship = rows.find((row) => row.orderId === shipAcceptDraft.orderId);
       if (!ship || ship.status !== "待驗收") return;
-      if (!confirmOverseasExportDeclOrContinue(ship)) return;
       const checked = shipAcceptDraft.lines.filter((line) => line.checked);
       if (!checked.length) {
         alert("請至少勾選一筆商品進行驗收");
@@ -18153,7 +18087,7 @@
       return rows.find((row) => row.orderId === shipNo) || null;
     }
 
-    /** 境外可結出貨單：已驗收。一張出貨單對一張出口報單。 */
+    /** 境外可結出貨單：已驗收。出口報單改掛在結帳單，一張結帳單一份。 */
     function overseasAcceptedShips(order) {
       if (!isOverseasPo(order)) return [];
       return validShipsOfPo(order.orderNo).filter((ship) => ship.status === "已驗收");
@@ -18796,7 +18730,7 @@
     function commitSettlementGroup(selected) {
       if (!selected.length) return null;
       const shipNos = [...new Set(selected.map((row) => row.shipNo).filter(Boolean))];
-      const shipNo = shipNos.find((no) => hasExportDeclFile(shipByOrderId(no))) || shipNos[0] || "";
+      const shipNo = shipNos[0] || "";
       const lines = selected.map((row) => {
         const untaxed = accRoundMoney(row.price);
         const qty = Number(row.settleQty) || 0;
@@ -19135,7 +19069,7 @@
       showPage("monthly-bill-detail");
     }
 
-    /** 境外結算包：出口報單跟出貨單走，僅財務可開啟檔案。 */
+    /** 境外結算包：一份出口報單掛在結帳單上，僅財務可開啟。 */
     function syncMonthlyBillExportDecl(bill) {
       const row = document.getElementById("monthlyBillExportDeclRow");
       const btn = document.getElementById("monthlyBillExportDeclBtn");
@@ -19144,8 +19078,7 @@
       const overseas = !!(bill && (bill.channelType === "境外通路" || isOverseasChannel(bill.channelName)));
       row.classList.toggle("hidden", !overseas);
       if (!overseas) return;
-      const ship = shipByOrderId(bill.shipNo);
-      const hasFile = hasExportDeclFile(ship);
+      const hasFile = exportDeclReady(bill.exportDeclFile);
       empty.classList.toggle("hidden", hasFile);
       empty.textContent = "尚未回壓";
       btn.classList.toggle("hidden", !hasFile);
@@ -19160,12 +19093,11 @@
       }
       const bill = settlementRecords.find((rec) => String(rec.id) === String(monthlyBillViewId));
       if (!bill) return;
-      const ship = shipByOrderId(bill.shipNo);
-      if (!hasExportDeclFile(ship)) {
+      if (!exportDeclReady(bill.exportDeclFile)) {
         alert("尚未回壓");
         return;
       }
-      openExportDeclFile(ship);
+      openExportDeclPayload(bill.exportDeclFile, { orderNo: bill.id, poDocNo: bill.shipNo || "" });
     }
 
     /** 刪除已開發票：清除發票資料，狀態回待開發票（僅財務） */
@@ -19981,7 +19913,7 @@
       }
     }
 
-    /** 境外結算示範：同一客戶訂單兩張已驗收出貨單，一張有出口報單、一張尚未回壓。 */
+    /** 境外結算示範：同一客戶訂單兩張已驗收出貨單。出口報單掛在結帳單 20260818082，不掛出貨單。 */
     function seedOverseasSettleDemo() {
       if (!overseasSettleSeeded) {
       overseasSettleSeeded = true;
@@ -20016,11 +19948,6 @@
             })),
           };
         }
-        if (withFile && !hasExportDeclFile(ship)) {
-          const file = demoStampPlaceholder({ orderNo: ship.salesOrderNo, poDocNo: ship.orderId });
-          file.name = `出口報單-${ship.orderId}.pdf`;
-          ship.exportDeclFile = file;
-        }
       };
       markAccepted(shipByOrderId("VN00010482"), "2026-08-18 11:00:00", true);
       if (!shipByOrderId("VN00010540") && order) {
@@ -20042,16 +19969,36 @@
       ensureOverseasExportBillDemo();
     }
 
-    /** 財務結算假資料：VN00010482 整張已結，檢視頁可開出貨單上的出口報單。 */
+    function overseasExportDeclDemoFile(order, ship) {
+      const file = demoStampPlaceholder({ orderNo: order.orderNo, poDocNo: ship.orderId });
+      file.name = `出口報單-${ship.orderId}.pdf`;
+      return file;
+    }
+
+    /** 舊假資料若把出口報單掛在出貨單，改掛到該出貨單所屬的境外結帳單，再清掉出貨單上的檔。 */
+    function migrateExportDeclOntoBills() {
+      settlementRecords.forEach((bill) => {
+        if (!(bill.channelType === "境外通路" || isOverseasChannel(bill.channelName))) return;
+        if (exportDeclReady(bill.exportDeclFile)) return;
+        const shipNos = [...new Set([bill.shipNo, ...(bill.lines || []).map((line) => line.shipNo)].filter(Boolean))];
+        const ship = shipNos.map((no) => shipByOrderId(no)).find((row) => row && row.exportDeclFile && row.exportDeclFile.data);
+        if (ship) bill.exportDeclFile = ship.exportDeclFile;
+      });
+      rows.forEach((ship) => {
+        if (ship.exportDeclFile) ship.exportDeclFile = null;
+      });
+    }
+
+    /** 財務結算假資料：20260818082 掛一份出口報單，檢視與財務都看這一份。 */
     function ensureOverseasExportBillDemo() {
       const BILL_ID = "20260818082";
       const order = salesOrders.find((item) => item.orderNo === "SO20260816021");
       const ship = shipByOrderId("VN00010482");
       if (!order || !ship || ship.status !== "已驗收") return;
-      if (!hasExportDeclFile(ship)) {
-        const file = demoStampPlaceholder({ orderNo: ship.salesOrderNo, poDocNo: ship.orderId });
-        file.name = `出口報單-${ship.orderId}.pdf`;
-        ship.exportDeclFile = file;
+      const existing = settlementRecords.find((rec) => String(rec.id) === BILL_ID);
+      if (existing) {
+        if (!exportDeclReady(existing.exportDeclFile)) existing.exportDeclFile = overseasExportDeclDemoFile(order, ship);
+        return;
       }
       const already = settlementRecords.some((rec) => String(rec.id) === BILL_ID)
         || settlementRecords.some((rec) => rec.shipNo === ship.orderId && rec.status !== "已駁回");
@@ -20099,6 +20046,7 @@
         fileName: "",
         fileType: "",
         fileData: "",
+        exportDeclFile: overseasExportDeclDemoFile(order, ship),
         total,
         lines,
       }));
@@ -20889,6 +20837,7 @@
       renderChannelBillSummary();
       if (total) total.textContent = String(grouped ? channelBillGroupsOf(data).length : data.length);
       syncChannelBillCheckAll(data);
+      syncChannelBillExportDeclUi();
       if (!body) return;
       if (!data.length) {
         body.innerHTML = `<tr class="empty-row"><td colspan="${channelBillColCount()}">${channelBillEmptyText()}</td></tr>`;
@@ -20924,9 +20873,82 @@
       document.getElementById("channelBillFlow").value = name ? channelAcceptFlow(name) : "";
     }
 
+    function channelBillCheckedShipCount() {
+      const ships = new Set();
+      settleRows.forEach((row) => {
+        if (row.checked && row.shipNo) ships.add(row.shipNo);
+      });
+      return ships.size;
+    }
+
+    function channelBillExportDeclEditing() {
+      return channelBillWizard.on && channelBillWizard.step <= 1 && settleDetailMode === "edit" && isOverseasChannel(channelBillWizard.channel);
+    }
+
+    function channelBillViewExportFile() {
+      if (settleDetailMode !== "view") return null;
+      const bill = settlementRecords.find((rec) => String(rec.id) === String(channelBillWizard.viewId));
+      if (!bill || !(bill.channelType === "境外通路" || isOverseasChannel(bill.channelName))) return null;
+      return exportDeclReady(bill.exportDeclFile) ? bill.exportDeclFile : null;
+    }
+
+    function syncChannelBillExportDeclUi() {
+      const btn = document.getElementById("channelBillExportDeclBtn");
+      const viewBtn = document.getElementById("channelBillExportDeclViewBtn");
+      const delBtn = document.getElementById("channelBillExportDeclDeleteBtn");
+      const foot = document.getElementById("channelBillFoot");
+      const right = foot && foot.querySelector(".po-wizard-foot-right");
+      if (!btn || !viewBtn || !delBtn) return;
+      const editing = channelBillExportDeclEditing();
+      const viewFile = channelBillViewExportFile();
+      const hasFile = editing ? exportDeclReady(channelBillExportDecl) : !!viewFile;
+      const canChange = editing && channelBillCheckedShipCount() > 0;
+      btn.classList.toggle("hidden", !editing);
+      btn.disabled = !canChange;
+      btn.title = canChange ? (hasFile ? "再匯入會覆蓋目前的出口報單" : "") : "請先勾選出貨單";
+      viewBtn.classList.toggle("hidden", !hasFile);
+      viewBtn.disabled = !hasFile;
+      delBtn.classList.toggle("hidden", !(editing && hasFile));
+      delBtn.disabled = !(editing && hasFile && canChange);
+      delBtn.title = canChange ? "" : "請先勾選出貨單";
+      if (settleDetailMode === "view") {
+        if (right) right.classList.add("hidden");
+        if (foot) foot.classList.toggle("hidden", !viewFile);
+      } else if (right) {
+        right.classList.remove("hidden");
+      }
+    }
+
+    function openChannelBillExportDeclPicker() {
+      if (!channelBillExportDeclEditing() || channelBillCheckedShipCount() < 1) return;
+      const input = document.getElementById("exportDeclFileInput");
+      if (!input) return;
+      input.value = "";
+      input.click();
+    }
+
+    function viewChannelBillExportDecl() {
+      if (channelBillExportDeclEditing()) {
+        if (!exportDeclReady(channelBillExportDecl)) return;
+        openExportDeclPayload(channelBillExportDecl, { orderNo: channelBillWizard.channel, poDocNo: "出口報單" });
+        return;
+      }
+      const file = channelBillViewExportFile();
+      if (!file) return;
+      openExportDeclPayload(file, { orderNo: channelBillWizard.viewId, poDocNo: "出口報單" });
+    }
+
+    function deleteChannelBillExportDecl() {
+      if (!channelBillExportDeclEditing() || channelBillCheckedShipCount() < 1 || !exportDeclReady(channelBillExportDecl)) return;
+      if (!confirm("確定刪除已上傳的出口報單？")) return;
+      channelBillExportDecl = null;
+      syncChannelBillExportDeclUi();
+    }
+
     function startChannelBillWizard(channelName) {
       const flow = channelAcceptFlow(channelName);
       channelBillWizard = { on: true, step: 1, channel: channelName, flow, viewId: "" };
+      channelBillExportDecl = null;
       channelBillGroupRemarks = {};
       settleDetailMode = "edit";
       settleDetailOrderNo = "";
@@ -20993,7 +21015,6 @@
       document.getElementById("channelSettleDetailMeta").textContent =
         `結帳單號：${bill.id}｜通路：${bill.channelName || "—"}｜結算類型：${bill.type || "—"}｜狀態：${bill.status || "—"}${bill.rejectReason ? `｜駁回原因：${bill.rejectReason}` : ""}`;
       document.getElementById("channelBillWizard")?.classList.add("hidden");
-      document.getElementById("channelBillFoot")?.classList.add("hidden");
       document.getElementById("channelSettleDetailActions")?.classList.add("hidden");
       document.getElementById("channelBillDraftFilter")?.classList.add("hidden");
       renderChannelBillDraft();
@@ -21036,6 +21057,10 @@
       if (!assertSettleSameChannel(selected)) return;
       const record = commitSettlementGroup(selected);
       if (!record) return;
+      if (isOverseasChannel(channelBillWizard.channel) && exportDeclReady(channelBillExportDecl)) {
+        record.exportDeclFile = channelBillExportDecl;
+      }
+      channelBillExportDecl = null;
       if (!record.monthly) fillAutoInvoice(record, settleBillTaxedTotal(record));
       else record.invoiceCounted = false;
       persistDemoData();
@@ -21517,25 +21542,13 @@
       history.replaceState({}, "", location.pathname);
     });
     document.getElementById("shipAcceptSubmitBtn").addEventListener("click", startShipAcceptSubmit);
-    document.getElementById("shipExportDeclBtn").addEventListener("click", () => {
-      if (!shipAcceptDraft) return;
-      const ship = rows.find((row) => row.orderId === shipAcceptDraft.orderId);
-      if (!ship) return;
-      if (canViewExportDecl(ship)) openExportDeclFile(ship);
-      else openExportDeclFilePicker(ship);
-    });
-    document.getElementById("shipExportDeclDeleteBtn").addEventListener("click", () => {
-      if (!shipAcceptDraft) return;
-      const ship = rows.find((row) => row.orderId === shipAcceptDraft.orderId);
-      if (!ship) return;
-      deleteExportDeclFromShip(ship);
-    });
+    document.getElementById("channelBillExportDeclBtn").addEventListener("click", openChannelBillExportDeclPicker);
+    document.getElementById("channelBillExportDeclViewBtn").addEventListener("click", viewChannelBillExportDecl);
+    document.getElementById("channelBillExportDeclDeleteBtn").addEventListener("click", deleteChannelBillExportDecl);
     document.getElementById("exportDeclFileInput").addEventListener("change", (e) => {
       const file = e.target.files && e.target.files[0];
       e.target.value = "";
-      const ship = rows.find((row) => row.orderId === pendingExportDeclShipId);
-      pendingExportDeclShipId = "";
-      if (!file || !ship || !canUploadExportDecl(ship) || hasExportDeclFile(ship)) return;
+      if (!file || !channelBillExportDeclEditing() || channelBillCheckedShipCount() < 1) return;
       const okType = /pdf$/i.test(file.type) || /^image\//i.test(file.type) || /\.(pdf|png|jpe?g|webp|gif)$/i.test(file.name);
       if (!okType) {
         alert("請上傳 PDF 或圖片");
@@ -21547,12 +21560,13 @@
       }
       const reader = new FileReader();
       reader.onload = () => {
-        applyExportDeclToShip(ship, {
+        channelBillExportDecl = {
           name: file.name,
           type: file.type || "application/octet-stream",
           data: String(reader.result || ""),
           uploadedAt: nowStamp(),
-        });
+        };
+        syncChannelBillExportDeclUi();
       };
       reader.readAsDataURL(file);
     });
@@ -21619,6 +21633,7 @@
     settlementRecords = settlementRecords.map(normalizeSettlementRecord);
     ensureSettleBillFixtures();
     settlementRecords = settlementRecords.map(normalizeSettlementRecord);
+    migrateExportDeclOntoBills();
     persistDemoData();
     renderShippingTable();
 
