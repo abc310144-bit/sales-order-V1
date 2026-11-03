@@ -3379,6 +3379,7 @@
                   <th>id</th>
                   <th>類型</th>
                   <th>通路名稱</th>
+                  <th>結算月份</th>
                   <th>發票號碼</th>
                   <th>發票日期</th>
                   <th class="num">訂單總金額(含稅)</th>
@@ -4596,6 +4597,26 @@
           <label>結算類型</label>
           <div class="form-ctrl">
             <input type="text" id="channelBillFlow" readonly placeholder="選擇通路後自動帶出" />
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="required">結算月份</label>
+          <div class="form-ctrl">
+            <select id="channelBillSettleMonth">
+              <option value="">請選擇</option>
+              <option value="1">1月</option>
+              <option value="2">2月</option>
+              <option value="3">3月</option>
+              <option value="4">4月</option>
+              <option value="5">5月</option>
+              <option value="6">6月</option>
+              <option value="7">7月</option>
+              <option value="8">8月</option>
+              <option value="9">9月</option>
+              <option value="10">10月</option>
+              <option value="11">11月</option>
+              <option value="12">12月</option>
+            </select>
           </div>
         </div>
       </div>
@@ -19061,7 +19082,7 @@
       if (total) total.textContent = String(data.length);
       if (!body) return;
       if (!data.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="10">查無資料</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="11">查無資料</td></tr>`;
         return;
       }
       body.innerHTML = data.map((rec) => {
@@ -19075,6 +19096,7 @@
           <td>${escapeHtml(rec.id)}</td>
           <td>${escapeHtml(rec.type || "—")}</td>
           <td>${escapeHtml(rec.channelName || "—")}</td>
+          <td>${escapeHtml(formatSettleMonth(rec.settleMonth))}</td>
           <td>${escapeHtml(invoiceNo)}</td>
           <td>${escapeHtml(invoiceDate)}</td>
           <td class="num">${escapeHtml(accMoney(settleBillTaxedTotal(rec)))}</td>
@@ -21297,6 +21319,8 @@
       select.innerHTML = `<option value="">請選擇</option>` + names
         .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}${isSystemInvoiceChannel(name) ? "（系統待開發票）" : ""}</option>`).join("");
       document.getElementById("channelBillFlow").value = "";
+      const monthSelect = document.getElementById("channelBillSettleMonth");
+      if (monthSelect) monthSelect.value = "";
       document.getElementById("channelBillCreateModal").classList.remove("hidden");
     }
 
@@ -21395,9 +21419,14 @@
       syncChannelBillExportDeclUi();
     }
 
-    function startChannelBillWizard(channelName) {
+    function formatSettleMonth(month) {
+      const n = Number(month);
+      return n >= 1 && n <= 12 ? `${n}月` : "—";
+    }
+
+    function startChannelBillWizard(channelName, settleMonth) {
       const flow = channelAcceptFlow(channelName);
-      channelBillWizard = { on: true, step: 1, channel: channelName, flow, viewId: "", editId: "" };
+      channelBillWizard = { on: true, step: 1, channel: channelName, flow, viewId: "", editId: "", settleMonth: Number(settleMonth) || 0 };
       channelBillExportDecl = null;
       channelBillGroupRemarks = {};
       settleDetailMode = "edit";
@@ -21408,7 +21437,7 @@
       const monthly = isMonthlySettleChannel(channelName);
       document.getElementById("channelSettleDetailTitle").textContent = "建立結帳單";
       document.getElementById("channelSettleDetailMeta").textContent =
-        `通路：${channelName}｜結算類型：${flow}｜${isSystemInvoiceChannel(channelName) ? "系統待開發票，出貨時已開立發票，財務確認結算即可" : (monthly ? "月結，送出後為待結算，由財務開立發票" : "不需財務開票，送出後為待結算並帶入發票資料，由財務確認結算")}`;
+        `通路：${channelName}｜結算類型：${flow}｜結算月份：${formatSettleMonth(settleMonth)}｜${isSystemInvoiceChannel(channelName) ? "系統待開發票，出貨時已開立發票，財務確認結算即可" : (monthly ? "月結，送出後為待結算，由財務開立發票" : "不需財務開票，送出後為待結算並帶入發票資料，由財務確認結算")}`;
       renderChannelBillWizardNav();
       renderChannelBillDraft();
       showPage("channel-settle-detail");
@@ -21566,6 +21595,7 @@
       record.channelName = built.channelName;
       record.channelType = built.channelType;
       record.shipNo = built.shipNo;
+      record.settleMonth = Number(channelBillWizard.settleMonth) || Number(record.settleMonth) || 0;
       record.monthly = isMonthlySettleChannel(built.channelName);
       record.total = built.total;
       record.lines = built.lines;
@@ -21596,7 +21626,7 @@
         alert("僅草稿與財務駁回可編輯");
         return;
       }
-      startChannelBillWizard(bill.channelName);
+      startChannelBillWizard(bill.channelName, bill.settleMonth);
       channelBillWizard.editId = String(bill.id);
       channelBillGroupRemarks = {};
       (bill.lines || []).forEach((line) => {
@@ -21926,12 +21956,17 @@
     document.getElementById("channelBillCreateCancel").addEventListener("click", closeChannelBillCreateModal);
     document.getElementById("channelBillCreateConfirm").addEventListener("click", () => {
       const name = document.getElementById("channelBillChannel").value;
+      const month = Number(document.getElementById("channelBillSettleMonth").value);
       if (!name) {
         alert("請選擇通路名稱");
         return;
       }
+      if (!(month >= 1 && month <= 12)) {
+        alert("請選擇結算月份");
+        return;
+      }
       closeChannelBillCreateModal();
-      startChannelBillWizard(name);
+      startChannelBillWizard(name, month);
     });
     document.getElementById("channelBillChannel").addEventListener("change", syncChannelBillFlowLabel);
     document.getElementById("channelBillCreateModal").addEventListener("click", (e) => {
