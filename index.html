@@ -3318,8 +3318,8 @@
             <strong>DEMO 提示｜財務結算</strong><br />
             只列出已送出結算的結帳單：待結算、已結算、財務駁回。草稿與已作廢不進這裡，結帳單建立作廢也不會把狀態寫進財務結算。<br />
             <strong>月結</strong>且待結算：可「回壓／開立發票」（完成後已結算）或「駁回」。已結算可「刪除發票」，狀態回到待結算、數量不加回，之後可再開發票。<br />
-            <strong>不需財務開票</strong>（線上、跨境）：送出時已帶發票資料。待結算可「確認結算」或「駁回」。發票金額與結算金額不同時，檢視頁會標示。已結算後不能駁回、不能刪發票。<br />
-            駁回須填原因（最多 20 字），狀態改財務駁回，數量加回。跨境 <strong>20260818082</strong> 發票金額故意不符，且可看出口報單。線上 <strong>20260810029</strong> 發票金額與結算金額相同。
+            <strong>系統待開發票</strong>（線上、跨境）：出貨時系統已按出貨單開立發票，一張出貨單一張發票。財務不用開立發票，檢視不顯示整張結帳單的發票基本資料，發票號碼、日期、金額在結算品項。待結算可「確認結算」或「駁回」。<br />
+            駁回須填原因（最多 20 字），狀態改財務駁回，數量加回。跨境 <strong>20260818082</strong> 可看出口報單。線上 <strong>20260810029</strong> 可看每張出貨單的發票。
           </div>
           <section class="filter" id="monthlyBillFilterPanel">
             <div class="filter-grid">
@@ -19029,7 +19029,12 @@
           if (statusFilter && rec.status !== statusFilter) return false;
           if (channelType && rec.channelType !== channelType) return false;
           if (channel && rec.channelName !== channel) return false;
-          if (invoiceDate && String(rec.invoiceDate || "") !== invoiceDate) return false;
+          if (invoiceDate) {
+            const dates = isSystemInvoiceChannel(rec.channelName)
+              ? billShipInvoices(rec).map((inv) => inv.date)
+              : [String(rec.invoiceDate || "")];
+            if (!dates.includes(invoiceDate)) return false;
+          }
           if (creator && rec.operator !== creator) return false;
           if ((from || to) && !inDateRange(rec.createdAt, from, to)) return false;
           return true;
@@ -19046,19 +19051,26 @@
         body.innerHTML = `<tr class="empty-row"><td colspan="10">查無資料</td></tr>`;
         return;
       }
-      body.innerHTML = data.map((rec) => `
+      body.innerHTML = data.map((rec) => {
+        const invoice = isSystemInvoiceChannel(rec.channelName)
+          ? billShipInvoices(rec)
+          : null;
+        const invoiceNo = invoice ? (invoice.map((inv) => inv.no).join("、") || "-") : (rec.invoiceNo || "-");
+        const invoiceDate = invoice ? ([...new Set(invoice.map((inv) => inv.date).filter(Boolean))].join("、") || "-") : (rec.invoiceDate || "-");
+        return `
         <tr>
           <td>${escapeHtml(rec.id)}</td>
           <td>${escapeHtml(rec.type || "—")}</td>
           <td>${escapeHtml(rec.channelName || "—")}</td>
-          <td>${escapeHtml(rec.invoiceNo || "-")}</td>
-          <td>${escapeHtml(rec.invoiceDate || "-")}</td>
+          <td>${escapeHtml(invoiceNo)}</td>
+          <td>${escapeHtml(invoiceDate)}</td>
           <td class="num">${escapeHtml(accMoney(settleBillTaxedTotal(rec)))}</td>
           <td>${escapeHtml(rec.operator || "—")}</td>
           <td>${escapeHtml(rec.createdAt || "—")}</td>
           <td>${statusTag(rec.status || "待開發票")}</td>
           <td class="ops"><a data-monthly-bill-view="${escapeHtml(rec.id)}">檢視</a></td>
-        </tr>`).join("");
+        </tr>`;
+      }).join("");
     }
 
     function openMonthlyBillDetail(billId) {
@@ -19071,7 +19083,7 @@
       monthlyBillViewId = String(bill.id);
       const status = bill.status || "待開發票";
       document.getElementById("monthlyBillDetailMeta").textContent =
-        `id：${bill.id}｜類型：${bill.type || "—"}｜通路：${bill.channelName || "—"}｜狀態：${status}｜月結：${bill.monthly ? "是" : "否"}`;
+        `id：${bill.id}｜類型：${bill.type || "—"}｜通路：${bill.channelName || "—"}｜狀態：${status}｜${isSystemInvoiceChannel(bill.channelName) ? "開票：系統待開發票" : "月結：是"}`;
       const billTaxedTotal = settleBillTaxedTotal(bill);
       document.getElementById("monthlyBillBasicTotal").value = accMoney(billTaxedTotal);
       document.getElementById("monthlyBillBasicOperator").value = bill.operator || "—";
@@ -19114,7 +19126,8 @@
       const body = document.getElementById("monthlyBillDetailBody");
       if (body) renderMonthlyBillDetailLines(bill);
       const invSection = document.getElementById("monthlyBillInvoiceSection");
-      const issued = !!(bill.invoiceNo || bill.invoiceDate || bill.fileData || (bill.invoiceAmount != null && bill.invoiceAmount !== ""));
+      const systemInvoice = isSystemInvoiceChannel(bill.channelName);
+      const issued = !systemInvoice && !!(bill.invoiceNo || bill.invoiceDate || bill.fileData || (bill.invoiceAmount != null && bill.invoiceAmount !== ""));
       invSection.classList.toggle("hidden", !issued);
       if (issued) {
         document.getElementById("monthlyBillInvNo").value = bill.invoiceNo || "-";
@@ -19139,21 +19152,82 @@
       showPage("monthly-bill-detail");
     }
 
+    function isSystemInvoiceChannel(channelName) {
+      return !isMonthlySettleChannel(channelName);
+    }
+
+    function shipHasLeftWarehouse(ship) {
+      if (!ship || ship.status === "訂單取消") return false;
+      if (["已出貨", "配送異常", "已配達", "待驗收", "已驗收"].includes(ship.status)) return true;
+      return !!String(ship.shipped || "").trim();
+    }
+
+    function ensureSystemShipInvoices() {
+      rows.forEach((ship) => {
+        const channel = ship.channel || (salesOrders.find((item) => item.orderNo === ship.salesOrderNo) || {}).channelName || "";
+        if (!isSystemInvoiceChannel(channel) || !shipHasLeftWarehouse(ship) || ship.systemInvoiceNo) return;
+        const order = salesOrders.find((item) => item.orderNo === ship.salesOrderNo);
+        const overseas = !!(order && isOverseasPo(order));
+        const amount = accRoundMoney((ship.items || []).reduce((sum, item) => {
+          if (item.gift) return sum;
+          const qty = Number(item.qty) || 0;
+          if (qty <= 0) return sum;
+          const src = order && (order.items || []).find((row) => itemKey(row) === (item.key || itemKey(item)));
+          const untaxed = accRoundMoney(src ? accUnitPrice(src) : (Number(item.price) || 0));
+          const taxed = overseas ? untaxed : accRoundMoney(untaxed * (1 + SETTLE_TAX_RATE));
+          return sum + accRoundMoney(taxed * qty);
+        }, 0));
+        const digits = String(ship.orderId || ship.id || "").replace(/\D/g, "");
+        ship.systemInvoiceNo = `EV${digits.slice(-8).padStart(8, "0")}`;
+        ship.systemInvoiceDate = String(ship.shipped || (ship.acceptance && ship.acceptance.acceptedAt) || "").slice(0, 10);
+        ship.systemInvoiceAmount = amount;
+      });
+    }
+
+    function lineShipInvoice(line) {
+      const ship = line && line.shipNo ? shipByOrderId(line.shipNo) : null;
+      if (!ship || !ship.systemInvoiceNo) return null;
+      return { no: ship.systemInvoiceNo, date: ship.systemInvoiceDate || "", amount: ship.systemInvoiceAmount };
+    }
+
+    function billShipInvoices(bill) {
+      const seen = new Set();
+      const list = [];
+      (bill.lines || []).forEach((line) => {
+        const inv = lineShipInvoice(line);
+        if (!inv || seen.has(inv.no)) return;
+        seen.add(inv.no);
+        list.push(inv);
+      });
+      return list;
+    }
+
     function renderMonthlyBillDetailLines(bill) {
       const body = document.getElementById("monthlyBillDetailBody");
       const total = document.getElementById("monthlyBillDetailTotal");
       if (!body) return;
       const lines = (bill && bill.lines) || [];
+      const systemInvoice = isSystemInvoiceChannel(bill && bill.channelName);
+      const head = document.querySelector("#page-monthly-bill-detail thead tr");
+      if (head) {
+        head.innerHTML = `<th>客戶訂單編號</th><th>通路</th><th>SKU</th><th>商品名稱</th><th class="num">結算數量</th><th class="num">未稅單價</th><th class="num">含稅單價</th><th class="num">稅額</th><th class="num">結算金額</th><th>備註</th>${systemInvoice ? `<th>發票號碼</th><th>發票日期</th><th class="num">發票金額</th>` : ""}`;
+      }
+      const colspan = systemInvoice ? 13 : 10;
       if (total) total.textContent = String(lines.length);
       const amountEl = document.getElementById("monthlyBillDetailAmount");
       if (amountEl) amountEl.textContent = accMoney(settleBillTaxedTotal(bill));
       if (!lines.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="10">無明細</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="${colspan}">無明細</td></tr>`;
         return;
       }
       body.innerHTML = lines.map((line) => {
         const tax = settleLineTaxFields(line);
         const remark = normalizeSettleRemark(line.remark);
+        const inv = systemInvoice ? lineShipInvoice(line) : null;
+        const invoiceCells = systemInvoice ? `
+            <td>${escapeHtml(inv ? inv.no : "—")}</td>
+            <td>${escapeHtml(inv && inv.date ? inv.date : "—")}</td>
+            <td class="num">${inv && inv.amount != null ? escapeHtml(accMoney(inv.amount)) : "—"}</td>` : "";
         return `
           <tr>
             <td>${escapeHtml(line.orderNo || "—")}</td>
@@ -19165,7 +19239,7 @@
             <td class="num">${escapeHtml(accMoney(tax.taxed))}</td>
             <td class="num">${escapeHtml(accMoney(tax.tax))}</td>
             <td class="num">${escapeHtml(accMoney(tax.amount))}</td>
-            <td>${remark ? escapeHtml(remark) : "-"}</td>
+            <td>${remark ? escapeHtml(remark) : "-"}</td>${invoiceCells}
           </tr>`;
       }).join("");
     }
@@ -22227,6 +22301,7 @@
     settlementRecords = settlementRecords.map(normalizeSettlementRecord);
     migrateExportDeclOntoBills();
     alignDemoSettlementShips();
+    ensureSystemShipInvoices();
     persistDemoData();
     renderSalesTable(getSalesFiltered());
     renderShippingTable();
