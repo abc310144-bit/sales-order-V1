@@ -7408,6 +7408,13 @@
       const enteringGoods = poWizardStep === 2 && !atLast && poWizardPrevStep !== 2;
       poWizardPrevStep = poWizardStep;
       if (enteringGoods) poEstMarginConfirmed = false;
+      placePoMarginOverview(current);
+      if (online && poWizardStep === 2 && !atLast) {
+        const marginEl = document.getElementById("poMarginOverview");
+        if (marginEl) marginEl.classList.remove("hidden");
+        if (poEstMarginConfirmed) renderPoEstMargin(current);
+        else resetPoEstMarginDisplay();
+      }
       const previewNow = page.classList.contains("is-wizard-preview");
       if (previewNow || wasPreview) {
         if (online) fillRecipientForm(current);
@@ -10193,10 +10200,12 @@
           tryAutofillRecvSkuName(tr, el.value, false);
           fillRecvSellable(tr, el.value, false);
           syncRecvGroupAmount(tr.getAttribute("data-recv-group"));
+          invalidatePoEstMargin();
         }
         if (field === "qty") {
           syncRecvOversell(tr, false);
           syncRecvGroupAmount(tr.getAttribute("data-recv-group"));
+          invalidatePoEstMargin();
         }
       });
       body.addEventListener("change", (e) => {
@@ -10249,10 +10258,12 @@
             hideRecvSkuHits(tr);
           }
           syncRecvGroupAmount(tr.getAttribute("data-recv-group"));
+          invalidatePoEstMargin();
         }
         if (field === "qty") {
           syncRecvOversell(tr, false);
           syncRecvGroupAmount(tr.getAttribute("data-recv-group"));
+          invalidatePoEstMargin();
         }
       });
       body.addEventListener("click", (e) => {
@@ -10381,6 +10392,7 @@
           if (!block || blocks.length <= 1 || blocks[0] === block) return;
           block.remove();
           refreshRecvItemDeleteButtons();
+          invalidatePoEstMargin();
           return;
         }
         if (action === "add-item") {
@@ -10408,6 +10420,7 @@
           const created = tbody.querySelectorAll("tr.recv-item-row");
           const focusEl = created[created.length - 1] && created[created.length - 1].querySelector('[data-recv="sku"]');
           if (focusEl) focusEl.focus();
+          invalidatePoEstMargin();
           return;
         }
         const tr = act.closest("tr.recv-item-row");
@@ -10438,12 +10451,14 @@
             hideRecvSkuHits(tr);
             refreshRecvItemDeleteButtons(gid);
             syncRecvGroupAmount(gid);
+            invalidatePoEstMargin();
             return;
           }
           if (block) block.remove();
           tr.remove();
           refreshRecvItemDeleteButtons(gid);
           syncRecvGroupAmount(gid);
+          invalidatePoEstMargin();
         }
       });
       document.addEventListener("click", (e) => {
@@ -13425,6 +13440,22 @@
       if (giftBtn) giftBtn.classList.toggle("hidden", inline || !giftEdit);
     }
 
+    function placePoMarginOverview(order) {
+      const el = document.getElementById("poMarginOverview");
+      const recvBar = document.getElementById("recvConfirmGoodsBar");
+      const goodsBar = document.getElementById("editGoodsConfirmBar");
+      if (!el || !recvBar || !goodsBar) return;
+      order = order || getWorkspaceOrder();
+      const page = document.getElementById("page-order-edit");
+      const onlineStep2 = !!(page
+        && page.classList.contains("is-online-wizard")
+        && page.dataset.wizardStep === "2"
+        && !page.classList.contains("is-wizard-preview")
+        && isOnlineTransferPo(order));
+      const anchor = onlineStep2 ? recvBar : goodsBar;
+      if (el.previousElementSibling !== anchor) anchor.insertAdjacentElement("afterend", el);
+    }
+
     function resetPoEstMarginDisplay() {
       poEstMarginConfirmed = false;
       const money = (n) => (typeof accMoney === "function" ? accMoney(n) : String(n));
@@ -13438,6 +13469,12 @@
       if (fee) fee.textContent = money(0);
       if (amt) amt.textContent = money(0);
       if (rate) rate.textContent = "0%";
+    }
+
+    function invalidatePoEstMargin() {
+      const el = document.getElementById("poMarginOverview");
+      if (el && isOnlineTransferPo(getWorkspaceOrder())) el.classList.remove("hidden");
+      resetPoEstMarginDisplay();
     }
 
     /** 新增：SKU 精準比對；任一不存在則整次不新增。同鍵合併（境外含效期_批號，贈品另成一列）。 */
@@ -13563,8 +13600,10 @@
       const order = getWorkspaceOrder();
       if (order && isOnlineTransferPo(order)) {
         if (!validateRecipientRequired(order)) return;
+        applyRecipientForm(order);
         loadPoGoodsWorkspace(order);
         poEstMarginConfirmed = true;
+        placePoMarginOverview(order);
         renderPoEstMargin(order);
         alert("已確認下定商品，並試算預估營收／成本／毛利");
         return;
@@ -15098,6 +15137,7 @@
     function renderPoEstMargin(order) {
       const el = document.getElementById("poMarginOverview");
       if (!el) return;
+      placePoMarginOverview(order);
       el.classList.remove("hidden");
       if (poGoodsEditable() && !poEstMarginConfirmed) {
         resetPoEstMarginDisplay();
