@@ -2556,6 +2556,12 @@
     #monthlyBillInvDiff { margin-left: 8px; color: #389e0d; }
     #monthlyBillInvDiff.is-mismatch { color: #cf1322; font-weight: 600; }
     .monthly-bill-detail-lines { margin-top: 24px; }
+    .monthly-bill-lines-meta { justify-content: space-between; }
+    .monthly-bill-lines-meta strong {
+      margin-left: 8px;
+      color: var(--text);
+      font-size: 16px;
+    }
     .acc-file-ops a { margin-right: 12px; }
     .acc-diff-list {
       margin: 0 0 16px;
@@ -3462,8 +3468,9 @@
           </div>
           <div class="monthly-bill-detail-lines">
             <h3 class="ship-settings-col-title">結算品項</h3>
-            <div class="table-meta">
-              總共 <span id="monthlyBillDetailTotal">0</span> 筆
+            <div class="table-meta monthly-bill-lines-meta">
+              <span>總結算金額<strong id="monthlyBillDetailAmount">0</strong></span>
+              <span>總共 <span id="monthlyBillDetailTotal">0</span> 筆</span>
             </div>
             <div class="table-wrap">
               <table class="settle-table">
@@ -19140,6 +19147,8 @@
       if (!body) return;
       const lines = (bill && bill.lines) || [];
       if (total) total.textContent = String(lines.length);
+      const amountEl = document.getElementById("monthlyBillDetailAmount");
+      if (amountEl) amountEl.textContent = accMoney(settleBillTaxedTotal(bill));
       if (!lines.length) {
         body.innerHTML = `<tr class="empty-row"><td colspan="10">無明細</td></tr>`;
         return;
