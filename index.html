@@ -3135,7 +3135,8 @@
           <div class="demo-hint" id="channelSettleOrderHint">
             <strong>DEMO 提示｜結帳單建立</strong><br />
             本頁列出已建立的結帳單。狀態有草稿、已作廢、待結算、已結算、財務駁回。按右上「建立結帳單」選通路（類型依通路自動帶出）。買斷、轉單第一步先篩選出貨單（未按套用不列出），一列一張出貨單，展開後勾選商品，可改數量。寄倉維持一列一項商品，未按套用不列出；可再以客戶訂單建立時間、實際出貨時間縮小。勾選後帶入可結數量。各步可「儲存為草稿」（不扣可結數量、不進財務結算）。「儲存此分頁」進預覽；「送出結算申請」才扣可結數量，狀態為待結算。待結算、已結算不可作廢。草稿、財務駁回可編輯、可作廢；作廢時若這張單還扣著數量，會把數量加回。境外可匯入一份出口報單。假資料 <strong>20260818082</strong> 已附出口報單。<br />
-            月結：財務回壓或 ezpay 後為已結算，待結算可駁回。不需財務開票（線上、跨境）：送出時帶假發票，財務「確認結算」後為已結算，待結算可駁回。駁回後狀態為財務駁回，數量加回，可再編輯送出或作廢。<br />
+            月結：財務回壓或 ezpay 後為已結算，待結算可駁回。其餘不月結通路：送出時帶假發票，財務「確認結算」後為已結算。<br />
+            <strong>系統待開發票示範只有兩條通路：線上-轉單、跨境- Cool Cool Trading。</strong>建立結帳單選通路時名稱後面有標示。這兩條只要出貨單有實際出貨時間就能選到，沒有出貨單或沒有實際出貨時間的不會出現。財務只按確認結算，不用回壓發票。可對照 Cool Cool：<strong>VN00010542</strong> 待驗收但有實際出貨時間，可選；<strong>VN00010543</strong> 揀貨中、沒有實際出貨時間，選不到。<br />
             可測單號：草稿 <strong>20260829011</strong>、已作廢 <strong>20260829012</strong>（新光，都沒扣可結數量）；財務駁回 <strong>20260822001</strong>（寶雅）；買斷月結待結算 <strong>20260822002</strong>、已結算 <strong>20260822003</strong>；跨境金額不符 <strong>20260818082</strong>（Cool Cool）；轉單月結已結算 <strong>20260821001</strong>（絢綻）、待結算 <strong>20260821002</strong>；轉單非月結待結算 <strong>20260810029</strong>（線上-轉單）、已結算 <strong>20260826032</strong>；寄倉已結算 <strong>20260820001</strong>、待結算 <strong>20260828008</strong>（PW）。<br />
             跨境- Cool Cool Trading 另有客戶訂單可從建立結帳單測：<strong>SO20260830041</strong>（部分出貨；VN00010541 已驗收可結、VN00010542 待驗收、VN00010543 揀貨中）、<strong>SO20260831042</strong>（已開立出貨單；VN00010544、VN00010545 都已驗收且未結，含一列贈品）、<strong>SO20260901043</strong>（部分出貨；VN00010546 已有待結算結帳單 <strong>20260901046</strong> 仍有剩餘、VN00010547 已驗收未結）。這三張單與出貨單在客戶訂單管理、出貨訂單管理都看得到。
           </div>
@@ -3318,7 +3319,7 @@
             <strong>DEMO 提示｜財務結算</strong><br />
             只列出已送出結算的結帳單：待結算、已結算、財務駁回。草稿與已作廢不進這裡，結帳單建立作廢也不會把狀態寫進財務結算。<br />
             <strong>月結</strong>且待結算：可「回壓／開立發票」（完成後已結算）或「駁回」。已結算可「刪除發票」，狀態回到待結算、數量不加回，之後可再開發票。<br />
-            <strong>系統待開發票</strong>（線上、跨境）：出貨時系統已按出貨單開立發票，一張出貨單一張發票。財務不用開立發票，檢視不顯示整張結帳單的發票基本資料，發票號碼、日期、金額在結算品項。待結算可「確認結算」或「駁回」。<br />
+            <strong>系統待開發票只有兩條通路：線上-轉單、跨境- Cool Cool Trading。</strong>出貨單有實際出貨時間時系統已開立發票，一張出貨單一張發票。檢視不顯示整張結帳單的發票基本資料，發票在結算品項。財務只按「確認結算」，不用回壓發票。其他通路維持原樣。<br />
             駁回須填原因（最多 20 字），狀態改財務駁回，數量加回。跨境 <strong>20260818082</strong> 可看出口報單。線上 <strong>20260810029</strong> 可看每張出貨單的發票。
           </div>
           <section class="filter" id="monthlyBillFilterPanel">
@@ -17425,9 +17426,19 @@
       return salesOrders.filter(isAcceptanceOrder);
     }
 
+    function isSystemInvoiceChannel(channelName) {
+      return channelName === "線上-轉單" || channelName === "跨境- Cool Cool Trading";
+    }
+
+    /** 系統待開發票：有實際出貨時間即可結，不必已驗收或已配達。 */
+    function isSystemInvoiceSettleShip(ship) {
+      return !!ship && ship.status !== "訂單取消" && !!String(ship.shipped || "").trim();
+    }
+
     /**
      * 轉單可結出貨單：線上出貨＝狀態已配達；其餘轉單＝有實際出貨時間。
      * 買斷／寄倉可結出貨單：狀態已驗收（出貨訂單管理驗收完成）。
+     * 系統待開發票的兩個示範通路改看實際出貨時間。
      */
     function isTransferSettleShip(ship) {
       if (!ship) return false;
@@ -17439,9 +17450,11 @@
     function isSettlementSourceOrder(order) {
       return !!order
         && order.status !== "已作廢"
-        && (isTransferAcceptFlow(order)
-          ? validShipsOfPo(order.orderNo).some(isTransferSettleShip)
-          : validShipsOfPo(order.orderNo).some((ship) => ship.status === "已驗收"));
+        && (isSystemInvoiceChannel(order.channelName)
+          ? validShipsOfPo(order.orderNo).some(isSystemInvoiceSettleShip)
+          : (isTransferAcceptFlow(order)
+            ? validShipsOfPo(order.orderNo).some(isTransferSettleShip)
+            : validShipsOfPo(order.orderNo).some((ship) => ship.status === "已驗收")));
     }
 
     function settlementSourceOrders() {
@@ -19152,20 +19165,10 @@
       showPage("monthly-bill-detail");
     }
 
-    function isSystemInvoiceChannel(channelName) {
-      return !isMonthlySettleChannel(channelName);
-    }
-
-    function shipHasLeftWarehouse(ship) {
-      if (!ship || ship.status === "訂單取消") return false;
-      if (["已出貨", "配送異常", "已配達", "待驗收", "已驗收"].includes(ship.status)) return true;
-      return !!String(ship.shipped || "").trim();
-    }
-
     function ensureSystemShipInvoices() {
       rows.forEach((ship) => {
         const channel = ship.channel || (salesOrders.find((item) => item.orderNo === ship.salesOrderNo) || {}).channelName || "";
-        if (!isSystemInvoiceChannel(channel) || !shipHasLeftWarehouse(ship) || ship.systemInvoiceNo) return;
+        if (!isSystemInvoiceChannel(channel) || !isSystemInvoiceSettleShip(ship) || ship.systemInvoiceNo) return;
         const order = salesOrders.find((item) => item.orderNo === ship.salesOrderNo);
         const overseas = !!(order && isOverseasPo(order));
         const amount = accRoundMoney((ship.items || []).reduce((sum, item) => {
@@ -19580,7 +19583,7 @@
       if (!order || !isSettlementSourceOrder(order)) return [];
       if (isOverseasPo(order)) {
         const ship = shipByOrderId(shipNo);
-        if (!ship || ship.salesOrderNo !== order.orderNo || ship.status !== "已驗收") return [];
+        if (!ship || ship.salesOrderNo !== order.orderNo || !(isSystemInvoiceChannel(order.channelName) ? isSystemInvoiceSettleShip(ship) : ship.status === "已驗收")) return [];
         const settleableAt = String((ship.acceptance && ship.acceptance.acceptedAt) || ship.shipped || ship.created || "").trim();
         return shipSettleLines(order, ship).map((line) => {
           const remain = Math.max(0, (Number(line.acceptQty) || 0) - (Number(line.settledQty) || 0));
@@ -19657,7 +19660,7 @@
       }
       const overseas = isOverseasPo(order);
       const ship = overseas ? shipByOrderId(shipNo) : null;
-      if (overseas && (!ship || ship.salesOrderNo !== order.orderNo || ship.status !== "已驗收")) {
+      if (overseas && (!ship || ship.salesOrderNo !== order.orderNo || !(isSystemInvoiceChannel(order.channelName) ? isSystemInvoiceSettleShip(ship) : ship.status === "已驗收"))) {
         alert("找不到可結算的出貨單");
         return;
       }
@@ -20719,6 +20722,7 @@
     function channelBillSettleShips(order) {
       const flow = channelAcceptFlow(order.channelName);
       return validShipsOfPo(order.orderNo).filter((ship) => {
+        if (isSystemInvoiceChannel(order.channelName)) return isSystemInvoiceSettleShip(ship);
         if (flow === "轉單") return isTransferSettleShip(ship);
         return ship.status === "已驗收";
       }).slice().sort((a, b) => String(a.shipped || a.created || a.orderId || "").localeCompare(String(b.shipped || b.created || b.orderId || "")));
@@ -21291,7 +21295,7 @@
       const select = document.getElementById("channelBillChannel");
       const names = Object.keys(channelProfiles).sort();
       select.innerHTML = `<option value="">請選擇</option>` + names
-        .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+        .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}${isSystemInvoiceChannel(name) ? "（系統待開發票）" : ""}</option>`).join("");
       document.getElementById("channelBillFlow").value = "";
       document.getElementById("channelBillCreateModal").classList.remove("hidden");
     }
@@ -21404,7 +21408,7 @@
       const monthly = isMonthlySettleChannel(channelName);
       document.getElementById("channelSettleDetailTitle").textContent = "建立結帳單";
       document.getElementById("channelSettleDetailMeta").textContent =
-        `通路：${channelName}｜結算類型：${flow}｜${monthly ? "月結，送出後為待結算，由財務開立發票" : "不需財務開票，送出後為待結算並帶入發票資料，由財務確認結算"}`;
+        `通路：${channelName}｜結算類型：${flow}｜${isSystemInvoiceChannel(channelName) ? "系統待開發票，出貨時已開立發票，財務確認結算即可" : (monthly ? "月結，送出後為待結算，由財務開立發票" : "不需財務開票，送出後為待結算並帶入發票資料，由財務確認結算")}`;
       renderChannelBillWizardNav();
       renderChannelBillDraft();
       showPage("channel-settle-detail");
