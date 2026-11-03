@@ -19213,7 +19213,7 @@
       const systemInvoice = isSystemInvoiceChannel(bill && bill.channelName);
       const head = document.querySelector("#page-monthly-bill-detail thead tr");
       if (head) {
-        head.innerHTML = `<th>客戶訂單編號</th><th>通路</th><th>SKU</th><th>商品名稱</th><th class="num">結算數量</th><th class="num">未稅單價</th><th class="num">含稅單價</th><th class="num">稅額</th><th class="num">結算金額</th><th>備註</th>${systemInvoice ? `<th>發票號碼</th><th>發票日期</th><th class="num">發票金額</th>` : ""}`;
+        head.innerHTML = `<th>客戶訂單編號</th><th>通路</th><th>SKU</th><th>商品名稱</th>${systemInvoice ? `<th>發票號碼</th><th>發票日期</th><th class="num">發票金額</th>` : ""}<th class="num">結算數量</th><th class="num">未稅單價</th><th class="num">含稅單價</th><th class="num">稅額</th><th class="num">結算金額</th><th>備註</th>`;
       }
       const colspan = systemInvoice ? 13 : 10;
       if (total) total.textContent = String(lines.length);
@@ -19236,13 +19236,13 @@
             <td>${escapeHtml(line.orderNo || "—")}</td>
             <td>${escapeHtml(line.channelName || bill.channelName || "—")}</td>
             <td>${escapeHtml(line.sku || "—")}</td>
-            <td>${escapeHtml(line.name || "—")}</td>
+            <td>${escapeHtml(line.name || "—")}</td>${invoiceCells}
             <td class="num">${escapeHtml(line.qty)}</td>
             <td class="num">${escapeHtml(accMoney(tax.untaxed))}</td>
             <td class="num">${escapeHtml(accMoney(tax.taxed))}</td>
             <td class="num">${escapeHtml(accMoney(tax.tax))}</td>
             <td class="num">${escapeHtml(accMoney(tax.amount))}</td>
-            <td>${remark ? escapeHtml(remark) : "-"}</td>${invoiceCells}
+            <td>${remark ? escapeHtml(remark) : "-"}</td>
           </tr>`;
       }).join("");
     }
