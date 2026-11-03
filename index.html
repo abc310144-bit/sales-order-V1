@@ -3378,7 +3378,6 @@
                   <th>id</th>
                   <th>類型</th>
                   <th>通路名稱</th>
-                  <th>出貨單編號</th>
                   <th>發票號碼</th>
                   <th>發票日期</th>
                   <th class="num">訂單總金額(含稅)</th>
@@ -19044,7 +19043,7 @@
       if (total) total.textContent = String(data.length);
       if (!body) return;
       if (!data.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="11">查無資料</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="10">查無資料</td></tr>`;
         return;
       }
       body.innerHTML = data.map((rec) => `
@@ -19052,7 +19051,6 @@
           <td>${escapeHtml(rec.id)}</td>
           <td>${escapeHtml(rec.type || "—")}</td>
           <td>${escapeHtml(rec.channelName || "—")}</td>
-          <td>${escapeHtml(rec.shipNo || "—")}</td>
           <td>${escapeHtml(rec.invoiceNo || "-")}</td>
           <td>${escapeHtml(rec.invoiceDate || "-")}</td>
           <td class="num">${escapeHtml(accMoney(settleBillTaxedTotal(rec)))}</td>
