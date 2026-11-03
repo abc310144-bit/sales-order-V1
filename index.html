@@ -3130,7 +3130,8 @@
             <strong>DEMO 提示｜結帳單建立</strong><br />
             本頁列出已建立的結帳單。狀態有草稿、已作廢、待結算、已結算、財務駁回。按右上「建立結帳單」選通路（類型依通路自動帶出）。買斷、轉單第一步先篩選出貨單（未按套用不列出），一列一張出貨單，展開後勾選商品，可改數量。寄倉維持一列一項商品，未按套用不列出；可再以客戶訂單建立時間、實際出貨時間縮小。勾選後帶入可結數量。各步可「儲存為草稿」（不扣可結數量、不進財務結算）。「儲存此分頁」進預覽；「送出結算申請」才扣可結數量，狀態為待結算。待結算、已結算不可作廢。草稿、財務駁回可編輯、可作廢；作廢時若這張單還扣著數量，會把數量加回。境外可匯入一份出口報單。假資料 <strong>20260818082</strong> 已附出口報單。<br />
             月結：財務回壓或 ezpay 後為已結算，待結算可駁回。不需財務開票（線上、跨境）：送出時帶假發票，財務「確認結算」後為已結算，待結算可駁回。駁回後狀態為財務駁回，數量加回，可再編輯送出或作廢。<br />
-            可測單號：草稿 <strong>20260829011</strong>、已作廢 <strong>20260829012</strong>（新光，都沒扣可結數量）；財務駁回 <strong>20260822001</strong>（寶雅）；買斷月結待結算 <strong>20260822002</strong>、已結算 <strong>20260822003</strong>；跨境金額不符 <strong>20260818082</strong>（Cool Cool）；轉單月結已結算 <strong>20260821001</strong>（絢綻）、待結算 <strong>20260821002</strong>；轉單非月結待結算 <strong>20260810029</strong>（線上-轉單）、已結算 <strong>20260826032</strong>；寄倉已結算 <strong>20260820001</strong>、待結算 <strong>20260828008</strong>（PW）。
+            可測單號：草稿 <strong>20260829011</strong>、已作廢 <strong>20260829012</strong>（新光，都沒扣可結數量）；財務駁回 <strong>20260822001</strong>（寶雅）；買斷月結待結算 <strong>20260822002</strong>、已結算 <strong>20260822003</strong>；跨境金額不符 <strong>20260818082</strong>（Cool Cool）；轉單月結已結算 <strong>20260821001</strong>（絢綻）、待結算 <strong>20260821002</strong>；轉單非月結待結算 <strong>20260810029</strong>（線上-轉單）、已結算 <strong>20260826032</strong>；寄倉已結算 <strong>20260820001</strong>、待結算 <strong>20260828008</strong>（PW）。<br />
+            跨境- Cool Cool Trading 另有客戶訂單可從建立結帳單測：<strong>SO20260830041</strong>（部分出貨；VN00010541 已驗收可結、VN00010542 待驗收、VN00010543 揀貨中）、<strong>SO20260831042</strong>（已開立出貨單；VN00010544、VN00010545 都已驗收且未結，含一列贈品）、<strong>SO20260901043</strong>（部分出貨；VN00010546 已有待結算結帳單 <strong>20260901046</strong> 仍有剩餘、VN00010547 已驗收未結）。這三張單與出貨單在客戶訂單管理、出貨訂單管理都看得到。
           </div>
             <section class="filter" id="channelSettleFilterPanel">
               <div class="filter-grid">
@@ -20000,6 +20001,187 @@
       }
     }
 
+    /**
+     * 跨境- Cool Cool Trading 結帳測試資料。
+     * 客戶訂單、出貨單、驗收與結帳單同一套；已存在的單號不覆寫。
+     */
+    function ensureCoolCoolSettleFixtures() {
+      const channel = "跨境- Cool Cool Trading";
+      const batch = "2027-07-12_健工";
+      const line = (sku, name, qty, basis, gift, pcs, weightG, unit) => {
+        const live = channelProductPriceOf(channel, sku);
+        return {
+          sku,
+          name,
+          qty,
+          unit,
+          pcsPerCarton: pcs,
+          priceLabel: live.priceLabel || "",
+          priceNoLabel: live.priceNoLabel || "",
+          priceBasis: basis,
+          gift: !!gift,
+          batch,
+          netWeightG: weightG,
+          remark: "",
+        };
+      };
+      const shipItem = (item, qty) => ({
+        sku: item.sku,
+        name: item.name,
+        qty,
+        unit: item.unit || "",
+        pcsPerCarton: item.pcsPerCarton || 0,
+        gift: !!item.gift,
+        batch: item.batch || "",
+        remark: "",
+      });
+      const placeOrder = (cfg) => {
+        let order = salesOrders.find((item) => item.orderNo === cfg.orderNo);
+        if (!order) {
+          order = extraPo({
+            orderNo: cfg.orderNo,
+            poDocNo: cfg.poDocNo,
+            channelType: "境外通路",
+            channelName: channel,
+            status: "未開立出貨單",
+            operator: "henry.huang",
+            createdAt: cfg.createdAt,
+            arriveDate: cfg.arriveDate,
+            shipByTime: cfg.shipByTime,
+          });
+          order.items = cfg.items;
+          order.overseasLineReady = true;
+          salesOrders.unshift(order);
+        }
+        ensureOverseasPo(order);
+        if (order.overseas && !order.overseas.termsOfDelivery) order.overseas.termsOfDelivery = "FOB";
+        if (!hasStampFile(order)) {
+          order.stampFile = demoStampPlaceholder(order);
+          const at = Date.parse(String(order.createdAt || "").replace(" ", "T")) || Date.now();
+          order.stampFile.uploadedAt = at;
+          if (!order.overseasExportedAt) order.overseasExportedAt = at - 1000;
+        }
+        const fp = giftFingerprint(order);
+        if (fp && order.giftExportedFingerprint !== fp) {
+          order.giftExportedFingerprint = fp;
+          order.giftExportedAt = order.overseasExportedAt || Date.now();
+        }
+        return order;
+      };
+      const placeShip = (id, order, status, created, items, extra) => {
+        const orderId = `VN${pad(id, 8)}`;
+        let ship = rows.find((row) => row.orderId === orderId);
+        if (!ship) {
+          ship = extraShip(id, order.orderNo, channel, status, "henry.huang", created, extra || {});
+          Object.assign(ship, channelSnapshotFromName(channel, "境外通路"), {
+            incoterm: "FOB",
+            inWarehouse: "藍田倉",
+            pickup: "訂單自取",
+            expectDate: String(created).slice(0, 10),
+            arriveDate: order.arriveDate || "",
+            arriveTime: order.arriveTime || "18:00",
+            shipOutDate: toDateInput(order.shipByTime) || "",
+            items,
+          });
+          rows.unshift(ship);
+        }
+        if (status === "已驗收" && !ship.acceptance) {
+          const lines = (ship.items || []).filter((item) => (Number(item.qty) || 0) > 0);
+          ship.status = "已驗收";
+          ship.audit = "審核通過";
+          if (!String(ship.shipped || "").trim() && extra && extra.shipped) ship.shipped = extra.shipped;
+          ship.acceptance = {
+            acceptedAt: (extra && extra.acceptedAt) || ship.shipped || created,
+            acceptedBy: "建檔人",
+            items: lines.map((item) => ({
+              key: itemKey(item),
+              sku: item.sku || "",
+              name: item.name || "",
+              acceptQty: Number(item.qty) || 0,
+              settledQty: 0,
+              remark: "",
+            })),
+          };
+        }
+        return ship;
+      };
+
+      const whey = line("UM-1002", "乳清蛋白粉 巧克力 1kg", 12, "label", false, 12, 1000, "罐");
+      const collagen = line("UM-3305", "膠原蛋白胜肽", 36, "noLabel", false, 36, 250, "袋");
+      const electrolyte = line("UM-4412", "電解質補給粉", 20, "label", false, 20, 100, "盒");
+      const orderPartial = placeOrder({
+        orderNo: "SO20260830041",
+        poDocNo: "CCT-HK-20260830",
+        createdAt: "2026-08-30 09:10:00",
+        arriveDate: "2026-09-04",
+        shipByTime: "2026-09-01",
+        items: [whey, collagen, electrolyte],
+      });
+      placeShip(10541, orderPartial, "已驗收", "2026-08-30 14:00:00", [shipItem(whey, 6), shipItem(collagen, 18)], {
+        shipped: "2026-09-02 10:00:00",
+        acceptedAt: "2026-09-03 11:00:00",
+      });
+      placeShip(10542, orderPartial, "待驗收", "2026-08-30 15:20:00", [shipItem(electrolyte, 10)], {
+        shipped: "2026-09-02 16:00:00",
+      });
+      placeShip(10543, orderPartial, "揀貨中", "2026-08-30 16:05:00", [shipItem(electrolyte, 4)], {});
+      syncPoStatusFromShips(orderPartial);
+
+      const crisp = line("UM-6601", "蛋白酥脆脆 起司 30g", 24, "label", false, 24, 120, "盒");
+      const crispGift = line("UM-6601", "蛋白酥脆脆 起司 30g", 2, "noLabel", true, 24, 120, "盒");
+      const cookie = line("UM-6602", "手作蛋白餅乾 原味", 20, "noLabel", false, 20, 200, "盒");
+      const jelly = line("UM-7703", "零卡果凍 蜂蜜檸檬", 30, "label", false, 30, 800, "箱");
+      const orderFull = placeOrder({
+        orderNo: "SO20260831042",
+        poDocNo: "CCT-HK-20260831",
+        createdAt: "2026-08-31 10:20:00",
+        arriveDate: "2026-09-06",
+        shipByTime: "2026-09-02",
+        items: [crisp, crispGift, cookie, jelly],
+      });
+      placeShip(10544, orderFull, "已驗收", "2026-08-31 11:10:00", [shipItem(crisp, 24), shipItem(crispGift, 2), shipItem(cookie, 10)], {
+        shipped: "2026-09-03 09:30:00",
+        acceptedAt: "2026-09-04 09:00:00",
+      });
+      placeShip(10545, orderFull, "已驗收", "2026-08-31 11:40:00", [shipItem(cookie, 10), shipItem(jelly, 30)], {
+        shipped: "2026-09-03 15:10:00",
+        acceptedAt: "2026-09-04 15:00:00",
+      });
+      syncPoStatusFromShips(orderFull);
+
+      const isolate = line("UM-8804", "分離乳清 可可 500g", 12, "label", false, 12, 500, "袋");
+      const bar = line("UM-9905", "植物蛋白棒 花生", 16, "noLabel", false, 16, 160, "盒");
+      const orderHeld = placeOrder({
+        orderNo: "SO20260901043",
+        poDocNo: "CCT-HK-20260901",
+        createdAt: "2026-09-01 09:40:00",
+        arriveDate: "2026-09-08",
+        shipByTime: "2026-09-03",
+        items: [isolate, bar],
+      });
+      const heldShip = placeShip(10546, orderHeld, "已驗收", "2026-09-01 10:10:00", [shipItem(isolate, 12)], {
+        shipped: "2026-09-04 11:20:00",
+        acceptedAt: "2026-09-05 11:00:00",
+      });
+      placeShip(10547, orderHeld, "已驗收", "2026-09-01 10:40:00", [shipItem(bar, 8)], {
+        shipped: "2026-09-04 16:40:00",
+        acceptedAt: "2026-09-05 14:00:00",
+      });
+      syncPoStatusFromShips(orderHeld);
+      pushFixedSettleBill({
+        id: "20260901046",
+        orderNo: orderHeld.orderNo,
+        shipNo: heldShip.orderId,
+        ratio: 0.5,
+        status: "待結算",
+        createdAt: "2026-09-05 16:00:00",
+      });
+      const heldBill = settlementRecords.find((rec) => String(rec.id) === "20260901046");
+      if (heldBill && !exportDeclReady(heldBill.exportDeclFile)) {
+        heldBill.exportDeclFile = overseasExportDeclDemoFile(orderHeld, heldShip);
+      }
+    }
+
     /** 境外結算示範：同一客戶訂單兩張已驗收出貨單。出口報單掛在結帳單 20260818082，不掛出貨單。 */
     function seedOverseasSettleDemo() {
       if (!overseasSettleSeeded) {
@@ -21973,11 +22155,13 @@
     seedConsignSettleDemo();
     seedOnlineTransferSettleDemo();
     seedOverseasSettleDemo();
+    ensureCoolCoolSettleFixtures();
     settlementRecords = settlementRecords.map(normalizeSettlementRecord);
     ensureSettleBillFixtures();
     settlementRecords = settlementRecords.map(normalizeSettlementRecord);
     migrateExportDeclOntoBills();
     persistDemoData();
+    renderSalesTable(getSalesFiltered());
     renderShippingTable();
 
     bootFromQuery();
