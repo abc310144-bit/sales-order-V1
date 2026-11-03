@@ -3460,17 +3460,8 @@
               </div>
             </div>
           </div>
-          <div class="monthly-bill-section hidden" id="monthlyBillExportDeclPreview">
-            <h3 class="ship-settings-col-title">出口報單預覽</h3>
-            <div class="form-row">
-              <label>出口報單</label>
-              <div class="form-ctrl">
-                <button type="button" class="btn" id="monthlyBillExportDeclPreviewBtn">出口報單預覽</button>
-                <span id="monthlyBillExportDeclPreviewEmpty" class="hidden">尚未回壓</span>
-              </div>
-            </div>
-          </div>
           <div class="monthly-bill-detail-lines">
+            <h3 class="ship-settings-col-title">結算品項</h3>
             <div class="table-meta">
               總共 <span id="monthlyBillDetailTotal">0</span> 筆
             </div>
@@ -19073,6 +19064,7 @@
         return;
       }
       monthlyBillViewId = String(bill.id);
+      monthlyBillLineExpanded = new Set();
       const status = bill.status || "待開發票";
       document.getElementById("monthlyBillDetailMeta").textContent =
         `id：${bill.id}｜類型：${bill.type || "—"}｜通路：${bill.channelName || "—"}｜狀態：${status}｜月結：${bill.monthly ? "是" : "否"}`;
@@ -19116,29 +19108,7 @@
           : (status === "已結算" ? "已結算" : (canInvoice ? "回壓／開立發票" : "僅待結算的月結結帳單可開立")));
       }
       const body = document.getElementById("monthlyBillDetailBody");
-      const lines = bill.lines || [];
-      document.getElementById("monthlyBillDetailTotal").textContent = String(lines.length);
-      if (!lines.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="10">無明細</td></tr>`;
-      } else {
-        body.innerHTML = lines.map((line) => {
-          const tax = settleLineTaxFields(line);
-          const remark = normalizeSettleRemark(line.remark);
-          return `
-          <tr>
-            <td>${escapeHtml(line.orderNo || "—")}</td>
-            <td>${escapeHtml(line.channelName || bill.channelName || "—")}</td>
-            <td>${escapeHtml(line.sku || "—")}</td>
-            <td>${escapeHtml(line.name || "—")}</td>
-            <td class="num">${escapeHtml(line.qty)}</td>
-            <td class="num">${escapeHtml(accMoney(tax.untaxed))}</td>
-            <td class="num">${escapeHtml(accMoney(tax.taxed))}</td>
-            <td class="num">${escapeHtml(accMoney(tax.tax))}</td>
-            <td class="num">${escapeHtml(accMoney(tax.amount))}</td>
-            <td>${remark ? escapeHtml(remark) : "-"}</td>
-          </tr>`;
-        }).join("");
-      }
+      if (body) renderMonthlyBillDetailLines(bill);
       const invSection = document.getElementById("monthlyBillInvoiceSection");
       const issued = !!(bill.invoiceNo || bill.invoiceDate || bill.fileData || (bill.invoiceAmount != null && bill.invoiceAmount !== ""));
       invSection.classList.toggle("hidden", !issued);
@@ -19165,6 +19135,105 @@
       showPage("monthly-bill-detail");
     }
 
+    let monthlyBillLineExpanded = new Set();
+
+    function monthlyBillGroupsByOrder(bill) {
+      return !!(bill && bill.type !== "寄倉");
+    }
+
+    function monthlyBillLineCells(line) {
+      const tax = settleLineTaxFields(line);
+      const remark = normalizeSettleRemark(line.remark);
+      const ship = line.shipNo ? `<div class="acc-sub">${channelBillShipLink(line.shipNo)}</div>` : "";
+      return `
+        <td>${escapeHtml(line.sku || "—")}${ship}</td>
+        <td>${escapeHtml(line.name || "—")}</td>
+        <td class="num">${escapeHtml(line.qty)}</td>
+        <td class="num">${escapeHtml(accMoney(tax.untaxed))}</td>
+        <td class="num">${escapeHtml(accMoney(tax.taxed))}</td>
+        <td class="num">${escapeHtml(accMoney(tax.tax))}</td>
+        <td class="num">${escapeHtml(accMoney(line.gift ? 0 : tax.amount))}</td>
+        <td>${remark ? escapeHtml(remark) : "—"}</td>`;
+    }
+
+    function renderMonthlyBillDetailLines(bill) {
+      const body = document.getElementById("monthlyBillDetailBody");
+      const head = document.querySelector("#page-monthly-bill-detail thead tr");
+      const total = document.getElementById("monthlyBillDetailTotal");
+      if (!body || !head) return;
+      const lines = (bill && bill.lines) || [];
+      const grouped = monthlyBillGroupsByOrder(bill);
+      const table = body.closest("table");
+      if (table) table.classList.toggle("is-grouped", grouped);
+      head.innerHTML = `${grouped ? `<th class="col-expand"></th>` : ""}
+        <th>客戶訂單編號</th>
+        <th>通路</th>
+        <th>SKU</th>
+        <th>商品名稱</th>
+        <th class="num">結算數量</th>
+        <th class="num">未稅單價</th>
+        <th class="num">含稅單價</th>
+        <th class="num">稅額</th>
+        <th class="num">結算金額</th>
+        <th>備註</th>`;
+      const colspan = grouped ? 11 : 10;
+      if (!lines.length) {
+        if (total) total.textContent = "0";
+        body.innerHTML = `<tr class="empty-row"><td colspan="${colspan}">無明細</td></tr>`;
+        return;
+      }
+      if (!grouped) {
+        if (total) total.textContent = String(lines.length);
+        body.innerHTML = lines.map((line) => `
+          <tr>
+            <td>${escapeHtml(line.orderNo || "—")}</td>
+            <td>${escapeHtml(line.channelName || bill.channelName || "—")}</td>
+            ${monthlyBillLineCells(line)}
+          </tr>`).join("");
+        return;
+      }
+      const groups = [];
+      const index = new Map();
+      lines.forEach((line) => {
+        const key = String(line.orderNo || "");
+        if (!index.has(key)) {
+          const group = { key, orderNo: line.orderNo || "", channelName: line.channelName || bill.channelName || "", rows: [] };
+          index.set(key, group);
+          groups.push(group);
+        }
+        index.get(key).rows.push(line);
+      });
+      if (total) total.textContent = String(groups.length);
+      body.innerHTML = groups.map((group) => {
+        const open = monthlyBillLineExpanded.has(group.key);
+        const qty = group.rows.reduce((sum, line) => sum + (Number(line.qty) || 0), 0);
+        const amount = group.rows.reduce((sum, line) => sum + (line.gift ? 0 : settleLineTaxFields(line).amount), 0);
+        const note = group.rows.map((line) => String(line.groupRemark || "").trim()).find(Boolean) || "";
+        const parent = `
+          <tr class="bill-parent">
+            <td class="col-expand"><button type="button" class="bill-expand${open ? " is-open" : ""}" data-monthly-bill-toggle="${escapeHtml(group.key)}" aria-expanded="${open ? "true" : "false"}" aria-label="展開商品"><svg viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" d="M4.5 2.5 8 6 4.5 9.5"/></svg></button></td>
+            <td>${escapeHtml(group.orderNo || "—")}</td>
+            <td>${escapeHtml(group.channelName || "—")}</td>
+            <td>—</td>
+            <td>—</td>
+            <td class="num">${escapeHtml(qty)}</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">${escapeHtml(accMoney(amount))}</td>
+            <td>${note ? escapeHtml(note) : "—"}</td>
+          </tr>`;
+        if (!open) return parent;
+        return parent + group.rows.map((line) => `
+          <tr class="bill-child">
+            <td class="col-expand"></td>
+            <td></td>
+            <td></td>
+            ${monthlyBillLineCells(line)}
+          </tr>`).join("");
+      }).join("");
+    }
+
     /** 境外結算包：一份出口報單掛在結帳單上，財務結算可預覽。 */
     function syncMonthlyBillExportDecl(bill) {
       const row = document.getElementById("monthlyBillExportDeclRow");
@@ -19173,10 +19242,6 @@
       if (!row || !btn || !empty) return;
       const overseas = !!(bill && (bill.channelType === "境外通路" || isOverseasChannel(bill.channelName)));
       row.classList.toggle("hidden", !overseas);
-      const preview = document.getElementById("monthlyBillExportDeclPreview");
-      const previewBtn = document.getElementById("monthlyBillExportDeclPreviewBtn");
-      const previewEmpty = document.getElementById("monthlyBillExportDeclPreviewEmpty");
-      if (preview) preview.classList.toggle("hidden", !overseas);
       if (!overseas) return;
       const hasFile = exportDeclReady(bill.exportDeclFile);
       empty.classList.toggle("hidden", hasFile);
@@ -19184,11 +19249,6 @@
       btn.classList.toggle("hidden", !hasFile);
       btn.disabled = !hasFile;
       btn.title = hasFile ? "檢視出口報單" : "尚未回壓";
-      if (previewBtn) {
-        previewBtn.classList.toggle("hidden", !hasFile);
-        previewBtn.disabled = !hasFile;
-      }
-      if (previewEmpty) previewEmpty.classList.toggle("hidden", hasFile);
     }
 
     function openMonthlyBillExportDecl() {
@@ -22074,7 +22134,15 @@
       previewInvoice(monthlyBillViewId);
     });
     document.getElementById("monthlyBillExportDeclBtn").addEventListener("click", openMonthlyBillExportDecl);
-    document.getElementById("monthlyBillExportDeclPreviewBtn").addEventListener("click", openMonthlyBillExportDecl);
+    document.getElementById("monthlyBillDetailBody").addEventListener("click", (e) => {
+      const toggle = e.target.closest("[data-monthly-bill-toggle]");
+      if (!toggle) return;
+      const key = toggle.dataset.monthlyBillToggle;
+      if (monthlyBillLineExpanded.has(key)) monthlyBillLineExpanded.delete(key);
+      else monthlyBillLineExpanded.add(key);
+      const bill = settlementRecords.find((rec) => String(rec.id) === String(monthlyBillViewId));
+      if (bill) renderMonthlyBillDetailLines(bill);
+    });
 
     document.getElementById("shipAcceptBack").addEventListener("click", (e) => {
       e.preventDefault();
@@ -22165,6 +22233,61 @@
       commitShipAcceptance(note);
     });
 
+    /** 買斷、轉單假資料明細補上實際出貨單，讓財務結算能依客戶訂單展開。 */
+    function alignDemoSettlementShips() {
+      const shipsFor = (orderNo) => {
+        const order = salesOrders.find((item) => item.orderNo === orderNo);
+        if (!order) return [];
+        const flow = channelAcceptFlow(order.channelName);
+        return validShipsOfPo(orderNo).filter((ship) => (flow === "轉單" ? isTransferSettleShip(ship) : ship.status === "已驗收"));
+      };
+      const lineOnShip = (ship, line) => {
+        const sku = String(line.sku || "").trim().toLowerCase();
+        const key = line.key || "";
+        const items = [].concat(ship.items || [], (ship.acceptance && ship.acceptance.items) || []);
+        return items.some((item) => {
+          if (key && (item.key || itemKey(item)) === key) return true;
+          return sku && String(item.sku || "").trim().toLowerCase() === sku;
+        });
+      };
+      const releaseOrderSettled = (line) => {
+        const order = salesOrders.find((item) => item.orderNo === line.orderNo);
+        const items = order && order.acceptance && order.acceptance.items;
+        if (!items) return;
+        const sku = String(line.sku || "").trim().toLowerCase();
+        const item = items.find((row) => (line.key && row.key === line.key) || (!line.key && sku && String(row.sku || "").trim().toLowerCase() === sku));
+        if (!item) return;
+        item.settledQty = Math.max(0, (Number(item.settledQty) || 0) - (Number(line.qty) || 0));
+      };
+      settlementRecords.forEach((bill) => {
+        if (!bill || bill.type === "寄倉") return;
+        const kept = [];
+        const dropped = [];
+        (bill.lines || []).forEach((line) => {
+          if (line.shipNo && shipByOrderId(line.shipNo)) {
+            kept.push(line);
+            return;
+          }
+          const hit = shipsFor(line.orderNo).find((ship) => lineOnShip(ship, line));
+          if (hit) {
+            line.shipNo = hit.orderId;
+            kept.push(line);
+            return;
+          }
+          dropped.push(line);
+        });
+        if (dropped.length && kept.length && String(bill.id) === "20260826032") {
+          const oldTotal = accRoundMoney(bill.total);
+          dropped.forEach(releaseOrderSettled);
+          bill.lines = kept;
+          bill.total = accRoundMoney(kept.reduce((sum, line) => sum + (line.gift ? 0 : settleLineTaxFields(line).amount), 0));
+          if (bill.invoiceAmount != null && accRoundMoney(bill.invoiceAmount) === oldTotal) bill.invoiceAmount = bill.total;
+        }
+        const shipNos = [...new Set((bill.lines || []).map((line) => line.shipNo).filter(Boolean))];
+        if (!bill.shipNo && shipNos.length === 1) bill.shipNo = shipNos[0];
+      });
+    }
+
     normalizeNonOnlineShipStatuses();
     applyDemoShipStatusOverrides();
     seedAcceptanceDemo();
@@ -22176,6 +22299,7 @@
     ensureSettleBillFixtures();
     settlementRecords = settlementRecords.map(normalizeSettlementRecord);
     migrateExportDeclOntoBills();
+    alignDemoSettlementShips();
     persistDemoData();
     renderSalesTable(getSalesFiltered());
     renderShippingTable();
