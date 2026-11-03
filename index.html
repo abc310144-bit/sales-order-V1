@@ -5231,6 +5231,33 @@
       return `<span class="void-note-tip" data-tip="${escapeHtml(full)}">${escapeHtml(full.slice(0, 15))}...</span>`;
     }
 
+    function shipCancelLink(ship) {
+      const thrown = ship.status === "訂單處理中(已拋單)";
+      const cancelled = ship.status === "訂單取消";
+      const off = thrown || cancelled;
+      const title = thrown ? "已拋單/待處理不可取消出貨單" : (cancelled ? "已取消出貨單" : "");
+      return `<a href="#" data-ship-cancel="${escapeHtml(ship.orderId)}" class="${off ? "is-disabled" : ""}"${title ? ` title="${escapeHtml(title)}"` : ""}${off ? " aria-disabled=\"true\"" : ""}>取消出貨單</a>`;
+    }
+
+    function cancelShipOrder(orderId) {
+      const ship = rows.find((row) => row.orderId === orderId);
+      if (!ship || ship.status === "訂單取消") return;
+      if (ship.status === "訂單處理中(已拋單)") {
+        alert("已拋單/待處理不可取消出貨單");
+        return;
+      }
+      if (!confirm(`確定取消出貨單 ${ship.orderId}？`)) return;
+      ship.status = "訂單取消";
+      const order = salesOrders.find((item) => item.orderNo === ship.salesOrderNo);
+      if (order) syncPoStatusFromShips(order);
+      persistDemoData();
+      renderShippingTable();
+      if (typeof renderOnlineShippingTable === "function") renderOnlineShippingTable();
+      if (typeof renderSalesTable === "function" && document.getElementById("page-sales")?.classList.contains("active")) {
+        renderSalesTable(getSalesFiltered());
+      }
+    }
+
     function renderShippingTable(list) {
       const data = list || getShippingFiltered();
       document.getElementById("shippingTotal").textContent = String(data.length);
@@ -5238,6 +5265,7 @@
         const canAccept = r.status === "待驗收";
         const ops = [
           `<a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=view" target="_blank" rel="noopener" data-ship-view="1">檢視</a>`,
+          shipCancelLink(r),
         ];
         if (canAccept) {
           ops.push(`<a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=accept" target="_blank" rel="noopener" data-ship-accept="1">驗收</a>`);
@@ -5397,7 +5425,7 @@
           <td>${escapeHtml(r.applicant || "—")}</td>
           <td>${escapeHtml(r.created || "—")}</td>
           <td>${escapeHtml(r.submittedAt || "")}</td>
-          <td class="ops"><a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=view" target="_blank" rel="noopener" data-ship-view="1">檢視</a></td>
+          <td class="ops"><a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=view" target="_blank" rel="noopener" data-ship-view="1">檢視</a> ${shipCancelLink(r)}</td>
         </tr>`;
       }).join("");
     }
@@ -6815,6 +6843,13 @@
     });
     document.getElementById("importChannelName").addEventListener("change", syncImportTransferHint);
     function onShipListPoViewClick(e) {
+      const cancelLink = e.target.closest("[data-ship-cancel]");
+      if (cancelLink) {
+        e.preventDefault();
+        if (cancelLink.classList.contains("is-disabled")) return;
+        cancelShipOrder(cancelLink.dataset.shipCancel);
+        return;
+      }
       if (e.target.closest("[data-ship-view]")) persistDemoData();
       const link = e.target.closest("[data-go='po-view']");
       if (!link) return;
