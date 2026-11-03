@@ -21256,9 +21256,9 @@
       const previewFile = channelBillPreviewExportFile();
       const hasFile = editing ? exportDeclReady(channelBillExportDecl) : !!(viewFile || previewFile);
       const canChange = editing && channelBillCheckedShipCount() > 0;
-      btn.classList.toggle("hidden", !editing);
+      btn.classList.toggle("hidden", !editing || hasFile);
       btn.disabled = !canChange;
-      btn.title = canChange ? (hasFile ? "再匯入會覆蓋目前的出口報單" : "") : "請先勾選出貨單";
+      btn.title = canChange ? "" : "請先勾選出貨單";
       viewBtn.classList.toggle("hidden", !hasFile);
       viewBtn.disabled = !hasFile;
       delBtn.classList.toggle("hidden", !(editing && hasFile));
