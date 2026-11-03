@@ -3460,6 +3460,16 @@
               </div>
             </div>
           </div>
+          <div class="monthly-bill-section hidden" id="monthlyBillExportDeclPreview">
+            <h3 class="ship-settings-col-title">出口報單預覽</h3>
+            <div class="form-row">
+              <label>出口報單</label>
+              <div class="form-ctrl">
+                <button type="button" class="btn" id="monthlyBillExportDeclPreviewBtn">出口報單預覽</button>
+                <span id="monthlyBillExportDeclPreviewEmpty" class="hidden">尚未回壓</span>
+              </div>
+            </div>
+          </div>
           <div class="monthly-bill-detail-lines">
             <div class="table-meta">
               總共 <span id="monthlyBillDetailTotal">0</span> 筆
@@ -19155,7 +19165,7 @@
       showPage("monthly-bill-detail");
     }
 
-    /** 境外結算包：一份出口報單掛在結帳單上，僅財務可開啟。 */
+    /** 境外結算包：一份出口報單掛在結帳單上，財務結算可預覽。 */
     function syncMonthlyBillExportDecl(bill) {
       const row = document.getElementById("monthlyBillExportDeclRow");
       const btn = document.getElementById("monthlyBillExportDeclBtn");
@@ -19163,20 +19173,25 @@
       if (!row || !btn || !empty) return;
       const overseas = !!(bill && (bill.channelType === "境外通路" || isOverseasChannel(bill.channelName)));
       row.classList.toggle("hidden", !overseas);
+      const preview = document.getElementById("monthlyBillExportDeclPreview");
+      const previewBtn = document.getElementById("monthlyBillExportDeclPreviewBtn");
+      const previewEmpty = document.getElementById("monthlyBillExportDeclPreviewEmpty");
+      if (preview) preview.classList.toggle("hidden", !overseas);
       if (!overseas) return;
       const hasFile = exportDeclReady(bill.exportDeclFile);
       empty.classList.toggle("hidden", hasFile);
       empty.textContent = "尚未回壓";
       btn.classList.toggle("hidden", !hasFile);
-      btn.disabled = !hasFile || !isFinanceRole();
-      btn.title = !hasFile ? "尚未回壓" : (isFinanceRole() ? "檢視出口報單" : "僅財務可檢視出口報單");
+      btn.disabled = !hasFile;
+      btn.title = hasFile ? "檢視出口報單" : "尚未回壓";
+      if (previewBtn) {
+        previewBtn.classList.toggle("hidden", !hasFile);
+        previewBtn.disabled = !hasFile;
+      }
+      if (previewEmpty) previewEmpty.classList.toggle("hidden", hasFile);
     }
 
     function openMonthlyBillExportDecl() {
-      if (!isFinanceRole()) {
-        alert("僅財務可檢視出口報單");
-        return;
-      }
       const bill = settlementRecords.find((rec) => String(rec.id) === String(monthlyBillViewId));
       if (!bill) return;
       if (!exportDeclReady(bill.exportDeclFile)) {
@@ -22059,6 +22074,7 @@
       previewInvoice(monthlyBillViewId);
     });
     document.getElementById("monthlyBillExportDeclBtn").addEventListener("click", openMonthlyBillExportDecl);
+    document.getElementById("monthlyBillExportDeclPreviewBtn").addEventListener("click", openMonthlyBillExportDecl);
 
     document.getElementById("shipAcceptBack").addEventListener("click", (e) => {
       e.preventDefault();
