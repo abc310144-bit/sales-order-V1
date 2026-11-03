@@ -3306,7 +3306,8 @@
           </div>
           <div class="demo-hint">
             <strong>DEMO 提示｜財務結算</strong><br />
-            品運送出的結帳單會出現於此，狀態與結帳單建立相同：待結算、已結算、經財務駁回。<br />
+            品運送出的結帳單會出現於此，狀態與結帳單建立相同：待結算、已結算、經財務駁回、已作廢。<br />
+            結帳單建立作廢後，這一張單的狀態改為已作廢，發票號碼、日期、金額一併清掉。不可開票、不可確認結算、不可駁回。明細與結算金額仍可檢視。<br />
             <strong>月結</strong>且待結算：可「回壓／開立發票」（完成後已結算）或「駁回」。已結算可「刪除發票」，狀態回到待結算、數量不加回，之後可再開發票。<br />
             <strong>不需財務開票</strong>（線上、跨境）：送出時已帶發票資料。待結算可「確認結算」或「駁回」。發票金額與結算金額不同時，檢視頁會標示。已結算後不能駁回、不能刪發票。<br />
             駁回須填原因（最多 20 字），狀態改經財務駁回，數量加回。跨境 <strong>20260818082</strong> 發票金額故意不符，且可看出口報單。線上 <strong>20260810029</strong> 發票金額與結算金額相同。
@@ -3350,6 +3351,7 @@
                   <option value="待結算">待結算</option>
                   <option value="已結算">已結算</option>
                   <option value="經財務駁回">經財務駁回</option>
+                  <option value="已作廢">已作廢</option>
                 </select>
               </div>
             </div>
@@ -18649,6 +18651,10 @@
       }
       const bill = settlementRecords.find((rec) => String(rec.id) === String(billId));
       if (!bill) return;
+      if (bill.status === "已作廢") {
+        alert("此結帳單已作廢，不可開立發票");
+        return;
+      }
       if (bill.status === "經財務駁回" || bill.status === "已駁回") {
         alert("此結帳單已駁回，不可開立發票");
         return;
@@ -19011,9 +19017,11 @@
       if (invoiceBtn) {
         invoiceBtn.classList.toggle("hidden", !bill.monthly || canDeleteInvoice);
         invoiceBtn.disabled = !canInvoice;
-        invoiceBtn.title = status === "經財務駁回"
+        invoiceBtn.title = status === "已作廢"
+          ? "已作廢不可開立發票"
+          : (status === "經財務駁回"
           ? "已駁回不可開立發票"
-          : (status === "已結算" ? "已結算" : (canInvoice ? "回壓／開立發票" : "僅待結算的月結結帳單可開立"));
+          : (status === "已結算" ? "已結算" : (canInvoice ? "回壓／開立發票" : "僅待結算的月結結帳單可開立")));
       }
       const body = document.getElementById("monthlyBillDetailBody");
       const lines = bill.lines || [];
@@ -20287,8 +20295,19 @@
       restoreSettlementPackageQty(bill);
       bill.status = "已作廢";
       bill.invoiceCounted = false;
+      bill.invoiceNo = "";
+      bill.invoiceDate = "";
+      bill.invoiceAmount = null;
+      bill.fileName = "";
+      bill.fileType = "";
+      bill.fileData = "";
+      bill.autoInvoice = false;
       persistDemoData();
       renderChannelBillList();
+      renderMonthlyBillTable(getMonthlyBillFiltered());
+      if (document.getElementById("page-monthly-bill-detail")?.classList.contains("active") && String(monthlyBillViewId) === String(bill.id)) {
+        openMonthlyBillDetail(bill.id);
+      }
     }
 
     function channelBillIsShipFlow() {
