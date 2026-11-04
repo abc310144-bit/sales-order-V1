@@ -11456,7 +11456,6 @@
         close: "Close",
         print: "Print / Save as PDF",
       };
-      const amountSuffix = dealer ? "" : " " + currency;
       const overseas = isOverseasPo(order);
       const priceHeadHtml = overseas
         ? `<th class="num">${escapeHtml(t.priceNoLabel)}</th><th class="num">${escapeHtml(t.priceLabel)}</th>`
@@ -11475,7 +11474,7 @@
                 ? `<td class="num">${row.price == null ? "-" : escapeHtml(pdfMoney(row.price, 2))}</td>
               <td class="num">${row.priceLabel == null ? "-" : escapeHtml(pdfMoney(row.priceLabel, 2))}</td>`
                 : `<td class="num">${escapeHtml(pdfMoney(row.quote, 2))}</td>`}
-              <td class="num">${escapeHtml(pdfMoney(row.total, 2))}${amountSuffix}</td>
+              <td class="num">${escapeHtml(pdfMoney(row.total, 2))}</td>
               <td class="remark">${escapeHtml(row.remark)}</td>
             </tr>`).join("")
         : `<tr><td colspan="${colCount}" class="empty">${t.empty}</td></tr>`;
@@ -11600,13 +11599,13 @@
           <th class="num">${escapeHtml(t.qty)}</th>
           <th class="num">${escapeHtml(t.carton)}</th>
           ${priceHeadHtml}
-          <th class="num">${escapeHtml(t.amount)}${amountSuffix}</th>
+          <th class="num">${escapeHtml(t.amount)}</th>
           <th>${escapeHtml(t.remark)}</th>
         </tr>
       </thead>
       <tbody>${rowsHtml}</tbody>
     </table>
-    <div class="total">${escapeHtml(t.total)}${dealer ? "：" : "： "}${escapeHtml(pdfMoney(total, 2))}${amountSuffix}</div>
+    <div class="total">${escapeHtml(t.total)}${dealer ? "：" : "： "}${escapeHtml(pdfMoney(total, 2))}</div>
     <div class="stamps">
       <div class="stamp">
         <h3>${escapeHtml(t.customer)}</h3>
@@ -14030,11 +14029,24 @@
       };
     }
 
-    function goodsPricePlain(value) {
+    function poDisplayCurrency(order) {
+      order = order || getWorkspaceOrder();
+      if (!order || !isOverseasPo(order)) return "";
+      const bag = typeof partyRecord === "function" ? partyRecord(order) : null;
+      return channelCurrency(order.channelName || (bag && bag.buyerName) || "", "USD");
+    }
+
+    function goodsMoneyLabel(value, order) {
+      const text = pdfMoney(value, 2);
+      const currency = poDisplayCurrency(order);
+      return currency ? text + " " + currency : text;
+    }
+
+    function goodsPricePlain(value, order) {
       if (value == null || value === "") return "-";
       const n = Number(value);
       if (!Number.isFinite(n) || n <= 0) return "-";
-      return pdfMoney(n, 2);
+      return goodsMoneyLabel(n, order);
     }
 
     function goodsPriceCellText(value) {
@@ -14114,7 +14126,7 @@
           <td class="num" data-sync="carton">${escapeHtml(d.carton)}</td>
           ${shippedCell}
           ${priceCells}
-          <td class="num" data-sync="amount">${escapeHtml(pdfMoney(d.amount, 2))}</td>
+          <td class="num" data-sync="amount">${escapeHtml(goodsMoneyLabel(d.amount, order))}</td>
           ${overseas ? overseasPalletCellsHtml(item, d) : ""}
           ${goodsRemarkCellHtml(d.remark, editable, giftEdit && !poRemarkFieldEditable())}
           ${opsCell}
@@ -15175,7 +15187,7 @@
       const amount = tr.querySelector('[data-sync="amount"]');
       const netWeight = tr.querySelector('[data-sync="netWeight"]');
       if (carton) carton.textContent = d.carton;
-      if (amount) amount.textContent = pdfMoney(d.amount, 2);
+      if (amount) amount.textContent = goodsMoneyLabel(d.amount);
       const priceNo = tr.querySelector('[data-sync="priceNo"]');
       const priceLabel = tr.querySelector('[data-sync="priceLabel"]');
       if (priceNo) priceNo.textContent = goodsPricePlain(d.priceNo);

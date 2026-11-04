@@ -22,7 +22,7 @@ alwaysApply: true
 - Invoice／Packing List 的條碼欄帶該列 SKU。
 - Best Before Date 帶效期_批號的日期前段（`2026-09-15_藍田` → `2026-09-15`）。客戶訂單 PDF、廠商 Invoice、報關 Invoice 都加這一欄，欄名與取值跟 Packing List 一樣。沒選批號則留白。Invoice 放在 Description 下一欄；客戶訂單 PDF 放在 Product Name 下一欄。經銷、一般通路的客戶訂單 PDF 不加。數量、贈品金額邏輯不變。同一 SKU 不同效期維持兩列，各寫自己的效期。
 - 品名用英文。DEMO 假資料在 `mockItemPool.nameEn`。畫面上的商品名稱維持中文。
-- Invoice 單價用畫面上「合計」的計算基數（該列商品報價）。客戶訂單 PDF、廠商 Invoice 的金額 = 該單價 × 下訂數量。報關 Invoice、Packing List 的數量與金額用這次還能出的數量。
+- Invoice 單價用畫面上「合計」的計算基數（該列商品報價）。客戶訂單 PDF、廠商 Invoice 的金額 = 該單價 × 下訂數量。報關 Invoice、Packing List 的數量與金額用這次還能出的數量。這些金額就是通路幣別（晨曦公司為 TWD，其餘境外為 USD），不換算成台幣，數字後面不加幣別代號。
 - 淨重留在境外訂單畫面，並寫進 Packing List 的 Net Weight。板入數、板數、毛重不在訂單上輸入。
 - 商品毛重的來源是商品管理的「重量」欄。ERP 上這個欄位目前填的是重量，不是毛重，要先請 JERRY 更新商品重量的填寫數值。數值改成毛重之前，不要把這個欄位寫進 Packing List 的 Gross Weight。
 - Packing List 用範本同一張框線表格。欄位是 Packing No.、S.No、DESCRIPTION、QUANTITY PCS、Carton、Carton/Pallet、pallet、Best Before Date、Pcs per Carton、Net Weight (KG)、Gross Weight (KG)。`NO:` 與 `Packing No.` 留白。Carton/Pallet、pallet、Gross Weight 空白，由人員自行填寫。數量、訂購箱數、箱入數、淨重由系統先填上。表尾 Total 合併左側儲存格，並加總數量、箱數、pallet、淨重、毛重。
