@@ -1304,6 +1304,18 @@
       background: #f5f5f5;
       cursor: not-allowed;
     }
+    #page-order-edit.is-wizard-preview #editExchangeRate {
+      pointer-events: auto;
+      background: #fff;
+      cursor: text;
+    }
+    .trade-currency-field {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .trade-currency-field select { width: 160px; flex: 0 0 160px; }
+    .trade-currency-field input { flex: 1; min-width: 0; max-width: none; }
     #page-order-edit.is-wizard-preview #editGoodsToolbar,
     #page-order-edit.is-wizard-preview #editGoodsFilterBar,
     #page-order-edit.is-wizard-preview #editGoodsConfirmBar,
@@ -4354,6 +4366,15 @@
               <div class="form-row" id="editTermsOfPaymentRow">
                 <label>付款條件</label>
                 <div class="form-ctrl"><input type="text" id="editTermsOfPayment" /></div>
+              </div>
+              <div class="form-row hidden" id="editTradeCurrencyRow">
+                <label class="required" for="editTradeCurrency">交易幣別</label>
+                <div class="form-ctrl">
+                  <div class="trade-currency-field">
+                    <select id="editTradeCurrency" disabled data-lock="1"></select>
+                    <input type="number" id="editExchangeRate" min="0" step="any" placeholder="匯率" aria-label="匯率" />
+                  </div>
+                </div>
               </div>
               </div>
             </div>
@@ -7730,6 +7751,7 @@
       if (!order) return null;
       if (requireBasic && !validatePoDocNoRequired(order)) return null;
       if (requireBasic && !validatePoTermsRequired(order)) return null;
+      if (requireBasic && !validateExchangeRateRequired(order)) return null;
       applyEditFormToOrder(order);
       applyOrderFees(order);
       if (requireBasic && !validateMarkFileRequired(order)) return null;
@@ -10937,6 +10959,8 @@
         vendorTaxId: VENDOR_TAX_ID,
         termsOfDelivery: "",
         termsOfPayment: "TT, 100% prepaid",
+        tradeCurrency: channelCurrency(channelName, "USD"),
+        exchangeRate: "",
         lines: catalogPartyLines(channelName || "跨境- Cool Cool Trading"),
         poDocNo: dateMatch ? `CCT-PO-${dateMatch[1]}` : "",
       };
@@ -11103,6 +11127,7 @@
       const hidePay = hidePartyPayment(order);
       document.getElementById("editTermsOfPaymentRow").classList.toggle("hidden", hidePay);
       document.getElementById("editTermsOfPayment").value = hidePay ? "" : (ov.termsOfPayment || "");
+      fillTradeCurrencyFields(order);
       document.getElementById("editVendorExtWrap").classList.toggle("hidden", readonly);
       document.getElementById("editVendorExt").classList.toggle("hidden", readonly);
       if (readonly) {
@@ -11154,6 +11179,10 @@
         ? collectionTermsOf(order)
         : document.getElementById("editTermsOfDelivery").value;
       bag.termsOfPayment = hidePartyPayment(order) ? "" : document.getElementById("editTermsOfPayment").value.trim();
+      if (isOverseasPo(order)) {
+        bag.tradeCurrency = overseasTradeCurrency(order);
+        bag.exchangeRate = readExchangeRate();
+      }
       order.address = bag.buyerAddress;
       order.items = collectEditGoods();
     }
@@ -11324,6 +11353,49 @@
       ];
       order.overseasLineReady = true;
       salesOrders.unshift(order);
+    }
+
+    function ensureChenxiRateOrder() {
+      const orderNo = "SO20261104061";
+      if (salesOrders.some((item) => item.orderNo === orderNo)) return;
+      const order = extraPo({
+        orderNo,
+        poDocNo: "CX-PO-20261104",
+        channelType: "境外通路",
+        channelName: "晨曦公司",
+        status: "未開立出貨單",
+        operator: "henry.huang",
+        createdAt: "2026-11-04 10:00:00",
+        arriveDate: "2026-11-08",
+        shipByTime: "2026-11-06",
+      });
+      order.overseasLineReady = true;
+      salesOrders.unshift(order);
+      ensureOverseasPo(order);
+      order.overseas.termsOfDelivery = "FOB";
+      order.overseas.tradeCurrency = "TWD";
+      order.overseas.exchangeRate = "1";
+      order.stampFile = demoStampPlaceholder(order);
+      const at = Date.parse("2026-11-04T10:05:00") || Date.now();
+      order.stampFile.uploadedAt = at;
+      order.overseasExportedAt = at - 1000;
+    }
+
+    function alignOverseasTradeCurrency() {
+      salesOrders.forEach((order) => {
+        if (!isOverseasPo(order)) return;
+        ensureOverseasPo(order);
+        const currency = channelCurrency(order.channelName, "USD");
+        order.overseas.tradeCurrency = currency;
+        const raw = String(order.overseas.exchangeRate == null ? "" : order.overseas.exchangeRate).trim();
+        const n = Number(raw);
+        const valid = raw !== "" && Number.isFinite(n) && n > 0;
+        if (currency === "TWD") {
+          if (!valid) order.overseas.exchangeRate = "1";
+        } else if (order.status !== "草稿" && !valid) {
+          order.overseas.exchangeRate = "32";
+        }
+      });
     }
 
     function pdfLinesFromOrder(order) {
@@ -13472,6 +13544,50 @@
         }
       }
       return true;
+    }
+
+    function overseasTradeCurrency(order) {
+      const name = (order && (order.channelName || (order.overseas && order.overseas.buyerName))) || "";
+      return channelCurrency(name, "USD");
+    }
+
+    function readExchangeRate() {
+      const raw = String((document.getElementById("editExchangeRate") || {}).value || "").trim();
+      const n = Number(raw);
+      if (!raw || !Number.isFinite(n) || n <= 0) return "";
+      return String(n);
+    }
+
+    function fillTradeCurrencyFields(order, opts) {
+      const row = document.getElementById("editTradeCurrencyRow");
+      const currencyEl = document.getElementById("editTradeCurrency");
+      const rateEl = document.getElementById("editExchangeRate");
+      if (!row || !currencyEl || !rateEl) return;
+      const show = isOverseasPo(order);
+      row.classList.toggle("hidden", !show);
+      if (!show) return;
+      const currency = overseasTradeCurrency(order);
+      currencyEl.innerHTML = `<option value="${escapeHtml(currency)}">${escapeHtml(currency)}</option>`;
+      currencyEl.value = currency;
+      currencyEl.disabled = true;
+      if (opts && opts.resetRate) {
+        rateEl.value = currency === "TWD" ? "1" : "";
+        return;
+      }
+      const saved = order && order.overseas ? order.overseas.exchangeRate : "";
+      if (saved != null && String(saved).trim() !== "") rateEl.value = String(saved);
+      else rateEl.value = currency === "TWD" ? "1" : "";
+    }
+
+    function validateExchangeRateRequired(order) {
+      if (!order || !isOverseasPo(order)) return true;
+      if (readExchangeRate()) return true;
+      alert("請填寫匯率");
+      const page = document.getElementById("page-order-edit");
+      if (poWizardOn && page && !page.classList.contains("is-wizard-preview")) setPoWizardStep(1, order);
+      const el = document.getElementById("editExchangeRate");
+      if (el) el.focus();
+      return false;
     }
 
     function validatePoTermsRequired(order) {
@@ -15728,6 +15844,7 @@
       if (!validateRecipientRequired(order)) return;
       if (!validateOverseasGoodsBatch(order)) return;
       if (!validateMarkFileRequired(order)) return;
+      if (!validateExchangeRateRequired(order)) return;
       commitWorkspaceOrder(order, "待審核");
       poWizardOn = false;
       poWizardSessionNew = false;
@@ -15994,6 +16111,7 @@
         loadPoGoodsWorkspace(order);
         if (!needsMarkFile(order)) order.markFile = null;
         syncMarkUploadUi(order);
+        fillTradeCurrencyFields(order, { resetRate: true });
       }
     });
     document.getElementById("editTermsOfDelivery").addEventListener("change", () => {});
@@ -23083,6 +23201,8 @@
     seedOnlineTransferSettleDemo();
     seedOverseasSettleDemo();
     ensureCoolCoolSettleFixtures();
+    ensureChenxiRateOrder();
+    alignOverseasTradeCurrency();
     ensureBillCreateTestFixtures();
     settlementRecords = settlementRecords.map(normalizeSettlementRecord);
     ensureSettleBillFixtures();
