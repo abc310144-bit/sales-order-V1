@@ -3148,6 +3148,7 @@
             月結：財務回壓或 ezpay 後為已結算，待結算可駁回。其餘不月結通路：送出時帶假發票，財務「確認結算」後為已結算。<br />
             <strong>系統待開發票示範只有兩條通路：線上-轉單、跨境- Cool Cool Trading。</strong>建立結帳單選通路時名稱後面有標示。這兩條只要出貨單有實際出貨時間就能選到，沒有出貨單或沒有實際出貨時間的不會出現。財務只按確認結算，不用回壓發票。可對照 Cool Cool：<strong>VN00010542</strong> 待驗收但有實際出貨時間，可選；<strong>VN00010543</strong> 揀貨中、沒有實際出貨時間，選不到。<br />
             可測單號：草稿 <strong>20260829011</strong>、已作廢 <strong>20260829012</strong>（新光，都沒扣可結數量）；財務駁回 <strong>20260822001</strong>（寶雅）；買斷月結待結算 <strong>20260822002</strong>、已結算 <strong>20260822003</strong>；跨境金額不符 <strong>20260818082</strong>（Cool Cool）；轉單月結已結算 <strong>20260821001</strong>（絢綻）、待結算 <strong>20260821002</strong>；轉單非月結待結算 <strong>20260810029</strong>（線上-轉單）、已結算 <strong>20260826032</strong>；寄倉已結算 <strong>20260820001</strong>、待結算 <strong>20260828008</strong>（PW）。<br />
+            <strong>建立結帳單測試單（2026-11-04）</strong>：買斷選「實體-寶雅」，看得到 <strong>SO20261104011</strong>／VN00010611（已驗收）與 <strong>SO20261104012</strong>／VN00010613（已驗收）；同一張單的 VN00010612 是揀貨中、沒有驗收，不會出現。草稿 <strong>20261104031</strong> 掛在 SO20261104012，結算月份 2026年11月，還沒扣可結數量。寄倉選「百貨-新光三越」的 <strong>SO20261104013</strong>／VN00010614（已驗收）；VN00010615 待驗收，不計入可結。經銷選「經銷商-學生營養股份有限公司」的 <strong>SO20261104014</strong>／VN00010616（已出貨、有實際出貨時間）；VN00010617 揀貨中、沒有實際出貨時間，不會出現。線上-轉單選 <strong>SO20261104015</strong>／TRY0000010621（已出貨、有實際出貨時間）；TRY0000010622 待拋單、沒有實際出貨時間，不會出現。<br />
             跨境- Cool Cool Trading 另有客戶訂單可從建立結帳單測：<strong>SO20260830041</strong>（部分出貨；VN00010541 已驗收可結、VN00010542 待驗收、VN00010543 揀貨中）、<strong>SO20260831042</strong>（已開立出貨單；VN00010544、VN00010545 都已驗收且未結，含一列贈品）、<strong>SO20260901043</strong>（部分出貨；VN00010546 已有待結算結帳單 <strong>20260901046</strong> 仍有剩餘、VN00010547 已驗收未結）。這三張單與出貨單在客戶訂單管理、出貨訂單管理都看得到。
           </div>
             <section class="filter" id="channelSettleFilterPanel">
@@ -20168,6 +20169,222 @@
     }
 
     /**
+     * 建立結帳單測試資料。買斷看已驗收、寄倉看已驗收、經銷轉單看實際出貨時間、
+     * 線上-轉單看實際出貨時間。對照用的那張出貨單故意不符合，建立頁不該出現。
+     * 已存在的單號不覆寫。
+     */
+    function ensureBillCreateTestFixtures() {
+      const lineOf = (channel, sku, qty) => {
+        const catalog = mockItemsFor(channel).find((item) => normalizeSku(item.sku) === normalizeSku(sku)) || {};
+        const price = channelProductPriceOf(channel, sku);
+        const quote = price.quote > 0 ? price.quote : (Number(catalog.quote) || 0);
+        return {
+          sku,
+          name: catalog.name || sku,
+          qty,
+          unit: catalog.unit || "",
+          pcsPerCarton: catalog.pcsPerCarton || 0,
+          expiryAccept: catalog.expiryAccept || "",
+          quote: quote > 0 ? String(quote) : "",
+          orderQuote: quote > 0 ? String(quote) : "",
+          quoteFrozen: quote > 0 ? quote : "",
+          priceLabel: price.priceLabel || "",
+          priceNoLabel: price.priceNoLabel || "",
+          remark: "",
+        };
+      };
+      const placePo = (cfg) => {
+        let order = salesOrders.find((item) => item.orderNo === cfg.orderNo);
+        if (!order) {
+          order = extraPo({
+            orderNo: cfg.orderNo,
+            poDocNo: cfg.poDocNo,
+            channelType: cfg.channelType,
+            channelName: cfg.channelName,
+            status: "未開立出貨單",
+            operator: "建檔人",
+            createdAt: cfg.createdAt,
+            arriveDate: "2026-11-08",
+            shipByTime: "2026-11-05",
+          });
+          order.items = cfg.items;
+          salesOrders.unshift(order);
+        }
+        return order;
+      };
+      const putShip = (id, order, channelType, status, created, shipped, items, accepted) => {
+        const orderId = `VN${pad(id, 8)}`;
+        if (rows.some((row) => row.orderId === orderId)) return rows.find((row) => row.orderId === orderId);
+        const ship = extraShip(id, order.orderNo, order.channelName, status, "建檔人", created, { shipped: shipped || "" });
+        Object.assign(ship, channelSnapshotFromName(order.channelName, channelType));
+        ship.shipped = shipped || "";
+        ship.items = items.map((item) => ({ sku: item.sku, name: item.name, qty: item.qty, unit: item.unit || "" }));
+        if (accepted) {
+          ship.status = "已驗收";
+          ship.audit = "審核通過";
+          ship.acceptance = {
+            acceptedAt: shipped || created,
+            acceptedBy: "建檔人",
+            items: ship.items.map((item) => ({
+              key: itemKey(item),
+              sku: item.sku,
+              name: item.name,
+              acceptQty: Number(item.qty) || 0,
+              settledQty: 0,
+              remark: "",
+            })),
+          };
+        }
+        rows.unshift(ship);
+        return ship;
+      };
+
+      const poya = "實體-寶雅";
+      const poyaVit = lineOf(poya, "UM-1001", 20);
+      const poyaCol = lineOf(poya, "UM-3305", 16);
+      const poyaBar = lineOf(poya, "PX-8801", 12);
+      const poyaA = placePo({
+        orderNo: "SO20261104011",
+        poDocNo: "POYA-1104-011",
+        channelType: "台灣本地通路",
+        channelName: poya,
+        createdAt: "2026-11-04 09:00:00",
+        items: [poyaVit, poyaCol],
+      });
+      putShip(10611, poyaA, "台灣本地通路", "已驗收", "2026-11-04 10:00:00", "2026-11-04 15:00:00", [
+        { ...poyaVit, qty: 10 },
+        { ...poyaCol, qty: 8 },
+      ], true);
+      putShip(10612, poyaA, "台灣本地通路", "揀貨中", "2026-11-04 10:20:00", "", [
+        { ...poyaVit, qty: 4 },
+      ], false);
+      const poyaB = placePo({
+        orderNo: "SO20261104012",
+        poDocNo: "POYA-1104-012",
+        channelType: "台灣本地通路",
+        channelName: poya,
+        createdAt: "2026-11-04 09:30:00",
+        items: [poyaBar],
+      });
+      putShip(10613, poyaB, "台灣本地通路", "已驗收", "2026-11-04 11:00:00", "2026-11-04 16:00:00", [
+        { ...poyaBar, qty: 6 },
+      ], true);
+      syncPoStatusFromShips(poyaA);
+      syncPoStatusFromShips(poyaB);
+      pushFixedSettleBill({
+        id: "20261104031",
+        orderNo: "SO20261104012",
+        shipNo: "VN00010613",
+        ratio: 0.4,
+        status: "草稿",
+        createdAt: "2026-11-04 17:00:00",
+      });
+
+      const skm = "百貨-新光三越";
+      const skmVit = lineOf(skm, "UM-1001", 24);
+      const skmDrink = lineOf(skm, "UM-5520", 18);
+      const skmOrder = placePo({
+        orderNo: "SO20261104013",
+        poDocNo: "SKM-1104-013",
+        channelType: "台灣實體百貨",
+        channelName: skm,
+        createdAt: "2026-11-04 09:10:00",
+        items: [skmVit, skmDrink],
+      });
+      putShip(10614, skmOrder, "台灣實體百貨", "已驗收", "2026-11-04 11:10:00", "2026-11-04 14:10:00", [
+        { ...skmVit, qty: 12 },
+        { ...skmDrink, qty: 9 },
+      ], true);
+      putShip(10615, skmOrder, "台灣實體百貨", "待驗收", "2026-11-04 11:40:00", "2026-11-04 14:40:00", [
+        { ...skmVit, qty: 6 },
+      ], false);
+      syncPoStatusFromShips(skmOrder);
+
+      const dealer = "經銷商-學生營養股份有限公司";
+      const dealerCol = lineOf(dealer, "UM-3305", 20);
+      const dealerDrink = lineOf(dealer, "UM-5520", 10);
+      const dealerOrder = placePo({
+        orderNo: "SO20261104014",
+        poDocNo: "SN-1104-014",
+        channelType: "台灣本地經銷",
+        channelName: dealer,
+        createdAt: "2026-11-04 09:20:00",
+        items: [dealerCol, dealerDrink],
+      });
+      if (!hasStampFile(dealerOrder)) dealerOrder.stampFile = demoStampPlaceholder(dealerOrder);
+      putShip(10616, dealerOrder, "台灣本地經銷", "已出貨", "2026-11-04 12:00:00", "2026-11-04 13:30:00", [
+        { ...dealerCol, qty: 10 },
+        { ...dealerDrink, qty: 5 },
+      ], false);
+      putShip(10617, dealerOrder, "台灣本地經銷", "揀貨中", "2026-11-04 12:20:00", "", [
+        { ...dealerCol, qty: 4 },
+      ], false);
+      syncPoStatusFromShips(dealerOrder);
+
+      const online = "線上-轉單";
+      const onlineVit = lineOf(online, "UM-1001", 4);
+      const onlineWhey = lineOf(online, "UM-1002", 3);
+      if (!salesOrders.some((item) => item.orderNo === "SO20261104015")) {
+        salesOrders.unshift(extraTransferPo({
+          orderNo: "SO20261104015",
+          status: "部分出貨",
+          operator: "建檔人",
+          createdAt: "2026-11-04 09:40:00",
+          recipients: [
+            {
+              platformOrderNo: "PLT-1104-A",
+              name: "測試收件人甲",
+              zip: "100",
+              address: "台北市中正區測試路1號",
+              tel: "0912000111",
+              shipDate: "2026-11-05",
+              arriveDate: "2026-11-06",
+              items: [transferLine(onlineVit.sku, onlineVit.name, 4, onlineVit.unit, onlineVit.expiryAccept, onlineVit.pcsPerCarton)],
+            },
+            {
+              platformOrderNo: "PLT-1104-B",
+              name: "測試收件人乙",
+              zip: "220",
+              address: "新北市板橋區測試路2號",
+              tel: "0912000222",
+              items: [transferLine(onlineWhey.sku, onlineWhey.name, 3, onlineWhey.unit, onlineWhey.expiryAccept, onlineWhey.pcsPerCarton)],
+            },
+          ],
+        }));
+      }
+      const onlineOrder = salesOrders.find((item) => item.orderNo === "SO20261104015");
+      if (!rows.some((row) => String(row.id) === "10621")) {
+        rows.unshift(extraOnlineShip({
+          id: 10621,
+          salesOrderNo: "SO20261104015",
+          status: "已出貨",
+          created: "2026-11-04 13:00:00",
+          shipped: "2026-11-04 18:00:00",
+          platformOrderNo: "PLT-1104-A",
+          recvName: "測試收件人甲",
+          recvTel: "0912000111",
+          recvAddress: "台北市中正區測試路1號",
+          items: [{ sku: onlineVit.sku, name: onlineVit.name, qty: 4 }],
+        }));
+      }
+      if (!rows.some((row) => String(row.id) === "10622")) {
+        rows.unshift(extraOnlineShip({
+          id: 10622,
+          salesOrderNo: "SO20261104015",
+          status: "待拋單",
+          created: "2026-11-04 13:10:00",
+          shipped: "",
+          platformOrderNo: "PLT-1104-B",
+          recvName: "測試收件人乙",
+          recvTel: "0912000222",
+          recvAddress: "新北市板橋區測試路2號",
+          items: [{ sku: onlineWhey.sku, name: onlineWhey.name, qty: 3 }],
+        }));
+      }
+      if (onlineOrder) syncPoStatusFromShips(onlineOrder);
+    }
+
+    /**
      * 跨境- Cool Cool Trading 結帳測試資料。
      * 客戶訂單、出貨單、驗收與結帳單同一套；已存在的單號不覆寫。
      */
@@ -22555,6 +22772,7 @@
     seedOnlineTransferSettleDemo();
     seedOverseasSettleDemo();
     ensureCoolCoolSettleFixtures();
+    ensureBillCreateTestFixtures();
     settlementRecords = settlementRecords.map(normalizeSettlementRecord);
     ensureSettleBillFixtures();
     settlementRecords = settlementRecords.map(normalizeSettlementRecord);
