@@ -5055,16 +5055,13 @@
         </div>
         <div class="hidden" id="channelSupplyEditOverseasQuote">
           <div class="form-row">
-            <label class="required">商品報價</label>
+            <label class="required" id="channelSupplyEditOverseasQuoteLabel">商品報價(USD)</label>
             <div class="form-ctrl"></div>
           </div>
           <div class="form-row supply-quote-l1" id="channelSupplyEditPriceLabelRow">
             <label class="required" for="channelSupplyEditPriceLabel">含標</label>
             <div class="form-ctrl">
-              <div class="fee-suffix-field">
-                <input type="number" id="channelSupplyEditPriceLabel" min="0.01" step="0.01" />
-                <span class="suffix">TWD</span>
-              </div>
+              <input type="number" id="channelSupplyEditPriceLabel" min="0.01" step="0.01" />
             </div>
           </div>
           <div class="form-row supply-quote-l2" id="channelSupplyEditLabelTaxModeRow">
@@ -5091,10 +5088,7 @@
           <div class="form-row supply-quote-l1 supply-quote-gap" id="channelSupplyEditPriceNoLabelRow">
             <label class="required" for="channelSupplyEditPriceNoLabel">不含標</label>
             <div class="form-ctrl">
-              <div class="fee-suffix-field">
-                <input type="number" id="channelSupplyEditPriceNoLabel" min="0.01" step="0.01" />
-                <span class="suffix">TWD</span>
-              </div>
+              <input type="number" id="channelSupplyEditPriceNoLabel" min="0.01" step="0.01" />
             </div>
           </div>
           <div class="form-row supply-quote-l2" id="channelSupplyEditNoLabelTaxModeRow">
@@ -8626,6 +8620,10 @@
       const overseas = isOverseasSupplyForm();
       const show = (id, on) => document.getElementById(id)?.classList.toggle("hidden", !on);
       show("channelSupplyEditOverseasQuote", overseas);
+      const overseasQuoteLabel = document.getElementById("channelSupplyEditOverseasQuoteLabel");
+      if (overseasQuoteLabel) {
+        overseasQuoteLabel.textContent = "商品報價(" + channelCurrency(channelSupplyChannelName, "USD") + ")";
+      }
       [
         "channelSupplyEditTaxModeRow",
         "channelSupplyEditQuoteRow",
