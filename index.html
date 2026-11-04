@@ -21116,14 +21116,67 @@
     function buildChannelBillDraftRows(channelName, flow) {
       const rows = [];
       if (flow === "寄倉") {
-        buildSettlePool().filter((row) => row.channelName === channelName && row.remain > 0).forEach((row) => {
-          rows.push({ ...row, shipNo: row.shipNo || "", checked: false, settleQty: 0, remark: "" });
-        });
+        settlementSourceOrders()
+          .filter((order) => order.channelName === channelName)
+          .forEach((order) => rows.push(...buildConsignChannelBillRows(order)));
         return rows;
       }
       settlementSourceOrders().filter((order) => order.channelName === channelName).forEach((order) => {
         channelBillAdjustedLines(order).forEach((line) => {
           if (line.remain > 0) rows.push(line);
+        });
+      });
+      return rows;
+    }
+
+    function consignAcceptedShips(order) {
+      if (!order) return [];
+      return validShipsOfPo(order.orderNo)
+        .filter((ship) => ship.status === "已驗收" && !ship.online)
+        .slice()
+        .sort((a, b) => String(a.shipped || a.created || a.orderId || "").localeCompare(String(b.shipped || b.created || b.orderId || "")));
+    }
+
+    /** 寄倉建立列：一張已驗收出貨單的一個商品。訂單上已結數量依出貨單順序分攤。 */
+    function buildConsignChannelBillRows(order) {
+      const priceByKey = {};
+      accLinesOf(order).forEach((line) => { priceByKey[line.key] = line; });
+      const pool = {};
+      ((order.acceptance && order.acceptance.items) || []).forEach((item) => {
+        if (item.key) pool[item.key] = Number(item.settledQty) || 0;
+      });
+      const rows = [];
+      consignAcceptedShips(order).forEach((ship) => {
+        shipSettleLines(order, ship).forEach((line) => {
+          const acceptQty = Number(line.acceptQty) || 0;
+          if (!line.key || acceptQty <= 0) return;
+          const shipSettled = Number(line.settledQty) || 0;
+          const room = Math.max(0, acceptQty - shipSettled);
+          const take = Math.min(room, Math.max(0, Number(pool[line.key]) || 0));
+          pool[line.key] = Math.max(0, (Number(pool[line.key]) || 0) - take);
+          const settledQty = shipSettled + take;
+          const remain = Math.max(0, acceptQty - settledQty);
+          if (remain <= 0) return;
+          const priced = priceByKey[line.key] || line;
+          rows.push({
+            id: settleRowKey(order.orderNo, line.key, ship.orderId),
+            orderNo: order.orderNo,
+            shipNo: ship.orderId,
+            channelName: order.channelName,
+            createdAt: order.createdAt,
+            key: line.key,
+            sku: line.sku || priced.sku || "",
+            name: line.name || priced.name || "",
+            price: priced.price || line.price || 0,
+            gift: !!(line.gift || priced.gift),
+            acceptQty,
+            settledQty,
+            remain,
+            shipDates: line.shipDates || [],
+            checked: false,
+            settleQty: 0,
+            remark: "",
+          });
         });
       });
       return rows;
@@ -21138,16 +21191,15 @@
 
     /** 出貨單編號與實際出貨時間要落在同一張已驗收、且含該 SKU 的出貨單。 */
     function consignDraftShipMatch(row, shipQuery, from, to) {
-      const order = salesOrders.find((item) => item.orderNo === row.orderNo);
-      if (!order) return false;
+      const shipNo = String(row.shipNo || "").trim();
+      if (!shipNo) return false;
+      const ship = shipByOrderId(shipNo);
+      if (!ship || ship.status !== "已驗收") return false;
+      if (row.key && !consignShipHasKey(ship, row.key)) return false;
       const q = String(shipQuery || "").trim().toLowerCase();
-      return validShipsOfPo(order.orderNo).some((ship) => {
-        if (ship.status !== "已驗收") return false;
-        if (!consignShipHasKey(ship, row.key)) return false;
-        if (q && !String(ship.orderId || "").toLowerCase().includes(q)) return false;
-        if ((from || to) && !inDateRange(ship.shipped, from, to)) return false;
-        return true;
-      });
+      if (q && !shipNo.toLowerCase().includes(q)) return false;
+      if ((from || to) && !inDateRange(ship.shipped, from, to)) return false;
+      return true;
     }
 
     function channelBillRowMatchesFilter(row) {
@@ -21538,7 +21590,7 @@
         <tr data-settle-id="${escapeHtml(row.id)}">
           <td class="col-check"><input type="checkbox" data-settle-check="1"${row.checked ? " checked" : ""}${canFill ? "" : " disabled"} /></td>
           <td>${escapeHtml(row.orderNo || "—")}</td>
-          <td>${escapeHtml(row.shipNo || "—")}</td>
+          <td>${channelBillShipLink(row.shipNo)}</td>
           <td>${escapeHtml(row.sku || "—")}</td>
           <td>${escapeHtml(row.name || "—")}</td>
           <td class="num">${dashMetrics ? "—" : escapeHtml(row.acceptQty)}</td>
@@ -22775,6 +22827,72 @@
         const shipNos = [...new Set((bill.lines || []).map((line) => line.shipNo).filter(Boolean))];
         if (!bill.shipNo && shipNos.length === 1) bill.shipNo = shipNos[0];
       });
+      alignConsignBillShipNos();
+    }
+
+    /** 寄倉假結帳單補上對應的已驗收出貨單。數量跨兩張出貨單時拆成兩列，總量不變。 */
+    function alignConsignBillShipNos() {
+      const used = {};
+      const holds = (bill) => bill.status === "待結算" || bill.status === "已結算";
+      settlementRecords
+        .filter((bill) => bill && bill.type === "寄倉")
+        .slice()
+        .sort((a, b) => String(a.createdAt || "").localeCompare(String(b.createdAt || "")))
+        .forEach((bill) => {
+          const next = [];
+          let changed = false;
+          (bill.lines || []).forEach((line) => {
+            if (line.shipNo && shipByOrderId(line.shipNo)) {
+              next.push(line);
+              if (holds(bill)) {
+                const mark = `${line.orderNo}|${line.shipNo}|${line.key || line.sku}`;
+                used[mark] = (used[mark] || 0) + (Number(line.qty) || 0);
+              }
+              return;
+            }
+            const order = salesOrders.find((item) => item.orderNo === line.orderNo);
+            const slots = [];
+            consignAcceptedShips(order).forEach((ship) => {
+              shipSettleLines(order, ship).forEach((src) => {
+                const sameKey = line.key && src.key === line.key;
+                const sameSku = !line.key && String(src.sku || "") === String(line.sku || "");
+                if (!sameKey && !sameSku) return;
+                slots.push({ shipNo: ship.orderId, cap: Number(src.acceptQty) || 0, key: src.key || line.key || line.sku });
+              });
+            });
+            let left = Number(line.qty) || 0;
+            if (!slots.length || left <= 0) {
+              next.push(line);
+              return;
+            }
+            const pieces = [];
+            slots.forEach((slot, index) => {
+              if (left <= 0) return;
+              const mark = `${line.orderNo}|${slot.shipNo}|${slot.key}`;
+              const room = Math.max(0, slot.cap - (used[mark] || 0));
+              const take = index === slots.length - 1 ? left : Math.min(left, room);
+              if (take <= 0) return;
+              pieces.push({ shipNo: slot.shipNo, qty: take, mark });
+              left -= take;
+            });
+            if (!pieces.length) {
+              next.push(line);
+              return;
+            }
+            const unitAmount = Number(line.qty) ? (Number(line.amount) || 0) / Number(line.qty) : 0;
+            let amountLeft = Number(line.amount) || 0;
+            pieces.forEach((piece, index) => {
+              const amount = index === pieces.length - 1 ? accRoundMoney(amountLeft) : accRoundMoney(unitAmount * piece.qty);
+              amountLeft = accRoundMoney(amountLeft - amount);
+              next.push({ ...line, shipNo: piece.shipNo, qty: piece.qty, amount });
+              if (holds(bill)) used[piece.mark] = (used[piece.mark] || 0) + piece.qty;
+            });
+            changed = true;
+          });
+          if (changed) bill.lines = next;
+          const shipNos = [...new Set((bill.lines || []).map((line) => line.shipNo).filter(Boolean))];
+          if (!bill.shipNo && shipNos.length === 1) bill.shipNo = shipNos[0];
+        });
     }
 
     normalizeNonOnlineShipStatuses();
