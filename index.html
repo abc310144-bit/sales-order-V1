@@ -1336,6 +1336,15 @@
       flex-wrap: wrap;
       gap: 8px;
     }
+    .bill-confirm-bar {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 12px;
+    }
+    .bill-confirm-bar.hidden,
+    .bill-preview.hidden { display: none; }
+    .bill-preview { margin-top: 28px; }
+    .bill-preview .ship-settings-col-title { margin-bottom: 12px; }
     .po-pane {
       min-height: 240px;
       min-width: 0;
@@ -3135,7 +3144,7 @@
           </div>
           <div class="demo-hint" id="channelSettleOrderHint">
             <strong>DEMO 提示｜結帳單建立</strong><br />
-            本頁列出已建立的結帳單。狀態有草稿、已作廢、待結算、已結算、財務駁回。按右上「建立結帳單」選通路（類型依通路自動帶出）。買斷、轉單、寄倉第一步都可依實際出貨時間篩選（未按套用不列出）。買斷、轉單一列一張出貨單，展開後勾選商品，可改數量。寄倉維持一列一項商品，另可依客戶訂單建立時間縮小。勾選後帶入可結數量。各步可「儲存為草稿」（不扣可結數量、不進財務結算）。「儲存此分頁」進預覽；「送出結算申請」才扣可結數量，狀態為待結算。待結算、已結算不可作廢。草稿、財務駁回可編輯、可作廢；作廢時若這張單還扣著數量，會把數量加回。境外可匯入一份出口報單。假資料 <strong>20260818082</strong> 已附出口報單。<br />
+            本頁列出已建立的結帳單。狀態有草稿、已作廢、待結算、已結算、財務駁回。按右上「建立結帳單」選通路（類型依通路自動帶出）。建立頁同一頁顯示篩選、可勾選品項和結帳單預覽，沒有步驟列。進頁就列出該通路全部可結資料；買斷、轉單預設展開品項。套用縮小範圍，清除回到全部。已勾選品項留在最上方。要勾了才能改本次結算數量。按「確定」才把上方試算到預覽；之後才能「儲存為草稿」或「送出結算申請」。改勾選或數量後要再按確定。儲存為草稿不扣可結數量、不進財務結算。送出結算申請才扣可結數量，狀態為待結算。待結算、已結算不可作廢。草稿、財務駁回可編輯、可作廢；作廢時若這張單還扣著數量，會把數量加回。境外可匯入一份出口報單。假資料 <strong>20260818082</strong> 已附出口報單。<br />
             月結：財務回壓或 ezpay 後為已結算，待結算可駁回。其餘不月結通路：送出時帶假發票，財務「確認結算」後為已結算。<br />
             <strong>系統待開發票示範只有兩條通路：線上-轉單、跨境- Cool Cool Trading。</strong>建立結帳單選通路時名稱後面有標示。這兩條只要出貨單有實際出貨時間就能選到，沒有出貨單或沒有實際出貨時間的不會出現。財務只按確認結算，不用回壓發票。可對照 Cool Cool：<strong>VN00010542</strong> 待驗收但有實際出貨時間，可選；<strong>VN00010543</strong> 揀貨中、沒有實際出貨時間，選不到。<br />
             可測單號：草稿 <strong>20260829011</strong>、已作廢 <strong>20260829012</strong>（新光，都沒扣可結數量）；財務駁回 <strong>20260822001</strong>（寶雅）；買斷月結待結算 <strong>20260822002</strong>、已結算 <strong>20260822003</strong>；跨境金額不符 <strong>20260818082</strong>（Cool Cool）；轉單月結已結算 <strong>20260821001</strong>（絢綻）、待結算 <strong>20260821002</strong>；轉單非月結待結算 <strong>20260810029</strong>（線上-轉單）、已結算 <strong>20260826032</strong>；寄倉已結算 <strong>20260820001</strong>、待結算 <strong>20260828008</strong>（PW）。<br />
@@ -3227,7 +3236,7 @@
           <nav class="po-wizard" id="channelBillWizard" aria-label="建立步驟"></nav>
           <div class="settle-summary" id="channelSettleDetailSummary"></div>
           <section class="filter" id="channelBillDraftFilter">
-            <p class="bill-filter-note hidden" id="channelBillFilterNote">選擇條件後按「套用」才會列出出貨單。只填一邊時，另一邊不限制；兩邊都空白按套用，會列出此通路全部可結出貨單。清除後表格回到空白。</p>
+            <p class="bill-filter-note hidden" id="channelBillFilterNote">進頁就列出此通路全部可結出貨單。套用後縮小範圍；清除篩選回到全部。已勾選的品項留在表格最上方。</p>
             <div class="filter-grid">
               <div class="field">
                 <label>客戶訂單編號</label>
@@ -3300,6 +3309,33 @@
               <tbody id="channelSettleDetailBody"></tbody>
             </table>
           </div>
+          <div class="bill-confirm-bar hidden" id="channelBillConfirmBar">
+            <button type="button" class="btn btn-primary" id="channelBillConfirmPreview">確定</button>
+          </div>
+          <section class="bill-preview hidden" id="channelBillPreview">
+            <h3 class="ship-settings-col-title">結帳單預覽</h3>
+            <div class="settle-summary" id="channelBillPreviewSummary"></div>
+            <div class="table-meta">總共 <span id="channelBillPreviewTotal">0</span> 筆</div>
+            <div class="table-wrap">
+              <table class="settle-table">
+                <thead>
+                  <tr>
+                    <th>客戶訂單編號</th>
+                    <th>出貨單編號</th>
+                    <th>SKU</th>
+                    <th>商品名稱</th>
+                    <th class="num">實際驗收數量</th>
+                    <th class="num">本次結算數量</th>
+                    <th class="num">本次結算金額</th>
+                    <th class="num">剩餘可結數量</th>
+                    <th class="num">剩餘可結金額</th>
+                    <th>備註</th>
+                  </tr>
+                </thead>
+                <tbody id="channelBillPreviewBody"></tbody>
+              </table>
+            </div>
+          </section>
           <div id="channelBillFoot" class="po-wizard-foot">
             <div class="po-wizard-foot-right">
               <button type="button" class="btn hidden" id="channelBillBackStep">返回</button>
@@ -18605,6 +18641,8 @@
     let channelBillPickShips = [];
     let channelBillExpanded = new Set();
     let channelBillGroupRemarks = {};
+    let channelBillPreviewReady = false;
+    let channelBillPreviewSnapshot = [];
 
     function isChannelSettleConsignMode() {
       return channelSettleMode === "consign";
@@ -20885,21 +20923,15 @@
       });
     }
 
-    function channelBillVisibleRows() {
-      if (settleDetailMode === "view") return settleRows;
-      if (settleDetailMode === "preview") return settleRows.filter((row) => row.checked && row.settleQty > 0);
+    function channelBillRowMatchesFilter(row) {
       if (channelBillIsShipFlow()) {
-        if (!channelBillApplied) return [];
         const shippedFrom = (document.getElementById("channelBillDraftShippedFrom") || {}).value || "";
         const shippedTo = (document.getElementById("channelBillDraftShippedTo") || {}).value || "";
-        return settleRows.filter((row) => {
-          if (channelBillPickOrders.length && !channelBillPickOrders.includes(row.orderNo)) return false;
-          if (channelBillPickShips.length && !channelBillPickShips.includes(row.shipNo)) return false;
-          if ((shippedFrom || shippedTo) && !channelBillRowInShippedRange(row, shippedFrom, shippedTo)) return false;
-          return true;
-        });
+        if (channelBillPickOrders.length && !channelBillPickOrders.includes(row.orderNo)) return false;
+        if (channelBillPickShips.length && !channelBillPickShips.includes(row.shipNo)) return false;
+        if ((shippedFrom || shippedTo) && !channelBillRowInShippedRange(row, shippedFrom, shippedTo)) return false;
+        return true;
       }
-      if (!channelBillApplied) return [];
       const orderNo = ((document.getElementById("channelBillDraftOrderNo") || {}).value || "").trim().toLowerCase();
       const shipNo = ((document.getElementById("channelBillDraftShipNo") || {}).value || "").trim().toLowerCase();
       const sku = ((document.getElementById("channelBillDraftSku") || {}).value || "").trim().toLowerCase();
@@ -20907,13 +20939,28 @@
       const orderTo = (document.getElementById("channelBillDraftOrderTo") || {}).value || "";
       const shippedFrom = (document.getElementById("channelBillDraftShippedFrom") || {}).value || "";
       const shippedTo = (document.getElementById("channelBillDraftShippedTo") || {}).value || "";
-      return settleRows.filter((row) => {
-        if (orderNo && !String(row.orderNo || "").toLowerCase().includes(orderNo)) return false;
-        if (sku && !String(row.sku || "").toLowerCase().includes(sku)) return false;
-        if ((orderFrom || orderTo) && !inDateRange(row.createdAt, orderFrom, orderTo)) return false;
-        if ((shipNo || shippedFrom || shippedTo) && !consignDraftShipMatch(row, shipNo, shippedFrom, shippedTo)) return false;
-        return true;
-      });
+      if (orderNo && !String(row.orderNo || "").toLowerCase().includes(orderNo)) return false;
+      if (sku && !String(row.sku || "").toLowerCase().includes(sku)) return false;
+      if ((orderFrom || orderTo) && !inDateRange(row.createdAt, orderFrom, orderTo)) return false;
+      if ((shipNo || shippedFrom || shippedTo) && !consignDraftShipMatch(row, shipNo, shippedFrom, shippedTo)) return false;
+      return true;
+    }
+
+    function channelBillVisibleRows() {
+      if (settleDetailMode === "view") return settleRows;
+      if (settleDetailMode === "preview") return settleRows.filter((row) => row.checked && row.settleQty > 0);
+      if (channelBillWizard.on && settleDetailMode === "edit") {
+        const pinned = settleRows.filter((row) => row.checked);
+        const pinnedIds = new Set(pinned.map((row) => row.id));
+        const rest = settleRows.filter((row) => !pinnedIds.has(row.id) && channelBillRowMatchesFilter(row));
+        return pinned.concat(rest);
+      }
+      if (channelBillIsShipFlow()) {
+        if (!channelBillApplied) return [];
+        return settleRows.filter((row) => channelBillRowMatchesFilter(row));
+      }
+      if (!channelBillApplied) return [];
+      return settleRows.filter((row) => channelBillRowMatchesFilter(row));
     }
 
     function channelBillGroupsOf(rows) {
@@ -20933,10 +20980,9 @@
     }
 
     function channelBillEmptyText() {
-      if (settleDetailMode === "preview") return "尚未選擇結算品項";
-      if (channelBillWizard.on && settleDetailMode !== "view" && !channelBillApplied) return "請設定篩選條件後按「套用」";
+      if (!settleRows.length) return "此通路目前沒有可結算品項";
       if (channelBillIsShipFlow() && settleDetailMode !== "view") return "查無符合的出貨單";
-      if (channelBillWizard.on && settleDetailMode !== "view") return "查無符合的商品";
+      if (settleDetailMode !== "view") return "查無符合的商品";
       return "此通路目前沒有可結算品項";
     }
 
@@ -20987,10 +21033,9 @@
     }
 
     function resetChannelBillDraftFilter() {
-      channelBillApplied = false;
+      channelBillApplied = true;
       channelBillPickOrders = [];
       channelBillPickShips = [];
-      channelBillExpanded = new Set();
       ["channelBillDraftOrderNo", "channelBillDraftShipNo", "channelBillDraftSku", "channelBillDraftOrderFrom", "channelBillDraftOrderTo", "channelBillDraftShippedFrom", "channelBillDraftShippedTo"].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.value = "";
@@ -20998,11 +21043,17 @@
       document.querySelectorAll("[data-bill-multi-q]").forEach((el) => { el.value = ""; });
       document.querySelectorAll("[data-bill-multi-panel]").forEach((el) => el.classList.add("hidden"));
       refreshChannelBillMultiLabels();
+      expandAllChannelBillGroups();
+    }
+
+    function expandAllChannelBillGroups() {
+      channelBillExpanded = new Set(settleRows.map((row) => channelBillGroupKey(row)));
     }
 
     function syncChannelBillFilterChrome() {
-      const grouped = channelBillIsShipFlow() && channelBillWizard.on && channelBillWizard.step <= 1;
-      const consign = channelBillWizard.on && channelBillWizard.flow === "寄倉" && channelBillWizard.step <= 1;
+      const editing = channelBillWizard.on && settleDetailMode === "edit";
+      const grouped = channelBillIsShipFlow() && editing;
+      const consign = editing && channelBillWizard.flow === "寄倉";
       document.getElementById("channelBillSkuField")?.classList.toggle("hidden", grouped);
       document.getElementById("channelBillOrderDateField")?.classList.toggle("hidden", !consign);
       document.getElementById("channelBillShippedDateField")?.classList.toggle("hidden", !(grouped || consign));
@@ -21010,9 +21061,9 @@
       if (note) {
         note.classList.toggle("hidden", !(grouped || consign));
         if (consign) {
-          note.textContent = "按「套用」才會列出商品。客戶訂單編號、出貨單編號、SKU、客戶訂單建立時間、實際出貨時間要同時符合；日期沒填則不限該日期。條件都空白按套用，會列出此通路全部可結商品。清除後表格回到空白。";
+          note.textContent = "進頁就列出此通路全部可結商品。套用後，客戶訂單編號、出貨單編號、SKU、客戶訂單建立時間、實際出貨時間要同時符合；日期沒填則不限該日期。清除篩選後回到全部。已勾選的商品留在表格最上方。";
         } else if (grouped) {
-          note.textContent = "選擇條件後按「套用」才會列出出貨單。客戶訂單編號、出貨單編號、實際出貨時間只填其中幾項時，沒填的不限制；都空白按套用，會列出此通路全部可結出貨單。清除後表格回到空白。";
+          note.textContent = "進頁就列出此通路全部可結出貨單，並展開品項。套用後，客戶訂單編號、出貨單編號、實際出貨時間只填其中幾項時，沒填的不限制。清除篩選後回到全部。已勾選的品項留在表格最上方。";
         }
       }
       document.querySelectorAll(".bill-filter-text").forEach((el) => el.classList.toggle("hidden", grouped));
@@ -21024,29 +21075,19 @@
     function renderChannelBillWizardNav() {
       const nav = document.getElementById("channelBillWizard");
       if (!nav) return;
-      nav.classList.toggle("hidden", !channelBillWizard.on);
-      if (!channelBillWizard.on) {
-        nav.innerHTML = "";
-        document.getElementById("channelBillSaveDraft")?.classList.add("hidden");
-        syncChannelBillFilterChrome();
-        return;
-      }
-      const labels = channelBillWizard.flow === "寄倉" ? ["選擇商品", "結帳單預覽"] : ["選擇訂單", "結帳單預覽"];
-      nav.innerHTML = labels.map((label, i) => {
-        const n = i + 1;
-        const state = n < channelBillWizard.step ? "is-done" : (n === channelBillWizard.step ? "is-active" : "");
-        const line = i < labels.length - 1 ? `<div class="po-wizard-line"></div>` : "";
-        return `<div class="po-wizard-step ${state}"><div class="po-wizard-node"><div class="po-wizard-dot">${n}</div><div class="po-wizard-label">${escapeHtml(label)}</div></div>${line}</div>`;
-      }).join("");
-      const atFirst = channelBillWizard.step <= 1;
-      document.getElementById("channelBillBackStep")?.classList.toggle("hidden", atFirst);
-      document.getElementById("channelBillSaveDraft")?.classList.remove("hidden");
-      document.getElementById("channelBillSavePage")?.classList.toggle("hidden", !atFirst);
-      document.getElementById("channelBillSubmit")?.classList.toggle("hidden", atFirst);
-      document.getElementById("channelBillFoot")?.classList.remove("hidden");
-      document.getElementById("channelSettleDetailActions")?.classList.toggle("hidden", !atFirst);
-      document.getElementById("channelBillDraftFilter")?.classList.toggle("hidden", !atFirst);
+      const editing = channelBillWizard.on && settleDetailMode === "edit";
+      nav.classList.add("hidden");
+      nav.innerHTML = "";
+      document.getElementById("channelBillBackStep")?.classList.toggle("hidden", !editing);
+      document.getElementById("channelBillSaveDraft")?.classList.toggle("hidden", !editing);
+      document.getElementById("channelBillSavePage")?.classList.toggle("hidden", !editing);
+      document.getElementById("channelBillSubmit")?.classList.toggle("hidden", !editing);
+      document.getElementById("channelBillFoot")?.classList.toggle("hidden", !editing);
+      document.getElementById("channelBillDraftFilter")?.classList.toggle("hidden", !editing);
+      if (editing) document.getElementById("channelSettleDetailActions")?.classList.remove("hidden");
       syncChannelBillFilterChrome();
+      syncChannelBillActionButtons();
+      renderChannelBillPreview();
     }
 
     function renderChannelBillSummary() {
@@ -21329,21 +21370,19 @@
       if (total) total.textContent = String(grouped ? channelBillGroupsOf(data).length : data.length);
       syncChannelBillCheckAll(data);
       syncChannelBillExportDeclUi();
-      if (!body) return;
-      if (!data.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="${channelBillColCount()}">${channelBillEmptyText()}</td></tr>`;
-        return;
+      if (body) {
+        if (!data.length) {
+          body.innerHTML = `<tr class="empty-row"><td colspan="${channelBillColCount()}">${channelBillEmptyText()}</td></tr>`;
+        } else if (grouped) {
+          body.innerHTML = channelBillGroupedRowsHtml(channelBillGroupsOf(data));
+          syncChannelBillParentChecks();
+        } else if (channelBillIsShipFlow() && settleDetailMode === "preview") {
+          body.innerHTML = data.map((row) => channelBillPreviewRowHtml(row)).join("");
+        } else {
+          body.innerHTML = data.map((row) => channelBillFlatRowHtml(row)).join("");
+        }
       }
-      if (grouped) {
-        body.innerHTML = channelBillGroupedRowsHtml(channelBillGroupsOf(data));
-        syncChannelBillParentChecks();
-        return;
-      }
-      if (channelBillIsShipFlow() && settleDetailMode === "preview") {
-        body.innerHTML = data.map((row) => channelBillPreviewRowHtml(row)).join("");
-        return;
-      }
-      body.innerHTML = data.map((row) => channelBillFlatRowHtml(row)).join("");
+      renderChannelBillPreview();
     }
 
     function openChannelBillCreateModal() {
@@ -21376,7 +21415,7 @@
     }
 
     function channelBillExportDeclEditing() {
-      return channelBillWizard.on && channelBillWizard.step <= 1 && settleDetailMode === "edit" && isOverseasChannel(channelBillWizard.channel);
+      return channelBillWizard.on && settleDetailMode === "edit" && isOverseasChannel(channelBillWizard.channel);
     }
 
     function channelBillPreviewExportFile() {
@@ -21500,6 +21539,92 @@
       select.innerHTML = options.join("");
     }
 
+    function cloneChannelBillPreviewRow(row) {
+      return {
+        id: row.id,
+        orderNo: row.orderNo,
+        shipNo: row.shipNo,
+        sku: row.sku,
+        name: row.name,
+        acceptQty: row.acceptQty,
+        settleQty: Number(row.settleQty) || 0,
+        remain: row.remain,
+        price: row.price,
+        gift: !!row.gift,
+        remark: row.remark || "",
+        channelName: row.channelName,
+        key: row.key,
+        checked: true,
+      };
+    }
+
+    function syncChannelBillActionButtons() {
+      const ready = channelBillWizard.on && settleDetailMode === "edit" && channelBillPreviewReady;
+      const draft = document.getElementById("channelBillSaveDraft");
+      const submit = document.getElementById("channelBillSubmit");
+      if (draft) draft.disabled = !ready;
+      if (submit) submit.disabled = !ready;
+    }
+
+    function renderChannelBillPreview() {
+      const section = document.getElementById("channelBillPreview");
+      const bar = document.getElementById("channelBillConfirmBar");
+      const show = channelBillWizard.on && settleDetailMode === "edit";
+      if (section) section.classList.toggle("hidden", !show);
+      if (bar) bar.classList.toggle("hidden", !show);
+      if (!show) return;
+      const body = document.getElementById("channelBillPreviewBody");
+      const total = document.getElementById("channelBillPreviewTotal");
+      const summary = document.getElementById("channelBillPreviewSummary");
+      const data = channelBillPreviewSnapshot;
+      if (total) total.textContent = String(data.length);
+      if (summary) {
+        const amount = data.reduce((sum, row) => sum + channelBillLineTaxed(row, row.settleQty), 0);
+        summary.innerHTML = data.length
+          ? `<div class="bill-total"><span class="bill-total-label">本次總結算金額</span><span class="bill-total-num">${escapeHtml(accMoney(amount))}</span></div>`
+          : "";
+      }
+      if (!body) return;
+      if (!data.length) {
+        body.innerHTML = `<tr class="empty-row"><td colspan="10">尚未選擇結算品項</td></tr>`;
+        return;
+      }
+      body.innerHTML = data.map((row) => channelBillPreviewRowHtml(row)).join("");
+    }
+
+    function invalidateChannelBillPreview() {
+      if (!channelBillWizard.on || settleDetailMode !== "edit") return;
+      channelBillPreviewReady = false;
+      syncChannelBillActionButtons();
+    }
+
+    function clearChannelBillPreview() {
+      channelBillPreviewReady = false;
+      channelBillPreviewSnapshot = [];
+      renderChannelBillPreview();
+      syncChannelBillActionButtons();
+    }
+
+    function confirmChannelBillPreview() {
+      const selected = settleRows.filter((row) => row.checked && (Number(row.settleQty) || 0) > 0);
+      if (!selected.length) {
+        clearChannelBillPreview();
+        return;
+      }
+      const bad = selected.find((row) => {
+        const qty = Number(row.settleQty);
+        return !Number.isInteger(qty) || qty <= 0 || qty > row.remain;
+      });
+      if (bad) {
+        alert(`${bad.orderNo} / ${bad.sku} 的本次結算數量須為大於 0、且不超過可結上限的整數`);
+        return;
+      }
+      channelBillPreviewSnapshot = selected.map(cloneChannelBillPreviewRow);
+      channelBillPreviewReady = true;
+      renderChannelBillPreview();
+      syncChannelBillActionButtons();
+    }
+
     function startChannelBillWizard(channelName, settleYear, settleMonth) {
       const flow = channelAcceptFlow(channelName);
       channelBillWizard = {
@@ -21518,6 +21643,8 @@
       settleDetailOrderNo = "";
       settleDetailShipNo = "";
       settleRows = buildChannelBillDraftRows(channelName, flow);
+      channelBillPreviewReady = false;
+      channelBillPreviewSnapshot = [];
       resetChannelBillDraftFilter();
       const monthly = isMonthlySettleChannel(channelName);
       document.getElementById("channelSettleDetailTitle").textContent = "建立結帳單";
@@ -21726,9 +21853,9 @@
         if (line.groupRemark) channelBillGroupRemarks[channelBillGroupKey(row)] = line.groupRemark;
       });
       channelBillApplied = true;
-      if (channelBillIsShipFlow()) {
-        channelBillExpanded = new Set(settleRows.filter((row) => row.checked).map((row) => channelBillGroupKey(row)));
-      }
+      expandAllChannelBillGroups();
+      channelBillPreviewSnapshot = settleRows.filter((row) => row.checked && (Number(row.settleQty) || 0) > 0).map(cloneChannelBillPreviewRow);
+      channelBillPreviewReady = channelBillPreviewSnapshot.length > 0;
       if (exportDeclReady(bill.exportDeclFile)) channelBillExportDecl = bill.exportDeclFile;
       const monthly = isMonthlySettleChannel(bill.channelName);
       document.getElementById("channelSettleDetailTitle").textContent = "編輯結帳單";
@@ -21739,33 +21866,23 @@
     }
 
     function saveChannelBillPage() {
-      const selected = settleSelectedRows();
-      if (!selected.length) {
-        alert("請先勾選並設定本次結算數量");
+      if (!channelBillPreviewReady) {
+        alert("請先按確定");
         return;
       }
-      const bad = selected.find((row) => {
-        const qty = Number(row.settleQty);
-        return !Number.isInteger(qty) || qty <= 0 || qty > row.remain;
-      });
-      if (bad) {
-        alert(`${bad.orderNo} / ${bad.sku} 的本次結算數量須為大於 0、且不超過可結上限的整數`);
-        return;
-      }
-      channelBillWizard.step = 2;
-      settleDetailMode = "preview";
-      renderChannelBillWizardNav();
-      renderChannelBillDraft();
+      if (!channelBillCheckedSelection()) return;
+      document.getElementById("channelBillPreview")?.scrollIntoView({ block: "nearest" });
     }
 
     function backChannelBillStep() {
-      channelBillWizard.step = 1;
-      settleDetailMode = "edit";
-      renderChannelBillWizardNav();
-      renderChannelBillDraft();
+      clearChannelBillPreview();
     }
 
     function saveChannelBillDraft() {
+      if (!channelBillPreviewReady) {
+        alert("請先按確定");
+        return;
+      }
       const selected = channelBillCheckedSelection();
       if (!selected) return;
       const record = saveChannelBillRecord(selected, true);
@@ -21776,6 +21893,10 @@
     }
 
     function submitChannelBill() {
+      if (!channelBillPreviewReady) {
+        alert("請先按確定");
+        return;
+      }
       const selected = channelBillCheckedSelection();
       if (!selected) return;
       const record = saveChannelBillRecord(selected, false);
@@ -21849,9 +21970,10 @@
       if (channelBillIsShipFlow()) {
         channelBillPickOrders = [];
         channelBillPickShips = [];
-        channelBillExpanded = new Set(picks.map((pick) => channelBillGroupKey(pick.row)));
         refreshChannelBillMultiLabels();
       }
+      expandAllChannelBillGroups();
+      invalidateChannelBillPreview();
       renderChannelBillDraft();
       return true;
     }
@@ -22078,6 +22200,7 @@
     document.getElementById("channelBillSavePage").addEventListener("click", saveChannelBillPage);
     document.getElementById("channelBillBackStep").addEventListener("click", backChannelBillStep);
     document.getElementById("channelBillSubmit").addEventListener("click", submitChannelBill);
+    document.getElementById("channelBillConfirmPreview").addEventListener("click", confirmChannelBillPreview);
     document.getElementById("channelBillDraftApply").addEventListener("click", () => {
       channelBillApplied = true;
       renderChannelBillDraft();
@@ -22132,6 +22255,7 @@
           row.checked = e.target.checked;
           row.settleQty = e.target.checked ? row.remain : 0;
         });
+        invalidateChannelBillPreview();
         renderChannelBillDraft();
         return;
       }
@@ -22144,6 +22268,7 @@
         row.checked = on;
         row.settleQty = on ? row.remain : 0;
       });
+      invalidateChannelBillPreview();
       renderChannelBillDraft();
     });
     document.getElementById("channelSettleDetailBody").addEventListener("change", (e) => {
@@ -22153,6 +22278,7 @@
       if (!row || row.remain <= 0) return;
       row.checked = e.target.checked;
       row.settleQty = row.checked ? row.remain : 0;
+      invalidateChannelBillPreview();
       renderChannelBillDraft();
     });
     document.getElementById("channelSettleDetailBody").addEventListener("input", (e) => {
@@ -22162,6 +22288,7 @@
         const next = String(e.target.value || "").slice(0, SETTLE_REMARK_MAX);
         if (next !== e.target.value) e.target.value = next;
         channelBillGroupRemarks[key] = next;
+        invalidateChannelBillPreview();
         return;
       }
       if (e.target.matches("input[data-settle-remark]")) {
@@ -22170,6 +22297,7 @@
         const next = String(e.target.value || "").slice(0, SETTLE_REMARK_MAX);
         if (next !== e.target.value) e.target.value = next;
         row.remark = next;
+        invalidateChannelBillPreview();
         return;
       }
       if (!e.target.matches("input[data-settle-qty]")) return;
@@ -22183,6 +22311,7 @@
         e.target.value = String(qty);
       }
       row.settleQty = qty;
+      invalidateChannelBillPreview();
       paintChannelBillLine(row);
     });
 
