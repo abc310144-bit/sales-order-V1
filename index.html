@@ -2457,7 +2457,12 @@
       color: var(--text-3);
     }
     .acc-sub.is-settled { color: #531dab; }
-    #channelBillDraftFilter { max-width: 1080px; overflow: visible; }
+    #channelBillCreateFrame.is-framed {
+      border: 1px solid var(--border);
+      padding: 16px 16px 12px;
+      margin-bottom: 16px;
+    }
+    #channelBillDraftFilter { max-width: 1080px; overflow: visible; border: none; padding: 0; }
     .bill-filter-note {
       margin: 0 0 12px;
       color: var(--text-2);
@@ -3238,6 +3243,7 @@
           </div>
           <nav class="po-wizard" id="channelBillWizard" aria-label="建立步驟"></nav>
           <div class="settle-summary" id="channelSettleDetailSummary"></div>
+          <div id="channelBillCreateFrame">
           <section class="filter" id="channelBillDraftFilter">
             <p class="bill-filter-note hidden" id="channelBillFilterNote">進頁就列出此通路全部可結出貨單。套用後縮小範圍；清除篩選回到全部。已勾選的品項留在表格最上方。</p>
             <div class="filter-grid">
@@ -3314,6 +3320,7 @@
           </div>
           <div class="bill-confirm-bar hidden" id="channelBillConfirmBar">
             <button type="button" class="btn btn-primary" id="channelBillConfirmPreview">確定</button>
+          </div>
           </div>
           <section class="bill-preview hidden" id="channelBillPreview">
             <h3 class="ship-settings-col-title">結帳單預覽</h3>
@@ -19761,6 +19768,7 @@
         `客戶訂單編號：${order.orderNo}${overseas ? `｜出貨單編號：${ship.orderId}` : ""}｜通路：${order.channelName || "—"}｜狀態：${status}`;
       document.getElementById("channelSettleDetailActions").classList.toggle("hidden", readonly);
       document.getElementById("channelSettleImportBtn")?.classList.remove("hidden");
+      document.getElementById("channelBillCreateFrame")?.classList.remove("is-framed");
       renderChannelSettleDetailTable();
       showPage("channel-settle-detail");
     }
@@ -21303,6 +21311,7 @@
       document.getElementById("channelBillSubmit")?.classList.toggle("hidden", !editing);
       document.getElementById("channelBillFoot")?.classList.toggle("hidden", !editing);
       document.getElementById("channelBillDraftFilter")?.classList.toggle("hidden", !editing);
+      document.getElementById("channelBillCreateFrame")?.classList.toggle("is-framed", editing);
       if (editing) document.getElementById("channelSettleDetailActions")?.classList.remove("hidden");
       syncChannelBillFilterChrome();
       syncChannelBillActionButtons();
@@ -21927,6 +21936,7 @@
       document.getElementById("channelBillWizard")?.classList.add("hidden");
       document.getElementById("channelSettleDetailActions")?.classList.add("hidden");
       document.getElementById("channelBillDraftFilter")?.classList.add("hidden");
+      document.getElementById("channelBillCreateFrame")?.classList.remove("is-framed");
       renderChannelBillDraft();
       showPage("channel-settle-detail");
     }
