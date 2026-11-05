@@ -1977,10 +1977,16 @@
       pointer-events: none;
     }
     .is-readonly #editGoodsBody .ops a:hover { text-decoration: none; }
-    #page-order-edit.is-readonly.can-edit-gifts #editGoodsBody tr[data-gift="1"] .ops a {
+    #page-order-edit.is-readonly.can-edit-gifts #editGoodsBody tr[data-gift="1"] .ops a,
+    #page-order-edit.is-readonly.is-gift-revise #editGoodsBody .ops a[data-po-add-gift] {
       color: var(--primary);
       cursor: pointer;
       pointer-events: auto;
+    }
+    #page-order-edit.is-gift-revise #editGoodsBody tr[data-gift="1"] input,
+    #page-order-edit.is-gift-revise #editGoodsBody tr[data-gift="1"] select {
+      background: #fff;
+      cursor: auto;
     }
     .gift-tag {
       display: inline-block;
@@ -4386,6 +4392,7 @@
               <div class="po-goods-section" id="editGoodsOverviewSection">
                 <div class="goods-title-row" id="editGoodsToolbar">
                   <h3 class="goods-title">訂單商品總攬</h3>
+                  <button type="button" class="btn btn-primary hidden" id="poGiftReviseAdd">新增贈品</button>
                   <button type="button" class="btn btn-primary" id="poPickImportBtn">匯入商品</button>
                 </div>
                 <div class="po-pick-filter" id="editGoodsFilterBar">
@@ -5840,7 +5847,9 @@
     }
 
     function canEditPo(order) {
-      return order.status === "草稿";
+      if (!order) return false;
+      if (order.status === "草稿") return true;
+      return canOverseasGiftRevise(order);
     }
 
     function canSubmitPo(order) {
@@ -6059,6 +6068,7 @@
           String(item.batch || "").trim(),
           String(Number(item.qty) || 0),
           clipPoRemark(item.remark),
+          item.priceBasis === "noLabel" ? "noLabel" : "label",
         ].join("\u001f"))
         .sort()
         .join("\n");
@@ -6107,6 +6117,40 @@
       order.giftExportedAt = Date.now();
     }
 
+    function canOverseasGiftRevise(order) {
+      if (!order || !isOverseasPo(order)) return false;
+      if (orderHasCreatedShips(order.orderNo)) return false;
+      return ["待審核", "待回壓文件", "未開立出貨單"].includes(order.status);
+    }
+
+    function isGiftReviseEdit() {
+      return orderFormMode === "edit" && canOverseasGiftRevise(getWorkspaceOrder());
+    }
+
+    function giftReviseComparable(items) {
+      return (items || [])
+        .filter((item) => {
+          if (!item || !item.gift) return false;
+          return !!(normalizeSku(item.sku)
+            || (Number(item.qty) || 0) > 0
+            || String(item.batch || "").trim()
+            || clipPoRemark(item.remark));
+        })
+        .map((item) => [
+          normalizeSku(item.sku),
+          String(item.batch || "").trim(),
+          String(Number(item.qty) || 0),
+          clipPoRemark(item.remark),
+          item.priceBasis === "noLabel" ? "noLabel" : "label",
+        ].join("\u001f"))
+        .sort()
+        .join("\n");
+    }
+
+    function giftReviseDirty() {
+      return giftReviseComparable(poLineItems) !== poGiftReviseBase;
+    }
+
     function overseasGiftEditable(order) {
       if (!order || !isOverseasPo(order)) return false;
       if (currentRole !== "建檔人" && currentRole !== "主管") return false;
@@ -6114,9 +6158,9 @@
       if (page && page.classList.contains("is-wizard-preview")) return false;
       const orderNo = order.orderNo || currentEditOrderNo;
       if (orderHasCreatedShips(orderNo)) return false;
-      if (["已作廢", "已開立出貨單"].includes(order.status)) return false;
-      if (poGoodsEditable()) return true;
-      return ["草稿", "待審核", "待回壓文件", "未開立出貨單"].includes(order.status);
+      if (["已作廢", "已開立出貨單", "部分出貨"].includes(order.status)) return false;
+      if (isGiftReviseEdit()) return true;
+      return poGoodsEditable();
     }
 
     function isSupervisorClosed(order) {
@@ -13165,6 +13209,7 @@
     let shipItemsLoadedPo = "";
     let nextShipItemId = 73672;
     let poLineItems = [];
+    let poGiftReviseBase = "";
     let poFocusLineId = "";
     let nextPoItemId = 73672;
     let poShipGoods = [];
@@ -13635,6 +13680,7 @@
     }
 
     function ensureInlinePoGoodsRow() {
+      if (isGiftReviseEdit()) return;
       const order = getWorkspaceOrder();
       if (!poGoodsUsesInlineSku(order) || !poSkuCellEditable()) return;
       if (poLineItems.length) return;
@@ -13644,6 +13690,18 @@
       line.name = "";
       line.batch = "";
       poLineItems.push(line);
+    }
+
+    function addGiftReviseRow() {
+      if (!isGiftReviseEdit()) return;
+      const line = toPoLineItem({ sku: "", name: "", qty: 0, batch: "", allowEmptyBatch: true, gift: true, priceBasis: "label" });
+      line.lineUid = line.id;
+      line.gift = true;
+      line.giftDraft = true;
+      line.priceBasis = "label";
+      poLineItems.push(line);
+      poFocusLineId = line.id;
+      renderPoGoodsTable();
     }
 
     function addInlinePoGoodsRow(afterId) {
@@ -13694,6 +13752,7 @@
       });
       next.lineUid = keepUid;
       next.gift = keepGift;
+      next.giftDraft = !!item.giftDraft;
       if (overseas) {
         const live = channelProductPriceOf(channelName, catalog.sku);
         next.priceLabel = live.priceLabel || "";
@@ -13796,6 +13855,7 @@
       const filterBar = document.getElementById("editGoodsFilterBar");
       const confirmBar = document.getElementById("editGoodsConfirmBar");
       const importBtn = document.getElementById("poPickImportBtn");
+      const addGiftBtn = document.getElementById("poGiftReviseAdd");
       const opsHead = document.getElementById("editGoodsOpsHead");
       const shippedHead = document.getElementById("editGoodsShippedHead");
       const order = getWorkspaceOrder();
@@ -13810,6 +13870,7 @@
       if (filterBar) filterBar.classList.toggle("hidden", online || inline || (!editable && !giftEdit));
       if (confirmBar) confirmBar.classList.toggle("hidden", !editable || online);
       if (importBtn) importBtn.classList.toggle("hidden", !editable || online);
+      if (addGiftBtn) addGiftBtn.classList.toggle("hidden", !isGiftReviseEdit());
       if (opsHead) {
         const showOps = !online && !preview && (inline ? (editable || giftEdit) : ((editable && poGoodsRowDeletable()) || giftEdit));
         opsHead.classList.toggle("hidden", !showOps);
@@ -13970,6 +14031,7 @@
       } else {
         poLineItems = [];
       }
+      poGiftReviseBase = giftReviseComparable((order && order.items) || []);
       syncPoGoodsToolbar();
       const marginEl = document.getElementById("poMarginOverview");
       if (marginEl) marginEl.classList.toggle("hidden", isFourStepWizard(order));
@@ -14214,13 +14276,18 @@
         : "";
       const inline = poGoodsUsesInlineSku(order);
       const rowIndex = opts && opts.rowIndex != null ? opts.rowIndex : 0;
-      const skuEditable = inline && poSkuCellEditable();
+      const giftRevise = isGiftReviseEdit();
+      const skuEditable = (inline && poSkuCellEditable()) || (giftRevise && item && item.gift && item.giftDraft);
       const skuCell = skuEditable
         ? `<td class="recv-sku-cell"><input type="text" data-field="sku" value="${escapeHtml(d.sku)}" autocomplete="off" placeholder="輸入 SKU" /><div class="recv-sku-hits hidden" data-po-sku-hits></div></td>`
         : `<td>${escapeHtml(d.sku)}</td>`;
       const preview = document.getElementById("page-order-edit").classList.contains("is-wizard-preview");
       let opsCell = "";
-      if (!preview && inline && (goodsEdit || giftEdit)) {
+      if (!preview && giftRevise) {
+        const add = `<a href="#" data-po-add-gift="1">新增贈品</a>`;
+        const del = item && item.gift ? `<a href="#" data-del="1">刪除</a>` : "";
+        opsCell = `<td class="ops">${add}${del}</td>`;
+      } else if (!preview && inline && (goodsEdit || giftEdit)) {
         const add = goodsEdit ? `<a href="#" data-po-add-row="1">新增品項</a>` : "";
         const canDel = rowIndex > 0 && (item && item.gift ? giftEdit : (goodsEdit && poGoodsRowDeletable()));
         const del = canDel ? `<a href="#" data-del="1">刪除</a>` : "";
@@ -15317,6 +15384,10 @@
 
     function syncOverviewGoods(order) {
       if (!order) return;
+      if (isGiftReviseEdit()) {
+        syncEditFooter(order, orderFormMode);
+        return;
+      }
       order.items = collectEditGoods();
       if (orderFormMode === "view" && order.orderNo && currentEditOrderNo !== "__new__") persistDemoData();
       if (orderFormMode === "view") syncEditFooter(order, orderFormMode);
@@ -15334,7 +15405,7 @@
       const field = e.target.dataset.field;
       if (!field) return;
       if (field === "sku") {
-        if (!poSkuCellEditable()) return;
+        if (!poSkuCellEditable() && !(isGiftReviseEdit() && item.giftDraft)) return;
         const order = getWorkspaceOrder();
         const typed = String(e.target.value || "").trim();
         showPoSkuHits(tr, typed);
@@ -15356,6 +15427,7 @@
           delete item.quoteFrozen;
           refreshPoSkuRow(tr, item);
         }
+        if (isGiftReviseEdit()) syncEditFooter(order, orderFormMode);
         return;
       }
       if (field === "lineKind") {
@@ -15410,6 +15482,7 @@
             refreshOverviewRowDerived(tr, item);
             updatePoQtyTotal();
             poEstMarginConfirmed = false;
+            if (isGiftReviseEdit()) syncEditFooter(getWorkspaceOrder(), orderFormMode);
             return;
           }
           const n = Math.floor(Number(raw));
@@ -15418,6 +15491,7 @@
           refreshOverviewRowDerived(tr, item);
           updatePoQtyTotal();
           poEstMarginConfirmed = false;
+          if (isGiftReviseEdit()) syncEditFooter(getWorkspaceOrder(), orderFormMode);
           return;
         }
         /* change：僅允許正整數 */
@@ -15620,7 +15694,7 @@
       if (!needsStampPo(order)) syncPoStatusFromShips(order);
       persistDemoData();
       renderSalesTable(getSalesFiltered());
-      if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "edit");
+      if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "view");
     }
 
     function rejectPo(order) {
@@ -15689,13 +15763,26 @@
       const view = mode === "view";
       const draftLike = canSubmitPo(order);
       const pending = canApprovePo(order);
+      const giftRevise = !view && canOverseasGiftRevise(order);
       syncPoShipTab(order);
-      setBtnEnabled("editSaveDraft", !view && draftLike);
-      setBtnEnabled("editSubmit", !view && draftLike && currentRole === "建檔人");
-      setBtnEnabled("editExportPdf", canExportPoPdf(order));
+      setBtnEnabled("editSaveDraft", !view && draftLike && !giftRevise);
+      if (giftRevise) {
+        const draftBtn = document.getElementById("editSaveDraft");
+        if (draftBtn) draftBtn.classList.add("hidden");
+      }
+      const submitBtn = document.getElementById("editSubmit");
+      if (submitBtn) {
+        submitBtn.textContent = giftRevise && order && order.status === "待審核" ? "儲存" : "送出申請";
+      }
+      setBtnEnabled("editSubmit", giftRevise ? giftReviseDirty() : (!view && draftLike && currentRole === "建檔人"));
+      setBtnEnabled("editExportPdf", !giftRevise && canExportPoPdf(order));
       const exportBtn = document.getElementById("editExportPdf");
       if (exportBtn) exportBtn.textContent = isOverseasPo(order) ? "匯出" : "匯出 PDF";
       syncStampButton(order);
+      if (giftRevise) {
+        const stampBtn = document.getElementById("editStampUpload");
+        if (stampBtn) stampBtn.disabled = true;
+      }
       syncCopyButton(order);
       const addShipBtn = document.getElementById("editAddShip");
       if (addShipBtn) {
@@ -15703,8 +15790,8 @@
         addShipBtn.classList.toggle("hidden", !showAddShip);
         addShipBtn.disabled = !showAddShip || !canCreateShipFromPo(order);
       }
-      setBtnEnabled("editApprove", pending && currentRole === "主管");
-      setBtnEnabled("editReject", pending && currentRole === "主管");
+      setBtnEnabled("editApprove", !giftRevise && pending && currentRole === "主管");
+      setBtnEnabled("editReject", !giftRevise && pending && currentRole === "主管");
       const confirmBtn = document.getElementById("editConfirmComplete");
       if (confirmBtn) {
         const showConfirm = !!order && order.status === "部分出貨" && mode === "view";
@@ -15768,7 +15855,10 @@
       renderRelatedShips(order);
       syncPoWizardUi(order, orderFormMode, opts || {});
       if (!poWizardOn) setPoTab("basic");
-      setOrderFormReadonly(orderFormMode === "view");
+      const giftRevise = orderFormMode === "edit" && canOverseasGiftRevise(order);
+      document.getElementById("page-order-edit").classList.toggle("is-gift-revise", giftRevise);
+      setOrderFormReadonly(orderFormMode === "view" || giftRevise);
+      if (giftRevise) setPoTab("goods");
       const viewExchange = isViewExchangeMode(order);
       document.getElementById("page-order-edit").classList.toggle("can-exchange", viewExchange);
       if (orderFormMode === "view") {
@@ -15825,6 +15915,56 @@
       }
     }
 
+    function validateGiftReviseLines() {
+      const order = getWorkspaceOrder();
+      const channelName = (order && order.channelName) || "";
+      const bound = channelBoundSkuMap(channelName);
+      const allB = typeof allShipBatches === "function" ? allShipBatches() : [];
+      for (let i = 0; i < poLineItems.length; i++) {
+        const item = poLineItems[i];
+        if (!item || !item.gift) continue;
+        const sku = normalizeSku(item.sku);
+        const qty = Number(item.qty) || 0;
+        const batch = String(item.batch || "").trim();
+        const remark = clipPoRemark(item.remark);
+        if (!sku && qty <= 0 && !batch && !remark) continue;
+        if (!sku || !bound[sku.toLowerCase()]) {
+          alert(sku ? `SKU「${sku}」不在此通路供應商品內` : "請輸入贈品 SKU");
+          setPoTab("goods");
+          return false;
+        }
+        if (!Number.isInteger(qty) || qty <= 0) {
+          alert("預計出貨數量僅可填寫大於 0 的正整數");
+          setPoTab("goods");
+          return false;
+        }
+        if (!batch || !allB.includes(batch)) {
+          alert(`SKU「${sku}」：請選擇效期_批號`);
+          setPoTab("goods");
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function submitGiftRevise() {
+      const order = getWorkspaceOrder();
+      if (!order || !isGiftReviseEdit() || !giftReviseDirty()) return;
+      if (!validateGiftReviseLines()) return;
+      const stayPending = order.status === "待審核";
+      order.items = collectEditGoods().map((row) => {
+        const copy = { ...row };
+        delete copy.giftDraft;
+        return copy;
+      });
+      if (!stayPending) order.status = "待審核";
+      persistDemoData();
+      renderSalesTable(getSalesFiltered());
+      history.replaceState({}, "", poWorkspaceUrl({ po: order.orderNo, mode: "view" }));
+      fillOrderEdit(order, "view");
+      alert(stayPending ? "已儲存" : "已送出申請");
+    }
+
     document.getElementById("editSaveDraft").addEventListener("click", () => {
       if (orderFormMode === "view") return;
       const order = getWorkspaceOrder();
@@ -15837,6 +15977,10 @@
     });
     document.getElementById("editSubmit").addEventListener("click", () => {
       if (orderFormMode === "view") return;
+      if (isGiftReviseEdit()) {
+        submitGiftRevise();
+        return;
+      }
       if (currentRole !== "建檔人") return;
       const order = getWorkspaceOrder();
       if (!order || !canSubmitPo(order)) return;
@@ -16242,6 +16386,9 @@
     document.getElementById("poPickFilterSearch").addEventListener("click", () => {
       applyPoPickFilter("goods");
     });
+    document.getElementById("poGiftReviseAdd").addEventListener("click", () => {
+      addGiftReviseRow();
+    });
     document.getElementById("poPickFilterGift").addEventListener("click", () => {
       applyPoPickFilter("gift");
     });
@@ -16276,6 +16423,12 @@
         }
         return;
       }
+      const addGift = e.target.closest("[data-po-add-gift]");
+      if (addGift) {
+        e.preventDefault();
+        addGiftReviseRow();
+        return;
+      }
       const addRow = e.target.closest("[data-po-add-row]");
       if (addRow) {
         e.preventDefault();
@@ -16290,7 +16443,7 @@
       const item = poLineItems.find((row) => row.id === tr.dataset.id);
       if (!item) return;
       const order = getWorkspaceOrder();
-      if (poGoodsUsesInlineSku(order)) {
+      if (poGoodsUsesInlineSku(order) && !(isGiftReviseEdit() && item.gift)) {
         const idx = poLineItems.findIndex((row) => row.id === item.id);
         if (idx <= 0) return;
       }
