@@ -11307,6 +11307,11 @@
       return Number.isInteger(rounded) ? rounded : rounded;
     }
 
+    function formatQtyTotal(n) {
+      const rounded = Math.round((Number(n) || 0) * 1000) / 1000;
+      return String(rounded);
+    }
+
     function pcsPerCartonOf(item, extraLine) {
       const n = Number((item && item.pcsPerCarton) || (extraLine && extraLine.pcsPerCarton) || pcsFromItemRemark(item)) || 0;
       if (n) return n;
@@ -11536,6 +11541,8 @@
       const lines = pdfLinesFromOrder(order);
       const currency = channelCurrency(order.channelName || bag.buyerName, dealer ? "TWD" : "USD");
       const total = lines.reduce((sum, row) => sum + (Number(row.total) || 0), 0);
+      const totalPcs = lines.reduce((sum, row) => sum + (Number(row.orderPcs) || 0), 0);
+      const totalCarton = Math.round(lines.reduce((sum, row) => sum + (Number(row.orderCarton) || 0), 0) * 1000) / 1000;
       const poNo = order.poDocNo || order.orderNo || "";
       const dateText = salesDateOnly(order.createdAt || nowStamp());
       const buyerName = bag.buyerName || order.channelName || "";
@@ -11570,6 +11577,8 @@
         quote: "商品報價(TWD)",
         amount: "合計",
         remark: "備註",
+        totalCarton: "總訂購箱數",
+        totalPcs: "總訂購 PCS",
         total: "合計",
         empty: "尚無商品明細",
         stampHint: "用印",
@@ -11604,6 +11613,8 @@
         quote: "Product Quote (TWD)",
         amount: "Total",
         remark: "Remark",
+        totalCarton: "Total Order Carton",
+        totalPcs: "Total Order Pcs",
         total: "Total",
         empty: "No line items",
         stampHint: "Stamp",
@@ -11682,7 +11693,9 @@
     td.num, th.num { text-align: right; white-space: nowrap; }
     td.remark { width: 12%; word-break: break-word; }
     td.empty { text-align: center; color: #888; }
-    .total { margin-top: 8px; text-align: right; font-size: 14px; font-weight: 700; }
+    .doc-totals { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-top: 8px; }
+    .qty-totals { font-size: 13px; line-height: 1.6; font-weight: 700; }
+    .total { text-align: right; font-size: 14px; font-weight: 700; }
     .stamps {
       display: flex;
       justify-content: flex-end;
@@ -11760,7 +11773,13 @@
       </thead>
       <tbody>${rowsHtml}</tbody>
     </table>
-    <div class="total">${escapeHtml(t.total)}${dealer ? "：" : "： "}${escapeHtml(pdfMoney(total, 2))}</div>
+    <div class="doc-totals">
+      <div class="qty-totals">
+        <div>${escapeHtml(t.totalCarton)}：${escapeHtml(formatQtyTotal(totalCarton))}</div>
+        <div>${escapeHtml(t.totalPcs)}：${escapeHtml(formatQtyTotal(totalPcs))}</div>
+      </div>
+      <div class="total">${escapeHtml(t.total)}${dealer ? "：" : "： "}${escapeHtml(pdfMoney(total, 2))}</div>
+    </div>
     <div class="stamps">
       <div class="stamp">
         <h3>${escapeHtml(t.customer)}</h3>
@@ -11943,22 +11962,31 @@
       };
     }
 
-    function buildOverseasInvoicePrintHtml(order, kind, id) {
+    function overseasInvoiceModel(order, kind) {
       const parties = overseasExportParties(order);
       const lines = kind === "customs" ? overseasShippableExportLines(order) : overseasExportLines(order);
-      const docTitle = kind === "customs" ? "報關 Invoice" : "廠商 Invoice";
       const priced = lines.map((row) => {
         const giftFree = kind !== "customs" && row.gift;
         return {
           ...row,
           showPrice: giftFree ? 0 : row.unitPrice,
           showAmount: giftFree ? 0 : row.amount,
+          noText: row.gift ? "FOC" : String(row.no),
         };
       });
       const total = priced.reduce((sum, row) => sum + (Number(row.showAmount) || 0), 0);
+      return { parties, priced, total };
+    }
+
+    function buildOverseasInvoicePrintHtml(order, kind, id) {
+      const model = overseasInvoiceModel(order, kind);
+      const parties = model.parties;
+      const priced = model.priced;
+      const total = model.total;
+      const docTitle = kind === "customs" ? "報關 Invoice" : "廠商 Invoice";
       const rows = priced.length
         ? priced.map((row) => `<tr>
-            <td class="num">${row.gift ? "FOC" : row.no}</td>
+            <td class="num">${escapeHtml(row.noText)}</td>
             <td>${escapeHtml(row.sku)}</td>
             <td>${escapeHtml(row.nameEn)}</td>
             <td>${escapeHtml(row.bestBefore || "")}</td>
@@ -12263,7 +12291,7 @@
     <border><left style="thin"><color rgb="FF000000"/></left><right style="thin"><color rgb="FF000000"/></right><top style="thin"><color rgb="FF000000"/></top><bottom style="thin"><color rgb="FF000000"/></bottom><diagonal/></border>
   </borders>
   <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-  <cellXfs count="7">
+  <cellXfs count="8">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
     <xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
     <xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
@@ -12271,6 +12299,7 @@
     <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
     <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
     <xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
   </cellXfs>
   <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
@@ -12331,7 +12360,117 @@
       });
     }
 
-    function packingListWorkbookBlob(order) {
+    function sheetXmlFromCells(cellMap, merges, endRef, colsXml) {
+      const byRow = new Map();
+      cellMap.forEach((cell) => {
+        if (!byRow.has(cell.row)) byRow.set(cell.row, []);
+        byRow.get(cell.row).push(cell);
+      });
+      const rowXml = [...byRow.keys()].sort((a, b) => a - b).map((row) => {
+        const height = row === 1 ? 28 : (row === 6 ? 32 : 18);
+        const xml = byRow.get(row)
+          .sort((a, b) => a.col.charCodeAt(0) - b.col.charCodeAt(0))
+          .map((cell) => cell.xml)
+          .join("");
+        return `<row r="${row}" ht="${height}" customHeight="1">${xml}</row>`;
+      }).join("");
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <dimension ref="A1:${endRef}"/>
+  <sheetViews><sheetView workbookViewId="0"/></sheetViews>
+  <cols>${colsXml}</cols>
+  <sheetData>${rowXml}</sheetData>
+  <mergeCells count="${merges.length}">${merges.map((ref) => `<mergeCell ref="${ref}"/>`).join("")}</mergeCells>
+</worksheet>`;
+    }
+
+    function buildInvoiceSheetXml(order, kind, id) {
+      const model = overseasInvoiceModel(order, kind);
+      const parties = model.parties;
+      const priced = model.priced;
+      const S = { title: 1, head: 3, center: 4, text: 5, info: 7 };
+      const cellMap = new Map();
+      const put = (col, row, style, value) => {
+        cellMap.set(col + row, { row, col, xml: packingCellXml(packingRef(col, row), style, value) });
+      };
+      const fill = (row, style) => {
+        "ABCDEFGH".split("").forEach((col) => {
+          if (!cellMap.has(col + row)) put(col, row, style, "");
+        });
+      };
+      put("A", 1, S.title, "Invoice");
+      put("A", 3, S.info, "Date: " + (id.date || ""));
+      put("D", 3, S.info, "Quotation to Date: " + (id.quotation || ""));
+      put("G", 3, S.info, "Invoice No: " + (id.no || ""));
+      put("A", 5, S.info, parties.sellerName);
+      put("E", 5, S.info, parties.buyerName);
+      put("A", 6, S.info, "Address : " + (parties.sellerAddress || ""));
+      put("E", 6, S.info, "Address : " + (parties.buyerAddress || ""));
+      put("A", 7, S.info, "Tel : " + (parties.sellerTel || ""));
+      put("E", 7, S.info, "Tel : " + (parties.buyerTel || ""));
+      put("A", 8, S.info, "ATTN: " + (parties.sellerAttn || ""));
+      put("E", 8, S.info, "ATTN: " + (parties.buyerAttn || ""));
+      put("A", 10, S.info, "Terms of Delivery: " + (parties.delivery || "—"));
+      put("A", 11, S.info, "Terms of Payment: " + parties.payment);
+      const heads = ["No.", "Barcode", "Description", "Best Before Date", "Unit Price (" + parties.currency + ")", "Pcs / Carton", "Order Quantity", "Amount"];
+      "ABCDEFGH".split("").forEach((col, index) => put(col, 13, S.head, heads[index]));
+      const first = 14;
+      if (!priced.length) {
+        fill(first, S.text);
+        put("A", first, S.text, "No line items");
+      } else {
+        priced.forEach((row, index) => {
+          const r = first + index;
+          fill(r, S.center);
+          put("A", r, S.center, row.noText);
+          put("B", r, S.center, row.sku);
+          put("C", r, S.text, row.nameEn);
+          put("D", r, S.center, row.bestBefore || "");
+          put("E", r, S.center, pdfMoney(row.showPrice, 2));
+          put("F", r, S.center, row.pcs === "" ? "" : row.pcs);
+          put("G", r, S.center, row.qty);
+          put("H", r, S.center, pdfMoney(row.showAmount, 2));
+        });
+      }
+      const last = priced.length ? first + priced.length - 1 : first;
+      const foot = last + 2;
+      const footLines = [
+        "Payment Term : " + parties.payment,
+        "Trade Terms : " + (parties.delivery || "—"),
+        "Amount : " + parties.currency + pdfMoney(model.total, 2),
+        "",
+        "Payment Detail",
+        "Account No.: " + OVERSEAS_BANK.accountNo,
+        "Account Name: " + OVERSEAS_BANK.accountName,
+        "Bank Name: " + OVERSEAS_BANK.bankName,
+        "Swift Code: " + OVERSEAS_BANK.swift,
+      ];
+      footLines.forEach((text, index) => {
+        if (text) put("A", foot + index, S.info, text);
+      });
+      const endRow = foot + footLines.length - 1;
+      const merges = [
+        "A1:H1", "A3:C3", "D3:F3", "G3:H3",
+        "A5:D5", "E5:H5", "A6:D6", "E6:H6", "A7:D7", "E7:H7", "A8:D8", "E8:H8",
+        "A10:H10", "A11:H11",
+      ];
+      if (!priced.length) merges.push("A" + first + ":H" + first);
+      footLines.forEach((text, index) => {
+        if (text) merges.push("A" + (foot + index) + ":H" + (foot + index));
+      });
+      const cols = `
+    <col min="1" max="1" width="16" customWidth="1"/>
+    <col min="2" max="2" width="16" customWidth="1"/>
+    <col min="3" max="3" width="36" customWidth="1"/>
+    <col min="4" max="4" width="18" customWidth="1"/>
+    <col min="5" max="5" width="18" customWidth="1"/>
+    <col min="6" max="6" width="14" customWidth="1"/>
+    <col min="7" max="7" width="16" customWidth="1"/>
+    <col min="8" max="8" width="14" customWidth="1"/>`;
+      return sheetXmlFromCells(cellMap, merges, "H" + endRow, cols);
+    }
+
+    function xlsxWorkbookBlob(sheetName, sheetXml) {
       const encoder = new TextEncoder();
       const xml = (text) => encoder.encode(text);
       const files = [
@@ -12349,7 +12488,7 @@
 </Relationships>`) },
         { name: "xl/workbook.xml", data: xml(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets><sheet name="Packing List" sheetId="1" r:id="rId1"/></sheets>
+  <sheets><sheet name="${packingXml(sheetName)}" sheetId="1" r:id="rId1"/></sheets>
   <calcPr calcMode="auto" fullCalcOnLoad="1"/>
 </workbook>`) },
         { name: "xl/_rels/workbook.xml.rels", data: xml(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -12358,20 +12497,36 @@
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>`) },
         { name: "xl/styles.xml", data: xml(packingStylesXml()) },
-        { name: "xl/worksheets/sheet1.xml", data: xml(buildPackingSheetXml(order)) },
+        { name: "xl/worksheets/sheet1.xml", data: xml(sheetXml) },
       ];
       return zipStored(files);
     }
 
-    async function downloadPackingList(order) {
-      const blob = packingListWorkbookBlob(order);
+    function packingListWorkbookBlob(order) {
+      return xlsxWorkbookBlob("Packing List", buildPackingSheetXml(order));
+    }
+
+    function downloadBlob(blob, filename) {
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = "Packing List " + (order.orderNo || "order") + ".xlsx";
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       link.remove();
       setTimeout(() => URL.revokeObjectURL(link.href), 30000);
+    }
+
+    async function downloadPackingList(order) {
+      downloadBlob(packingListWorkbookBlob(order), "Packing List " + (order.orderNo || "order") + ".xlsx");
+    }
+
+    function downloadOverseasInvoiceExcels(order, id) {
+      [
+        ["vendor", "廠商 Invoice"],
+        ["customs", "報關 Invoice"],
+      ].forEach(([kind, title]) => {
+        downloadBlob(xlsxWorkbookBlob(title, buildInvoiceSheetXml(order, kind, id)), title + " " + (order.orderNo || "order") + ".xlsx");
+      });
     }
 
     function writePrintWindow(win, html) {
@@ -12417,6 +12572,7 @@
         writePrintWindow(wins[0], buildPartyPoPrintHtml(order));
         writePrintWindow(wins[1], buildOverseasInvoicePrintHtml(order, "vendor", id));
         writePrintWindow(wins[2], buildOverseasInvoicePrintHtml(order, "customs", id));
+        downloadOverseasInvoiceExcels(order, id);
         downloadPackingList(order).catch((err) => {
           alert(err && err.message ? err.message : "Packing List 匯出失敗");
         });

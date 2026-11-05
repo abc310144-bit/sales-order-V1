@@ -1,23 +1,27 @@
 ---
-description: 境外客戶訂單匯出三份 PDF 與一份 Packing List Excel
+description: 境外客戶訂單匯出三份 PDF、兩份 Invoice Excel 與一份 Packing List Excel
 alwaysApply: true
 ---
 
 # 境外匯出
 
-境外按「匯出」一次產出四個檔案：
+境外按「匯出」一次產出六個檔案：
 
 - 客戶訂單 PDF（現有那份）
 - 廠商 Invoice PDF
+- 廠商 Invoice Excel（內容與該 PDF 相同）
 - 報關 Invoice PDF
+- 報關 Invoice Excel（內容與該 PDF 相同）
 - Packing List Excel
 
 經銷、一般通路仍只匯出原本的客戶訂單 PDF。
 
+客戶訂單 PDF 表尾左側加「Total Order Carton」「Total Order Pcs」。經銷這份是中文，對應「總訂購箱數」「總訂購 PCS」。兩欄加總這張 PO 每一列的下訂數量與訂購箱數，贈品也算。箱數沿用每一列數量 ÷ 箱入數、最多三位小數再加總；沒有箱入數的列，箱數當 0。右側金額合計不變，贈品金額仍不計入。一般通路、經銷的客戶訂單 PDF 也加這兩列。
+
 已確認：
 
 - 賣方、買方用系統現有資料，匯出時翻成英文。賣方公司名譯為 Juan Yuan Limited，地址譯為英文台北地址。用詞和範本稍有不同可以。
-- 貿易條件只帶訂單上選到的選項，不加地點。付款條件維持系統現有文案（預設 `TT, 100% prepaid`）。
+- 貿易條件只帶訂單上選到的選項，不加地點。付款條件維持系統現有文案（預設 `TT, 100% prepaid`）。兩張 Invoice 的 Terms of Payment、Payment Term，以及對應 Excel，都讀賣方付款條件；空白時仍是這句預設。
 - 明細只列下訂數量大於 0 的商品，不要商品系列分組列。
 - Invoice／Packing List 的條碼欄帶該列 SKU。
 - Best Before Date 帶效期_批號的日期前段（`2026-09-15_藍田` → `2026-09-15`）。客戶訂單 PDF、廠商 Invoice、報關 Invoice 都加這一欄，欄名與取值跟 Packing List 一樣。沒選批號則留白。Invoice 放在 Description 下一欄；客戶訂單 PDF 放在 Product Name 下一欄。經銷、一般通路的客戶訂單 PDF 不加。數量、贈品金額邏輯不變。同一 SKU 不同效期維持兩列，各寫自己的效期。
