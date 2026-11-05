@@ -4392,7 +4392,6 @@
               <div class="po-goods-section" id="editGoodsOverviewSection">
                 <div class="goods-title-row" id="editGoodsToolbar">
                   <h3 class="goods-title">訂單商品總攬</h3>
-                  <button type="button" class="btn btn-primary hidden" id="poGiftReviseAdd">新增贈品</button>
                   <button type="button" class="btn btn-primary" id="poPickImportBtn">匯入商品</button>
                 </div>
                 <div class="po-pick-filter" id="editGoodsFilterBar">
@@ -4427,7 +4426,7 @@
                     <tbody id="editGoodsBody"></tbody>
                   </table>
                 </div>
-                <div class="filter-actions" id="editGoodsConfirmBar" style="justify-content:flex-end;margin-top:12px">
+                <div class="filter-actions hidden" id="editGoodsConfirmBar" style="justify-content:flex-end;margin-top:12px">
                   <button type="button" class="btn btn-primary" id="poConfirmGoodsBtn">確認下定商品</button>
                 </div>
               </div>
@@ -7778,14 +7777,16 @@
 
     function guardWizardGoodsAdvance(order) {
       if (!order) return false;
-      if (isOnlineTransferPo(order) || poGoodsUsesInlineSku(order)) {
+      if (isOnlineTransferPo(order)) {
         if (!poEstMarginConfirmed) {
           alert("請先確認下定商品");
           return false;
         }
-        if (isOnlineTransferPo(order)) return validateRecipientRequired(order);
+        return validateRecipientRequired(order);
       }
-      return validateAddedGoodsQty(order);
+      if (!validateAddedGoodsQty(order)) return false;
+      if (!validateOverseasGoodsBatch(order)) return false;
+      return true;
     }
 
     function savePoWizardDraft(opts) {
@@ -13855,7 +13856,6 @@
       const filterBar = document.getElementById("editGoodsFilterBar");
       const confirmBar = document.getElementById("editGoodsConfirmBar");
       const importBtn = document.getElementById("poPickImportBtn");
-      const addGiftBtn = document.getElementById("poGiftReviseAdd");
       const opsHead = document.getElementById("editGoodsOpsHead");
       const shippedHead = document.getElementById("editGoodsShippedHead");
       const order = getWorkspaceOrder();
@@ -13868,9 +13868,8 @@
       const preview = !!(page && page.classList.contains("is-wizard-preview"));
       if (page) page.classList.toggle("can-edit-gifts", giftEdit && !editable);
       if (filterBar) filterBar.classList.toggle("hidden", online || inline || (!editable && !giftEdit));
-      if (confirmBar) confirmBar.classList.toggle("hidden", !editable || online);
+      if (confirmBar) confirmBar.classList.add("hidden");
       if (importBtn) importBtn.classList.toggle("hidden", !editable || online);
-      if (addGiftBtn) addGiftBtn.classList.toggle("hidden", !isGiftReviseEdit());
       if (opsHead) {
         const showOps = !online && !preview && (inline ? (editable || giftEdit) : ((editable && poGoodsRowDeletable()) || giftEdit));
         opsHead.classList.toggle("hidden", !showOps);
@@ -16385,9 +16384,6 @@
     });
     document.getElementById("poPickFilterSearch").addEventListener("click", () => {
       applyPoPickFilter("goods");
-    });
-    document.getElementById("poGiftReviseAdd").addEventListener("click", () => {
-      addGiftReviseRow();
     });
     document.getElementById("poPickFilterGift").addEventListener("click", () => {
       applyPoPickFilter("gift");
