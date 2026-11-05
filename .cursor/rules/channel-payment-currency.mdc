@@ -5,7 +5,9 @@ alwaysApply: true
 
 # 境外付款幣別
 
-境外金額的幣別讀通路基本資料 `channelProfiles[通路名稱].currency`。不要寫死 USD。新增境外通路時，在該通路基本資料補上 currency。
+境外金額的幣別讀該通路在通路／經銷商的幣別設定。不要寫死 USD。DEMO 沒有該設定頁，讀 `channelProfiles[通路名稱].currency`。新增境外通路時，在該通路基本資料補上 currency。
+
+通路商品列表的境外供應商品，「商品報價」欄位文案同樣跟這個設定：USD 為「商品報價(USD)」，台幣為「商品報價(TWD)」。設定改變，文案跟著改變。
 
 境外通路幣別：
 - **晨曦公司**：TWD
