@@ -13690,16 +13690,17 @@
       line.sku = "";
       line.name = "";
       line.batch = "";
+      if (isOverseasPo(order)) line.priceBasis = "noLabel";
       poLineItems.push(line);
     }
 
     function addGiftReviseRow() {
       if (!isGiftReviseEdit()) return;
-      const line = toPoLineItem({ sku: "", name: "", qty: 0, batch: "", allowEmptyBatch: true, gift: true, priceBasis: "label" });
+      const line = toPoLineItem({ sku: "", name: "", qty: 0, batch: "", allowEmptyBatch: true, gift: true, priceBasis: "noLabel" });
       line.lineUid = line.id;
       line.gift = true;
       line.giftDraft = true;
-      line.priceBasis = "label";
+      line.priceBasis = "noLabel";
       poLineItems.push(line);
       poFocusLineId = line.id;
       renderPoGoodsTable();
@@ -13713,6 +13714,7 @@
       line.sku = "";
       line.name = "";
       line.batch = "";
+      if (isOverseasPo(order)) line.priceBasis = "noLabel";
       const idx = poLineItems.findIndex((row) => row.id === afterId);
       if (idx >= 0) poLineItems.splice(idx + 1, 0, line);
       else poLineItems.push(line);
@@ -13990,7 +13992,7 @@
           const live = channelProductPriceOf(channelName, line.sku);
           line.priceLabel = live.priceLabel || "";
           line.priceNoLabel = live.priceNoLabel || line.priceNoLabel || "";
-          line.priceBasis = "label";
+          line.priceBasis = "noLabel";
         }
         poLineItems.push(line);
         byKey[poGoodsLineKey(line, overseas)] = line;
@@ -14094,7 +14096,9 @@
       const live = channelProductPriceOf(channelName, item.sku);
       if (item.priceLabel == null || item.priceLabel === "") item.priceLabel = live.priceLabel || "";
       if (item.priceNoLabel == null || item.priceNoLabel === "") item.priceNoLabel = live.priceNoLabel || "";
-      if (item.priceBasis !== "label" && item.priceBasis !== "noLabel") item.priceBasis = "label";
+      if (item.priceBasis !== "label" && item.priceBasis !== "noLabel") {
+        item.priceBasis = normalizeSku(item.sku) ? "label" : "noLabel";
+      }
     }
 
     function overseasTypedPrice(item) {
@@ -15275,7 +15279,7 @@
           const live = channelProductPriceOf(channelName, catalog.sku);
           line.priceLabel = live.priceLabel || "";
           line.priceNoLabel = live.priceNoLabel || line.priceNoLabel || "";
-          line.priceBasis = "label";
+          line.priceBasis = "noLabel";
         }
         line.gift = asGift;
         line.lineUid = line.id;
