@@ -689,9 +689,39 @@
     }
     .po-goods-pick-table { min-width: 980px; }
     .po-goods-pick-table .col-expiry { min-width: 180px; }
-    .po-goods-pick-table .col-pick-qty input.is-oversell {
+    .qty-field {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      min-width: 88px;
+    }
+    .qty-oversell-hint {
+      margin-top: 4px;
+      color: #cf1322;
+      font-size: 12px;
+      line-height: 1.4;
+      white-space: normal;
+      text-align: left;
+    }
+    .po-goods-pick-table .col-pick-qty input.is-oversell,
+    .goods-pdf-table .col-qty input.is-oversell,
+    .recv-list-table input.is-oversell,
+    .recv-goods-table input.is-oversell,
+    .recv-exchange-table input.is-oversell,
+    #page-order-edit.is-gift-revise #editGoodsBody tr[data-gift="1"] input.is-oversell {
       border-color: #ff4d4f;
       box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
+      color: #cf1322;
+    }
+    .goods-pdf-table .col-qty input.is-oversell:focus,
+    .recv-list-table input.is-oversell:focus,
+    .recv-exchange-table input.is-oversell:focus {
+      border-color: #ff4d4f;
+      box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
+    }
+    .recv-list-table td.num:has(.qty-field),
+    .recv-exchange-table td.num:has(.qty-field) {
+      white-space: normal;
     }
     .po-pick-filter {
       display: flex;
@@ -1051,6 +1081,8 @@
     .recv-goods-table input.is-oversell,
     .recv-exchange-table input.is-oversell {
       color: #cf1322;
+      border-color: #ff4d4f;
+      box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
     }
     .recv-list-table [data-recv="orderAmount"] { min-width: 110px; }
     .recv-list-table [data-recv="shipMethod"] { min-width: 140px; }
@@ -9534,8 +9566,14 @@
       if (!qtyEl) return;
       const sell = recvSellableNumber(sellEl && sellEl.value);
       const qty = Number(qtyEl.value);
-      const over = sell != null && Number.isFinite(qty) && qty > 0 && qty > sell;
+      const over = orderFormMode !== "view"
+        && sell != null
+        && Number.isFinite(qty)
+        && qty > 0
+        && qty > sell;
       qtyEl.classList.toggle("is-oversell", over);
+      const hint = qtyEl.parentElement && qtyEl.parentElement.querySelector(".qty-oversell-hint");
+      if (hint) hint.classList.toggle("hidden", !over);
     }
 
     function fillRecvSellable(tr, sku, isExchange) {
@@ -9569,7 +9607,7 @@
           <td><input type="text" data-recv-ex="itemName" readonly value="${escapeHtml((ex && ex.name) || "")}" /></td>
           <td>${recvBatchSelectHtml((ex && ex.batch) || "", { exchange: true, disabled: !editable })}</td>
           <td class="num"><input type="text" data-recv-ex="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
-          <td class="num"><input type="number" data-recv-ex="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${over ? "is-oversell" : ""}" ${editable ? "" : "readonly"} /></td>
+          <td class="num"><div class="qty-field"><input type="number" data-recv-ex="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${over && orderFormMode !== "view" ? "is-oversell" : ""}" ${editable ? "" : "readonly"} /><div class="qty-oversell-hint${over && orderFormMode !== "view" ? "" : " hidden"}">數量大於當前可賣量</div></div></td>
           <td class="num"><input type="text" data-recv-ex="lineAmount" readonly value="" /></td>
           ${ops}
         </tr>`;
@@ -9727,7 +9765,7 @@
           <td><input type="text" data-recv="itemName" readonly value="${escapeHtml(row.itemName || "")}" /></td>
           <td>${recvBatchSelectHtml(row.batch || "")}</td>
           <td class="num"><input type="text" data-recv="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
-          <td class="num"><input type="number" data-recv="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${qtyOver ? "is-oversell" : ""}"${ro} /></td>
+          <td class="num"><div class="qty-field"><input type="number" data-recv="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${qtyOver && orderFormMode !== "view" ? "is-oversell" : ""}"${ro} /><div class="qty-oversell-hint${qtyOver && orderFormMode !== "view" ? "" : " hidden"}">數量大於當前可賣量</div></div></td>
           <td class="num"><input type="number" data-recv="orderAmount" min="0" step="0.01" readonly value="${row.orderAmount === 0 || row.orderAmount ? escapeHtml(String(row.orderAmount)) : ""}" /></td>
           ${recvRemarkCellHtml(row, editable)}
           ${ops}
@@ -13820,8 +13858,23 @@
       return n;
     }
 
+    function lineShownSellable(item) {
+      if (!item || !normalizeSku(item.sku)) return null;
+      if (item.sellableQty != null && item.sellableQty !== "") {
+        const n = Number(item.sellableQty);
+        return Number.isFinite(n) ? n : null;
+      }
+      const order = getWorkspaceOrder();
+      const n = Number(virtualAllocOf((order && order.channelName) || "", item.sku));
+      return Number.isFinite(n) ? n : 0;
+    }
+
     function isOverviewQtyOversell(row) {
-      return !!row && (Number(row.qty) || 0) > (Number(row.sellableQty) || 0);
+      if (orderFormMode === "view") return false;
+      const sell = lineShownSellable(row);
+      if (sell == null) return false;
+      const qty = Number(row && row.qty) || 0;
+      return qty > 0 && qty > sell;
     }
 
     function poPickRowMatchesFilter(row, queries) {
@@ -14246,7 +14299,7 @@
       const oversell = isOverviewQtyOversell(item);
       const qtyVal = d.qty > 0 ? d.qty : "";
       const qtyCell = editable
-        ? `<input type="number" min="1" step="1" data-field="qty" value="${escapeHtml(qtyVal)}"${oversell ? ' class="is-oversell"' : ""} />`
+        ? `<div class="qty-field"><input type="number" min="1" step="1" data-field="qty" value="${escapeHtml(qtyVal)}"${oversell ? ' class="is-oversell"' : ""} /><div class="qty-oversell-hint${oversell ? "" : " hidden"}">數量大於當前可賣量</div></div>`
         : escapeHtml(d.qty > 0 ? d.qty : "-");
       const basis = item && item.priceBasis === "noLabel" ? "noLabel" : "label";
       const typeText = item && item.gift ? "贈品" : "一般下定商品";
@@ -15382,7 +15435,12 @@
       if (quoteCell) quoteCell.textContent = goodsPricePlain(d.quote);
       if (netWeight) netWeight.textContent = lineNetWeightKgText(item, d.qty);
       const qtyInput = tr.querySelector('[data-field="qty"]');
-      if (qtyInput) qtyInput.classList.toggle("is-oversell", isOverviewQtyOversell(item));
+      if (qtyInput) {
+        const over = isOverviewQtyOversell(item);
+        qtyInput.classList.toggle("is-oversell", over);
+        const hint = qtyInput.parentElement && qtyInput.parentElement.querySelector(".qty-oversell-hint");
+        if (hint) hint.classList.toggle("hidden", !over);
+      }
     }
 
     function syncOverviewGoods(order) {
