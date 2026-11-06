@@ -11380,28 +11380,6 @@
           item.priceBasis = item.gift ? "label" : (idx % 2 === 0 ? "label" : "noLabel");
         }
       });
-      const blocked = orderHasCreatedShips(order.orderNo)
-        || order.status === "已作廢"
-        || order.status === "已取消"
-        || order.status === "已開立出貨單";
-      const src = items[0];
-      if (!blocked && src && !items.some((item) => item.gift)) {
-        items.push({
-          sku: src.sku,
-          name: src.name,
-          productCode: src.productCode || "",
-          unit: src.unit || "",
-          qty: 2,
-          pcsPerCarton: src.pcsPerCarton || 0,
-          batch: src.batch || "",
-          priceLabel: src.priceLabel,
-          priceNoLabel: src.priceNoLabel,
-          priceBasis: "noLabel",
-          gift: true,
-          netWeightG: src.netWeightG,
-          remark: "",
-        });
-      }
       order.overseasLineReady = true;
     }
 
@@ -14105,7 +14083,8 @@
         && page.dataset.wizardStep === "2"
         && !page.classList.contains("is-wizard-preview")
         && isOnlineTransferPo(order));
-      const parkOnFees = slot && (isFourStepFeeStep(order) || isFourStepPreview(order));
+      const viewOnFees = orderFormMode === "view" && !isOnlineTransferPo(order);
+      const parkOnFees = slot && (isFourStepFeeStep(order) || isFourStepPreview(order) || viewOnFees);
       if (parkOnFees) {
         if (el.parentElement !== slot) slot.appendChild(el);
         return;
@@ -15988,9 +15967,7 @@
         if (draftBtn) draftBtn.classList.add("hidden");
       }
       const submitBtn = document.getElementById("editSubmit");
-      if (submitBtn) {
-        submitBtn.textContent = giftRevise && order && order.status === "待審核" ? "儲存" : "送出申請";
-      }
+      if (submitBtn) submitBtn.textContent = "送出申請";
       setBtnEnabled("editSubmit", giftRevise ? giftReviseDirty() : (!view && draftLike && currentRole === "建檔人"));
       setBtnEnabled("editExportPdf", !giftRevise && canExportPoPdf(order));
       const exportBtn = document.getElementById("editExportPdf");
@@ -16179,7 +16156,7 @@
       renderSalesTable(getSalesFiltered());
       history.replaceState({}, "", poWorkspaceUrl({ po: order.orderNo, mode: "view" }));
       fillOrderEdit(order, "view");
-      alert(stayPending ? "已儲存" : "已送出申請");
+      alert("已送出申請");
     }
 
     document.getElementById("editSaveDraft").addEventListener("click", () => {
