@@ -5877,10 +5877,19 @@
       return (value || "").slice(0, 10);
     }
 
+    function canOnlineExchangeEdit(order) {
+      if (!isOnlineTransferPo(order)) return false;
+      if (currentRole !== "建檔人" && currentRole !== "主管") return false;
+      if (!order || !order.orderNo) return false;
+      if (order.status !== "待審核" && order.status !== "未開立出貨單") return false;
+      return validShipsOfPo(order.orderNo).length === 0;
+    }
+
     function canEditPo(order) {
       if (!order) return false;
       if (order.status === "草稿") return true;
-      return canOverseasGiftRevise(order);
+      if (canOverseasGiftRevise(order)) return true;
+      return canOnlineExchangeEdit(order);
     }
 
     function canSubmitPo(order) {
@@ -9159,13 +9168,13 @@
       if (currentRole !== "建檔人" && currentRole !== "主管") return false;
       const no = order && order.orderNo;
       if (!no || no === "__new__" || currentEditOrderNo === "__new__") return false;
+      if (orderFormMode !== "edit") return false;
       if (!EXCHANGE_PO_STATUSES.includes(order.status)) return false;
-      if (order.status === "草稿" && orderFormMode === "view") return false;
       return validShipsOfPo(no).length === 0;
     }
 
-    function isViewExchangeMode(order) {
-      return orderFormMode === "view" && canExchangeOnPo(order);
+    function isExchangeLockMode(order) {
+      return orderFormMode === "edit" && canExchangeOnPo(order) && !!order && order.status !== "草稿";
     }
 
     function enableRecvExchangeInputs() {
@@ -9719,7 +9728,7 @@
 
     function refreshRecvExDeleteButtons(exTbody) {
       if (!exTbody) return;
-      if (orderFormMode === "view" && !isViewExchangeMode(getWorkspaceOrder())) return;
+      if (orderFormMode === "view" && !isExchangeLockMode(getWorkspaceOrder())) return;
       const rows = exTbody.querySelectorAll("tr[data-ex-row]");
       rows.forEach((tr, idx) => {
         const ops = tr.querySelector("td.recv-ex-ops");
@@ -10186,42 +10195,20 @@
       return body.querySelector(`tr.recv-item-row[data-recv-item="${CSS.escape(itemKey)}"]`);
     }
 
-    function exchangeItemsSignature(list) {
-      return JSON.stringify(normalizeExchangeItems(list)
-        .filter((ex) => ex.sku && Number(ex.qty) > 0)
-        .map((ex) => ({
-          sku: ex.sku,
-          qty: Number(ex.qty) || 0,
-          batch: ex.batch || "",
-        })));
-    }
-
-    function confirmedExchangeSignature(itemTr) {
-      if (!itemTr) return "[]";
-      const raw = itemTr.getAttribute("data-ex-confirmed") || "";
-      if (!raw) return "[]";
-      try {
-        return exchangeItemsSignature(JSON.parse(decodeURIComponent(raw)));
-      } catch (err) {
-        return "[]";
-      }
-    }
-
-    /** 已審核通過的線上轉單，建檔人變更換貨後要再送審，通過後才能開出貨單。 */
-    function reopenApprovedExchange(order, beforeSig, afterSig) {
+    /** 已審核通過的線上轉單，建檔人確定換貨或取消換貨都要再送審，內容有沒有改都一樣。 */
+    function reopenApprovedExchange(order) {
       if (!order || order.status !== "未開立出貨單" || currentRole !== "建檔人") return false;
-      if (beforeSig === afterSig) return false;
       order.status = "待審核";
       persistDemoData();
       renderSalesTable(getSalesFiltered());
-      if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "view");
-      alert("換貨內容已變更，狀態改為待審核。主管審核通過後才能新增出貨單。");
+      if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "edit");
+      alert("狀態改為待審核。主管審核通過後才能新增出貨單。");
       return true;
     }
 
     function persistViewExchangeRow(itemTr) {
       const order = getWorkspaceOrder();
-      if (!order || !isViewExchangeMode(order) || !itemTr) return false;
+      if (!order || !isExchangeLockMode(order) || !itemTr) return false;
       const body = document.getElementById("editRecvBody");
       if (!body) return false;
       const recipients = recipientListOf(order);
@@ -10519,7 +10506,7 @@
         exchangeItems: [emptyExchangeItem()],
       };
       itemTr.insertAdjacentHTML("afterend", recvExchangeBlockHtml(row, true));
-      if (isViewExchangeMode(getWorkspaceOrder())) enableRecvExchangeInputs();
+      if (isExchangeLockMode(getWorkspaceOrder())) enableRecvExchangeInputs();
     }
 
     function removeExchangeBlock(itemTr) {
@@ -10532,7 +10519,7 @@
       if (block) block.remove();
       itemTr.classList.remove("is-exchanged");
       itemTr.removeAttribute("data-ex-confirmed");
-      if (orderFormMode !== "view") setRecvProductLocked(itemTr, false);
+      if (orderFormMode !== "view" && !isExchangeLockMode(getWorkspaceOrder())) setRecvProductLocked(itemTr, false);
       const exCell = itemTr.querySelector(".recv-ex-col");
       if (exCell) exCell.innerHTML = `<a href="#" data-recv-act="exchange">換貨</a>`;
     }
@@ -10542,7 +10529,7 @@
       if (!body || body.dataset.recvBound === "1") return;
       body.dataset.recvBound = "1";
       body.addEventListener("input", (e) => {
-        if (orderFormMode === "view" && !isViewExchangeMode(getWorkspaceOrder())) return;
+        if (orderFormMode === "view" && !isExchangeLockMode(getWorkspaceOrder())) return;
         const el = e.target;
         const exField = el.getAttribute("data-recv-ex");
         if (exField === "sku") {
@@ -10582,7 +10569,7 @@
         }
       });
       body.addEventListener("change", (e) => {
-        if (orderFormMode === "view" && !isViewExchangeMode(getWorkspaceOrder())) return;
+        if (orderFormMode === "view" && !isExchangeLockMode(getWorkspaceOrder())) return;
         const el = e.target;
         const exField = el.getAttribute("data-recv-ex");
         if (exField === "sku") {
@@ -10640,7 +10627,7 @@
         }
       });
       body.addEventListener("click", (e) => {
-        if (orderFormMode === "view" && !isViewExchangeMode(getWorkspaceOrder())) return;
+        if (orderFormMode === "view" && !isExchangeLockMode(getWorkspaceOrder())) return;
         const pickBtn = e.target.closest("[data-recv-sku-pick]");
         if (pickBtn) {
           e.preventDefault();
@@ -10700,11 +10687,10 @@
             alert(`換貨合計須等於原商品合計 ${recvMoneyText(origin)}，目前為 ${recvMoneyText(sum)}`);
             return;
           }
-          const beforeSig = confirmedExchangeSignature(itemTr);
           block.setAttribute("data-ex-draft", "0");
           stashConfirmedExchange(itemTr, checked);
           persistViewExchangeRow(itemTr);
-          if (reopenApprovedExchange(order, beforeSig, exchangeItemsSignature(checked))) return;
+          if (reopenApprovedExchange(order)) return;
           syncExchangeBlockMoney(block);
           return;
         }
@@ -10716,10 +10702,9 @@
           }
           const itemTr = act.closest("tr.recv-item-row");
           if (!itemTr) return;
-          const beforeSig = confirmedExchangeSignature(itemTr);
           removeExchangeBlock(itemTr);
           persistViewExchangeRow(itemTr);
-          reopenApprovedExchange(order, beforeSig, "[]");
+          reopenApprovedExchange(order);
           return;
         }
         if (action === "add-ex") {
@@ -10730,7 +10715,7 @@
           const drafted = exTr.closest("tr.recv-ex-block");
           markExchangeDraft(drafted);
           syncExchangeBlockMoney(drafted);
-          if (isViewExchangeMode(getWorkspaceOrder())) enableRecvExchangeInputs();
+          if (isExchangeLockMode(getWorkspaceOrder())) enableRecvExchangeInputs();
           return;
         }
         if (action === "del-ex") {
@@ -15986,8 +15971,8 @@
         addShipBtn.classList.toggle("hidden", !showAddShip);
         addShipBtn.disabled = !showAddShip || !canCreateShipFromPo(order);
       }
-      setBtnEnabled("editApprove", !giftRevise && pending && currentRole === "主管");
-      setBtnEnabled("editReject", !giftRevise && pending && currentRole === "主管");
+      setBtnEnabled("editApprove", view && !giftRevise && pending && currentRole === "主管");
+      setBtnEnabled("editReject", view && !giftRevise && pending && currentRole === "主管");
       const confirmBtn = document.getElementById("editConfirmComplete");
       if (confirmBtn) {
         const showConfirm = !!order && order.status === "部分出貨" && mode === "view";
@@ -16052,12 +16037,13 @@
       syncPoWizardUi(order, orderFormMode, opts || {});
       if (!poWizardOn) setPoTab("basic");
       const giftRevise = orderFormMode === "edit" && canOverseasGiftRevise(order);
-      document.getElementById("page-order-edit").classList.toggle("is-gift-revise", giftRevise);
-      setOrderFormReadonly(orderFormMode === "view" || giftRevise);
+      const exchangeLock = isExchangeLockMode(order);
+      const editPage = document.getElementById("page-order-edit");
+      editPage.classList.toggle("is-gift-revise", giftRevise);
+      editPage.classList.toggle("can-exchange", exchangeLock);
+      setOrderFormReadonly(orderFormMode === "view" || giftRevise || exchangeLock);
       if (giftRevise) setPoTab("goods");
-      const viewExchange = isViewExchangeMode(order);
-      document.getElementById("page-order-edit").classList.toggle("can-exchange", viewExchange);
-      if (orderFormMode === "view") {
+      if (orderFormMode === "view" || exchangeLock) {
         const recvBody = document.getElementById("editRecvBody");
         if (recvBody) {
           recvBody.querySelectorAll("input, select, textarea").forEach((el) => {
@@ -16065,8 +16051,8 @@
             el.disabled = true;
           });
         }
-        if (viewExchange) enableRecvExchangeInputs();
-        if (shouldShowRecvShipChecks(order)) enableRecvShipCheckInputs();
+        if (exchangeLock) enableRecvExchangeInputs();
+        if (orderFormMode === "view" && shouldShowRecvShipChecks(order)) enableRecvShipCheckInputs();
       }
       syncPoGoodsToolbar();
       syncEditFooter(order, orderFormMode);
