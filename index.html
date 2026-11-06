@@ -6301,11 +6301,13 @@
     function salesRowActions(item) {
       const editOn = canEditPo(item);
       const voidOn = canVoidOrder(item);
-      return [
-        `<a data-action="edit" data-no="${item.orderNo}" class="${editOn ? "" : "is-disabled"}"${editOn ? "" : " aria-disabled=\"true\""}>編輯</a>`,
-        `<a data-action="view" data-no="${item.orderNo}">檢視</a>`,
-        `<a data-action="void" data-no="${item.orderNo}" class="${voidOn ? "" : "is-disabled"}"${voidOn ? "" : " aria-disabled=\"true\""}>作廢</a>`,
-      ].join("");
+      const actions = [];
+      if (!(item.status === "待回壓文件" && !editOn)) {
+        actions.push(`<a data-action="edit" data-no="${item.orderNo}" class="${editOn ? "" : "is-disabled"}"${editOn ? "" : " aria-disabled=\"true\""}>編輯</a>`);
+      }
+      actions.push(`<a data-action="view" data-no="${item.orderNo}">檢視</a>`);
+      actions.push(`<a data-action="void" data-no="${item.orderNo}" class="${voidOn ? "" : "is-disabled"}"${voidOn ? "" : " aria-disabled=\"true\""}>作廢</a>`);
+      return actions.join("");
     }
 
     function getSalesFiltered() {
