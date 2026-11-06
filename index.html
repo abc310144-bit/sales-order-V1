@@ -4665,6 +4665,10 @@
               ；可下載測試檔 <a class="upload-link" href="transfer-import-sample.xlsx" download="轉單匯入測試範例.xlsx">轉單匯入測試範例.xlsx</a>
               （含 2 個平台訂單、已綁定 SKU）
             </div>
+            <div class="field-hint-below hidden" id="importOverseasHint">
+              境外通路使用同一份模板。Barcode、Product Description、Order Pcs 為必填，Order Pcs 須填大於 0 的正整數。
+              <a class="btn" href="境外客戶訂單匯入範例.xlsx" download="境外客戶訂單匯入範例.xlsx">下載境外範例檔案</a>
+            </div>
           </div>
         </div>
       </div>
@@ -6587,9 +6591,11 @@
 
     function syncImportTransferHint() {
       const hint = document.getElementById("importTransferHint");
-      if (!hint) return;
+      const overseasHint = document.getElementById("importOverseasHint");
       const name = document.getElementById("importChannelName").value;
-      hint.classList.toggle("hidden", name !== "線上-轉單");
+      const kind = getImportPoKind();
+      if (hint) hint.classList.toggle("hidden", name !== "線上-轉單");
+      if (overseasHint) overseasHint.classList.toggle("hidden", kind !== "境外通路");
     }
 
     function pad(n, width) {
@@ -6706,6 +6712,20 @@
         });
         return;
       }
+      if (kind === "境外通路") {
+        parseOverseasPoImportFile(file, channelName).then((items) => {
+          if (!items) return;
+          const order = createPoFromImport("草稿", { overseasItems: items });
+          if (!order) return;
+          persistDemoData();
+          closeImportModal();
+          poWizardSessionNew = true;
+          openPoWorkspace({ po: order.orderNo, mode: "edit", wizard: "preview" });
+        }).catch((err) => {
+          alert(err && err.message ? err.message : "境外匯入失敗");
+        });
+        return;
+      }
       const order = createPoFromImport("草稿", null);
       if (!order) return;
       persistDemoData();
@@ -6737,6 +6757,7 @@
       const header = matrix[0];
       const map = {};
       Object.keys(header).forEach((col) => {
+        if (col.charAt(0) === "_") return;
         const key = normalizeTransferHeaderKey(header[col]);
         if (key.includes("通路平台")) map[col] = "platform";
         else if (key.includes("收件人姓名")) map[col] = "name";
@@ -6796,6 +6817,105 @@
       const shared = sharedStringsFromXml(decodeZipText(files["xl/sharedStrings.xml"] || new Uint8Array()));
       const sheetPath = worksheetPathFromWorkbook(files, false);
       return sheetMatrixFromXml(decodeZipText(files[sheetPath]), shared);
+    }
+
+    function overseasHeaderKey(raw) {
+      return String(raw == null ? "" : raw).replace(/\s+/g, "").toLowerCase();
+    }
+
+    function overseasImportColumns(row) {
+      const cols = {};
+      Object.keys(row || {}).forEach((col) => {
+        if (col.charAt(0) === "_") return;
+        const key = overseasHeaderKey(row[col]);
+        if (key === "barcode") cols.barcode = col;
+        else if (key === "productdescription") cols.desc = col;
+        else if (key === "orderpcs") cols.pcs = col;
+      });
+      return cols.barcode && cols.desc && cols.pcs ? cols : null;
+    }
+
+    function overseasOrderPcs(raw) {
+      let s = String(raw == null ? "" : raw).trim();
+      if (!s) return null;
+      if (/^\d+\.0+$/.test(s)) s = s.replace(/\.0+$/, "");
+      if (!/^\d+$/.test(s)) return null;
+      const n = Number(s);
+      if (!Number.isSafeInteger(n) || n <= 0) return null;
+      return n;
+    }
+
+    function overseasImportedLine(channelName, sku, name, qty) {
+      if (channelName && !Array.isArray(channelSupplyByChannel[channelName])) {
+        channelSupplyByChannel[channelName] = buildChannelSupplyRows(channelName);
+      }
+      const supply = channelSupplyRowOf(channelName, sku);
+      const cat = catalogLineBySku(sku);
+      const priceLabel = supply && supply.priceLabel != null && supply.priceLabel !== "" ? supply.priceLabel : 0;
+      const priceNoLabel = supply && supply.priceNoLabel != null && supply.priceNoLabel !== "" ? supply.priceNoLabel : 0;
+      return {
+        sku,
+        name,
+        qty,
+        batch: "",
+        gift: false,
+        priceBasis: "noLabel",
+        priceLabel,
+        priceNoLabel,
+        pcsPerCarton: cat ? (Number(cat.pcsPerCarton) || 0) : 0,
+        unit: (cat && cat.unit) || "",
+      };
+    }
+
+    function overseasItemsFromMatrix(matrix, channelName) {
+      const rows = matrix || [];
+      let headerAt = -1;
+      let cols = null;
+      for (let i = 0; i < rows.length; i++) {
+        cols = overseasImportColumns(rows[i]);
+        if (cols) {
+          headerAt = i;
+          break;
+        }
+      }
+      if (headerAt < 0) {
+        return { error: "找不到欄位 Barcode、Product Description、Order Pcs，整檔不匯入" };
+      }
+      const lines = [];
+      for (let i = headerAt + 1; i < rows.length; i++) {
+        const row = rows[i];
+        const rowNo = Number(row._row) || (i + 1);
+        const barcode = normalizeSku(row[cols.barcode]);
+        const desc = String(row[cols.desc] == null ? "" : row[cols.desc]).trim();
+        const pcsRaw = String(row[cols.pcs] == null ? "" : row[cols.pcs]).trim();
+        if (!barcode && !desc && !pcsRaw) continue;
+        const qty = overseasOrderPcs(pcsRaw);
+        if (!barcode || !desc || qty == null) {
+          const missing = [];
+          if (!barcode) missing.push("Barcode");
+          if (!desc) missing.push("Product Description");
+          const pcsMsg = qty == null ? "Order Pcs 須為大於 0 的正整數" : "";
+          const head = missing.length ? missing.join("、") + " 為必填" : "";
+          const detail = [head, pcsMsg].filter(Boolean).join("，");
+          return { error: `第 ${rowNo} 列：${detail}，整檔不匯入` };
+        }
+        if (lines.length >= 1000) return { error: "超過 1000 筆，整檔不匯入" };
+        lines.push(overseasImportedLine(channelName, barcode, desc, qty));
+      }
+      if (!lines.length) {
+        return { error: "沒有可匯入的商品列。Barcode、Product Description、Order Pcs 為必填，Order Pcs 須為大於 0 的正整數" };
+      }
+      return { items: lines };
+    }
+
+    async function parseOverseasPoImportFile(file, channelName) {
+      const matrix = await sheetMatrixFromFile(file);
+      const result = overseasItemsFromMatrix(matrix, channelName);
+      if (result.error) {
+        alert(result.error);
+        return null;
+      }
+      return result.items;
     }
 
     function excelTimeToHm(val) {
@@ -6987,9 +7107,11 @@
         arriveTime: isTransfer || party ? "" : "18:00",
         shipByTime: isTransfer ? "" : (payload ? (payload.shipByTime || "") : (party ? "" : addDaysToStamp(createdAt, 1))),
         inWarehouse: payload ? (payload.inWarehouse || profile.inWarehouse || "") : (profile.inWarehouse || ""),
-        items: isTransfer && payload
+        items: isTransfer && payload && payload.items
           ? payload.items
-          : mockItemsFor(channelName),
+          : (isOverseas && payload && payload.overseasItems)
+            ? payload.overseasItems
+            : mockItemsFor(channelName),
         overseas: isOverseas ? party : null,
         dealer: isDealer ? party : null,
         general: !isOverseas && !isDealer ? party : null,
@@ -6997,6 +7119,7 @@
         recipients: null,
         fees: [],
       };
+      if (isOverseas && payload && payload.overseasItems) order.overseasLineReady = true;
       if (isTransfer) {
         order.poDocNo = "";
         if (payload && Array.isArray(payload.recipients) && payload.recipients.length) {
@@ -14988,7 +15111,7 @@
     function sheetMatrixFromXml(xml, shared) {
       const doc = new DOMParser().parseFromString(xml, "application/xml");
       return xmlByLocalName(doc, "row").map((rowEl) => {
-        const rec = {};
+        const rec = { _row: Number(rowEl.getAttribute("r")) || 0 };
         [...rowEl.children].filter((el) => el.localName === "c").forEach((cell) => {
           const col = colLetters(cell.getAttribute("r"));
           const type = cell.getAttribute("t");
