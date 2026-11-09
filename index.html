@@ -4663,7 +4663,7 @@
             <div class="field-hint-below hidden" id="importTransferHint">
               線上-轉單請使用 <a class="upload-link" href="轉單匯入模板.xlsx" download="轉單匯入模板.xlsx">轉單匯入模板.xlsx</a>
               ；可下載測試檔 <a class="upload-link" href="transfer-import-sample.xlsx" download="轉單匯入測試範例.xlsx">轉單匯入測試範例.xlsx</a>
-              （含 2 個平台訂單、已綁定 SKU）
+              （含 2 個平台訂單、已綁定 SKU。效期_批號空白會帶入先進先出）
             </div>
             <div class="field-hint-below hidden" id="importOverseasHint">
               境外通路使用同一份模板。SKU、預計出貨數量(下定數量) 為必填，數量須為大於 0 的正整數。效期_批號可空白。
@@ -6759,39 +6759,32 @@
       Object.keys(header).forEach((col) => {
         if (col.charAt(0) === "_") return;
         const key = normalizeTransferHeaderKey(header[col]);
-        if (key.includes("通路平台")) map[col] = "platform";
-        else if (key.includes("收件人姓名")) map[col] = "name";
+        if (!key) return;
+        if (key.includes("收件人姓名")) map[col] = "name";
         else if (key.includes("郵遞區號")) map[col] = "zip";
         else if (key === "地址") map[col] = "address";
         else if (key === "電話") map[col] = "tel";
-        else if (key.includes("訂單總金額")) map[col] = "orderAmount";
-        else if (key.includes("商品平台訂單編號")) map[col] = "itemPlatformOrderNo";
         else if (key.includes("平台訂單編號")) map[col] = "platformOrderNo";
-        else if (key.includes("預計到貨時間") || (key.includes("到貨時間") && !key.includes("日期"))) map[col] = "arriveTime";
+        else if (key.includes("預計出貨數量") || key === "數量") map[col] = "qty";
         else if (key.includes("預計到貨")) map[col] = "arriveDate";
-        else if (key.includes("預計出貨")) map[col] = "shipDate";
+        else if (key.includes("應出貨") || key.includes("預計出貨")) map[col] = "shipDate";
         else if (key.includes("運送方式")) map[col] = "shipMethod";
         else if (key === "備註") map[col] = "remark";
         else if (/^SKU/i.test(key) || key.includes("品號")) map[col] = "sku";
-        else if (key === "數量") map[col] = "qty";
-        else if (key.includes("單品總金額")) map[col] = "lineAmount";
-        else if (key.includes("倉別")) map[col] = "warehouse";
-        else if (key.includes("商品效期")) map[col] = "expiry";
-        else if (key === "批號") map[col] = "batch";
+        else if (key === "效期_批號" || key.includes("效期") || key === "批號") map[col] = "batch";
       });
       return matrix.slice(1).map((row) => {
-        const rec = {};
+        const rec = { _row: Number(row._row) || 0 };
         Object.keys(map).forEach((col) => {
           rec[map[col]] = String(row[col] == null ? "" : row[col]).trim();
         });
         if (rec.sku) rec.sku = normalizeSku(rec.sku);
         return rec;
       }).filter((rec) => {
-        const blob = Object.values(rec).join("");
+        const blob = Object.keys(rec).filter((key) => key !== "_row").map((key) => rec[key]).join("");
         if (!blob) return false;
-        if (blob.includes("輸入三碼") || blob.includes("留空則視為") || blob.includes("B2B-PChome、")) return false;
-        if (blob.includes("只能輸入") || blob.includes("YYYY-MM-DD") || blob.includes("字元")) return false;
-        if (blob.includes("需填寫倉別") || blob.includes("先進先出") || blob.includes("指定無批號")) return false;
+        const hintNo = String(rec.platformOrderNo || "");
+        if (hintNo.includes("最多") && hintNo.includes("字元")) return false;
         return true;
       });
     }
@@ -6962,6 +6955,31 @@
       return /^[A-Za-z0-9_\-\u4e00-\u9fff]{1,50}$/.test(s);
     }
 
+    function transferImportRowNo(row, index) {
+      return Number(row && row._row) || (index + 2);
+    }
+
+    function transferImportQty(raw) {
+      let s = String(raw == null ? "" : raw).trim();
+      if (!s) return null;
+      if (/^\d+\.0+$/.test(s)) s = s.replace(/\.0+$/, "");
+      if (!/^[1-9]\d*$/.test(s)) return null;
+      const n = Number(s);
+      if (!Number.isSafeInteger(n) || n <= 0) return null;
+      return n;
+    }
+
+    function transferImportDate(raw) {
+      const s = String(raw == null ? "" : raw).trim();
+      if (!s) return "";
+      const normalized = excelDateToInput(s);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return null;
+      const parts = normalized.split("-").map(Number);
+      const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+      if (dt.getUTCFullYear() !== parts[0] || dt.getUTCMonth() !== parts[1] - 1 || dt.getUTCDate() !== parts[2]) return null;
+      return normalized;
+    }
+
     async function parseTransferImportFile(file) {
       const matrix = await sheetMatrixFromFile(file);
       const rows = recordsFromTransferMatrix(matrix);
@@ -6974,34 +6992,79 @@
         return null;
       }
       const bound = channelBoundSkuMap("線上-轉單");
+      const shipMethods = (typeof RECV_SHIP_OPTS !== "undefined" && RECV_SHIP_OPTS.length)
+        ? RECV_SHIP_OPTS
+        : ["新竹物流", "黑猫", "全盛貨運(邱哥)", "宅配通"];
+      const fifoBatch = (closestFifoLot() || {}).batch || "";
       const groups = new Map();
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
+        const rowNo = transferImportRowNo(row, i);
         const platformOrderNo = normalizePlatformOrderNo(row.platformOrderNo).slice(0, 50);
-        if (!platformOrderNo) {
-          alert(`第 ${i + 2} 列：請填寫平台訂單編號`);
+        const missing = [];
+        if (!platformOrderNo) missing.push("平台訂單編號");
+        if (!String(row.name || "").trim()) missing.push("收件人姓名");
+        if (!String(row.address || "").trim()) missing.push("地址");
+        if (!String(row.tel || "").trim()) missing.push("電話");
+        if (!String(row.sku || "").trim()) missing.push("SKU");
+        if (!String(row.shipMethod || "").trim()) missing.push("運送方式");
+        if (missing.length) {
+          alert(`第 ${rowNo} 列：請填寫${missing.join("、")}，整檔不匯入`);
           return null;
         }
         if (!isValidPlatformOrderNo(platformOrderNo)) {
-          alert(`第 ${i + 2} 列：平台訂單編號「${platformOrderNo}」最多 50 字，僅可中、英、數、_、-`);
+          alert(`第 ${rowNo} 列：平台訂單編號「${platformOrderNo}」最多 50 字，僅可中、英、數、_、-，整檔不匯入`);
           return null;
         }
-        if (!row.sku || !isPositiveIntQty(row.qty)) {
-          alert(`第 ${i + 2} 列：SKU、數量皆必填，數量須為大於 0 的正整數`);
+        if (!/^\d{3}$/.test(String(row.zip || "").trim())) {
+          alert(`第 ${rowNo} 列：郵遞區號須為三碼數字，整檔不匯入`);
+          return null;
+        }
+        const qty = transferImportQty(row.qty);
+        if (qty == null) {
+          alert(`第 ${rowNo} 列：預計出貨數量(下定數量)須為大於 0 的正整數，整檔不匯入`);
           return null;
         }
         const skuKey = String(row.sku).toLowerCase();
         if (!bound[skuKey]) {
           const samples = Object.keys(bound).slice(0, 5).join("、");
-          alert(`第 ${i + 2} 列：SKU ${row.sku} 未綁定「線上-轉單」通路商品，整檔不匯入` + (samples ? `\n可參考：${samples}` : ""));
+          alert(`第 ${rowNo} 列：SKU ${row.sku} 未綁定「線上-轉單」通路商品，整檔不匯入` + (samples ? `\n可參考：${samples}` : ""));
+          return null;
+        }
+        if (!shipMethods.includes(String(row.shipMethod || "").trim())) {
+          alert(`第 ${rowNo} 列：運送方式須為${shipMethods.join("、")}，整檔不匯入`);
+          return null;
+        }
+        const arriveDate = transferImportDate(row.arriveDate);
+        if (arriveDate == null) {
+          alert(`第 ${rowNo} 列：預計到貨日格式須為 yyyy/mm/dd，整檔不匯入`);
+          return null;
+        }
+        const shipDate = transferImportDate(row.shipDate);
+        if (shipDate == null) {
+          alert(`第 ${rowNo} 列：應出貨日格式須為 yyyy/mm/dd，整檔不匯入`);
+          return null;
+        }
+        const remark = String(row.remark || "").trim();
+        if (remark.length > 20) {
+          alert(`第 ${rowNo} 列：備註最多 20 字，整檔不匯入`);
           return null;
         }
         const batchRaw = String(row.batch || "").trim();
         if (batchRaw && !recvBatchList().includes(batchRaw)) {
-          alert(`第 ${i + 2} 列：批號「${batchRaw}」不在可選清單，整檔不匯入。留空則依先進先出。`);
+          alert(`第 ${rowNo} 列：效期_批號「${batchRaw}」不在可選清單，整檔不匯入`);
           return null;
         }
-        row.batch = batchRaw;
+        if (!batchRaw && !fifoBatch) {
+          alert(`第 ${rowNo} 列：效期_批號空白，且沒有可帶入的先進先出批號，整檔不匯入`);
+          return null;
+        }
+        row.platformOrderNo = platformOrderNo;
+        row.qty = qty;
+        row.remark = remark;
+        row.arriveDate = arriveDate;
+        row.shipDate = shipDate;
+        row.batch = batchRaw || fifoBatch;
         if (!groups.has(platformOrderNo)) {
           groups.set(platformOrderNo, { rows: [], meta: row });
         }
@@ -7011,33 +7074,15 @@
       const allItems = [];
       for (const [platformOrderNo, group] of groups) {
         const first = group.meta;
-        const required = [
-          ["name", "收件人姓名"],
-          ["zip", "郵遞區號"],
-          ["address", "地址"],
-          ["tel", "電話"],
-        ];
-        for (const [key, label] of required) {
-          if (!String(first[key] || "").trim()) {
-            alert(`平台訂單 ${platformOrderNo}：請填寫${label}`);
-            return null;
-          }
-        }
-        if (!/^\d{3}$/.test(String(first.zip || "").trim())) {
-          alert(`平台訂單 ${platformOrderNo}：郵遞區號請輸入三碼數字`);
-          return null;
-        }
         const items = group.rows.map((row) => {
           const src = bound[String(row.sku).toLowerCase()];
           return toPoLineItem({
             ...src,
             qty: Number(row.qty),
-            lineAmount: row.lineAmount || "",
-            platformItemOrderNo: row.itemPlatformOrderNo || "",
             platformOrderNo,
-            expiry: row.expiry || "",
             batch: row.batch || "",
-            allowEmptyBatch: !String(row.batch || "").trim(),
+            allowEmptyBatch: false,
+            remark: row.remark || "",
           });
         });
         allItems.push(...items);
@@ -7045,25 +7090,24 @@
           platform: "線上-轉單",
           platformOrderNo,
           name: first.name,
-          zip: first.zip,
+          zip: String(first.zip || "").trim(),
           address: first.address,
           tel: first.tel,
-          orderAmount: first.orderAmount === "" ? "0" : first.orderAmount,
-          shipMethod: first.shipMethod || "",
-          remark: clipPoRemark(first.remark),
-          arriveDate: excelDateToInput(first.arriveDate),
-          arriveTime: excelTimeToHm(first.arriveTime),
-          shipDate: excelDateToInput(first.shipDate),
+          orderAmount: "",
+          shipMethod: first.shipMethod,
+          remark: "",
+          arriveDate: first.arriveDate || "",
+          arriveTime: "",
+          shipDate: first.shipDate || "",
           items,
         });
       }
-      const firstWarehouse = String((rows[0] && rows[0].warehouse) || "").trim();
       return {
         recipients,
         recipient: { ...recipients[0] },
         poDocNo: "",
         items: aggregateItemsBySku(allItems),
-        inWarehouse: firstWarehouse,
+        inWarehouse: "",
         shipByTime: "",
         arriveDate: "",
       };
