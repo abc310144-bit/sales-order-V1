@@ -4439,7 +4439,7 @@
                         <th>SKU</th>
                         <th>商品名稱</th>
                         <th class="col-po-choice hidden">類型</th>
-                        <th class="col-po-choice hidden">報價</th>
+                        <th class="col-po-choice hidden">商品報價</th>
                         <th class="col-po-batch hidden" id="editGoodsBatchHead">效期_批號</th>
                         <th>箱入數</th>
                         <th class="num col-alloc">當前可賣量</th>
@@ -6825,8 +6825,30 @@
         else if (key === "商品種類") cols.kind = col;
         else if (key.indexOf("預計出貨數量") >= 0 || key === "下定數量" || key === "下訂數量") cols.pcs = col;
         else if (key === "效期_批號" || key.indexOf("效期") >= 0) cols.batch = col;
+        else if (key === "商品報價") cols.quote = col;
       });
-      return cols.sku && cols.pcs ? cols : null;
+      return cols.sku && cols.pcs && cols.quote ? cols : null;
+    }
+
+    function overseasQuoteBasis(raw) {
+      const s = String(raw == null ? "" : raw).replace(/\s+/g, "");
+      if (s === "含標") return "label";
+      if (s === "不含標") return "noLabel";
+      return null;
+    }
+
+    function overseasResolveImportBatch(raw, channelName, sku, qty) {
+      const filled = String(raw == null ? "" : raw).trim();
+      const allB = allShipBatches();
+      if (filled && !allB.includes(filled)) return { error: "list" };
+      const sellable = virtualAllocOf(channelName, sku);
+      if (!filled || sellable < qty) {
+        const lot = closestFifoLot();
+        if (!lot || !lot.batch) return { error: "fifo" };
+        return { batch: lot.batch, expiryType: lot.expiryType || "regular" };
+      }
+      const meta = resolveBatchMeta(filled);
+      return { batch: filled, expiryType: meta.expiryType || "regular" };
     }
 
     function overseasKindGift(raw) {
@@ -6846,20 +6868,24 @@
       return n;
     }
 
-    function overseasImportedLine(sku, qty, batch, gift) {
-      const cat = catalogLineBySku(sku);
+    function overseasImportedLine(sku, qty, batchMeta, gift, priceBasis, channelName, catalog) {
+      const cat = catalog || catalogLineBySku(sku);
+      const live = channelProductPriceOf(channelName, sku);
       return {
-        sku,
+        sku: (cat && cat.sku) || sku,
         name: (cat && cat.name) || "",
         qty,
-        batch: batch || "",
-        allowEmptyBatch: !batch,
+        batch: batchMeta.batch || "",
+        expiryType: batchMeta.expiryType || "regular",
+        allowEmptyBatch: false,
         gift: !!gift,
-        priceBasis: "noLabel",
-        priceLabel: 0,
-        priceNoLabel: 0,
+        priceBasis,
+        priceLabel: live.priceLabel || "",
+        priceNoLabel: live.priceNoLabel || "",
         pcsPerCarton: cat ? (Number(cat.pcsPerCarton) || 0) : 0,
         unit: (cat && cat.unit) || "",
+        sellableQty: virtualAllocOf(channelName, sku),
+        netWeightG: productMasterWeightG(sku),
       };
     }
 
@@ -6875,17 +6901,19 @@
         }
       }
       if (headerAt < 0) {
-        return { error: "找不到欄位 SKU、預計出貨數量(下定數量)，整檔不匯入" };
+        return { error: "找不到欄位 SKU、預計出貨數量(下定數量)、商品報價，整檔不匯入" };
       }
+      const bound = channelBoundSkuMap(channelName);
       const lines = [];
       for (let i = headerAt + 1; i < rows.length; i++) {
         const row = rows[i];
         const rowNo = Number(row._row) || (i + 1);
         const sku = normalizeSku(row[cols.sku]);
         const pcsRaw = String(row[cols.pcs] == null ? "" : row[cols.pcs]).trim();
-        const batch = cols.batch ? String(row[cols.batch] == null ? "" : row[cols.batch]).trim() : "";
+        const batchRaw = cols.batch ? String(row[cols.batch] == null ? "" : row[cols.batch]).trim() : "";
         const kindRaw = cols.kind ? String(row[cols.kind] == null ? "" : row[cols.kind]).trim() : "";
-        if (!sku && !pcsRaw && !batch) continue;
+        const quoteRaw = String(row[cols.quote] == null ? "" : row[cols.quote]).trim();
+        if (!sku && !pcsRaw && !batchRaw) continue;
         const gift = overseasKindGift(kindRaw);
         if (gift === null) {
           return { error: `第 ${rowNo} 列：商品種類請填一般下訂商品或贈品，整檔不匯入` };
@@ -6899,11 +6927,26 @@
           const detail = [head, pcsMsg].filter(Boolean).join("，");
           return { error: `第 ${rowNo} 列：${detail}，整檔不匯入` };
         }
+        const catalog = bound[sku.toLowerCase()];
+        if (!catalog) {
+          return { error: `第 ${rowNo} 列：SKU「${sku}」不在該通路供應商品，整檔不匯入` };
+        }
+        const priceBasis = overseasQuoteBasis(quoteRaw);
+        if (!priceBasis) {
+          return { error: `第 ${rowNo} 列：商品報價為必填，請填含標或不含標，整檔不匯入` };
+        }
+        const batchMeta = overseasResolveImportBatch(batchRaw, channelName, catalog.sku, qty);
+        if (batchMeta.error === "list") {
+          return { error: `第 ${rowNo} 列：效期_批號「${batchRaw}」不在可選清單，整檔不匯入` };
+        }
+        if (batchMeta.error) {
+          return { error: `第 ${rowNo} 列：無法帶入先進先出，整檔不匯入` };
+        }
         if (lines.length >= 1000) return { error: "超過 1000 筆，整檔不匯入" };
-        lines.push(overseasImportedLine(sku, qty, batch, gift));
+        lines.push(overseasImportedLine(catalog.sku, qty, batchMeta, gift, priceBasis, channelName, catalog));
       }
       if (!lines.length) {
-        return { error: "沒有可匯入的商品列。SKU、預計出貨數量(下定數量) 為必填，數量須為大於 0 的正整數" };
+        return { error: "沒有可匯入的商品列。SKU、預計出貨數量(下定數量)、商品報價為必填，數量須為大於 0 的正整數，商品報價請填含標或不含標" };
       }
       return { items: lines };
     }
@@ -15567,6 +15610,54 @@
       return true;
     }
 
+    function overseasGoodsImportKey(item) {
+      const sku = normalizeSku(item && item.sku).toLowerCase();
+      if (!sku) return "";
+      const batch = String((item && item.batch) || "").trim();
+      const gift = item && item.gift ? "|gift" : "";
+      const basis = item && item.priceBasis === "label" ? "label" : "noLabel";
+      return `${sku}||${batch}${gift}|${basis}`;
+    }
+
+    function applyOverseasGoodsImport(items) {
+      const order = getWorkspaceOrder();
+      if (!order || !poGoodsEditable()) return false;
+      const byKey = {};
+      poLineItems.forEach((item) => {
+        const key = overseasGoodsImportKey(item);
+        if (key) byKey[key] = item;
+      });
+      items.forEach((rec) => {
+        const key = overseasGoodsImportKey(rec);
+        const existing = byKey[key];
+        if (existing) {
+          existing.qty = (Number(existing.qty) || 0) + (Number(rec.qty) || 0);
+          existing.sellableQty = rec.sellableQty != null ? Number(rec.sellableQty) : existing.sellableQty;
+          return;
+        }
+        const line = toPoLineItem(rec);
+        line.gift = !!rec.gift;
+        line.priceBasis = rec.priceBasis === "label" ? "label" : "noLabel";
+        line.priceLabel = rec.priceLabel || "";
+        line.priceNoLabel = rec.priceNoLabel || "";
+        line.batch = rec.batch || "";
+        line.expiryType = rec.expiryType === "near" ? "near" : "regular";
+        line.sellableQty = rec.sellableQty != null ? Number(rec.sellableQty) : virtualAllocOf(order.channelName, line.sku);
+        line.lineUid = line.id;
+        poLineItems.push(line);
+        byKey[key] = line;
+      });
+      poPickImportSkus = null;
+      poPickFilterQueries = [];
+      const filterInput = document.getElementById("poPickFilterInput");
+      if (filterInput) filterInput.value = "";
+      order.items = collectEditGoods();
+      poEstMarginConfirmed = false;
+      resetPoEstMarginDisplay();
+      renderPoGoodsTable();
+      return true;
+    }
+
     function applyPickImportRecords(records) {
       const order = getWorkspaceOrder();
       if (!order || !poGoodsEditable()) return false;
@@ -15692,6 +15783,21 @@
       }
       if (goodsModalTarget === "po-pick") {
         if (!poGoodsEditable()) return;
+        const pickOrder = getWorkspaceOrder();
+        if (isOverseasPo(pickOrder)) {
+          let imported;
+          try {
+            imported = await parseOverseasPoImportFile(pendingPoImportFile, pickOrder.channelName || "");
+          } catch (err) {
+            alert(err && err.message ? err.message : "檔案解析失敗");
+            return;
+          }
+          if (!imported) return;
+          if (!applyOverseasGoodsImport(imported)) return;
+          closeImportPoItemsModal();
+          alert("成功匯入");
+          return;
+        }
         let records;
         try {
           records = await parsePickImportFile(pendingPoImportFile);
