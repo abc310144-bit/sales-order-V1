@@ -4666,7 +4666,7 @@
               （含 2 個平台訂單、已綁定 SKU）
             </div>
             <div class="field-hint-below hidden" id="importOverseasHint">
-              境外通路使用同一份模板。Barcode、Product Description、Order Pcs 為必填，Order Pcs 須填大於 0 的正整數。
+              境外通路使用同一份模板。SKU、預計出貨數量(下定數量) 為必填，數量須為大於 0 的正整數。效期_批號可空白。
               <a class="btn" href="境外客戶訂單匯入範例.xlsx" download="境外客戶訂單匯入範例.xlsx">下載境外範例檔案</a>
             </div>
           </div>
@@ -6828,11 +6828,19 @@
       Object.keys(row || {}).forEach((col) => {
         if (col.charAt(0) === "_") return;
         const key = overseasHeaderKey(row[col]);
-        if (key === "barcode") cols.barcode = col;
-        else if (key === "productdescription") cols.desc = col;
-        else if (key === "orderpcs") cols.pcs = col;
+        if (key === "sku") cols.sku = col;
+        else if (key === "商品種類") cols.kind = col;
+        else if (key.indexOf("預計出貨數量") >= 0 || key === "下定數量" || key === "下訂數量") cols.pcs = col;
+        else if (key === "效期_批號" || key.indexOf("效期") >= 0) cols.batch = col;
       });
-      return cols.barcode && cols.desc && cols.pcs ? cols : null;
+      return cols.sku && cols.pcs ? cols : null;
+    }
+
+    function overseasKindGift(raw) {
+      const s = String(raw == null ? "" : raw).replace(/\s+/g, "");
+      if (!s || s === "一般下定商品" || s === "一般下訂商品") return false;
+      if (s === "贈品") return true;
+      return null;
     }
 
     function overseasOrderPcs(raw) {
@@ -6845,23 +6853,18 @@
       return n;
     }
 
-    function overseasImportedLine(channelName, sku, name, qty) {
-      if (channelName && !Array.isArray(channelSupplyByChannel[channelName])) {
-        channelSupplyByChannel[channelName] = buildChannelSupplyRows(channelName);
-      }
-      const supply = channelSupplyRowOf(channelName, sku);
+    function overseasImportedLine(sku, qty, batch, gift) {
       const cat = catalogLineBySku(sku);
-      const priceLabel = supply && supply.priceLabel != null && supply.priceLabel !== "" ? supply.priceLabel : 0;
-      const priceNoLabel = supply && supply.priceNoLabel != null && supply.priceNoLabel !== "" ? supply.priceNoLabel : 0;
       return {
         sku,
-        name,
+        name: (cat && cat.name) || "",
         qty,
-        batch: "",
-        gift: false,
+        batch: batch || "",
+        allowEmptyBatch: !batch,
+        gift: !!gift,
         priceBasis: "noLabel",
-        priceLabel,
-        priceNoLabel,
+        priceLabel: 0,
+        priceNoLabel: 0,
         pcsPerCarton: cat ? (Number(cat.pcsPerCarton) || 0) : 0,
         unit: (cat && cat.unit) || "",
       };
@@ -6879,31 +6882,35 @@
         }
       }
       if (headerAt < 0) {
-        return { error: "找不到欄位 Barcode、Product Description、Order Pcs，整檔不匯入" };
+        return { error: "找不到欄位 SKU、預計出貨數量(下定數量)，整檔不匯入" };
       }
       const lines = [];
       for (let i = headerAt + 1; i < rows.length; i++) {
         const row = rows[i];
         const rowNo = Number(row._row) || (i + 1);
-        const barcode = normalizeSku(row[cols.barcode]);
-        const desc = String(row[cols.desc] == null ? "" : row[cols.desc]).trim();
+        const sku = normalizeSku(row[cols.sku]);
         const pcsRaw = String(row[cols.pcs] == null ? "" : row[cols.pcs]).trim();
-        if (!barcode && !desc && !pcsRaw) continue;
+        const batch = cols.batch ? String(row[cols.batch] == null ? "" : row[cols.batch]).trim() : "";
+        const kindRaw = cols.kind ? String(row[cols.kind] == null ? "" : row[cols.kind]).trim() : "";
+        if (!sku && !pcsRaw && !batch) continue;
+        const gift = overseasKindGift(kindRaw);
+        if (gift === null) {
+          return { error: `第 ${rowNo} 列：商品種類請填一般下訂商品或贈品，整檔不匯入` };
+        }
         const qty = overseasOrderPcs(pcsRaw);
-        if (!barcode || !desc || qty == null) {
+        if (!sku || qty == null) {
           const missing = [];
-          if (!barcode) missing.push("Barcode");
-          if (!desc) missing.push("Product Description");
-          const pcsMsg = qty == null ? "Order Pcs 須為大於 0 的正整數" : "";
+          if (!sku) missing.push("SKU");
+          const pcsMsg = qty == null ? "預計出貨數量(下定數量)須為大於 0 的正整數" : "";
           const head = missing.length ? missing.join("、") + " 為必填" : "";
           const detail = [head, pcsMsg].filter(Boolean).join("，");
           return { error: `第 ${rowNo} 列：${detail}，整檔不匯入` };
         }
         if (lines.length >= 1000) return { error: "超過 1000 筆，整檔不匯入" };
-        lines.push(overseasImportedLine(channelName, barcode, desc, qty));
+        lines.push(overseasImportedLine(sku, qty, batch, gift));
       }
       if (!lines.length) {
-        return { error: "沒有可匯入的商品列。Barcode、Product Description、Order Pcs 為必填，Order Pcs 須為大於 0 的正整數" };
+        return { error: "沒有可匯入的商品列。SKU、預計出貨數量(下定數量) 為必填，數量須為大於 0 的正整數" };
       }
       return { items: lines };
     }
