@@ -7277,6 +7277,8 @@
     let workspaceOrder = null;
     let poWizardOn = false;
     let poWizardStep = 1;
+    let poExchangeCommit = false;
+    let poExchangeDomHandoff = null;
     let poWizardPrevStep = 0;
     let poWizardSessionNew = false;
     let poWizardSkipSession = false;
@@ -7970,10 +7972,17 @@
       if (requireBasic && !validatePoDocNoRequired(order)) return null;
       if (requireBasic && !validatePoTermsRequired(order)) return null;
       if (requireBasic && !validateExchangeRateRequired(order)) return null;
+      poExchangeDomHandoff = snapshotExchangeDom();
       applyEditFormToOrder(order);
       applyOrderFees(order);
-      if (requireBasic && !validateMarkFileRequired(order)) return null;
-      if (requireGoods && !guardWizardGoodsAdvance(order)) return null;
+      if (requireBasic && !validateMarkFileRequired(order)) {
+        poExchangeDomHandoff = null;
+        return null;
+      }
+      if (requireGoods && !guardWizardGoodsAdvance(order)) {
+        poExchangeDomHandoff = null;
+        return null;
+      }
       commitWorkspaceOrder(order, "草稿");
       return order;
     }
@@ -9778,7 +9787,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  ${lines.map((ex, idx) => recvExchangeLineHtml(ex, editable, idx > 0, checks[idx])).join("")}
+                  ${lines.map((ex, idx) => recvExchangeLineHtml(ex, editable, !!editable, checks[idx])).join("")}
                 </tbody>
               </table>
               <div class="recv-ex-foot">
@@ -9787,7 +9796,6 @@
                   <span>換貨合計 <b data-ex-sum>0</b></span>
                   <span>差額 <b data-ex-diff>0</b></span>
                 </div>
-                ${editable ? '<button type="button" class="btn btn-primary recv-ex-confirm" data-recv-act="confirm-exchange">確定換貨</button>' : ""}
               </div>
             </div>
           </td>
@@ -9865,7 +9873,7 @@
         if (!ops) return;
         ops.innerHTML = `
             <a href="#" data-recv-act="add-ex">新增</a>
-            ${idx > 0 ? '<a href="#" data-recv-act="del-ex">刪除</a>' : ""}`;
+            <a href="#" data-recv-act="del-ex">刪除</a>`;
       });
     }
 
@@ -9895,7 +9903,7 @@
       const ops = recvItemOpsHtml(editable, !!showDelete);
       const ro = productLocked ? " readonly" : "";
       const main = `
-        <tr class="recv-item-row${hasEx ? " is-exchanged" : ""}" data-recv-group="${escapeHtml(row.groupId)}" data-recv-item="${escapeHtml(row.itemKey)}"${hasEx ? ` data-ex-confirmed="${encodeURIComponent(JSON.stringify(row.exchangeItems || []))}"` : ""}>
+        <tr class="recv-item-row${hasEx ? " is-exchanged" : ""}" data-recv-group="${escapeHtml(row.groupId)}" data-recv-item="${escapeHtml(row.itemKey)}" data-ex-base="${encodeURIComponent(JSON.stringify(row.exchangeItems || []))}"${hasEx ? ` data-ex-confirmed="${encodeURIComponent(JSON.stringify(row.exchangeItems || []))}"` : ""}>
           ${recvShipCheckTd(shipMeta && shipMeta.origin)}
           ${showExchange ? exCell : ""}
           <td class="recv-item-no-col" data-recv-item-no>1</td>
@@ -10105,10 +10113,9 @@
         const exBlock = itemKey
           ? body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`)
           : null;
-        if (tr.classList.contains("is-exchanged") || exBlock) {
-          const draft = exBlock && exBlock.getAttribute("data-ex-draft") === "1";
-          item.exchangeItems = draft ? confirmedExchangeOf(tr) : readExchangeItemsFromBlock(exBlock);
-        }
+        item.exchangeItems = poExchangeCommit
+          ? (exBlock ? readExchangeItemsFromBlock(exBlock) : [])
+          : exchangeBaseOf(tr);
         if (item.sku || item.qty || item.name || item.remark || (item.exchangeItems && item.exchangeItems.length)) {
           groupMap[gid].items.push(item);
         }
@@ -10193,22 +10200,6 @@
       focusRecvField(trOrGroupIdx, field);
     }
 
-    function confirmedExchangeOf(itemTr) {
-      const raw = itemTr && itemTr.getAttribute("data-ex-confirmed");
-      if (!raw) return [];
-      try {
-        const list = JSON.parse(decodeURIComponent(raw));
-        return Array.isArray(list) ? list : [];
-      } catch (err) {
-        return [];
-      }
-    }
-
-    function stashConfirmedExchange(itemTr, items) {
-      if (!itemTr) return;
-      itemTr.setAttribute("data-ex-confirmed", encodeURIComponent(JSON.stringify(items || [])));
-    }
-
     function recvMoneyOf(sku, qty) {
       return Math.round((Number(qty) || 0) * recvItemUnitPrice(sku) * 100) / 100;
     }
@@ -10224,6 +10215,149 @@
 
     function markExchangeDraft(block) {
       if (block) block.setAttribute("data-ex-draft", "1");
+      const order = getWorkspaceOrder();
+      if (order && document.getElementById("editSubmit")) syncEditFooter(order, orderFormMode);
+    }
+
+    function exchangeBaseOf(itemTr) {
+      const raw = itemTr && itemTr.getAttribute("data-ex-base");
+      if (!raw) return [];
+      try {
+        const list = JSON.parse(decodeURIComponent(raw));
+        return Array.isArray(list) ? list : [];
+      } catch (err) {
+        return [];
+      }
+    }
+
+    function exchangeRowSig(list) {
+      return JSON.stringify((list || []).map((ex) => ({
+        sku: String((ex && ex.sku) || ""),
+        qty: ex && ex.qty !== "" && ex.qty != null ? Number(ex.qty) : "",
+        batch: String((ex && ex.batch) || ""),
+      })));
+    }
+
+    function exchangeDirty() {
+      const body = document.getElementById("editRecvBody");
+      if (!body) return false;
+      return Array.from(body.querySelectorAll("tr.recv-item-row")).some((tr) => {
+        const itemKey = tr.getAttribute("data-recv-item") || "";
+        const block = itemKey
+          ? body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`)
+          : null;
+        const live = block ? readExchangeItemsFromBlock(block) : [];
+        const blank = !!(block && Array.from(block.querySelectorAll("tr[data-ex-row]")).some((row) => {
+          const sku = String((row.querySelector('[data-recv-ex="sku"]') || {}).value || "").trim();
+          const qty = String((row.querySelector('[data-recv-ex="qty"]') || {}).value || "").trim();
+          return !sku && !qty;
+        }));
+        return blank || exchangeRowSig(exchangeBaseOf(tr)) !== exchangeRowSig(live);
+      });
+    }
+
+    function snapshotExchangeDom() {
+      const body = document.getElementById("editRecvBody");
+      if (!body) return [];
+      return Array.from(body.querySelectorAll("tr.recv-item-row")).map((tr) => {
+        const itemKey = tr.getAttribute("data-recv-item") || "";
+        const block = itemKey
+          ? body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`)
+          : null;
+        if (!block) return null;
+        return Array.from(block.querySelectorAll("tr[data-ex-row]")).map((row) => {
+          const get = (field) => {
+            const el = row.querySelector(`[data-recv-ex="${field}"]`);
+            return el ? String(el.value || "").trim() : "";
+          };
+          return {
+            sku: normalizeSku(get("sku")),
+            name: get("itemName"),
+            qty: get("qty"),
+            batch: get("batch"),
+          };
+        });
+      });
+    }
+
+    function paintExchangeDom(rows) {
+      const body = document.getElementById("editRecvBody");
+      if (!body || !Array.isArray(rows)) return;
+      Array.from(body.querySelectorAll("tr.recv-item-row")).forEach((itemTr, i) => {
+        const spec = rows[i];
+        if (!spec) {
+          if (itemTr.classList.contains("is-exchanged")) removeExchangeBlock(itemTr);
+          return;
+        }
+        if (!itemTr.classList.contains("is-exchanged")) insertExchangeBlockAfter(itemTr);
+        const itemKey = itemTr.getAttribute("data-recv-item") || "";
+        const block = itemKey
+          ? body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`)
+          : null;
+        const tbody = block && block.querySelector("tbody");
+        if (!tbody) return;
+        const lines = spec.length ? spec : [emptyExchangeItem()];
+        tbody.innerHTML = lines.map((ex) => recvExchangeLineHtml(ex, true, true)).join("");
+        refreshRecvExDeleteButtons(tbody);
+        syncExchangeBlockMoney(block);
+      });
+      if (isExchangeLockMode(getWorkspaceOrder())) enableRecvExchangeInputs();
+    }
+
+    function validateVisibleExchanges() {
+      const body = document.getElementById("editRecvBody");
+      if (!body) return true;
+      const itemRows = Array.from(body.querySelectorAll("tr.recv-item-row"));
+      for (let i = 0; i < itemRows.length; i++) {
+        const itemTr = itemRows[i];
+        const itemKey = itemTr.getAttribute("data-recv-item") || "";
+        const block = itemKey
+          ? body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`)
+          : null;
+        if (!block) continue;
+        const blank = Array.from(block.querySelectorAll("tr[data-ex-row]")).some((row) => {
+          const sku = String((row.querySelector('[data-recv-ex="sku"]') || {}).value || "").trim();
+          const qty = String((row.querySelector('[data-recv-ex="qty"]') || {}).value || "").trim();
+          return !sku && !qty;
+        });
+        if (blank) {
+          alert("請先刪除空白的換貨列");
+          return false;
+        }
+        const checked = validateRecvExchangeItems(readExchangeItemsFromBlock(block), `訂單內容第 ${i + 1} 列`);
+        if (!checked) return false;
+        const originSku = String((itemTr.querySelector('[data-recv="sku"]') || {}).value || "").trim();
+        const originQty = Number((itemTr.querySelector('[data-recv="qty"]') || {}).value) || 0;
+        const origin = recvMoneyOf(originSku, originQty);
+        const sum = Math.round(checked.reduce((s, ex) => s + recvMoneyOf(ex.sku, ex.qty), 0) * 100) / 100;
+        if (!recvMoneyEqual(origin, sum)) {
+          alert(`換貨合計須等於原商品合計 ${recvMoneyText(origin)}，目前為 ${recvMoneyText(sum)}`);
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function submitExchangeRevise() {
+      const order = getWorkspaceOrder();
+      if (!order || !isExchangeLockMode(order) || !exchangeDirty()) return;
+      if (!validateVisibleExchanges()) return;
+      poExchangeCommit = true;
+      try {
+        applyRecipientForm(order);
+      } finally {
+        poExchangeCommit = false;
+      }
+      let msg = "已送出申請";
+      if (order.status === "未開立出貨單" && currentRole === "建檔人") {
+        order.status = "待審核";
+        msg = "已送出申請。狀態改為待審核。主管審核通過後才能新增出貨單。";
+      }
+      persistDemoData();
+      renderSalesTable(getSalesFiltered());
+      history.replaceState({}, "", poWorkspaceUrl({ po: order.orderNo, mode: "view" }));
+      fillOrderEdit(order, "view");
+      alert(msg);
     }
 
     function syncExchangeBlockMoney(block) {
@@ -10323,66 +10457,6 @@
       const body = document.getElementById("editRecvBody");
       if (!body || !itemKey) return null;
       return body.querySelector(`tr.recv-item-row[data-recv-item="${CSS.escape(itemKey)}"]`);
-    }
-
-    /** 已審核通過的線上轉單，建檔人確定換貨或取消換貨都要再送審，內容有沒有改都一樣。 */
-    function reopenApprovedExchange(order) {
-      if (!order || order.status !== "未開立出貨單" || currentRole !== "建檔人") return false;
-      order.status = "待審核";
-      persistDemoData();
-      renderSalesTable(getSalesFiltered());
-      if (currentEditOrderNo === order.orderNo) fillOrderEdit(order, "edit");
-      alert("狀態改為待審核。主管審核通過後才能新增出貨單。");
-      return true;
-    }
-
-    function persistViewExchangeRow(itemTr) {
-      const order = getWorkspaceOrder();
-      if (!order || !isExchangeLockMode(order) || !itemTr) return false;
-      const body = document.getElementById("editRecvBody");
-      if (!body) return false;
-      const recipients = recipientListOf(order);
-      const itemRows = Array.from(body.querySelectorAll("tr.recv-item-row"));
-      const idx = itemRows.indexOf(itemTr);
-      if (idx < 0) return false;
-      const groupIndex = {};
-      const itemCursor = {};
-      let groupSeq = 0;
-      let target = null;
-      itemRows.forEach((tr) => {
-        const gid = tr.getAttribute("data-recv-group") || "";
-        if (!(gid in groupIndex)) {
-          groupIndex[gid] = groupSeq++;
-          itemCursor[gid] = 0;
-        }
-        const ri = groupIndex[gid];
-        const ii = itemCursor[gid]++;
-        if (tr === itemTr) {
-          const itemKey = tr.getAttribute("data-recv-item") || "";
-          const exBlock = itemKey
-            ? body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`)
-            : null;
-          target = { ri, ii, exchanged: tr.classList.contains("is-exchanged") || !!exBlock, exBlock };
-        }
-      });
-      if (!target) return false;
-      const rec = recipients[target.ri];
-      const item = rec && rec.items && rec.items[target.ii];
-      if (!item) return false;
-      if (!target.exchanged) {
-        item.exchangeItems = [];
-      } else {
-        const checked = validateRecvExchangeItems(readExchangeItemsFromBlock(target.exBlock), "", { silent: true });
-        if (!checked) return false;
-        item.exchangeItems = checked;
-      }
-      order.recipients = recipients;
-      order.recipient = recipients[0]
-        ? { ...recipients[0], items: (recipients[0].items || []).map((it) => ({ ...it })) }
-        : emptyRecipient();
-      persistDemoData();
-      renderSalesTable(getSalesFiltered());
-      return true;
     }
 
     function focusRecvOrWizard(fieldIdx, field) {
@@ -10636,7 +10710,11 @@
         exchangeItems: [emptyExchangeItem()],
       };
       itemTr.insertAdjacentHTML("afterend", recvExchangeBlockHtml(row, true));
+      const opened = itemKey
+        ? document.getElementById("editRecvBody").querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`)
+        : null;
       if (isExchangeLockMode(getWorkspaceOrder())) enableRecvExchangeInputs();
+      markExchangeDraft(opened);
     }
 
     function removeExchangeBlock(itemTr) {
@@ -10787,41 +10865,7 @@
             ? body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(opened)}"]`)
             : null;
           syncExchangeBlockMoney(openedBlock);
-          return;
-        }
-        if (action === "confirm-exchange") {
-          const order = getWorkspaceOrder();
-          if (!canExchangeOnPo(order)) {
-            alert(exchangeBlockedMessage(order, "確定換貨"));
-            return;
-          }
-          const block = act.closest("tr.recv-ex-block");
-          const itemTr = recvItemTrFromEl(act);
-          if (!block || !itemTr) return;
-          const blank = Array.from(block.querySelectorAll("tr[data-ex-row]")).some((tr) => {
-            const sku = String((tr.querySelector('[data-recv-ex="sku"]') || {}).value || "").trim();
-            const qty = String((tr.querySelector('[data-recv-ex="qty"]') || {}).value || "").trim();
-            return !sku && !qty;
-          });
-          if (blank) {
-            alert("請先刪除空白的換貨列，才能按確定換貨");
-            return;
-          }
-          const checked = validateRecvExchangeItems(readExchangeItemsFromBlock(block), "");
-          if (!checked) return;
-          const originSku = String((itemTr.querySelector('[data-recv="sku"]') || {}).value || "").trim();
-          const originQty = Number((itemTr.querySelector('[data-recv="qty"]') || {}).value) || 0;
-          const origin = recvMoneyOf(originSku, originQty);
-          const sum = Math.round(checked.reduce((s, ex) => s + recvMoneyOf(ex.sku, ex.qty), 0) * 100) / 100;
-          if (!recvMoneyEqual(origin, sum)) {
-            alert(`換貨合計須等於原商品合計 ${recvMoneyText(origin)}，目前為 ${recvMoneyText(sum)}`);
-            return;
-          }
-          block.setAttribute("data-ex-draft", "0");
-          stashConfirmedExchange(itemTr, checked);
-          persistViewExchangeRow(itemTr);
-          if (reopenApprovedExchange(order)) return;
-          syncExchangeBlockMoney(block);
+          markExchangeDraft(openedBlock);
           return;
         }
         if (action === "cancel-exchange") {
@@ -10833,8 +10877,7 @@
           const itemTr = act.closest("tr.recv-item-row");
           if (!itemTr) return;
           removeExchangeBlock(itemTr);
-          persistViewExchangeRow(itemTr);
-          reopenApprovedExchange(order);
+          markExchangeDraft(null);
           return;
         }
         if (action === "add-ex") {
@@ -10853,14 +10896,10 @@
           const tbody = exTr && exTr.parentElement;
           if (!exTr || !tbody) return;
           const exRows = tbody.querySelectorAll("tr[data-ex-row]");
-          if (exRows[0] === exTr) return;
           if (exRows.length <= 1) {
-            exTr.querySelectorAll("[data-recv-ex]").forEach((el) => { el.value = ""; });
-            hideRecvSkuHits(exTr);
-            refreshRecvExDeleteButtons(tbody);
-            const drafted = exTr.closest("tr.recv-ex-block");
-            markExchangeDraft(drafted);
-            syncExchangeBlockMoney(drafted);
+            const itemTr = recvItemTrFromEl(exTr);
+            removeExchangeBlock(itemTr);
+            markExchangeDraft(null);
             return;
           }
           const drafted = exTr.closest("tr.recv-ex-block");
@@ -16085,7 +16124,9 @@
       }
       const submitBtn = document.getElementById("editSubmit");
       if (submitBtn) submitBtn.textContent = "送出申請";
-      setBtnEnabled("editSubmit", giftRevise ? giftReviseDirty() : (!view && draftLike && currentRole === "建檔人"));
+      const exchangeEdit = !view && isExchangeLockMode(order);
+      const draftSubmit = !view && draftLike && (currentRole === "建檔人" || (currentRole === "主管" && isOnlineTransferPo(order) && exchangeDirty()));
+      setBtnEnabled("editSubmit", giftRevise ? giftReviseDirty() : (exchangeEdit ? exchangeDirty() : draftSubmit));
       setBtnEnabled("editExportPdf", !giftRevise && canExportPoPdf(order));
       const exportBtn = document.getElementById("editExportPdf");
       if (exportBtn) exportBtn.textContent = isOverseasPo(order) ? "匯出" : "匯出 PDF";
@@ -16189,6 +16230,13 @@
       syncPoFeesTab(order);
       syncMarkUploadUi(order);
       showPage("order-edit");
+      if (poExchangeDomHandoff) {
+        const handoff = poExchangeDomHandoff;
+        poExchangeDomHandoff = null;
+        paintExchangeDom(handoff);
+        if (isExchangeLockMode(order)) enableRecvExchangeInputs();
+        syncEditFooter(order, orderFormMode);
+      }
     }
 
     document.getElementById("operatorRole").addEventListener("change", (e) => {
@@ -16283,6 +16331,7 @@
       if (!order || !canSubmitPo(order)) return;
       if (!validatePoDocNoRequired(order)) return;
       if (!validateOverseasGoodsBatch(order)) return;
+      poExchangeDomHandoff = snapshotExchangeDom();
       commitWorkspaceOrder(order, "草稿");
       fillOrderEdit(order, "edit");
       alert("已儲存為草稿");
@@ -16293,15 +16342,25 @@
         submitGiftRevise();
         return;
       }
-      if (currentRole !== "建檔人") return;
       const order = getWorkspaceOrder();
+      if (order && isExchangeLockMode(order)) {
+        submitExchangeRevise();
+        return;
+      }
+      if (currentRole !== "建檔人" && !(currentRole === "主管" && order && isOnlineTransferPo(order) && exchangeDirty())) return;
       if (!order || !canSubmitPo(order)) return;
       if (!validatePoDocNoRequired(order)) return;
       if (!validateRecipientRequired(order)) return;
+      if (!validateVisibleExchanges()) return;
       if (!validateOverseasGoodsBatch(order)) return;
       if (!validateMarkFileRequired(order)) return;
       if (!validateExchangeRateRequired(order)) return;
-      commitWorkspaceOrder(order, "待審核");
+      poExchangeCommit = true;
+      try {
+        commitWorkspaceOrder(order, "待審核");
+      } finally {
+        poExchangeCommit = false;
+      }
       poWizardOn = false;
       poWizardSessionNew = false;
       fillOrderEdit(order, "view");
