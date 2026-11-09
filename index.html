@@ -4606,7 +4606,7 @@
               <button type="button" class="btn hidden" id="editWizardBack">返回</button>
               <button type="button" class="btn" id="editWizardDraft">儲存為草稿</button>
               <button type="button" class="btn btn-primary hidden" id="editWizardSavePage">儲存此分頁</button>
-              <button type="button" class="btn btn-primary hidden" id="editWizardSave">儲存</button>
+              <button type="button" class="btn btn-primary hidden" id="editWizardSave">儲存此分頁</button>
               <button type="button" class="btn btn-primary hidden" id="editWizardSubmit">送出申請</button>
             </div>
           </div>
@@ -14064,7 +14064,7 @@
       return false;
     }
 
-    /** 精靈第 2 步「儲存」：已新增的每一列都要有大於 0 的預計出貨數量。 */
+    /** 精靈第 2 步「儲存此分頁」：已新增的每一列都要有大於 0 的預計出貨數量。 */
     function validateAddedGoodsQty(order) {
       if (!order || isOnlineTransferPo(order)) return true;
       const lines = poGoodsUsesInlineSku(order)
