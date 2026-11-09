@@ -1372,6 +1372,7 @@
     #page-order-edit.is-wizard.is-online-wizard[data-wizard-step="2"] .po-vendor-col,
     #page-order-edit.is-wizard.is-online-wizard[data-wizard-step="2"] .po-basic-top { display: none !important; }
     #page-order-edit.is-wizard.is-online-wizard[data-wizard-step="2"] #editRecipientPanel { display: block !important; }
+    #page-order-edit.is-wizard #recvConfirmGoodsBar,
     #page-order-edit.is-wizard-preview #recvConfirmGoodsBar,
     #page-order-edit.is-readonly #recvConfirmGoodsBar { display: none !important; }
     #page-order-edit.is-wizard-preview input,
@@ -7821,8 +7822,8 @@
       return isOnlineTransferPo(order);
     }
 
-    function poWizardMaxStep(order) {
-      return poWizardUsesOnline(order) ? 3 : 4;
+    function poWizardMaxStep() {
+      return 4;
     }
 
     function shouldUsePoWizard(order, mode, opts) {
@@ -7834,7 +7835,7 @@
 
     function poWizardLabels(order) {
       return poWizardUsesOnline(order)
-        ? ["訂單基本資料", "設定訂單內容", "預覽"]
+        ? ["訂單基本資料", "設定訂單內容", "費用填寫", "預覽"]
         : ["建立基本資料", "建立下定商品", "費用填寫", "訂單預覽"];
     }
 
@@ -7865,8 +7866,8 @@
       syncPoFeeTrialButtons(order);
     }
 
-    function isFourStepWizard(order) {
-      return poWizardOn && !poWizardUsesOnline(order || getWorkspaceOrder());
+    function isFourStepWizard() {
+      return poWizardOn;
     }
 
     function poWizardPageStep() {
@@ -7961,7 +7962,7 @@
 
     function syncPoFeesTab(order) {
       const tab = document.querySelector('.po-tab[data-po-tab="fees"]');
-      const show = !!order && !poWizardUsesOnline(order) && orderFormMode === "view";
+      const show = !!order && orderFormMode === "view";
       if (tab) tab.classList.toggle("hidden", !show);
     }
 
@@ -8016,12 +8017,12 @@
       if (atLast) {
         show.basic = true;
         show.goods = true;
-        show.fees = !online;
+        show.fees = true;
         show.ships = false;
       } else if (online) {
         show.basic = poWizardStep === 1 || poWizardStep === 2;
         show.goods = false;
-        show.fees = false;
+        show.fees = poWizardStep === 3;
         show.ships = false;
       } else {
         show.basic = poWizardStep === 1;
@@ -8047,12 +8048,6 @@
       poWizardPrevStep = poWizardStep;
       if (enteringGoods) poEstMarginConfirmed = false;
       placePoMarginOverview(current);
-      if (online && poWizardStep === 2 && !atLast) {
-        const marginEl = document.getElementById("poMarginOverview");
-        if (marginEl) marginEl.classList.remove("hidden");
-        if (poEstMarginConfirmed) renderPoEstMargin(current);
-        else resetPoEstMarginDisplay();
-      }
       applyPoFeeTrialView(current);
       syncPoFeeTrialButtons(current);
       const previewNow = page.classList.contains("is-wizard-preview");
@@ -8088,7 +8083,7 @@
       }
       const continuing = !!(opts && ((opts.wizardStep != null && opts.wizardStep !== "") || opts.preview));
       if (!continuing) resetPoFeeTrial();
-      if (opts && opts.preview && !poWizardUsesOnline(order)) {
+      if (opts && opts.preview) {
         poFeeTrialReady = true;
         poFeeTrialShown = true;
       }
@@ -8107,13 +8102,7 @@
 
     function guardWizardGoodsAdvance(order) {
       if (!order) return false;
-      if (isOnlineTransferPo(order)) {
-        if (!poEstMarginConfirmed) {
-          alert("請先確認下定商品");
-          return false;
-        }
-        return validateRecipientRequired(order);
-      }
+      if (isOnlineTransferPo(order)) return validateRecipientRequired(order);
       if (!validateAddedGoodsQty(order)) return false;
       if (!validateOverseasGoodsBatch(order)) return false;
       return true;
@@ -8154,7 +8143,7 @@
       } else if (poWizardStep === 2 && !online) {
         order.items = [];
         loadPoGoodsWorkspace(order);
-      } else if (poWizardStep === 3 && !online) {
+      } else if (poWizardStep === 3) {
         poShipFees = [];
         order.fees = [];
         renderPoShipFees();
@@ -10158,9 +10147,7 @@
       syncAllExchangeMoney();
       syncRecipientPanel(order);
       const recvConfirm = document.getElementById("recvConfirmGoodsBar");
-      if (recvConfirm) {
-        recvConfirm.classList.toggle("hidden", !isOnlineTransferPo(order) || orderFormMode === "view" || (document.getElementById("page-order-edit") || {}).classList.contains("is-wizard-preview"));
-      }
+      if (recvConfirm) recvConfirm.classList.add("hidden");
       if (document.getElementById("page-order-edit")?.classList.contains("is-readonly")) {
         body.querySelectorAll("input, select, textarea").forEach((el) => {
           if (el.matches("[data-recv-ship-check], #recvShipCheckAll")) return;
@@ -14388,19 +14375,13 @@
       const slot = document.getElementById("poFeeMarginSlot");
       if (!el || !recvBar || !goodsBar) return;
       order = order || getWorkspaceOrder();
-      const page = document.getElementById("page-order-edit");
-      const onlineStep2 = !!(page
-        && page.classList.contains("is-online-wizard")
-        && page.dataset.wizardStep === "2"
-        && !page.classList.contains("is-wizard-preview")
-        && isOnlineTransferPo(order));
-      const viewOnFees = orderFormMode === "view" && !isOnlineTransferPo(order);
+      const viewOnFees = orderFormMode === "view";
       const parkOnFees = slot && (isFourStepFeeStep(order) || isFourStepPreview(order) || viewOnFees);
       if (parkOnFees) {
         if (el.parentElement !== slot) slot.appendChild(el);
         return;
       }
-      const anchor = onlineStep2 ? recvBar : goodsBar;
+      const anchor = goodsBar;
       if (el.previousElementSibling !== anchor) anchor.insertAdjacentElement("afterend", el);
     }
 
@@ -14420,8 +14401,10 @@
     }
 
     function invalidatePoEstMargin() {
+      const order = getWorkspaceOrder();
+      if (poWizardOn && isOnlineTransferPo(order)) return;
       const el = document.getElementById("poMarginOverview");
-      if (el && isOnlineTransferPo(getWorkspaceOrder())) el.classList.remove("hidden");
+      if (el && isOnlineTransferPo(order)) el.classList.remove("hidden");
       resetPoEstMarginDisplay();
     }
 
