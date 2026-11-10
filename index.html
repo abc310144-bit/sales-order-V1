@@ -1368,6 +1368,62 @@
       #page-order-edit.is-wizard:not(.is-wizard-preview):not(.is-online-wizard)[data-wizard-step="1"] .po-buyer-col { grid-row: 2; }
       #page-order-edit.is-wizard:not(.is-wizard-preview):not(.is-online-wizard)[data-wizard-step="1"] .po-vendor-col { grid-row: 3; }
     }
+    #page-order-edit.is-wizard.is-wizard-preview:not(.is-online-wizard) .po-basic-layout {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr);
+      gap: 28px 36px;
+      align-items: start;
+      max-width: 100%;
+      width: 100%;
+    }
+    #page-order-edit.is-wizard.is-wizard-preview:not(.is-online-wizard) .po-basic-top {
+      grid-column: 1;
+      grid-row: 1;
+      order: unset;
+      max-width: none;
+    }
+    #page-order-edit.is-wizard.is-wizard-preview:not(.is-online-wizard) .po-buyer-col {
+      grid-column: 1;
+      grid-row: 2;
+      order: unset;
+      max-width: none;
+    }
+    #page-order-edit.is-wizard.is-wizard-preview:not(.is-online-wizard) .po-vendor-col {
+      grid-column: 2;
+      grid-row: 2;
+      order: unset;
+      max-width: none;
+      margin-top: 0;
+    }
+    #page-order-edit.is-wizard.is-wizard-preview:not(.is-online-wizard) #poMarkUploadBlock {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
+    #page-order-edit.is-wizard-preview:not(.is-online-wizard) #editGoodsOverviewSection {
+      margin-top: 8px;
+    }
+    #page-order-edit.is-wizard-preview:not(.is-online-wizard) #editGoodsToolbar .goods-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    @media (max-width: 1100px) {
+      #page-order-edit.is-wizard.is-wizard-preview:not(.is-online-wizard) .po-basic-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      #page-order-edit.is-wizard.is-wizard-preview:not(.is-online-wizard) .po-basic-top,
+      #page-order-edit.is-wizard.is-wizard-preview:not(.is-online-wizard) .po-buyer-col,
+      #page-order-edit.is-wizard.is-wizard-preview:not(.is-online-wizard) .po-vendor-col {
+        grid-column: auto;
+        grid-row: auto;
+        max-width: 520px;
+      }
+      #page-order-edit.is-wizard.is-wizard-preview:not(.is-online-wizard) .po-basic-top { order: 1; }
+      #page-order-edit.is-wizard.is-wizard-preview:not(.is-online-wizard) .po-buyer-col { order: 2; }
+      #page-order-edit.is-wizard.is-wizard-preview:not(.is-online-wizard) .po-vendor-col { order: 3; margin-top: 4px; }
+    }
     #page-order-edit.is-wizard.is-online-wizard[data-wizard-step="2"] .po-buyer-col,
     #page-order-edit.is-wizard.is-online-wizard[data-wizard-step="2"] .po-vendor-col,
     #page-order-edit.is-wizard.is-online-wizard[data-wizard-step="2"] .po-basic-top { display: none !important; }
@@ -7993,12 +8049,11 @@
       const foot = document.getElementById("poWizardFoot");
       if (!block || !top || !foot || !foot.parentElement) return;
       const page = document.getElementById("page-order-edit");
-      const inStep1 = !!(page
+      const inBasicTop = !!(page
         && page.classList.contains("is-wizard")
-        && !page.classList.contains("is-wizard-preview")
         && !page.classList.contains("is-online-wizard")
-        && page.dataset.wizardStep === "1");
-      if (inStep1) {
+        && (page.dataset.wizardStep === "1" || page.classList.contains("is-wizard-preview")));
+      if (inBasicTop) {
         if (block.parentElement !== top) top.appendChild(block);
       } else if (block.parentElement !== foot.parentElement || block.nextElementSibling !== foot) {
         foot.parentElement.insertBefore(block, foot);
