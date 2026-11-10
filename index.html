@@ -1394,7 +1394,7 @@
     }
     .trade-currency-field select { width: 160px; flex: 0 0 160px; }
     .trade-currency-field input { flex: 1; min-width: 0; max-width: none; }
-    #page-order-edit.is-wizard-preview #editGoodsToolbar,
+    #page-order-edit.is-wizard-preview #poPickImportBtn,
     #page-order-edit.is-wizard-preview #editGoodsFilterBar,
     #page-order-edit.is-wizard-preview #editGoodsConfirmBar,
     #page-order-edit.is-wizard-preview #editGoodsOpsHead,
@@ -7966,6 +7966,15 @@
       if (tab) tab.classList.toggle("hidden", !show);
     }
 
+    function syncPoGoodsTab(order) {
+      const tab = document.querySelector('.po-tab[data-po-tab="goods"]');
+      const hide = !!(order && isOnlineTransferPo(order) && orderFormMode === "view");
+      if (tab) tab.classList.toggle("hidden", hide);
+      if (!hide || poWizardOn) return;
+      const pane = document.querySelector('[data-po-pane="goods"]');
+      if (pane && !pane.classList.contains("hidden")) setPoTab("basic");
+    }
+
     function loadOrderFees(order) {
       poShipFees = Array.isArray(order && order.fees) ? order.fees.map((fee) => ({ ...fee })) : [];
       const rebate = document.getElementById("poShipRebateText");
@@ -8016,7 +8025,7 @@
       }
       if (atLast) {
         show.basic = true;
-        show.goods = true;
+        show.goods = !online;
         show.fees = true;
         show.ships = false;
       } else if (online) {
@@ -8163,6 +8172,8 @@
       if (name === "ships" && shipsTab && shipsTab.classList.contains("hidden")) name = "basic";
       const feesTab = document.querySelector('.po-tab[data-po-tab="fees"]');
       if (name === "fees" && feesTab && feesTab.classList.contains("hidden")) name = "basic";
+      const goodsTab = document.querySelector('.po-tab[data-po-tab="goods"]');
+      if (name === "goods" && goodsTab && goodsTab.classList.contains("hidden")) name = "basic";
       document.querySelectorAll(".po-tab").forEach((el) => el.classList.toggle("active", el.dataset.poTab === name));
       document.querySelectorAll(".po-pane").forEach((el) => el.classList.toggle("hidden", el.dataset.poPane !== name));
       const footer = document.getElementById("editFooter");
@@ -16429,6 +16440,7 @@
       syncPoGoodsToolbar();
       syncEditFooter(order, orderFormMode);
       syncPoFeesTab(order);
+      syncPoGoodsTab(order);
       syncMarkUploadUi(order);
       showPage("order-edit");
       if (poExchangeDomHandoff) {
