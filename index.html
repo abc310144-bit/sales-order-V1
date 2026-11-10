@@ -16461,7 +16461,7 @@
       setBtnEnabled("editSubmit", giftRevise ? giftReviseDirty() : (exchangeEdit ? exchangeDirty() : draftSubmit));
       setBtnEnabled("editExportPdf", !giftRevise && canExportPoPdf(order));
       const exportBtn = document.getElementById("editExportPdf");
-      if (exportBtn) exportBtn.textContent = isOverseasPo(order) ? "匯出" : "匯出 PDF";
+      if (exportBtn) exportBtn.textContent = (isOverseasPo(order) || (view && isDealerPo(order))) ? "匯出" : "匯出 PDF";
       syncStampButton(order);
       if (giftRevise) {
         const stampBtn = document.getElementById("editStampUpload");
