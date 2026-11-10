@@ -2032,6 +2032,12 @@
       z-index: 3;
       background: var(--table-head);
     }
+    .po-goods-table .col-po-seq {
+      width: 64px;
+      min-width: 64px;
+      text-align: center;
+      white-space: nowrap;
+    }
     .po-goods-table .col-id,
     .po-goods-table .col-code,
     .po-goods-table .col-qty,
@@ -4538,6 +4544,7 @@
                   <table class="ship-items-table po-goods-table goods-pdf-table" id="editGoodsOverviewTable">
                     <thead>
                       <tr>
+                        <th class="col-po-seq hidden">編號</th>
                         <th>SKU</th>
                         <th>商品名稱</th>
                         <th class="col-po-choice hidden">類型</th>
@@ -14079,6 +14086,13 @@
       });
     }
 
+    function syncPoGoodsSeqColumn(order) {
+      const show = isOverseasPo(order);
+      document.querySelectorAll("#editGoodsOverviewTable .col-po-seq").forEach((el) => {
+        el.classList.toggle("hidden", !show);
+      });
+    }
+
     function syncPoGoodsPriceColumns(order) {
       const overseas = isOverseasPo(order);
       document.querySelectorAll("#editGoodsOverviewTable .col-po-price-pair").forEach((el) => {
@@ -14832,6 +14846,9 @@
       const skuCell = skuEditable
         ? `<td class="recv-sku-cell"><input type="text" data-field="sku" value="${escapeHtml(d.sku)}" autocomplete="off" placeholder="輸入 SKU" /><div class="recv-sku-hits hidden" data-po-sku-hits></div></td>`
         : `<td>${escapeHtml(d.sku)}</td>`;
+      const seqCell = overseas
+        ? `<td class="col-po-seq">${(opts && opts.rowIndex != null ? opts.rowIndex : 0) + 1}</td>`
+        : "";
       const preview = document.getElementById("page-order-edit").classList.contains("is-wizard-preview");
       let opsCell = "";
       if (!preview && giftRevise) {
@@ -14850,6 +14867,7 @@
       const giftTag = item && item.gift ? `<span class="gift-tag">贈品</span>` : "";
       return `
         <tr data-id="${escapeHtml(item.id)}" data-sku="${escapeHtml(d.sku)}"${item && item.gift ? ' data-gift="1"' : ""}>
+          ${seqCell}
           ${skuCell}
           <td class="col-name" data-sync="name">${giftTag}${escapeHtml(d.name)}</td>
           ${choiceCells}
@@ -14964,6 +14982,7 @@
       const orderNo = (workspaceOrder && workspaceOrder.orderNo) || currentEditOrderNo;
       const showShipped = orderHasCreatedShips(orderNo);
       const showBatch = isOverseasPo(order);
+      syncPoGoodsSeqColumn(order);
       syncPoGoodsBatchColumn(order);
       syncPoGoodsPriceColumns(order);
       syncPoGoodsPalletColumns(order);
