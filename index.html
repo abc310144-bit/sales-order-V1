@@ -4331,7 +4331,7 @@
               <div class="po-kind-meta" id="editPoKindMeta"></div>
             </div>
             <div class="edit-footer" id="editFooter">
-              <button type="button" class="btn" id="editExportPdf">匯出 PDF</button>
+              <button type="button" class="btn" id="editExportPdf">匯出</button>
               <button type="button" class="btn" id="editStampUpload">回壓文件</button>
               <button type="button" class="btn hidden" id="editCopyPo">複製</button>
               <button type="button" class="btn hidden" id="editAddShip" disabled>新增出貨單</button>
@@ -16461,7 +16461,7 @@
       setBtnEnabled("editSubmit", giftRevise ? giftReviseDirty() : (exchangeEdit ? exchangeDirty() : draftSubmit));
       setBtnEnabled("editExportPdf", !giftRevise && canExportPoPdf(order));
       const exportBtn = document.getElementById("editExportPdf");
-      if (exportBtn) exportBtn.textContent = (isOverseasPo(order) || (view && isDealerPo(order))) ? "匯出" : "匯出 PDF";
+      if (exportBtn) exportBtn.textContent = "匯出";
       syncStampButton(order);
       if (giftRevise) {
         const stampBtn = document.getElementById("editStampUpload");
