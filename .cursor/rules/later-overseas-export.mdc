@@ -27,9 +27,8 @@ alwaysApply: true
 - Best Before Date 帶效期_批號的日期前段（`2026-09-15_藍田` → `2026-09-15`）。客戶訂單 PDF、廠商 Invoice、報關 Invoice 都加這一欄，欄名與取值跟 Packing List 一樣。沒選批號則留白。Invoice 放在 Description 下一欄；客戶訂單 PDF 放在 Product Name 下一欄。經銷、一般通路的客戶訂單 PDF 不加。數量、贈品金額邏輯不變。同一 SKU 不同效期維持兩列，各寫自己的效期。
 - 品名用英文。DEMO 假資料在 `mockItemPool.nameEn`。畫面上的商品名稱維持中文。
 - Invoice 單價用畫面上「合計」的計算基數（該列商品報價）。客戶訂單 PDF、廠商 Invoice 的金額 = 該單價 × 下訂數量。報關 Invoice、Packing List 的數量與金額用這次還能出的數量。這些金額就是通路幣別（晨曦公司為 TWD，其餘境外為 USD），不換算成台幣，數字後面不加幣別代號。
-- 淨重留在境外訂單畫面，並寫進 Packing List 的 Net Weight。板入數、板數、毛重不在訂單上輸入。
-- 商品毛重的來源是商品管理的「重量」欄。ERP 上這個欄位目前填的是重量，不是毛重，要先請 JERRY 更新商品重量的填寫數值。數值改成毛重之前，不要把這個欄位寫進 Packing List 的 Gross Weight。
-- Packing List 用範本同一張框線表格。欄位是 Packing No.、S.No、DESCRIPTION、QUANTITY PCS、Carton、Carton/Pallet、pallet、Best Before Date、Pcs per Carton、Net Weight (KG)、Gross Weight (KG)。`NO:` 與 `Packing No.` 留白。Carton/Pallet、pallet、Gross Weight 空白，由人員自行填寫。數量、訂購箱數、箱入數、淨重由系統先填上。表尾 Total 合併左側儲存格，並加總數量、箱數、pallet、淨重、毛重。
+- 淨重留在境外訂單畫面，並寫進 Packing List 的 Net Weight。毛重(G)留在淨重右邊，Packing List 的 Gross Weight 填這一列公克 ÷ 1000。板入數、板數不在訂單上輸入。
+- Packing List 用範本同一張框線表格。欄位是 Packing No.、S.No、DESCRIPTION、QUANTITY PCS、Carton、Carton/Pallet、pallet、Best Before Date、Pcs per Carton、Net Weight (KG)、Gross Weight (KG)。`NO:` 與 `Packing No.` 留白。Carton/Pallet、pallet 維持現在的填法。數量、訂購箱數、箱入數、淨重、毛重由系統先填上。表尾 Total 合併左側儲存格，並加總數量、箱數、pallet、淨重、毛重。DEMO 單件毛重是單件淨重公克的 1.1 倍。正式環境毛重欄位之後再接。
 - 客戶訂單 PDF、廠商 Invoice 的明細是訂單上數量大於 0 的全部品項，數量用下訂數量。出貨單增減、取消，都不改這兩份的品項和數量。
 - 報關 Invoice、Packing List 的明細是這次還能出的數量：還沒進有效出貨單的剩餘，且不超過目前庫存。庫存是 0 的不列入。同一 SKU 有多個效期時，庫存先補較早到期的那一列。出貨單存檔後剩餘減少，再匯出就只剩還沒出的；剩餘是 0 時這兩份沒有商品列。出貨單取消後數量回到訂單，再匯出跟著加回來。
 - 例：A 下訂 10、庫存 9、尚未出貨。客戶訂單 PDF 與廠商 Invoice 的 A 是 10；報關 Invoice 與 Packing List 的 A 是 9。這 9 出貨存檔後再匯出，前兩份仍是 10，後兩份是剩下的 1（庫存夠的話）。
@@ -43,7 +42,7 @@ alwaysApply: true
 - 客戶訂單 PDF 要列贈品，品名前面加「贈品」。贈品單價與金額顯示 0，不加進總額。不印「含標」「不含標」。正貨只印該列選到的那個價格，另一欄是 `-`。
 - 廠商 Invoice 要列贈品，編號寫 `FOC`，單價與金額顯示 0，不加進總額。
 - 報關 Invoice 要列贈品，編號寫 `FOC`，單價用畫面價格，並加進總額。
-- Packing List 同一批贈品放在品名，前面標 `*FOC`。數量、箱數、淨重跟正貨一起加總。
+- Packing List 同一批贈品放在品名，前面標 `*FOC`。數量、箱數、淨重、毛重跟正貨一起加總。
 - 第一次出貨（還沒有有效出貨單，或出貨單都已取消）：必須先匯出，再回壓這次匯出之後的檔，才能新增出貨單。已有有效出貨單時，再出下一批不必重新匯出或回壓。再次匯出後若仍沒有有效出貨單，要再回壓最新的這一次。有贈品且贈品在上次匯出之後有增刪改，同樣要先再匯出再回壓。
 - 贈品和正貨開在同一張出貨單，可以分批。正貨或贈品還有數量沒進有效出貨單時，維持部分出貨，不會先變成已開立出貨單。已經進了出貨單的正貨和贈品都不能再改。
 - 境外不要求上傳麥頭。經銷的麥頭維持原規則。

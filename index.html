@@ -4560,6 +4560,7 @@
                         <th class="num col-po-quote hidden" id="editGoodsQuoteHead">商品報價(TWD)</th>
                         <th>合計</th>
                         <th class="num col-po-pallet hidden">淨重(KG)</th>
+                        <th class="num col-po-pallet hidden">毛重(G)</th>
                         <th>備註</th>
                         <th class="ops" id="editGoodsOpsHead">操作</th>
                       </tr>
@@ -6995,6 +6996,7 @@
         unit: (cat && cat.unit) || "",
         sellableQty: virtualAllocOf(channelName, sku),
         netWeightG: productMasterWeightG(sku),
+        grossWeightG: productMasterGrossWeightG(sku),
       };
     }
 
@@ -7582,6 +7584,7 @@
         expiryAccept: src.expiryAccept || "",
         batch: src.batch || "",
         netWeightG: snapshotNetWeightG(src),
+        grossWeightG: snapshotGrossWeightG(src),
       };
       if (src.lineUid) out.lineUid = String(src.lineUid);
       if (src.gift) out.gift = true;
@@ -11733,6 +11736,7 @@
         item.pcsPerCarton = pcsPerCartonOf(item);
         if (item.remark) item.remark = userFacingRemark(item.remark);
         if (!isOverseasPo(order)) return;
+        if (!(Number(item.grossWeightG) > 0)) item.grossWeightG = snapshotGrossWeightG(item);
         const cat = catalogLineBySku(item.sku);
         const catalogLabel = cat && cat.priceLabel != null && cat.priceLabel !== "" ? Number(cat.priceLabel) : "";
         if (catalogLabel === "") return;
@@ -11772,6 +11776,7 @@
           gift: !!gift,
           batch: "2027-07-12_健工",
           netWeightG: weightG,
+          grossWeightG: Math.round(Number(weightG) * 1.1) || 0,
         };
       };
       const order = extraPo({
@@ -12250,6 +12255,7 @@
         carton: orderCartonQty(qty, pcs),
         bestBefore: bestBeforeOfItem(item),
         netKg: lineNetWeightKg(item, qty),
+        grossKg: lineGrossWeightKg(item, qty),
         unitPrice,
         amount: Math.round(qty * unitPrice * 100) / 100,
         gift: !!item.gift,
@@ -12562,6 +12568,7 @@
         put("J", row, S.center, line.bestBefore);
         if (line.pcs !== "") put("K", row, S.center, line.pcs);
         if (line.netKg !== "") put("L", row, S.center, line.netKg);
+        if (line.grossKg !== "") put("M", row, S.center, line.grossKg);
       });
       box("A", "M", totalRow, S.total);
       put("A", totalRow, S.total, "Total");
@@ -12570,7 +12577,7 @@
         ["G", packingSum(lines, "carton")],
         ["I", lines.reduce((sum, line) => sum + (Number(palletCountOf(line.carton, cartonPerPalletOf(boxSizeOf(line.sku)))) || 0), 0)],
         ["L", packingSum(lines, "netKg")],
-        ["M", 0],
+        ["M", packingSum(lines, "grossKg")],
       ];
       sumCols.forEach(([col, value]) => {
         if (!lines.length) {
@@ -14071,6 +14078,7 @@
         sellableQty: src.sellableQty != null ? Number(src.sellableQty) : undefined,
         remark: clipPoRemark(src.remark),
         netWeightG: snapshotNetWeightG(src),
+        grossWeightG: snapshotGrossWeightG(src),
         pcsPerCarton: Number(src.pcsPerCarton) || Number((catalogLineBySku(src.sku) || {}).pcsPerCarton) || pcsFromItemRemark(src) || 0,
         qty: Number(src.qty) || 0,
         priceWithLabel: src.priceWithLabel != null && src.priceWithLabel !== "" ? String(src.priceWithLabel) : "",
@@ -14729,6 +14737,40 @@
       return productMasterWeightG(src && src.sku);
     }
 
+    /** DEMO 單件毛重公克：比淨重略重。正式環境改接商品主檔毛重。 */
+    function productMasterGrossWeightG(sku) {
+      const net = productMasterWeightG(sku);
+      return net > 0 ? Math.round(net * 1.1) : 0;
+    }
+
+    function snapshotGrossWeightG(src) {
+      if (src && src.grossWeightG != null && src.grossWeightG !== "") {
+        const n = Number(src.grossWeightG);
+        if (Number.isFinite(n) && n > 0) return Math.round(n);
+      }
+      const fromMaster = productMasterGrossWeightG(src && src.sku);
+      if (fromMaster > 0) return fromMaster;
+      const net = Number(src && src.netWeightG);
+      return Number.isFinite(net) && net > 0 ? Math.round(net * 1.1) : 0;
+    }
+
+    function lineGrossWeightG(item, qty) {
+      const grams = Number(item && item.grossWeightG) || 0;
+      const n = Number(qty) || 0;
+      if (grams <= 0 || n <= 0) return "";
+      return Math.round(grams * n);
+    }
+
+    function lineGrossWeightGText(item, qty) {
+      const grams = lineGrossWeightG(item, qty);
+      return grams === "" ? "-" : String(grams);
+    }
+
+    function lineGrossWeightKg(item, qty) {
+      const grams = lineGrossWeightG(item, qty);
+      return grams === "" ? "" : Math.round(grams) / 1000;
+    }
+
     function lineNetWeightKg(item, qty) {
       const grams = Number(item && item.netWeightG) || 0;
       const n = Number(qty) || 0;
@@ -14744,7 +14786,9 @@
 
     function overseasPalletCellsHtml(item, d) {
       const weight = lineNetWeightKgText(item, d.qty);
-      return `<td class="num col-po-pallet" data-sync="netWeight">${escapeHtml(weight)}</td>`;
+      const gross = lineGrossWeightGText(item, d.qty);
+      return `<td class="num col-po-pallet" data-sync="netWeight">${escapeHtml(weight)}</td>`
+        + `<td class="num col-po-pallet" data-sync="grossWeight">${escapeHtml(gross)}</td>`;
     }
 
     function goodsDisplayFields(item) {
@@ -16011,6 +16055,8 @@
       const quoteCell = tr.querySelector('[data-sync="quote"]');
       if (quoteCell) quoteCell.textContent = goodsPricePlain(d.quote);
       if (netWeight) netWeight.textContent = lineNetWeightKgText(item, d.qty);
+      const grossWeight = tr.querySelector('[data-sync="grossWeight"]');
+      if (grossWeight) grossWeight.textContent = lineGrossWeightGText(item, d.qty);
       const qtyInput = tr.querySelector('[data-field="qty"]');
       if (qtyInput) {
         const over = isOverviewQtyOversell(item);
@@ -21522,6 +21568,7 @@
           gift: !!gift,
           batch,
           netWeightG: weightG,
+          grossWeightG: Math.round(Number(weightG) * 1.1) || 0,
           remark: "",
         };
       };
