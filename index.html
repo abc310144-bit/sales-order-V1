@@ -5102,7 +5102,7 @@
           </svg>
           <div class="upload-links">
             <button type="button" class="upload-link" id="importPoItemsPick">選擇檔案</button>
-            <a class="upload-link" id="importPoItemsTemplate" href="下定商品匯入模板.xlsx" download="下定商品匯入模板.xlsx">下載範例檔案</a>
+            <a class="upload-link" id="importPoItemsTemplate" href="一般通路 - 下訂商品匯入模板.xlsx" download="一般通路 - 下訂商品匯入模板.xlsx">下載範例檔案</a>
           </div>
           <div class="upload-file-name" id="importPoItemsFileName"></div>
           <input type="file" id="importPoItemsFile" class="hidden" accept=".csv,.xlsx,.xls,.txt" />
@@ -15361,9 +15361,12 @@
         } else if (isOverseasPo(getWorkspaceOrder())) {
           tpl.href = "下定商品匯入模板-境外.xlsx";
           tpl.setAttribute("download", "下定商品匯入模板-境外.xlsx");
-        } else {
+        } else if (isDealerPo(getWorkspaceOrder())) {
           tpl.href = "下定商品匯入模板.xlsx";
           tpl.setAttribute("download", "下定商品匯入模板.xlsx");
+        } else {
+          tpl.href = "一般通路 - 下訂商品匯入模板.xlsx";
+          tpl.setAttribute("download", "一般通路 - 下訂商品匯入模板.xlsx");
         }
       }
       resetImportPoItemsModal();
@@ -15552,7 +15555,7 @@
         else if (key === "類型") map[col] = "lineKind";
         else if (key.includes("商品名稱") || key === "品名" || /name/i.test(key)) map[col] = "name";
         else if (key.includes("效期") || key.includes("批號") || /batch/i.test(key)) map[col] = "batch";
-        else if (key === "數量" || key.includes("訂購數量") || /qty|quantity/i.test(key)) map[col] = "qty";
+        else if (key === "數量" || key.includes("下定數量") || key.includes("訂購數量") || /qty|quantity/i.test(key)) map[col] = "qty";
       });
       return matrix.slice(1).map((row) => {
         const rec = { sku: "", name: "", qty: "", batch: "", lineKind: "" };
@@ -15898,7 +15901,8 @@
         const batch = String(rec.batch || "").trim();
         const kind = String(rec.lineKind || "").replace(/\s/g, "");
         const kindOk = !overseas || kind === "一般下定商品" || kind === "贈品";
-        if (!sku || !name || (overseas && (!batch || !kindOk))) {
+        const nameRequired = !overseas && isDealerPo(order);
+        if (!sku || (nameRequired && !name) || (overseas && (!batch || !kindOk))) {
           missingField.push(rec);
           return;
         }
@@ -15918,7 +15922,9 @@
       if (missingField.length) {
         alert(overseas
           ? "所有欄位皆為必填，請檢查類型、SKU、商品名稱、效期_批號、數量。類型請填一般下定商品或贈品"
-          : "所有欄位皆為必填，請檢查 SKU、商品名稱、數量");
+          : (isDealerPo(order)
+            ? "所有欄位皆為必填，請檢查 SKU、商品名稱、數量"
+            : "所有欄位皆為必填，請檢查 SKU、預計出貨數量(下定數量)"));
         return false;
       }
       if (invalidQty.length) {
