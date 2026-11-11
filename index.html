@@ -18581,7 +18581,7 @@
 
     /** 已建立出貨單，且該張已拋單或尚未取消（狀態不是訂單取消）→ 不可作廢客戶訂單。 */
     function canVoidOrder(order) {
-      if (!order || order.status === "已作廢" || order.status === "待審核") return false;
+      if (!order || order.status === "已作廢") return false;
       if (validShipsOfPo(order.orderNo).length > 0) return false;
       return getLantianStatus(order) === "WAITING";
     }
