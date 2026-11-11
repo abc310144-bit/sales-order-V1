@@ -20,7 +20,7 @@ alwaysApply: true
 
 已確認：
 
-- 賣方、買方用系統現有資料，匯出時翻成英文。賣方公司名譯為 Juan Yuan Limited，地址譯為英文台北地址。用詞和範本稍有不同可以。
+- 賣方、買方用系統現有資料，匯出時翻成英文。賣方公司名譯為 Juan Yuan Limited，地址譯為英文台北地址。用詞和範本稍有不同可以。兩張 Invoice 的買賣方各加一個框，框內標題是 Vendor、Buyer。框裡的公司名稱、地址、電話、ATTN 維持原樣。對應 Excel 同樣加上這兩個標題和框線。
 - 貿易條件只帶訂單上選到的選項，不加地點。付款條件維持系統現有文案（預設 `TT, 100% prepaid`）。兩張 Invoice 的 Terms of Payment、Payment Term，以及對應 Excel，都讀賣方付款條件；空白時仍是這句預設。
 - 明細只列下訂數量大於 0 的商品，不要商品系列分組列。
 - Invoice／Packing List 的條碼欄帶該列 SKU。

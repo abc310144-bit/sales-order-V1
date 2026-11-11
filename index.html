@@ -12386,8 +12386,10 @@
     .sheet { width: 210mm; min-height: 297mm; margin: 16px auto 32px; padding: 12mm 12mm; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
     h1 { margin: 0 0 12px; font-size: 22px; }
     .meta { display: flex; gap: 18px; margin-bottom: 12px; font-size: 13px; }
-    .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 12px; font-size: 12px; line-height: 1.5; }
-    .parties p { margin: 0; }
+    .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px; }
+    .box { border: 1px solid #111; padding: 10px 12px; min-height: 132px; }
+    .box h2 { margin: 0 0 8px; font-size: 14px; border-bottom: 1px solid #111; padding-bottom: 4px; }
+    .box p { margin: 0 0 4px; font-size: 12px; line-height: 1.55; }
     .terms { margin-bottom: 12px; font-size: 13px; }
     table { width: 100%; border-collapse: collapse; font-size: 11px; }
     th, td { border: 1px solid #111; padding: 4px 6px; vertical-align: top; }
@@ -12416,13 +12418,15 @@
       <div>Invoice No: ${escapeHtml(id.no)}</div>
     </div>
     <div class="parties">
-      <div>
+      <div class="box">
+        <h2>Vendor</h2>
         <p><strong>${escapeHtml(parties.sellerName)}</strong></p>
         <p>Address : ${escapeHtml(parties.sellerAddress)}</p>
         <p>Tel : ${escapeHtml(parties.sellerTel)}</p>
         <p>ATTN: ${escapeHtml(parties.sellerAttn)}</p>
       </div>
-      <div>
+      <div class="box">
+        <h2>Buyer</h2>
         <p><strong>${escapeHtml(parties.buyerName)}</strong></p>
         <p>Address : ${escapeHtml(parties.buyerAddress)}</p>
         <p>Tel : ${escapeHtml(parties.buyerTel)}</p>
@@ -12765,7 +12769,7 @@
       const model = overseasInvoiceModel(order, kind);
       const parties = model.parties;
       const priced = model.priced;
-      const S = { title: 1, head: 3, center: 4, text: 5, info: 7 };
+      const S = { title: 1, box: 2, head: 3, center: 4, text: 5, info: 7 };
       const cellMap = new Map();
       const put = (col, row, style, value) => {
         cellMap.set(col + row, { row, col, xml: packingCellXml(packingRef(col, row), style, value) });
@@ -12779,19 +12783,24 @@
       put("A", 3, S.info, "Date: " + (id.date || ""));
       put("D", 3, S.info, "Quotation to Date: " + (id.quotation || ""));
       put("G", 3, S.info, "Invoice No: " + (id.no || ""));
-      put("A", 5, S.info, parties.sellerName);
-      put("E", 5, S.info, parties.buyerName);
-      put("A", 6, S.info, "Address : " + (parties.sellerAddress || ""));
-      put("E", 6, S.info, "Address : " + (parties.buyerAddress || ""));
-      put("A", 7, S.info, "Tel : " + (parties.sellerTel || ""));
-      put("E", 7, S.info, "Tel : " + (parties.buyerTel || ""));
-      put("A", 8, S.info, "ATTN: " + (parties.sellerAttn || ""));
-      put("E", 8, S.info, "ATTN: " + (parties.buyerAttn || ""));
-      put("A", 10, S.info, "Terms of Delivery: " + (parties.delivery || "—"));
-      put("A", 11, S.info, "Terms of Payment: " + parties.payment);
+      const partyLines = [
+        ["Vendor", "Buyer"],
+        [parties.sellerName, parties.buyerName],
+        ["Address : " + (parties.sellerAddress || ""), "Address : " + (parties.buyerAddress || "")],
+        ["Tel : " + (parties.sellerTel || ""), "Tel : " + (parties.buyerTel || "")],
+        ["ATTN: " + (parties.sellerAttn || ""), "ATTN: " + (parties.buyerAttn || "")],
+      ];
+      partyLines.forEach((pair, index) => {
+        const row = 5 + index;
+        "ABCDEFGH".split("").forEach((col) => put(col, row, S.box, ""));
+        put("A", row, index === 0 ? S.head : S.box, pair[0]);
+        put("E", row, index === 0 ? S.head : S.box, pair[1]);
+      });
+      put("A", 11, S.info, "Terms of Delivery: " + (parties.delivery || "—"));
+      put("A", 12, S.info, "Terms of Payment: " + parties.payment);
       const heads = ["No.", "Barcode", "Description", "Best Before Date", "Unit Price (" + parties.currency + ")", "Pcs / Carton", "Order Quantity", "Amount"];
-      "ABCDEFGH".split("").forEach((col, index) => put(col, 13, S.head, heads[index]));
-      const first = 14;
+      "ABCDEFGH".split("").forEach((col, index) => put(col, 14, S.head, heads[index]));
+      const first = 15;
       if (!priced.length) {
         fill(first, S.text);
         put("A", first, S.text, "No line items");
@@ -12828,8 +12837,8 @@
       const endRow = foot + footLines.length - 1;
       const merges = [
         "A1:H1", "A3:C3", "D3:F3", "G3:H3",
-        "A5:D5", "E5:H5", "A6:D6", "E6:H6", "A7:D7", "E7:H7", "A8:D8", "E8:H8",
-        "A10:H10", "A11:H11",
+        "A5:D5", "E5:H5", "A6:D6", "E6:H6", "A7:D7", "E7:H7", "A8:D8", "E8:H8", "A9:D9", "E9:H9",
+        "A11:H11", "A12:H12",
       ];
       if (!priced.length) merges.push("A" + first + ":H" + first);
       footLines.forEach((text, index) => {
