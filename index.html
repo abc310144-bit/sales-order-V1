@@ -622,6 +622,12 @@
       margin: 0 0 12px;
     }
     .goods-title-row .goods-title { margin: 0; }
+    .goods-title-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
     .po-goods-section + .po-goods-section { margin-top: 28px; }
     #editGoodsPickSection.hidden + .po-goods-section { margin-top: 0; }
     .po-margin-overview {
@@ -4532,7 +4538,10 @@
               <div class="po-goods-section" id="editGoodsOverviewSection">
                 <div class="goods-title-row" id="editGoodsToolbar">
                   <h3 class="goods-title">訂單商品總攬</h3>
-                  <button type="button" class="btn btn-primary" id="poPickImportBtn">匯入商品</button>
+                  <div class="goods-title-actions">
+                    <button type="button" class="btn btn-primary hidden" id="poGiftReviseAddBtn">新增贈品</button>
+                    <button type="button" class="btn btn-primary" id="poPickImportBtn">匯入商品</button>
+                  </div>
                 </div>
                 <div class="po-pick-filter" id="editGoodsFilterBar">
                   <input id="poPickFilterInput" type="text" placeholder="輸入 SKU（精準），多個以 , 或 ， 分隔" autocomplete="off" />
@@ -14445,6 +14454,8 @@
       if (filterBar) filterBar.classList.toggle("hidden", online || inline || (!editable && !giftEdit));
       if (confirmBar) confirmBar.classList.add("hidden");
       if (importBtn) importBtn.classList.toggle("hidden", !editable || online);
+      const giftAddBtn = document.getElementById("poGiftReviseAddBtn");
+      if (giftAddBtn) giftAddBtn.classList.toggle("hidden", !isGiftReviseEdit());
       if (opsHead) {
         const showOps = !online && !preview && (inline ? (editable || giftEdit) : ((editable && poGoodsRowDeletable()) || giftEdit));
         opsHead.classList.toggle("hidden", !showOps);
@@ -14896,9 +14907,8 @@
       const preview = document.getElementById("page-order-edit").classList.contains("is-wizard-preview");
       let opsCell = "";
       if (!preview && giftRevise) {
-        const add = `<a href="#" data-po-add-gift="1">新增贈品</a>`;
         const del = item && item.gift ? `<a href="#" data-del="1">刪除</a>` : "";
-        opsCell = `<td class="ops">${add}${del}</td>`;
+        opsCell = `<td class="ops">${del}</td>`;
       } else if (!preview && inline && (goodsEdit || giftEdit)) {
         const add = goodsEdit ? `<a href="#" data-po-add-row="1">新增品項</a>` : "";
         const canDel = rowIndex > 0 && (item && item.gift ? giftEdit : (goodsEdit && poGoodsRowDeletable()));
@@ -16450,10 +16460,8 @@
       const giftRevise = !view && canOverseasGiftRevise(order);
       syncPoShipTab(order);
       setBtnEnabled("editSaveDraft", !view && draftLike && !giftRevise);
-      if (giftRevise) {
-        const draftBtn = document.getElementById("editSaveDraft");
-        if (draftBtn) draftBtn.classList.add("hidden");
-      }
+      const draftBtn = document.getElementById("editSaveDraft");
+      if (draftBtn && (view || giftRevise)) draftBtn.classList.add("hidden");
       const submitBtn = document.getElementById("editSubmit");
       if (submitBtn) submitBtn.textContent = "送出申請";
       const exchangeEdit = !view && isExchangeLockMode(order);
@@ -17071,6 +17079,9 @@
     document.getElementById("importPoItemsConfirm").addEventListener("click", confirmImportPoItems);
     document.getElementById("importPoItemsModal").addEventListener("click", (e) => {
       if (e.target.id === "importPoItemsModal") closeImportPoItemsModal();
+    });
+    document.getElementById("poGiftReviseAddBtn").addEventListener("click", () => {
+      addGiftReviseRow();
     });
     document.getElementById("poPickImportBtn").addEventListener("click", () => {
       openImportPoItemsModal("po-pick");
