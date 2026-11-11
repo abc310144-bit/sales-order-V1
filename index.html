@@ -4516,7 +4516,7 @@
                 </div>
               </div>
               <div class="form-row" id="editTermsOfPaymentRow">
-                <label>付款條件</label>
+                <label id="editTermsOfPaymentLabel">付款條件</label>
                 <div class="form-ctrl"><input type="text" id="editTermsOfPayment" /></div>
               </div>
               <div class="form-row hidden" id="editTradeCurrencyRow">
@@ -8095,6 +8095,7 @@
       const show = {};
       if (!poWizardOn) {
         placePoMarkBlock();
+        syncOverseasPaymentTermsLabel(current);
         return;
       }
       if (atLast) {
@@ -8139,6 +8140,7 @@
         renderPoGoodsTable();
       }
       placePoMarkBlock();
+      syncOverseasPaymentTermsLabel(current);
     }
 
     function syncPoWizardUi(order, mode, opts) {
@@ -8162,6 +8164,7 @@
         placePoMarginOverview(order);
         if (orderFormMode === "view") renderPoEstMargin(order);
         placePoMarkBlock();
+        syncOverseasPaymentTermsLabel(order);
         return;
       }
       const continuing = !!(opts && ((opts.wizardStep != null && opts.wizardStep !== "") || opts.preview));
@@ -11259,6 +11262,14 @@
       return !isOverseasPo(order);
     }
 
+    function syncOverseasPaymentTermsLabel(order) {
+      const label = document.getElementById("editTermsOfPaymentLabel");
+      if (!label) return;
+      const page = document.getElementById("page-order-edit");
+      const step1 = !!(poWizardOn && page && page.classList.contains("is-wizard") && !page.classList.contains("is-wizard-preview") && page.dataset.wizardStep === "1");
+      label.textContent = (order && isOverseasPo(order) && step1) ? "收款條件" : "付款條件";
+    }
+
     const DEMO_COLLECTION_TERMS = "月結 30 天";
     const INCOTERM_SELECT_HTML = `<option value="">請選擇</option><option>FOB</option><option>CIF</option><option>EXW</option><option>DDU</option>`;
     const SHIP_INCOTERM_SELECT_HTML = `<option value="">請選擇</option><option>FOB</option><option>CIF</option><option>EXW</option><option>CFR</option><option>DAP</option><option>DDP</option>`;
@@ -11593,6 +11604,7 @@
       const hidePay = hidePartyPayment(order);
       document.getElementById("editTermsOfPaymentRow").classList.toggle("hidden", hidePay);
       document.getElementById("editTermsOfPayment").value = hidePay ? "" : (ov.termsOfPayment || "");
+      syncOverseasPaymentTermsLabel(order);
       fillTradeCurrencyFields(order);
       document.getElementById("editVendorExtWrap").classList.toggle("hidden", readonly);
       document.getElementById("editVendorExt").classList.toggle("hidden", readonly);
