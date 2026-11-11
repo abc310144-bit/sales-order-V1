@@ -4743,7 +4743,7 @@
       </div>
       <div class="modal-body">
         <div class="form-row">
-          <label>客戶訂單類型</label>
+          <label class="required">客戶訂單類型</label>
           <div class="form-ctrl">
             <div class="radio-group">
               <label class="radio-line"><input type="radio" name="importPoKind" value="一般通路" /> 一般通路</label>
@@ -4753,7 +4753,7 @@
           </div>
         </div>
         <div class="form-row hidden" id="importGeneralTypeRow">
-          <label>合作通路類型</label>
+          <label class="required">合作通路類型</label>
           <div class="form-ctrl">
             <select id="importChannelType">
               <option value="">請選擇</option>
@@ -4763,7 +4763,7 @@
           </div>
         </div>
         <div class="form-row hidden" id="importChannelNameRow">
-          <label>通路名稱</label>
+          <label class="required">通路名稱</label>
           <div class="form-ctrl">
             <select id="importChannelName">
               <option value="">請選擇</option>
@@ -4772,7 +4772,7 @@
         </div>
         <div id="importPlanning" class="create-planning hidden">相關設定目前規劃中</div>
         <div class="form-row hidden" id="importFileRow">
-          <label>選擇檔案</label>
+          <label class="required">選擇檔案</label>
           <div class="form-ctrl">
             <div class="file-pick">
               <button type="button" class="btn" id="importFileBtn">選擇檔案</button>
@@ -4793,7 +4793,7 @@
       </div>
       <div class="modal-foot">
         <button type="button" class="btn" id="importCancel">取消</button>
-        <button type="button" class="btn btn-primary" id="importConfirm">匯入</button>
+        <button type="button" class="btn btn-primary" id="importConfirm" disabled>匯入</button>
       </div>
     </div>
   </div>
@@ -4806,7 +4806,7 @@
       </div>
       <div class="modal-body">
         <div class="form-row">
-          <label>客戶訂單類型</label>
+          <label class="required">客戶訂單類型</label>
           <div class="form-ctrl">
             <div class="radio-group">
               <label class="radio-line"><input type="radio" name="createPoKind" value="一般通路" /> 一般通路</label>
@@ -4816,7 +4816,7 @@
           </div>
         </div>
         <div class="form-row hidden" id="createGeneralTypeRow">
-          <label>合作通路類型</label>
+          <label class="required">合作通路類型</label>
           <div class="form-ctrl">
             <select id="createChannelType">
               <option value="">請選擇</option>
@@ -4826,7 +4826,7 @@
           </div>
         </div>
         <div class="form-row hidden" id="createChannelNameRow">
-          <label>通路名稱</label>
+          <label class="required">通路名稱</label>
           <div class="form-ctrl">
             <select id="createChannelName">
               <option value="">請選擇</option>
@@ -4836,7 +4836,7 @@
       </div>
       <div class="modal-foot">
         <button type="button" class="btn" id="createCancel">取消</button>
-        <button type="button" class="btn btn-primary" id="createConfirm">確定</button>
+        <button type="button" class="btn btn-primary" id="createConfirm" disabled>確定</button>
       </div>
     </div>
   </div>
@@ -6671,6 +6671,21 @@
       return document.querySelector('input[name="importPoKind"]:checked')?.value || "";
     }
 
+    function importPickReady() {
+      const kind = getImportPoKind();
+      const channelType = document.getElementById("importChannelType").value;
+      const channel = document.getElementById("importChannelName").value;
+      const file = document.getElementById("importFile").files[0];
+      if (!kind || !channel || !file) return false;
+      if (kind === "一般通路" && !channelType) return false;
+      return true;
+    }
+
+    function syncImportConfirmEnabled() {
+      const btn = document.getElementById("importConfirm");
+      if (btn) btn.disabled = !importPickReady();
+    }
+
     function syncImportModal() {
       const kind = getImportPoKind();
       const subType = document.getElementById("importChannelType").value;
@@ -6683,29 +6698,23 @@
         document.getElementById("importChannelNameRow").classList.toggle("hidden", !subType);
         document.getElementById("importFileRow").classList.toggle("hidden", !subType);
         document.getElementById("importPlanning").classList.add("hidden");
-        syncImportTransferHint();
-        return;
-      }
-      if (isDealer) {
+      } else if (isDealer) {
         fillChannelNameOptions("importChannelName", "台灣本地經銷");
         document.getElementById("importChannelNameRow").classList.remove("hidden");
         document.getElementById("importFileRow").classList.remove("hidden");
         document.getElementById("importPlanning").classList.add("hidden");
-        syncImportTransferHint();
-        return;
-      }
-      if (isOverseas) {
+      } else if (isOverseas) {
         fillChannelNameOptions("importChannelName", "境外通路");
         document.getElementById("importChannelNameRow").classList.remove("hidden");
         document.getElementById("importFileRow").classList.remove("hidden");
         document.getElementById("importPlanning").classList.add("hidden");
-        syncImportTransferHint();
-        return;
+      } else {
+        document.getElementById("importChannelNameRow").classList.add("hidden");
+        document.getElementById("importFileRow").classList.add("hidden");
+        document.getElementById("importPlanning").classList.add("hidden");
       }
-      document.getElementById("importChannelNameRow").classList.add("hidden");
-      document.getElementById("importFileRow").classList.add("hidden");
-      document.getElementById("importPlanning").classList.add("hidden");
       syncImportTransferHint();
+      syncImportConfirmEnabled();
     }
 
     function syncImportTransferHint() {
@@ -7379,6 +7388,7 @@
         label.textContent = "尚未選擇檔案";
         label.classList.add("empty");
       }
+      syncImportConfirmEnabled();
     });
     document.getElementById("importModal").addEventListener("click", (e) => {
       if (e.target.id === "importModal") closeImportModal();
@@ -7398,7 +7408,10 @@
       fillChannelNameOptions("importChannelName", document.getElementById("importChannelType").value);
       syncImportModal();
     });
-    document.getElementById("importChannelName").addEventListener("change", syncImportTransferHint);
+    document.getElementById("importChannelName").addEventListener("change", () => {
+      syncImportTransferHint();
+      syncImportConfirmEnabled();
+    });
     function onShipListPoViewClick(e) {
       const cancelLink = e.target.closest("[data-ship-cancel]");
       if (cancelLink) {
@@ -16997,6 +17010,20 @@
       return document.querySelector('input[name="createPoKind"]:checked')?.value || "";
     }
 
+    function createPickReady() {
+      const kind = getCreatePoKind();
+      const channelType = document.getElementById("createChannelType").value;
+      const channel = document.getElementById("createChannelName").value;
+      if (!kind || !channel) return false;
+      if (kind === "一般通路" && !channelType) return false;
+      return true;
+    }
+
+    function syncCreateConfirmEnabled() {
+      const btn = document.getElementById("createConfirm");
+      if (btn) btn.disabled = !createPickReady();
+    }
+
     function syncCreateModal() {
       const kind = getCreatePoKind();
       const subType = document.getElementById("createChannelType").value;
@@ -17009,20 +17036,17 @@
       if (isGeneral) {
         fillChannelNameOptions("createChannelName", subType);
         nameRow.classList.toggle("hidden", !subType);
-        return;
-      }
-      if (isDealer) {
+      } else if (isDealer) {
         fillChannelNameOptions("createChannelName", "台灣本地經銷");
         nameRow.classList.remove("hidden");
-        return;
-      }
-      if (isOverseas) {
+      } else if (isOverseas) {
         fillChannelNameOptions("createChannelName", "境外通路");
         nameRow.classList.remove("hidden");
-        return;
+      } else {
+        nameRow.classList.add("hidden");
+        select.innerHTML = `<option value="">請選擇</option>`;
       }
-      nameRow.classList.add("hidden");
-      select.innerHTML = `<option value="">請選擇</option>`;
+      syncCreateConfirmEnabled();
     }
 
     function openCreateModal() {
@@ -17051,6 +17075,7 @@
       fillChannelNameOptions("createChannelName", document.getElementById("createChannelType").value);
       syncCreateModal();
     });
+    document.getElementById("createChannelName").addEventListener("change", syncCreateConfirmEnabled);
     document.getElementById("createConfirm").addEventListener("click", () => {
       const kind = getCreatePoKind();
       if (!kind) {
