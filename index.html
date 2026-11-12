@@ -1362,10 +1362,38 @@
       max-width: none;
       margin-top: 0;
     }
-    #page-order-edit.is-wizard:not(.is-wizard-preview):not(.is-online-wizard)[data-wizard-step="1"] #poMarkUploadBlock {
+    #page-order-edit.is-wizard:not(.is-wizard-preview):not(.is-online-wizard)[data-wizard-step="1"] #poMarkUploadBlock,
+    #page-order-edit.is-flat .po-basic-top #poMarkUploadBlock {
       margin-top: 0;
       padding-top: 0;
       border-top: none;
+    }
+    #page-order-edit.is-flat .po-basic-layout:not(.has-recipient) {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr);
+      gap: 28px 36px;
+      align-items: start;
+      max-width: 100%;
+      width: 100%;
+    }
+    #page-order-edit.is-flat .po-basic-layout:not(.has-recipient) .po-basic-top {
+      grid-column: 1;
+      grid-row: 1;
+      order: unset;
+      max-width: none;
+    }
+    #page-order-edit.is-flat .po-basic-layout:not(.has-recipient) .po-buyer-col {
+      grid-column: 1;
+      grid-row: 2;
+      order: unset;
+      max-width: none;
+    }
+    #page-order-edit.is-flat .po-basic-layout:not(.has-recipient) .po-vendor-col {
+      grid-column: 2;
+      grid-row: 2;
+      order: unset;
+      max-width: none;
+      margin-top: 0;
     }
     @media (max-width: 1100px) {
       #page-order-edit.is-wizard:not(.is-wizard-preview):not(.is-online-wizard)[data-wizard-step="1"] .po-basic-layout {
@@ -1379,6 +1407,17 @@
       #page-order-edit.is-wizard:not(.is-wizard-preview):not(.is-online-wizard)[data-wizard-step="1"] .po-basic-top { grid-row: 1; }
       #page-order-edit.is-wizard:not(.is-wizard-preview):not(.is-online-wizard)[data-wizard-step="1"] .po-buyer-col { grid-row: 2; }
       #page-order-edit.is-wizard:not(.is-wizard-preview):not(.is-online-wizard)[data-wizard-step="1"] .po-vendor-col { grid-row: 3; }
+      #page-order-edit.is-flat .po-basic-layout:not(.has-recipient) {
+        grid-template-columns: 1fr;
+      }
+      #page-order-edit.is-flat .po-basic-layout:not(.has-recipient) .po-basic-top,
+      #page-order-edit.is-flat .po-basic-layout:not(.has-recipient) .po-buyer-col,
+      #page-order-edit.is-flat .po-basic-layout:not(.has-recipient) .po-vendor-col {
+        grid-column: 1;
+      }
+      #page-order-edit.is-flat .po-basic-layout:not(.has-recipient) .po-basic-top { grid-row: 1; }
+      #page-order-edit.is-flat .po-basic-layout:not(.has-recipient) .po-buyer-col { grid-row: 2; }
+      #page-order-edit.is-flat .po-basic-layout:not(.has-recipient) .po-vendor-col { grid-row: 3; }
     }
     #page-order-edit.is-wizard.is-wizard-preview:not(.is-online-wizard) .po-basic-layout {
       display: grid;
@@ -8096,6 +8135,7 @@
       const page = document.getElementById("page-order-edit");
       const flat = usePoFlatLayout();
       if (page) page.classList.toggle("is-flat", flat);
+      placePoMarkBlock();
       if (!flat) return;
       const show = {};
       document.querySelectorAll(".po-tab").forEach((tab) => {
@@ -8138,10 +8178,13 @@
       const foot = document.getElementById("poWizardFoot");
       if (!block || !top || !foot || !foot.parentElement) return;
       const page = document.getElementById("page-order-edit");
-      const inBasicTop = !!(page
-        && page.classList.contains("is-wizard")
-        && !page.classList.contains("is-online-wizard")
-        && (page.dataset.wizardStep === "1" || page.classList.contains("is-wizard-preview")));
+      const layout = document.getElementById("poBasicLayout");
+      const onlineHead = !!(page && page.classList.contains("is-online-wizard"))
+        || !!(layout && layout.classList.contains("has-recipient"));
+      const inBasicTop = !!(page && !onlineHead && (
+        (page.classList.contains("is-wizard") && (page.dataset.wizardStep === "1" || page.classList.contains("is-wizard-preview")))
+        || page.classList.contains("is-flat")
+      ));
       if (inBasicTop) {
         if (block.parentElement !== top) top.appendChild(block);
       } else if (block.parentElement !== foot.parentElement || block.nextElementSibling !== foot) {
