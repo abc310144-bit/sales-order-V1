@@ -9601,11 +9601,11 @@
     }
 
     function recvColCount(showExchange) {
-      return showExchange ? 13 : 12;
+      return showExchange ? 15 : 14;
     }
 
     function recvOtherHeadLabel() {
-      return orderTaxModeOf(getWorkspaceOrder()) === "untaxed" ? "含稅金額" : "未稅";
+      return orderTaxModeOf(getWorkspaceOrder()) === "untaxed" ? "含稅金額" : "未稅金額";
     }
 
     function recvGoodsHeadHtml(showExchange) {
@@ -9619,6 +9619,8 @@
             <th class="num">當前可賣量</th>
             <th class="num">預計出貨數量(下訂數量)</th>
             <th class="num">商品報價</th>
+            <th class="num">稅額</th>
+            <th class="num">${recvOtherHeadLabel()}</th>
             <th class="num">合計</th>
             <th class="num">合計稅額</th>
             <th>備註</th>
@@ -10261,6 +10263,8 @@
           <td class="num"><input type="text" data-recv="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
           <td class="num"><div class="qty-field"><input type="number" data-recv="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${qtyOver && orderFormMode !== "view" ? "is-oversell" : ""}"${ro} /><div class="qty-oversell-hint${qtyOver && orderFormMode !== "view" ? "" : " hidden"}">數量大於當前可賣量</div></div></td>
           <td class="num"><input type="number" data-recv="lineQuote" min="0.01" step="0.01" value="${escapeHtml(row.quoteFrozen != null && row.quoteFrozen !== "" ? String(row.quoteFrozen) : "")}"${(!editable || isExchangeLockMode(getWorkspaceOrder())) ? " readonly" : ""} /></td>
+          <td class="num"><input type="text" data-recv="lineTax" readonly value="" /></td>
+          <td class="num"><input type="text" data-recv="lineOther" readonly value="" /></td>
           <td class="num"><input type="number" data-recv="orderAmount" min="0" step="0.01" readonly value="${row.orderAmount === 0 || row.orderAmount ? escapeHtml(String(row.orderAmount)) : ""}" /></td>
           <td class="num"><input type="text" data-recv="taxTotal" readonly value="" /></td>
           ${recvRemarkCellHtml(row, editable)}
@@ -10974,8 +10978,13 @@
       const quote = recvRowQuote(tr);
       const total = Math.round(qty * quote * 100) / 100;
       el.value = total ? String(total) : "";
+      const mode = orderTaxModeOf(getWorkspaceOrder());
+      const parts = calcChannelSupplyQuote(quote, mode);
+      const taxUnitEl = tr.querySelector('[data-recv="lineTax"]');
+      const otherEl = tr.querySelector('[data-recv="lineOther"]');
+      if (taxUnitEl) taxUnitEl.value = quote > 0 ? goodsPricePlain(parts.tax) : "-";
+      if (otherEl) otherEl.value = quote > 0 ? goodsPricePlain(mode === "untaxed" ? parts.taxed : parts.untaxed) : "-";
       const taxEl = tr.querySelector('[data-recv="taxTotal"]');
-      const parts = calcChannelSupplyQuote(quote, orderTaxModeOf(getWorkspaceOrder()));
       const taxTotal = Math.round(qty * (parts.tax || 0) * 100) / 100;
       if (taxEl) taxEl.value = qty > 0 && quote > 0 ? String(taxTotal) : "";
     }
@@ -14315,7 +14324,7 @@
         el.classList.remove("hidden");
       });
       document.querySelectorAll("#editGoodsOverviewTable .col-po-tax-split").forEach((el) => {
-        el.classList.toggle("hidden", !overseas);
+        el.classList.remove("hidden");
       });
       document.querySelectorAll("#editGoodsOverviewTable .col-po-choice").forEach((el) => {
         el.classList.toggle("hidden", !overseas);
@@ -15208,11 +15217,9 @@
       const quoteVal = d.quote > 0 ? d.quote : "";
       const priceCells = `<td class="num col-po-quote">${quoteEditable
         ? `<input type="number" min="0.01" step="0.01" data-field="lineQuote" value="${escapeHtml(quoteVal)}" />`
-        : `<span data-sync="quote">${goodsPriceCellText(d.quote)}</span>`}</td>`
-        + (overseas
-          ? `<td class="num col-po-tax-split" data-sync="unitTax">${goodsPriceCellText(d.tax)}</td>
-             <td class="num col-po-tax-split" data-sync="otherAmt">${goodsPriceCellText(d.other)}</td>`
-          : "");
+        : `<span data-sync="quote">${goodsPriceCellText(d.quote)}</span>`}</td>
+        <td class="num col-po-tax-split" data-sync="unitTax">${goodsPriceCellText(d.tax)}</td>
+        <td class="num col-po-tax-split" data-sync="otherAmt">${goodsPriceCellText(d.other)}</td>`;
       const orderNo = (opts && opts.orderNo) || currentEditOrderNo;
       const shippedMap = showShipped && orderNo && orderNo !== "__new__" ? shippedQtyByKey(orderNo) : {};
       const shippedQty = shippedQtyOfPoLine({ orderNo }, item, shippedMap);
