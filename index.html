@@ -4475,6 +4475,15 @@
             </aside>
               <div class="po-vendor-col">
               <h3 class="goods-title">賣方 Vendor</h3>
+              <div class="form-row" id="editOrderTaxModeRow">
+                <label class="required" for="editOrderTaxMode">訂單稅別</label>
+                <div class="form-ctrl">
+                  <select id="editOrderTaxMode">
+                    <option value="taxed">含稅</option>
+                    <option value="untaxed">未稅</option>
+                  </select>
+                </div>
+              </div>
               <div class="form-row">
                 <label>公司名稱</label>
                 <div class="form-ctrl"><input type="text" id="editVendorName" data-lock="1" /></div>
@@ -4564,10 +4573,11 @@
                         <th>預計出貨數量(下訂數量)</th>
                         <th>訂購總箱數</th>
                         <th class="num" id="editGoodsShippedHead">實際出貨數</th>
-                        <th class="num col-po-price-pair" id="editGoodsPriceNoHead">單價（不含標）</th>
-                        <th class="num col-po-price-pair" id="editGoodsPriceLabelHead">單價（含標）</th>
-                        <th class="num col-po-quote hidden" id="editGoodsQuoteHead">商品報價(TWD)</th>
+                        <th class="num col-po-quote" id="editGoodsQuoteHead">商品報價</th>
+                        <th class="num col-po-tax-split hidden" id="editGoodsUnitTaxHead">稅額</th>
+                        <th class="num col-po-tax-split hidden" id="editGoodsOtherAmtHead">未稅金額</th>
                         <th>合計</th>
+                        <th class="num" id="editGoodsTaxTotalHead">合計稅額</th>
                         <th class="num col-po-pallet hidden">淨重(KG)</th>
                         <th class="num col-po-pallet hidden">毛重(G)</th>
                         <th>備註</th>
@@ -4770,6 +4780,16 @@
             </select>
           </div>
         </div>
+        <div class="form-row hidden" id="importOrderTaxRow">
+          <label class="required" for="importOrderTaxMode">訂單稅別</label>
+          <div class="form-ctrl">
+            <select id="importOrderTaxMode">
+              <option value="">請選擇</option>
+              <option value="taxed">含稅</option>
+              <option value="untaxed">未稅</option>
+            </select>
+          </div>
+        </div>
         <div id="importPlanning" class="create-planning hidden">相關設定目前規劃中</div>
         <div class="form-row hidden" id="importFileRow">
           <label class="required">選擇檔案</label>
@@ -4830,6 +4850,16 @@
           <div class="form-ctrl">
             <select id="createChannelName">
               <option value="">請選擇</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row hidden" id="createOrderTaxRow">
+          <label class="required" for="createOrderTaxMode">訂單稅別</label>
+          <div class="form-ctrl">
+            <select id="createOrderTaxMode">
+              <option value="">請選擇</option>
+              <option value="taxed">含稅</option>
+              <option value="untaxed">未稅</option>
             </select>
           </div>
         </div>
@@ -5240,86 +5270,73 @@
             <label class="required" id="channelSupplyEditOverseasQuoteLabel">商品報價(USD)</label>
             <div class="form-ctrl"></div>
           </div>
-          <div class="form-row supply-quote-l1" id="channelSupplyEditPriceLabelRow">
-            <label class="required" for="channelSupplyEditPriceLabel">含標</label>
+          <div class="form-row supply-quote-l1">
+            <label class="required">含標</label>
+            <div class="form-ctrl"></div>
+          </div>
+          <div class="form-row supply-quote-l2">
+            <label class="required" for="channelSupplyEditLabelTaxedInput">含稅</label>
             <div class="form-ctrl">
-              <input type="number" id="channelSupplyEditPriceLabel" min="0.01" step="0.01" />
+              <input type="number" id="channelSupplyEditLabelTaxedInput" min="0.01" step="0.01" data-quote-side="label" data-quote-basis="taxed" />
             </div>
           </div>
-          <div class="form-row supply-quote-l2" id="channelSupplyEditLabelTaxModeRow">
-            <label class="required">稅別</label>
-            <div class="form-ctrl">
-              <div class="radio-group" id="channelSupplyEditLabelTaxModeGroup">
-                <label class="radio-line"><input type="checkbox" id="channelSupplyEditLabelTaxed" data-side-tax="label" data-tax-mode="taxed" checked /> 含稅</label>
-                <label class="radio-line"><input type="checkbox" id="channelSupplyEditLabelUntaxed" data-side-tax="label" data-tax-mode="untaxed" /> 未稅</label>
-              </div>
-            </div>
-          </div>
-          <div class="form-row supply-quote-l3" id="channelSupplyEditLabelTaxRow">
+          <div class="form-row supply-quote-l3">
             <label for="channelSupplyEditLabelTax">稅額</label>
             <div class="form-ctrl">
               <input type="text" id="channelSupplyEditLabelTax" readonly disabled />
             </div>
           </div>
-          <div class="form-row supply-quote-l3" id="channelSupplyEditLabelPeerRow">
-            <label for="channelSupplyEditLabelPeer" id="channelSupplyEditLabelPeerLabel">未稅價格</label>
+          <div class="form-row supply-quote-l2">
+            <label class="required" for="channelSupplyEditLabelUntaxedInput">未稅</label>
             <div class="form-ctrl">
-              <input type="text" id="channelSupplyEditLabelPeer" readonly disabled />
+              <input type="number" id="channelSupplyEditLabelUntaxedInput" min="0.01" step="0.01" data-quote-side="label" data-quote-basis="untaxed" />
             </div>
           </div>
-          <div class="form-row supply-quote-l1 supply-quote-gap" id="channelSupplyEditPriceNoLabelRow">
-            <label class="required" for="channelSupplyEditPriceNoLabel">不含標</label>
+          <div class="form-row supply-quote-l1 supply-quote-gap">
+            <label class="required">不含標</label>
+            <div class="form-ctrl"></div>
+          </div>
+          <div class="form-row supply-quote-l2">
+            <label class="required" for="channelSupplyEditNoLabelTaxedInput">含稅</label>
             <div class="form-ctrl">
-              <input type="number" id="channelSupplyEditPriceNoLabel" min="0.01" step="0.01" />
+              <input type="number" id="channelSupplyEditNoLabelTaxedInput" min="0.01" step="0.01" data-quote-side="noLabel" data-quote-basis="taxed" />
             </div>
           </div>
-          <div class="form-row supply-quote-l2" id="channelSupplyEditNoLabelTaxModeRow">
-            <label class="required">稅別</label>
-            <div class="form-ctrl">
-              <div class="radio-group" id="channelSupplyEditNoLabelTaxModeGroup">
-                <label class="radio-line"><input type="checkbox" id="channelSupplyEditNoLabelTaxed" data-side-tax="noLabel" data-tax-mode="taxed" /> 含稅</label>
-                <label class="radio-line"><input type="checkbox" id="channelSupplyEditNoLabelUntaxed" data-side-tax="noLabel" data-tax-mode="untaxed" checked /> 未稅</label>
-              </div>
-            </div>
-          </div>
-          <div class="form-row supply-quote-l3" id="channelSupplyEditNoLabelTaxRow">
+          <div class="form-row supply-quote-l3">
             <label for="channelSupplyEditNoLabelTax">稅額</label>
             <div class="form-ctrl">
               <input type="text" id="channelSupplyEditNoLabelTax" readonly disabled />
             </div>
           </div>
-          <div class="form-row supply-quote-l3" id="channelSupplyEditNoLabelPeerRow">
-            <label for="channelSupplyEditNoLabelPeer" id="channelSupplyEditNoLabelPeerLabel">含稅金額</label>
+          <div class="form-row supply-quote-l2">
+            <label class="required" for="channelSupplyEditNoLabelUntaxedInput">未稅</label>
             <div class="form-ctrl">
-              <input type="text" id="channelSupplyEditNoLabelPeer" readonly disabled />
+              <input type="number" id="channelSupplyEditNoLabelUntaxedInput" min="0.01" step="0.01" data-quote-side="noLabel" data-quote-basis="untaxed" />
             </div>
           </div>
         </div>
-        <div class="form-row" id="channelSupplyEditTaxModeRow">
-          <label class="required">報價稅別</label>
-          <div class="form-ctrl">
-            <div class="radio-group" id="channelSupplyEditTaxModeGroup">
-              <label class="radio-line"><input type="checkbox" id="channelSupplyEditTaxModeTaxed" data-channel-supply-tax-mode="taxed" checked /> 含稅</label>
-              <label class="radio-line"><input type="checkbox" id="channelSupplyEditTaxModeUntaxed" data-channel-supply-tax-mode="untaxed" /> 未稅</label>
+        <div id="channelSupplyEditGeneralQuote">
+          <div class="form-row">
+            <label class="required">報價稅別</label>
+            <div class="form-ctrl"></div>
+          </div>
+          <div class="form-row">
+            <label class="required" for="channelSupplyEditTaxedInput">含稅</label>
+            <div class="form-ctrl">
+              <input type="number" id="channelSupplyEditTaxedInput" min="0.01" step="0.01" data-quote-side="general" data-quote-basis="taxed" />
             </div>
           </div>
-        </div>
-        <div class="form-row" id="channelSupplyEditQuoteRow">
-          <label class="required" for="channelSupplyEditQuote" id="channelSupplyEditQuoteLabel">商品報價(TWD)(含稅)</label>
-          <div class="form-ctrl">
-            <input type="number" id="channelSupplyEditQuote" min="0" step="0.01" />
+          <div class="form-row" id="channelSupplyEditTaxRow">
+            <label for="channelSupplyEditTax">稅額</label>
+            <div class="form-ctrl">
+              <input type="text" id="channelSupplyEditTax" readonly disabled />
+            </div>
           </div>
-        </div>
-        <div class="form-row" id="channelSupplyEditTaxRow">
-          <label for="channelSupplyEditTax">稅額</label>
-          <div class="form-ctrl">
-            <input type="text" id="channelSupplyEditTax" readonly disabled />
-          </div>
-        </div>
-        <div class="form-row" id="channelSupplyEditQuotePeerRow">
-          <label for="channelSupplyEditQuotePeer" id="channelSupplyEditQuotePeerLabel">未稅價格</label>
-          <div class="form-ctrl">
-            <input type="text" id="channelSupplyEditQuotePeer" readonly disabled />
+          <div class="form-row">
+            <label class="required" for="channelSupplyEditUntaxedInput">未稅</label>
+            <div class="form-ctrl">
+              <input type="number" id="channelSupplyEditUntaxedInput" min="0.01" step="0.01" data-quote-side="general" data-quote-basis="untaxed" />
+            </div>
           </div>
         </div>
         <div class="form-row">
@@ -6305,6 +6322,7 @@
           String(Number(item.qty) || 0),
           clipPoRemark(item.remark),
           item.priceBasis === "noLabel" ? "noLabel" : "label",
+          String(item.quoteFrozen == null ? "" : item.quoteFrozen),
         ].join("\u001f"))
         .sort()
         .join("\n");
@@ -6676,7 +6694,8 @@
       const channelType = document.getElementById("importChannelType").value;
       const channel = document.getElementById("importChannelName").value;
       const file = document.getElementById("importFile").files[0];
-      if (!kind || !channel || !file) return false;
+      const tax = document.getElementById("importOrderTaxMode").value;
+      if (!kind || !channel || !file || !tax) return false;
       if (kind === "一般通路" && !channelType) return false;
       return true;
     }
@@ -6713,6 +6732,8 @@
         document.getElementById("importFileRow").classList.add("hidden");
         document.getElementById("importPlanning").classList.add("hidden");
       }
+      const taxRow = document.getElementById("importOrderTaxRow");
+      if (taxRow) taxRow.classList.toggle("hidden", !document.getElementById("importChannelName").value);
       syncImportTransferHint();
       syncImportConfirmEnabled();
     }
@@ -7357,6 +7378,10 @@
           order.recipients = [{ ...order.recipient }];
         }
       }
+      const taxMode = document.getElementById("importOrderTaxMode").value === "untaxed" ? "untaxed" : "taxed";
+      order.orderTaxMode = taxMode;
+      order.orderTaxReady = true;
+      applyOrderTaxMode(order, taxMode, { resetEdited: true });
       salesOrders.unshift(order);
       renderSalesTable(getSalesFiltered());
       return order;
@@ -7409,9 +7434,12 @@
       syncImportModal();
     });
     document.getElementById("importChannelName").addEventListener("change", () => {
+      const taxRow = document.getElementById("importOrderTaxRow");
+      if (taxRow) taxRow.classList.toggle("hidden", !document.getElementById("importChannelName").value);
       syncImportTransferHint();
       syncImportConfirmEnabled();
     });
+    document.getElementById("importOrderTaxMode").addEventListener("change", syncImportConfirmEnabled);
     function onShipListPoViewClick(e) {
       const cancelLink = e.target.closest("[data-ship-cancel]");
       if (cancelLink) {
@@ -8287,7 +8315,7 @@
       if (!show && pane && !pane.classList.contains("hidden")) setPoTab("basic");
     }
 
-    function startCreateWorkspace(kind, channelName, channelType) {
+    function startCreateWorkspace(kind, channelName, channelType, taxMode) {
       poWizardSessionNew = true;
       poWizardSkipSession = false;
       const createdAt = nowStamp();
@@ -8328,6 +8356,8 @@
         recipients: name === "線上-轉單" ? [emptyRecipient()] : null,
         markFile: null,
         fees: [],
+        orderTaxMode: taxMode === "untaxed" ? "untaxed" : "taxed",
+        orderTaxReady: true,
       };
       currentEditOrderNo = "__new__";
       workspaceOrder = order;
@@ -8390,6 +8420,8 @@
         stampFile: null,
         markFile: null,
         fees: Array.isArray(src.fees) ? src.fees.map((fee) => ({ ...fee })) : [],
+        orderTaxMode: src.orderTaxMode === "untaxed" ? "untaxed" : "taxed",
+        orderTaxReady: true,
         closedBySupervisor: false,
         completeNote: "",
         voidReason: "",
@@ -8484,7 +8516,7 @@
         return;
       }
       if (params.get("create") === "1" && kind) {
-        startCreateWorkspace(kind, params.get("channel") || "", params.get("type") || "");
+        startCreateWorkspace(kind, params.get("channel") || "", params.get("type") || "", params.get("tax") || "taxed");
         return;
       }
       if (po) {
@@ -8822,19 +8854,39 @@
         return {
           quote: channelSupplyQuoteAmount(row),
           quoteLink: row.quoteLink === "noLabel" ? "noLabel" : (row.quoteLink === "label" ? "label" : ""),
+          taxed: Number(row.quoteTaxed) || 0,
+          untaxed: Number(row.quoteUntaxed) || 0,
+          tax: Number(row.quoteTaxAmount) || 0,
           priceLabel: row.priceLabel,
           priceNoLabel: row.priceNoLabel,
+          labelTaxed: Number(row.labelTaxed != null ? row.labelTaxed : row.quoteTaxed) || 0,
+          labelUntaxed: Number(row.labelUntaxed != null ? row.labelUntaxed : row.quoteUntaxed) || 0,
+          labelTax: Number(row.labelTaxAmount != null ? row.labelTaxAmount : row.quoteTaxAmount) || 0,
+          noLabelTaxed: Number(row.noLabelTaxed) || 0,
+          noLabelUntaxed: Number(row.noLabelUntaxed) || 0,
+          noLabelTax: Number(row.noLabelTaxAmount) || 0,
         };
       }
       const meta = typeof metaForSku === "function" ? metaForSku(sku) : {};
       const quote = Number(meta.quote) || 0;
       const overseas = isOverseasChannel(channelName);
       const noLabel = parsePositiveMoney(meta.priceNoLabel);
+      const parts = quote > 0 ? calcChannelSupplyQuote(quote, "taxed") : { taxed: 0, untaxed: 0, tax: 0 };
+      const noParts = noLabel != null ? calcChannelSupplyQuote(noLabel, "untaxed") : { taxed: 0, untaxed: 0, tax: 0 };
       return {
         quote,
         quoteLink: overseas ? "label" : "",
+        taxed: parts.taxed || 0,
+        untaxed: parts.untaxed || 0,
+        tax: parts.tax || 0,
         priceLabel: overseas && quote > 0 ? quote : "",
         priceNoLabel: overseas && noLabel != null ? noLabel : (meta.priceNoLabel || ""),
+        labelTaxed: parts.taxed || 0,
+        labelUntaxed: parts.untaxed || 0,
+        labelTax: parts.tax || 0,
+        noLabelTaxed: noParts.taxed || 0,
+        noLabelUntaxed: noParts.untaxed || 0,
+        noLabelTax: noParts.tax || 0,
       };
     }
 
@@ -8990,38 +9042,112 @@
     let channelSupplyFormMode = "edit"; // edit | create
     let channelSupplySkuVerified = false;
 
-    function channelSupplyEditTaxMode() {
-      const untaxed = document.getElementById("channelSupplyEditTaxModeUntaxed");
-      if (untaxed && untaxed.checked) return "untaxed";
-      return "taxed";
+    let channelSupplyQuoteSyncing = false;
+
+    function channelSupplyPairIds(side) {
+      if (side === "label") {
+        return {
+          taxed: "channelSupplyEditLabelTaxedInput",
+          untaxed: "channelSupplyEditLabelUntaxedInput",
+          tax: "channelSupplyEditLabelTax",
+        };
+      }
+      if (side === "noLabel") {
+        return {
+          taxed: "channelSupplyEditNoLabelTaxedInput",
+          untaxed: "channelSupplyEditNoLabelUntaxedInput",
+          tax: "channelSupplyEditNoLabelTax",
+        };
+      }
+      return {
+        taxed: "channelSupplyEditTaxedInput",
+        untaxed: "channelSupplyEditUntaxedInput",
+        tax: "channelSupplyEditTax",
+      };
     }
 
-    function setChannelSupplyEditTaxMode(mode) {
-      const next = mode === "untaxed" ? "untaxed" : "taxed";
-      const taxedEl = document.getElementById("channelSupplyEditTaxModeTaxed");
-      const untaxedEl = document.getElementById("channelSupplyEditTaxModeUntaxed");
-      if (taxedEl) taxedEl.checked = next === "taxed";
-      if (untaxedEl) untaxedEl.checked = next === "untaxed";
-      const quoteLabel = document.getElementById("channelSupplyEditQuoteLabel");
-      const peerLabel = document.getElementById("channelSupplyEditQuotePeerLabel");
-      if (quoteLabel) quoteLabel.textContent = next === "untaxed" ? "商品報價(TWD)(未稅)" : "商品報價(TWD)(含稅)";
-      if (peerLabel) peerLabel.textContent = next === "untaxed" ? "含稅金額" : "未稅價格";
-      refreshChannelSupplyEditQuoteCalc();
+    function clearChannelSupplyPair(side) {
+      const ids = channelSupplyPairIds(side);
+      const taxedEl = document.getElementById(ids.taxed);
+      if (taxedEl) taxedEl.dataset.quoteSource = "";
+      [ids.taxed, ids.untaxed, ids.tax].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
     }
+
+    function loadChannelSupplyPair(side, parts, source) {
+      const ids = channelSupplyPairIds(side);
+      const taxedEl = document.getElementById(ids.taxed);
+      const next = source === "untaxed" ? "untaxed" : "taxed";
+      if (taxedEl) taxedEl.dataset.quoteSource = parts && parts.taxed != null ? next : "";
+      const taxed = document.getElementById(ids.taxed);
+      const untaxed = document.getElementById(ids.untaxed);
+      const tax = document.getElementById(ids.tax);
+      if (taxed) taxed.value = parts && parts.taxed != null ? String(parts.taxed) : "";
+      if (untaxed) untaxed.value = parts && parts.untaxed != null ? String(parts.untaxed) : "";
+      if (tax) tax.value = parts && parts.tax != null ? String(parts.tax) : "";
+    }
+
+    function applyChannelSupplyPair(side, source) {
+      if (channelSupplyQuoteSyncing) return null;
+      const ids = channelSupplyPairIds(side);
+      const taxedEl = document.getElementById(ids.taxed);
+      const untaxedEl = document.getElementById(ids.untaxed);
+      const taxEl = document.getElementById(ids.tax);
+      if (!taxedEl || !untaxedEl) return null;
+      const nextSource = source === "untaxed" || source === "taxed" ? source : "";
+      channelSupplyQuoteSyncing = true;
+      try {
+        if (!nextSource) {
+          clearChannelSupplyPair(side);
+          return null;
+        }
+        const raw = (nextSource === "taxed" ? taxedEl.value : untaxedEl.value).trim();
+        taxedEl.dataset.quoteSource = nextSource;
+        if (raw === "") {
+          taxedEl.value = "";
+          untaxedEl.value = "";
+          taxedEl.dataset.quoteSource = "";
+          if (taxEl) taxEl.value = "";
+          return null;
+        }
+        const parts = calcChannelSupplyQuote(raw, nextSource);
+        if (parts.taxed == null) {
+          if (nextSource === "taxed") untaxedEl.value = "";
+          else taxedEl.value = "";
+          if (taxEl) taxEl.value = "";
+          return null;
+        }
+        if (nextSource === "taxed") untaxedEl.value = String(parts.untaxed);
+        else taxedEl.value = String(parts.taxed);
+        if (taxEl) taxEl.value = String(parts.tax);
+        return { ...parts, source: nextSource };
+      } finally {
+        channelSupplyQuoteSyncing = false;
+      }
+    }
+
+    function readChannelSupplyPair(side) {
+      const ids = channelSupplyPairIds(side);
+      const taxedEl = document.getElementById(ids.taxed);
+      const source = taxedEl && taxedEl.dataset.quoteSource;
+      if (source !== "taxed" && source !== "untaxed") return null;
+      const raw = source === "taxed" ? taxedEl.value.trim() : document.getElementById(ids.untaxed).value.trim();
+      const parts = calcChannelSupplyQuote(raw, source);
+      if (parts.taxed == null || !(Number(parts.taxed) > 0)) return null;
+      return { ...parts, source };
+    }
+
+    function channelSupplyEditTaxMode() {
+      const pair = readChannelSupplyPair("general");
+      return pair && pair.source === "untaxed" ? "untaxed" : "taxed";
+    }
+
+    function setChannelSupplyEditTaxMode() {}
 
     function refreshChannelSupplyEditQuoteCalc() {
-      const mode = channelSupplyEditTaxMode();
-      const quoteRaw = document.getElementById("channelSupplyEditQuote").value.trim();
-      const parts = calcChannelSupplyQuote(quoteRaw, mode);
-      const taxEl = document.getElementById("channelSupplyEditTax");
-      const peerEl = document.getElementById("channelSupplyEditQuotePeer");
-      if (taxEl) taxEl.value = parts.tax == null ? "" : String(parts.tax);
-      if (peerEl) {
-        peerEl.value = mode === "untaxed"
-          ? (parts.taxed == null ? "" : String(parts.taxed))
-          : (parts.untaxed == null ? "" : String(parts.untaxed));
-      }
-      return parts;
+      return readChannelSupplyPair("general");
     }
 
     function isOverseasSupplyForm() {
@@ -9076,57 +9202,24 @@
     }
 
     function channelSupplySideTaxMode(side) {
-      const untaxed = document.getElementById(channelSupplySidePrefix(side) + "Untaxed");
-      if (untaxed && untaxed.checked) return "untaxed";
-      return "taxed";
+      const pair = readChannelSupplyPair(side);
+      return pair && pair.source === "untaxed" ? "untaxed" : "taxed";
     }
 
     function refreshChannelSupplySideQuote(side) {
-      const prefix = channelSupplySidePrefix(side);
-      const priceId = side === "noLabel" ? "channelSupplyEditPriceNoLabel" : "channelSupplyEditPriceLabel";
-      const mode = channelSupplySideTaxMode(side);
-      const raw = String((document.getElementById(priceId) || {}).value || "").trim();
-      const parts = calcChannelSupplyQuote(raw, mode);
-      const taxEl = document.getElementById(prefix + "Tax");
-      const peerEl = document.getElementById(prefix + "Peer");
-      const peerLabel = document.getElementById(prefix + "PeerLabel");
-      if (peerLabel) peerLabel.textContent = mode === "untaxed" ? "含稅金額" : "未稅價格";
-      if (taxEl) taxEl.value = parts.tax == null ? "" : String(parts.tax);
-      if (peerEl) {
-        peerEl.value = mode === "untaxed"
-          ? (parts.taxed == null ? "" : String(parts.taxed))
-          : (parts.untaxed == null ? "" : String(parts.untaxed));
-      }
-      return parts;
+      return readChannelSupplyPair(side);
     }
 
-    function setChannelSupplySideTaxMode(side, mode) {
-      const next = mode === "untaxed" ? "untaxed" : "taxed";
-      const prefix = channelSupplySidePrefix(side);
-      const taxedEl = document.getElementById(prefix + "Taxed");
-      const untaxedEl = document.getElementById(prefix + "Untaxed");
-      if (taxedEl) taxedEl.checked = next === "taxed";
-      if (untaxedEl) untaxedEl.checked = next === "untaxed";
-      refreshChannelSupplySideQuote(side);
-    }
+    function setChannelSupplySideTaxMode() {}
 
     function syncOverseasSupplyForm() {
       const overseas = isOverseasSupplyForm();
       const show = (id, on) => document.getElementById(id)?.classList.toggle("hidden", !on);
       show("channelSupplyEditOverseasQuote", overseas);
+      show("channelSupplyEditGeneralQuote", !overseas);
       const overseasQuoteLabel = document.getElementById("channelSupplyEditOverseasQuoteLabel");
       if (overseasQuoteLabel) {
         overseasQuoteLabel.textContent = "商品報價(" + channelCurrency(channelSupplyChannelName, "USD") + ")";
-      }
-      [
-        "channelSupplyEditTaxModeRow",
-        "channelSupplyEditQuoteRow",
-        "channelSupplyEditTaxRow",
-        "channelSupplyEditQuotePeerRow",
-      ].forEach((id) => show(id, !overseas));
-      if (overseas) {
-        refreshChannelSupplySideQuote("label");
-        refreshChannelSupplySideQuote("noLabel");
       }
     }
 
@@ -9206,10 +9299,8 @@
       document.getElementById("channelSupplyEditSku").value = meta.sku;
       document.getElementById("channelSupplyEditName").value = meta.name || "";
       if (meta.pcsPerCarton) document.getElementById("channelSupplyEditPcs").value = meta.pcsPerCarton;
-      if (!isOverseasSupplyForm() && meta.quote > 0 && !document.getElementById("channelSupplyEditQuote").value) {
-        setChannelSupplyEditTaxMode("taxed");
-        document.getElementById("channelSupplyEditQuote").value = meta.quote;
-        refreshChannelSupplyEditQuoteCalc();
+      if (!isOverseasSupplyForm() && meta.quote > 0 && !readChannelSupplyPair("general")) {
+        loadChannelSupplyPair("general", calcChannelSupplyQuote(meta.quote, "taxed"), "taxed");
       }
       setChannelSupplySkuLock(false);
       document.getElementById("channelSupplyEditChannelSku").disabled = false;
@@ -9240,12 +9331,9 @@
       document.getElementById("channelSupplyEditName").value = "";
       document.getElementById("channelSupplyEditSellPrice").value = "";
       document.getElementById("channelSupplyEditFrontRate").value = "0.000";
-      document.getElementById("channelSupplyEditPriceLabel").value = "";
-      document.getElementById("channelSupplyEditPriceNoLabel").value = "";
-      setChannelSupplyEditTaxMode("taxed");
-      setChannelSupplySideTaxMode("label", "taxed");
-      setChannelSupplySideTaxMode("noLabel", "untaxed");
-      document.getElementById("channelSupplyEditQuote").value = "";
+      clearChannelSupplyPair("general");
+      clearChannelSupplyPair("label");
+      clearChannelSupplyPair("noLabel");
       document.getElementById("channelSupplyEditBackRate").value = "0.000";
       document.getElementById("channelSupplyEditPcs").value = "";
       document.getElementById("channelSupplyEditAcceptDays").value = "1";
@@ -9279,21 +9367,15 @@
       channelSupplyFormMode = "edit";
       channelSupplySkuVerified = true;
       channelSupplyEditId = String(row.id);
-      const mode = row.quoteTaxMode === "untaxed" ? "untaxed" : "taxed";
       document.getElementById("channelSupplyEditTitle").textContent = "編輯商品";
       document.getElementById("channelSupplyEditSku").value = row.sku || "";
       document.getElementById("channelSupplyEditName").value = row.name || "";
       document.getElementById("channelSupplyEditSellPrice").value =
         row.sellPrice == null || row.sellPrice === "" ? "" : row.sellPrice;
       document.getElementById("channelSupplyEditFrontRate").value = row.frontRate ?? "0.000";
-      document.getElementById("channelSupplyEditPriceLabel").value =
-        row.priceLabel == null || row.priceLabel === "" ? "" : row.priceLabel;
-      document.getElementById("channelSupplyEditPriceNoLabel").value =
-        row.priceNoLabel == null || row.priceNoLabel === "" ? "" : row.priceNoLabel;
-      setChannelSupplyEditTaxMode(mode);
-      document.getElementById("channelSupplyEditQuote").value = mode === "untaxed"
-        ? (row.quoteUntaxed == null || row.quoteUntaxed === "" ? "" : row.quoteUntaxed)
-        : (row.quoteTaxed == null || row.quoteTaxed === "" ? "" : row.quoteTaxed);
+      clearChannelSupplyPair("general");
+      clearChannelSupplyPair("label");
+      clearChannelSupplyPair("noLabel");
       document.getElementById("channelSupplyEditBackRate").value = row.backRate ?? "0.000";
       document.getElementById("channelSupplyEditPcs").value = row.pcsPerCarton || "";
       document.getElementById("channelSupplyEditAcceptDays").value = row.acceptDays ?? 1;
@@ -9301,29 +9383,35 @@
       document.getElementById("channelSupplyEditChannelSku").placeholder = "驗證完成 SKU(品號)後才能輸入";
       setChannelSupplySkuLock(true);
       if (isOverseasSupplyForm()) {
-        if (!document.getElementById("channelSupplyEditPriceLabel").value && row.quoteTaxed) {
-          document.getElementById("channelSupplyEditPriceLabel").value = row.quoteTaxed;
-        }
-        setChannelSupplySideTaxMode("label", row.labelTaxMode === "untaxed" ? "untaxed" : "taxed");
-        setChannelSupplySideTaxMode("noLabel", row.noLabelTaxMode === "taxed" ? "taxed" : "untaxed");
+        const labelMode = row.labelTaxMode === "untaxed" ? "untaxed" : "taxed";
+        const noMode = row.noLabelTaxMode === "taxed" ? "taxed" : "untaxed";
+        const labelParts = row.labelTaxed != null
+          ? { taxed: row.labelTaxed, untaxed: row.labelUntaxed, tax: row.labelTaxAmount }
+          : calcChannelSupplyQuote(row.priceLabel, labelMode);
+        const noParts = row.noLabelTaxed != null
+          ? { taxed: row.noLabelTaxed, untaxed: row.noLabelUntaxed, tax: row.noLabelTaxAmount }
+          : calcChannelSupplyQuote(row.priceNoLabel, noMode);
+        loadChannelSupplyPair("label", labelParts, labelMode);
+        loadChannelSupplyPair("noLabel", noParts, noMode);
       } else {
-        setChannelSupplyQuoteLocked(false);
+        const mode = row.quoteTaxMode === "untaxed" ? "untaxed" : "taxed";
+        const parts = row.quoteTaxed != null
+          ? { taxed: row.quoteTaxed, untaxed: row.quoteUntaxed, tax: row.quoteTaxAmount }
+          : calcChannelSupplyQuote(mode === "untaxed" ? row.quoteUntaxed : row.quote, mode);
+        loadChannelSupplyPair("general", parts, mode);
       }
       syncOverseasSupplyForm();
-      refreshChannelSupplyEditQuoteCalc();
       document.getElementById("channelSupplyEditModal")?.classList.remove("hidden");
     }
 
     function confirmChannelSupplyEdit() {
       const sellRaw = document.getElementById("channelSupplyEditSellPrice").value.trim();
       const frontRaw = document.getElementById("channelSupplyEditFrontRate").value.trim();
-      const quoteRaw = document.getElementById("channelSupplyEditQuote").value.trim();
       const pcsRaw = document.getElementById("channelSupplyEditPcs").value.trim();
       const daysRaw = document.getElementById("channelSupplyEditAcceptDays").value.trim();
       const skuRaw = document.getElementById("channelSupplyEditSku").value.trim();
       const nameRaw = document.getElementById("channelSupplyEditName").value.trim();
       const channelSkuRaw = document.getElementById("channelSupplyEditChannelSku").value.trim();
-      const mode = channelSupplyEditTaxMode();
       if (channelSupplyFormMode === "create" && !channelSupplySkuVerified) {
         alert("請先驗證 SKU(品號)");
         return;
@@ -9345,24 +9433,20 @@
         return;
       }
       const overseas = isOverseasSupplyForm();
-      const priceLabelRaw = document.getElementById("channelSupplyEditPriceLabel").value.trim();
-      const priceNoLabelRaw = document.getElementById("channelSupplyEditPriceNoLabel").value.trim();
-      const priceLabel = parsePositiveMoney(priceLabelRaw);
-      const priceNoLabel = parsePositiveMoney(priceNoLabelRaw);
       let payload;
       if (overseas) {
-        if (priceLabel == null) {
-          alert("請填寫含標價格（僅可輸入正數）");
+        const labelParts = readChannelSupplyPair("label");
+        const noParts = readChannelSupplyPair("noLabel");
+        if (!labelParts) {
+          alert("請填寫含標的含稅或未稅（僅可輸入正數）");
           return;
         }
-        if (priceNoLabel == null) {
-          alert("請填寫不含標價格（僅可輸入正數）");
+        if (!noParts) {
+          alert("請填寫不含標的含稅或未稅（僅可輸入正數）");
           return;
         }
-        const labelMode = channelSupplySideTaxMode("label");
-        const noMode = channelSupplySideTaxMode("noLabel");
-        const labelParts = calcChannelSupplyQuote(priceLabel, labelMode);
-        const noParts = calcChannelSupplyQuote(priceNoLabel, noMode);
+        const labelMode = labelParts.source;
+        const noMode = noParts.source;
         payload = {
           sellPrice: Number(sellRaw),
           frontRate: Number(frontRaw).toFixed(3),
@@ -9371,8 +9455,8 @@
           quoteUntaxed: labelParts.untaxed,
           quoteTaxAmount: labelParts.tax,
           quoteLink: "label",
-          priceLabel,
-          priceNoLabel,
+          priceLabel: labelMode === "untaxed" ? labelParts.untaxed : labelParts.taxed,
+          priceNoLabel: noMode === "untaxed" ? noParts.untaxed : noParts.taxed,
           labelTaxMode: labelMode,
           labelTaxed: labelParts.taxed,
           labelUntaxed: labelParts.untaxed,
@@ -9386,15 +9470,15 @@
           channelProductNo: channelSkuRaw,
         };
       } else {
-        if (quoteRaw === "" || !Number.isFinite(Number(quoteRaw)) || Number(quoteRaw) < 0) {
-          alert("請填寫商品報價(TWD)");
+        const parts = readChannelSupplyPair("general");
+        if (!parts) {
+          alert("請填寫含稅或未稅（僅可輸入正數）");
           return;
         }
-        const parts = calcChannelSupplyQuote(quoteRaw, mode);
         payload = {
           sellPrice: Number(sellRaw),
           frontRate: Number(frontRaw).toFixed(3),
-          quoteTaxMode: mode,
+          quoteTaxMode: parts.source,
           quoteTaxed: parts.taxed,
           quoteUntaxed: parts.untaxed,
           quoteTaxAmount: parts.tax,
@@ -9517,7 +9601,11 @@
     }
 
     function recvColCount(showExchange) {
-      return showExchange ? 11 : 10;
+      return showExchange ? 13 : 12;
+    }
+
+    function recvOtherHeadLabel() {
+      return orderTaxModeOf(getWorkspaceOrder()) === "untaxed" ? "含稅金額" : "未稅";
     }
 
     function recvGoodsHeadHtml(showExchange) {
@@ -9530,7 +9618,9 @@
             <th>效期_批號</th>
             <th class="num">當前可賣量</th>
             <th class="num">預計出貨數量(下訂數量)</th>
+            <th class="num">商品報價</th>
             <th class="num">合計</th>
+            <th class="num">合計稅額</th>
             <th>備註</th>
             <th class="recv-ops-col">操作</th>
           </tr>`;
@@ -9703,7 +9793,7 @@
             : (ii === 0 ? (rec.remark || "") : "");
           const qtyN = Number(item && item.qty) || 0;
           const lineAmount = qtyN > 0 && item && item.sku
-            ? Math.round(qtyN * recvItemUnitPrice(item.sku) * 100) / 100
+            ? Math.round(qtyN * recvItemUnitPrice(item.sku, item) * 100) / 100
             : "";
           rows.push({
             groupId,
@@ -9726,6 +9816,8 @@
             expiryAccept: (item && item.expiryAccept) || "",
             batch: (item && item.batch) || "",
             qty: item && (item.qty === 0 || item.qty) ? item.qty : "",
+            quoteFrozen: item && item.quoteFrozen != null ? item.quoteFrozen : "",
+            quoteEdited: !!(item && item.quoteEdited),
             unit: (item && item.unit) || "",
             pcsPerCarton: (item && item.pcsPerCarton) || 0,
             exchangeItems: normalizeExchangeItems(item && item.exchangeItems),
@@ -10003,7 +10095,11 @@
           <td>${recvBatchSelectHtml((ex && ex.batch) || "", { exchange: true, disabled: !editable })}</td>
           <td class="num"><input type="text" data-recv-ex="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
           <td class="num"><div class="qty-field"><input type="number" data-recv-ex="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${over && orderFormMode !== "view" ? "is-oversell" : ""}" ${editable ? "" : "readonly"} /><div class="qty-oversell-hint${over && orderFormMode !== "view" ? "" : " hidden"}">數量大於當前可賣量</div></div></td>
+          <td class="num"><input type="text" data-recv-ex="lineQuote" readonly value="" /></td>
+          <td class="num"><input type="text" data-recv-ex="lineTax" readonly value="" /></td>
+          <td class="num"><input type="text" data-recv-ex="lineOther" readonly value="" /></td>
           <td class="num"><input type="text" data-recv-ex="lineAmount" readonly value="" /></td>
+          <td class="num"><input type="text" data-recv-ex="lineTaxTotal" readonly value="" /></td>
           ${ops}
         </tr>`;
     }
@@ -10027,7 +10123,11 @@
                     <th>效期_批號</th>
                     <th class="num">當前可賣量</th>
                     <th class="num">預計出貨數量(下訂數量)</th>
+                    <th class="num">商品報價</th>
+                    <th class="num">稅額</th>
+                    <th class="num">${recvOtherHeadLabel()}</th>
                     <th class="num">合計</th>
+                    <th class="num">合計稅額</th>
                     <th class="ops recv-ex-ops">操作</th>
                   </tr>
                 </thead>
@@ -10148,7 +10248,7 @@
       const ops = recvItemOpsHtml(editable, !!showDelete);
       const ro = productLocked ? " readonly" : "";
       const main = `
-        <tr class="recv-item-row${hasEx ? " is-exchanged" : ""}" data-recv-group="${escapeHtml(row.groupId)}" data-recv-item="${escapeHtml(row.itemKey)}" data-ex-base="${encodeURIComponent(JSON.stringify(row.exchangeItems || []))}"${hasEx ? ` data-ex-confirmed="${encodeURIComponent(JSON.stringify(row.exchangeItems || []))}"` : ""}>
+        <tr class="recv-item-row${hasEx ? " is-exchanged" : ""}" data-recv-group="${escapeHtml(row.groupId)}" data-recv-item="${escapeHtml(row.itemKey)}" data-quote-edited="${row.quoteEdited ? "1" : "0"}" data-ex-base="${encodeURIComponent(JSON.stringify(row.exchangeItems || []))}"${hasEx ? ` data-ex-confirmed="${encodeURIComponent(JSON.stringify(row.exchangeItems || []))}"` : ""}>
           ${recvShipCheckTd(shipMeta && shipMeta.origin)}
           ${showExchange ? exCell : ""}
           <td class="recv-item-no-col" data-recv-item-no>1</td>
@@ -10160,7 +10260,9 @@
           <td>${recvBatchSelectHtml(row.batch || "")}</td>
           <td class="num"><input type="text" data-recv="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
           <td class="num"><div class="qty-field"><input type="number" data-recv="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${qtyOver && orderFormMode !== "view" ? "is-oversell" : ""}"${ro} /><div class="qty-oversell-hint${qtyOver && orderFormMode !== "view" ? "" : " hidden"}">數量大於當前可賣量</div></div></td>
+          <td class="num"><input type="number" data-recv="lineQuote" min="0.01" step="0.01" value="${escapeHtml(row.quoteFrozen != null && row.quoteFrozen !== "" ? String(row.quoteFrozen) : "")}"${(!editable || isExchangeLockMode(getWorkspaceOrder())) ? " readonly" : ""} /></td>
           <td class="num"><input type="number" data-recv="orderAmount" min="0" step="0.01" readonly value="${row.orderAmount === 0 || row.orderAmount ? escapeHtml(String(row.orderAmount)) : ""}" /></td>
+          <td class="num"><input type="text" data-recv="taxTotal" readonly value="" /></td>
           ${recvRemarkCellHtml(row, editable)}
           ${ops}
         </tr>`;
@@ -10301,6 +10403,9 @@
         expiryAccept: get("expiryAccept") || expiryDateFromBatch(get("batch")),
         batch: get("batch"),
         qty: Number.isFinite(qty) ? qty : "",
+        quoteFrozen: parsePositiveMoney(get("lineQuote")) || "",
+        quoteEdited: tr.dataset.quoteEdited === "1",
+        quoteInputMode: orderTaxModeOf(getWorkspaceOrder()),
         remark: clipPoRemark(get("remark")),
         unit: "",
         pcsPerCarton: 0,
@@ -10381,7 +10486,7 @@
       let list = readRecipientRowsFromDom().map((r) => ({ ...r, platform }));
       list = list.filter((r) => !recvRecordIsBlank(r));
       list.forEach((rec) => {
-        const sum = (rec.items || []).reduce((s, it) => s + (Number(it.qty) || 0) * recvItemUnitPrice(it.sku), 0);
+        const sum = (rec.items || []).reduce((s, it) => s + (Number(it.qty) || 0) * recvItemUnitPrice(it.sku, it), 0);
         rec.orderAmount = sum ? String(Math.round(sum * 100) / 100) : "";
         rec.remark = (rec.items[0] && rec.items[0].remark) || "";
       });
@@ -10569,9 +10674,8 @@
         }
         const checked = validateRecvExchangeItems(readExchangeItemsFromBlock(block), `訂單內容第 ${i + 1} 列`);
         if (!checked) return false;
-        const originSku = String((itemTr.querySelector('[data-recv="sku"]') || {}).value || "").trim();
         const originQty = Number((itemTr.querySelector('[data-recv="qty"]') || {}).value) || 0;
-        const origin = recvMoneyOf(originSku, originQty);
+        const origin = Math.round(originQty * recvRowQuote(itemTr) * 100) / 100;
         const sum = Math.round(checked.reduce((s, ex) => s + recvMoneyOf(ex.sku, ex.qty), 0) * 100) / 100;
         if (!recvMoneyEqual(origin, sum)) {
           alert(`換貨合計須等於原商品合計 ${recvMoneyText(origin)}，目前為 ${recvMoneyText(sum)}`);
@@ -10610,17 +10714,28 @@
       const itemTr = body && itemKey
         ? body.querySelector(`tr.recv-item-row[data-recv-item="${CSS.escape(itemKey)}"]`)
         : null;
-      const sku = itemTr ? String((itemTr.querySelector('[data-recv="sku"]') || {}).value || "").trim() : "";
       const qty = itemTr ? Number((itemTr.querySelector('[data-recv="qty"]') || {}).value) || 0 : 0;
-      const origin = recvMoneyOf(sku, qty);
+      const originQuote = itemTr ? recvRowQuote(itemTr) : 0;
+      const origin = Math.round(qty * originQuote * 100) / 100;
+      const mode = orderTaxModeOf(getWorkspaceOrder());
       let sum = 0;
       block.querySelectorAll("tr[data-ex-row]").forEach((tr) => {
         const exSku = String((tr.querySelector('[data-recv-ex="sku"]') || {}).value || "").trim();
         const exQty = Number((tr.querySelector('[data-recv-ex="qty"]') || {}).value) || 0;
-        const amount = exSku && exQty > 0 ? recvMoneyOf(exSku, exQty) : 0;
+        const exQuote = exSku ? recvSupplyQuote(exSku) : 0;
+        const parts = calcChannelSupplyQuote(exQuote, mode);
+        const amount = exSku && exQty > 0 ? Math.round(exQty * exQuote * 100) / 100 : 0;
+        const taxTotal = exSku && exQty > 0 ? Math.round(exQty * (parts.tax || 0) * 100) / 100 : 0;
         sum = Math.round((sum + amount) * 100) / 100;
-        const amountEl = tr.querySelector('[data-recv-ex="lineAmount"]');
-        if (amountEl) amountEl.value = amount ? recvMoneyText(amount) : "";
+        const setEx = (field, value) => {
+          const el = tr.querySelector(`[data-recv-ex="${field}"]`);
+          if (el) el.value = value;
+        };
+        setEx("lineQuote", exQuote > 0 ? String(exQuote) : "");
+        setEx("lineTax", exQuote > 0 ? String(parts.tax || 0) : "");
+        setEx("lineOther", exQuote > 0 ? String(mode === "untaxed" ? (parts.taxed || 0) : (parts.untaxed || 0)) : "");
+        setEx("lineAmount", amount ? recvMoneyText(amount) : "");
+        setEx("lineTaxTotal", exQty > 0 && exQuote > 0 ? String(taxTotal) : "");
       });
       const originEl = block.querySelector("[data-ex-origin]");
       const sumEl = block.querySelector("[data-ex-sum]");
@@ -10806,9 +10921,30 @@
       return true;
     }
 
-    function recvItemUnitPrice(sku) {
-      const n = channelProductPriceOf("線上-轉單", sku).quote;
-      return Number.isFinite(n) ? n : 0;
+    function recvSupplyQuote(sku) {
+      const order = getWorkspaceOrder();
+      const mode = orderTaxModeOf(order);
+      ensureChannelSupply("線上-轉單");
+      const live = channelProductPriceOf("線上-轉單", sku);
+      const n = mode === "untaxed" ? Number(live.untaxed) : Number(live.taxed);
+      if (Number.isFinite(n) && n > 0) return n;
+      const fallback = Number(live.quote);
+      return Number.isFinite(fallback) ? fallback : 0;
+    }
+
+    function recvItemUnitPrice(sku, item) {
+      if (item && item.quoteFrozen != null && item.quoteFrozen !== "" && Number(item.quoteFrozen) > 0) {
+        return roundChannelSupplyMoney(Number(item.quoteFrozen));
+      }
+      return recvSupplyQuote(sku);
+    }
+
+    function recvRowQuote(tr) {
+      const el = tr && tr.querySelector('[data-recv="lineQuote"]');
+      const n = parsePositiveMoney(el && el.value);
+      if (n != null) return n;
+      const sku = tr ? String((tr.querySelector('[data-recv="sku"]') || {}).value || "") : "";
+      return recvSupplyQuote(sku);
     }
 
     function recvRecordIsBlank(rec) {
@@ -10830,8 +10966,18 @@
       const el = tr.querySelector('[data-recv="orderAmount"]');
       if (!el) return;
       const qty = Number(qtyEl && qtyEl.value) || 0;
-      const total = Math.round(qty * recvItemUnitPrice(skuEl ? skuEl.value : "") * 100) / 100;
+      let quoteEl = tr.querySelector('[data-recv="lineQuote"]');
+      if (quoteEl && tr.dataset.quoteEdited !== "1" && !String(quoteEl.value || "").trim() && skuEl && skuEl.value) {
+        const supply = recvSupplyQuote(skuEl.value);
+        if (supply > 0) quoteEl.value = String(supply);
+      }
+      const quote = recvRowQuote(tr);
+      const total = Math.round(qty * quote * 100) / 100;
       el.value = total ? String(total) : "";
+      const taxEl = tr.querySelector('[data-recv="taxTotal"]');
+      const parts = calcChannelSupplyQuote(quote, orderTaxModeOf(getWorkspaceOrder()));
+      const taxTotal = Math.round(qty * (parts.tax || 0) * 100) / 100;
+      if (taxEl) taxEl.value = qty > 0 && quote > 0 ? String(taxTotal) : "";
     }
 
     function syncRecvGroupAmount(gid) {
@@ -10904,7 +11050,14 @@
         expEl.value = toDateInput(catalogRow.expiryAccept) || "";
       }
       fillRecvSellable(tr, catalogRow.sku || "", false);
+      const quoteEl = tr.querySelector('[data-recv="lineQuote"]');
+      tr.dataset.quoteEdited = "0";
+      if (quoteEl) {
+        const supply = recvSupplyQuote(catalogRow.sku || "");
+        quoteEl.value = supply > 0 ? String(supply) : "";
+      }
       hideRecvSkuHits(tr);
+      syncRecvRowAmount(tr);
     }
 
     function hideRecvSkuHits(tr) {
@@ -11016,6 +11169,15 @@
         if (field === "qty") {
           syncRecvOversell(tr, false);
           syncRecvGroupAmount(tr.getAttribute("data-recv-group"));
+          invalidatePoEstMargin();
+        }
+        if (field === "lineQuote") {
+          const n = parsePositiveMoney(el.value);
+          if (n != null) tr.dataset.quoteEdited = "1";
+          if (el.value.trim() === "") tr.dataset.quoteEdited = "0";
+          syncRecvGroupAmount(tr.getAttribute("data-recv-group"));
+          const drafted = body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(tr.getAttribute("data-recv-item") || "")}"]`);
+          if (drafted) syncExchangeBlockMoney(drafted);
           invalidatePoEstMargin();
         }
       });
@@ -13631,7 +13793,7 @@
         item.exchangeItems = [];
         return;
       }
-      const origin = recvMoneyOf(item.sku, item.qty);
+      const origin = Math.round((Number(item.qty) || 0) * recvItemUnitPrice(item.sku, item) * 100) / 100;
       const sumOf = (rows) => Math.round(rows.reduce((s, ex) => s + recvMoneyOf(ex.sku, ex.qty), 0) * 100) / 100;
       if (recvMoneyEqual(sumOf(lines), origin)) {
         item.exchangeItems = lines;
@@ -13889,6 +14051,7 @@
     });
     ensureOnlineExchangeDemo();
     repairOnlineExchangeAmounts();
+    migrateDemoOrderTaxes();
     persistDemoData();
 
     function batchesFor(type) {
@@ -14114,6 +14277,8 @@
         quote: src.quote || meta.quote,
         orderQuote: src.orderQuote ?? src.priceNoLabel ?? meta.priceNoLabel ?? "0",
         quoteFrozen: src.quoteFrozen != null && src.quoteFrozen !== "" ? Number(src.quoteFrozen) : undefined,
+        quoteEdited: !!src.quoteEdited,
+        quoteInputMode: src.quoteInputMode === "untaxed" ? "untaxed" : (src.quoteInputMode === "taxed" ? "taxed" : ""),
         priceNoLabel: src.priceNoLabel ?? meta.priceNoLabel ?? "",
         priceLabel: src.priceLabel ?? "",
         priceBasis: src.priceBasis === "noLabel" ? "noLabel" : (src.priceBasis === "label" ? "label" : ""),
@@ -14146,15 +14311,17 @@
 
     function syncPoGoodsPriceColumns(order) {
       const overseas = isOverseasPo(order);
-      document.querySelectorAll("#editGoodsOverviewTable .col-po-price-pair").forEach((el) => {
-        el.classList.toggle("hidden", !overseas);
-      });
       document.querySelectorAll("#editGoodsOverviewTable .col-po-quote").forEach((el) => {
-        el.classList.toggle("hidden", overseas);
+        el.classList.remove("hidden");
+      });
+      document.querySelectorAll("#editGoodsOverviewTable .col-po-tax-split").forEach((el) => {
+        el.classList.toggle("hidden", !overseas);
       });
       document.querySelectorAll("#editGoodsOverviewTable .col-po-choice").forEach((el) => {
         el.classList.toggle("hidden", !overseas);
       });
+      const other = document.getElementById("editGoodsOtherAmtHead");
+      if (other) other.textContent = orderTaxModeOf(order) === "untaxed" ? "含稅金額" : "未稅金額";
     }
 
     function syncPoGoodsPalletColumns(order) {
@@ -14364,7 +14531,8 @@
         next.priceBasis = keepBasis;
         if (keepBatch) next.batch = keepBatch;
       }
-      if (isDealerPo(order)) freezeDealerLineQuote(next, channelName);
+      next.quoteEdited = false;
+      stampLineQuote(order, next, { resetEdited: true });
       Object.keys(item).forEach((key) => { delete item[key]; });
       Object.assign(item, next);
     }
@@ -14724,38 +14892,162 @@
 
     /** 經銷：SKU 對到當下，依供應商品「商品報價」與報價稅別算出金額並凍結在這一列。 */
     function freezeDealerLineQuote(item, channelName) {
-      if (!item) return;
+      const order = getWorkspaceOrder() || { channelName, orderTaxMode: "taxed" };
+      if (channelName) order.channelName = channelName;
+      stampLineQuote(order, item, { resetEdited: !item.quoteEdited });
+    }
+
+    function orderTaxModeOf(order) {
+      return order && order.orderTaxMode === "untaxed" ? "untaxed" : "taxed";
+    }
+
+    function ensureChannelSupply(channelName) {
       if (channelName && !Array.isArray(channelSupplyByChannel[channelName])) {
         channelSupplyByChannel[channelName] = buildChannelSupplyRows(channelName);
       }
-      const live = channelProductPriceOf(channelName, item.sku);
-      const n = Number(live && live.quote);
-      const frozen = Number.isFinite(n) && n > 0 ? roundChannelSupplyMoney(n) : 0;
-      item.quote = String(frozen);
-      item.orderQuote = String(frozen);
-      item.quoteFrozen = frozen;
+    }
+
+    function supplyMoneyForLine(order, item) {
+      const channel = (order && order.channelName) || "";
+      ensureChannelSupply(channel);
+      const live = channelProductPriceOf(channel, item && item.sku);
+      if (order && isOverseasPo(order) && item && item.priceBasis === "noLabel") {
+        return { taxed: Number(live.noLabelTaxed) || 0, untaxed: Number(live.noLabelUntaxed) || 0, tax: Number(live.noLabelTax) || 0 };
+      }
+      if (order && isOverseasPo(order)) {
+        return { taxed: Number(live.labelTaxed) || Number(live.taxed) || 0, untaxed: Number(live.labelUntaxed) || Number(live.untaxed) || 0, tax: Number(live.labelTax) || Number(live.tax) || 0 };
+      }
+      return { taxed: Number(live.taxed) || 0, untaxed: Number(live.untaxed) || 0, tax: Number(live.tax) || 0 };
+    }
+
+    function stampLineQuote(order, item, opts) {
+      if (!item || !order) return;
+      const mode = orderTaxModeOf(order);
+      const force = opts && opts.forceSupply;
+      const reset = opts && opts.resetEdited;
+      if (!force && !reset && item.quoteEdited && item.quoteFrozen != null && item.quoteFrozen !== "") {
+        item.quoteInputMode = mode;
+        item.quote = String(item.quoteFrozen);
+        item.orderQuote = item.quote;
+        return;
+      }
+      const supply = supplyMoneyForLine(order, item);
+      const quote = mode === "untaxed" ? Number(supply.untaxed) || 0 : Number(supply.taxed) || 0;
+      item.quoteEdited = false;
+      item.quoteInputMode = mode;
+      item.quoteFrozen = quote > 0 ? roundChannelSupplyMoney(quote) : "";
+      item.quote = item.quoteFrozen === "" ? "" : String(item.quoteFrozen);
+      item.orderQuote = item.quote || "0";
+    }
+
+    function applyOrderTaxMode(order, mode, opts) {
+      if (!order) return;
+      order.orderTaxMode = mode === "untaxed" ? "untaxed" : "taxed";
+      order.orderTaxReady = true;
+      (order.items || []).forEach((item) => stampLineQuote(order, item, opts));
+      if (typeof recipientListOf === "function" && isOnlineTransferPo(order)) {
+        recipientListOf(order).forEach((rec) => {
+          (rec.items || []).forEach((item) => {
+            stampLineQuote(order, item, opts);
+            (item.exchangeItems || []).forEach((ex) => stampLineQuote(order, ex, { forceSupply: true }));
+          });
+        });
+      }
+    }
+
+    function storedUnitPrice(order, item) {
+      if (!item) return null;
+      if (item.quoteFrozen != null && item.quoteFrozen !== "" && Number(item.quoteFrozen) > 0) return Number(item.quoteFrozen);
+      if (order && isOverseasPo(order)) {
+        const raw = item.priceBasis === "noLabel" ? item.priceNoLabel : item.priceLabel;
+        const picked = parsePositiveMoney(raw);
+        if (picked != null) return picked;
+      }
+      const quote = parsePositiveMoney(item.quote);
+      if (quote != null) return quote;
+      return null;
+    }
+
+    function inferOrderTaxMode(order) {
+      let taxed = 0;
+      let untaxed = 0;
+      const lines = [].concat(order && order.items || []);
+      if (order && isOnlineTransferPo(order) && typeof recipientListOf === "function") {
+        recipientListOf(order).forEach((rec) => (rec.items || []).forEach((item) => lines.push(item)));
+      }
+      lines.forEach((item) => {
+        const stored = storedUnitPrice(order, item);
+        if (stored == null) return;
+        const supply = supplyMoneyForLine(order, item);
+        const dt = Math.abs(stored - (Number(supply.taxed) || 0));
+        const du = Math.abs(stored - (Number(supply.untaxed) || 0));
+        if (du + 0.02 < dt) untaxed += 1;
+        else taxed += 1;
+      });
+      return untaxed > taxed ? "untaxed" : "taxed";
+    }
+
+    function migrateDemoOrderTaxes() {
+      salesOrders.forEach((order) => {
+        if (!order || order.orderTaxReady) return;
+        ensureChannelSupply(order.channelName);
+        if (!order.orderTaxMode) order.orderTaxMode = inferOrderTaxMode(order);
+        const mode = orderTaxModeOf(order);
+        const stampStored = (item) => {
+          if (!item || !normalizeSku(item.sku)) return;
+          const stored = storedUnitPrice(order, item);
+          const supply = supplyMoneyForLine(order, item);
+          const expected = mode === "untaxed" ? Number(supply.untaxed) || 0 : Number(supply.taxed) || 0;
+          if (stored != null) {
+            item.quoteFrozen = roundChannelSupplyMoney(stored);
+            item.quoteEdited = Math.abs(stored - expected) > 0.02;
+          } else {
+            item.quoteFrozen = expected > 0 ? roundChannelSupplyMoney(expected) : "";
+            item.quoteEdited = false;
+          }
+          item.quoteInputMode = mode;
+          item.quote = item.quoteFrozen === "" ? "" : String(item.quoteFrozen);
+          item.orderQuote = item.quote || "0";
+        };
+        (order.items || []).forEach(stampStored);
+        if (isOnlineTransferPo(order) && typeof recipientListOf === "function") {
+          recipientListOf(order).forEach((rec) => {
+            (rec.items || []).forEach((item) => {
+              stampStored(item);
+              (item.exchangeItems || []).forEach((ex) => stampLineQuote(order, ex, { forceSupply: true }));
+            });
+          });
+          if (order.recipients) order.recipient = order.recipients[0] ? { ...order.recipients[0] } : order.recipient;
+        }
+        order.orderTaxReady = true;
+      });
+    }
+
+    function lineMoneyOf(order, item) {
+      const mode = orderTaxModeOf(order);
+      let quote = 0;
+      if (item && item.quoteFrozen != null && item.quoteFrozen !== "" && Number(item.quoteFrozen) > 0) {
+        quote = roundChannelSupplyMoney(Number(item.quoteFrozen));
+      } else {
+        const supply = supplyMoneyForLine(order, item);
+        quote = mode === "untaxed" ? Number(supply.untaxed) || 0 : Number(supply.taxed) || 0;
+      }
+      const parts = calcChannelSupplyQuote(quote, mode);
+      const unit = parts.taxed == null ? 0 : quote;
+      const tax = parts.tax || 0;
+      const qty = Number(item && item.qty) || 0;
+      return {
+        quote: unit,
+        tax,
+        other: mode === "untaxed" ? (parts.taxed || 0) : (parts.untaxed || 0),
+        amount: Math.round(qty * unit * 100) / 100,
+        taxTotal: Math.round(qty * tax * 100) / 100,
+      };
     }
 
     function goodsQuoteOf(item, order) {
       order = order || getWorkspaceOrder();
-      if (order && isDealerPo(order) && item && item.quoteFrozen != null && item.quoteFrozen !== "") {
-        const frozen = Number(item.quoteFrozen);
-        if (Number.isFinite(frozen)) return frozen;
-      }
-      if (item && (item.priceBasis === "label" || item.priceBasis === "noLabel")) {
-        const picked = overseasTypedPrice(item);
-        if (picked != null) return picked;
-      }
-      if (order && isOverseasPo(order)) {
-        ensureOverseasLinePrices(item, order.channelName);
-        const picked = overseasTypedPrice(item);
-        return picked != null ? picked : 0;
-      }
-      const channel = (order && order.channelName) || "";
-      const live = channelProductPriceOf(channel, item && item.sku);
-      if (live.quote > 0) return live.quote;
-      const fallback = Number((item && (item.quote || item.orderQuote || item.priceNoLabel)) || 0);
-      return Number.isFinite(fallback) && fallback > 0 ? fallback : 0;
+      return lineMoneyOf(order, item).quote;
     }
 
     function goodsQuoteLinkOf(item, order) {
@@ -14842,21 +15134,21 @@
       const order = getWorkspaceOrder();
       const overseas = isOverseasPo(order);
       if (overseas) ensureOverseasLinePrices(item, order.channelName);
-      const quote = goodsQuoteOf(item, order);
+      const money = lineMoneyOf(order, item);
       const link = goodsQuoteLinkOf(item, order);
       const cartons = orderCartonQty(qty, pcs);
-      const basis = item && item.priceBasis === "noLabel" ? "noLabel" : "label";
       return {
         sku: (item && item.sku) || "",
         name: (item && item.name) || "",
         pcs: pcs || "",
         qty,
         carton: cartons,
-        quote,
+        quote: money.quote,
+        tax: money.tax,
+        other: money.other,
+        taxTotal: money.taxTotal,
         quoteLink: link,
-        priceNo: overseas ? (basis === "noLabel" ? quote : null) : quote,
-        priceLabel: overseas ? (basis === "label" ? quote : null) : null,
-        amount: Math.round(qty * quote * 100) / 100,
+        amount: money.amount,
         remark: userFacingRemark(item && item.remark),
       };
     }
@@ -14910,10 +15202,17 @@
           ? `<select data-field="priceBasis"><option value="label"${basis === "label" ? " selected" : ""}>含標</option><option value="noLabel"${basis === "noLabel" ? " selected" : ""}>不含標</option></select>`
           : escapeHtml(basisText)}</td>`
         : "";
-      const priceCells = overseas
-        ? `<td class="num col-po-price-pair" data-sync="priceNo">${goodsPriceCellText(d.priceNo)}</td>
-          <td class="num col-po-price-pair col-price-label" data-sync="priceLabel">${goodsPriceCellText(d.priceLabel)}</td>`
-        : `<td class="num col-po-quote" data-sync="quote">${goodsPriceCellText(d.quote)}</td>`;
+      const page = document.getElementById("page-order-edit");
+      const quoteEditable = (!page.classList.contains("is-readonly") && !page.classList.contains("is-wizard-preview") && goodsEdit)
+        || (giftEdit && item && item.gift);
+      const quoteVal = d.quote > 0 ? d.quote : "";
+      const priceCells = `<td class="num col-po-quote">${quoteEditable
+        ? `<input type="number" min="0.01" step="0.01" data-field="lineQuote" value="${escapeHtml(quoteVal)}" />`
+        : `<span data-sync="quote">${goodsPriceCellText(d.quote)}</span>`}</td>`
+        + (overseas
+          ? `<td class="num col-po-tax-split" data-sync="unitTax">${goodsPriceCellText(d.tax)}</td>
+             <td class="num col-po-tax-split" data-sync="otherAmt">${goodsPriceCellText(d.other)}</td>`
+          : "");
       const orderNo = (opts && opts.orderNo) || currentEditOrderNo;
       const shippedMap = showShipped && orderNo && orderNo !== "__new__" ? shippedQtyByKey(orderNo) : {};
       const shippedQty = shippedQtyOfPoLine({ orderNo }, item, shippedMap);
@@ -14967,6 +15266,7 @@
           ${shippedCell}
           ${priceCells}
           <td class="num" data-sync="amount">${escapeHtml(goodsMoneyLabel(d.amount, order))}</td>
+          <td class="num" data-sync="taxTotal">${escapeHtml(goodsMoneyLabel(d.taxTotal, order))}</td>
           ${overseas ? overseasPalletCellsHtml(item, d) : ""}
           ${goodsRemarkCellHtml(d.remark, editable, giftEdit && !poRemarkFieldEditable())}
           ${opsCell}
@@ -16098,12 +16398,18 @@
       const netWeight = tr.querySelector('[data-sync="netWeight"]');
       if (carton) carton.textContent = d.carton;
       if (amount) amount.textContent = goodsMoneyLabel(d.amount);
-      const priceNo = tr.querySelector('[data-sync="priceNo"]');
-      const priceLabel = tr.querySelector('[data-sync="priceLabel"]');
-      if (priceNo) priceNo.textContent = goodsPricePlain(d.priceNo);
-      if (priceLabel) priceLabel.textContent = goodsPricePlain(d.priceLabel);
+      const unitTax = tr.querySelector('[data-sync="unitTax"]');
+      const otherAmt = tr.querySelector('[data-sync="otherAmt"]');
+      const taxTotal = tr.querySelector('[data-sync="taxTotal"]');
+      if (unitTax) unitTax.textContent = goodsPricePlain(d.tax);
+      if (otherAmt) otherAmt.textContent = goodsPricePlain(d.other);
+      if (taxTotal) taxTotal.textContent = goodsMoneyLabel(d.taxTotal);
       const quoteCell = tr.querySelector('[data-sync="quote"]');
       if (quoteCell) quoteCell.textContent = goodsPricePlain(d.quote);
+      const quoteInput = tr.querySelector('[data-field="lineQuote"]');
+      if (quoteInput && document.activeElement !== quoteInput) {
+        quoteInput.value = d.quote > 0 ? String(d.quote) : "";
+      }
       if (netWeight) netWeight.textContent = lineNetWeightKgText(item, d.qty);
       const grossWeight = tr.querySelector('[data-sync="grossWeight"]');
       if (grossWeight) grossWeight.textContent = lineGrossWeightGText(item, d.qty);
@@ -16176,9 +16482,36 @@
         renderPoGoodsTable();
         return;
       }
+      if (field === "lineQuote") {
+        const order = getWorkspaceOrder();
+        const raw = String(e.target.value || "").trim();
+        const n = parsePositiveMoney(raw);
+        if (n == null) {
+          if (e.type === "change" && raw === "") {
+            item.quoteEdited = false;
+            stampLineQuote(order, item, { resetEdited: true });
+            if (item.quoteFrozen !== "") e.target.value = item.quoteFrozen;
+            refreshOverviewRowDerived(tr, item);
+            syncOverviewGoods(order);
+          }
+          return;
+        }
+        item.quoteEdited = true;
+        item.quoteFrozen = n;
+        item.quoteInputMode = orderTaxModeOf(order);
+        item.quote = String(n);
+        item.orderQuote = String(n);
+        refreshOverviewRowDerived(tr, item);
+        if (e.type === "change") syncOverviewGoods(order);
+        poEstMarginConfirmed = false;
+        return;
+      }
       if (field === "priceBasis") {
         if (!goodsEdit && !giftEdit) return;
         item.priceBasis = e.target.value === "noLabel" ? "noLabel" : "label";
+        if (!item.quoteEdited) stampLineQuote(getWorkspaceOrder(), item, { resetEdited: true });
+        const quoteInput = tr.querySelector('[data-field="lineQuote"]');
+        if (quoteInput && item.quoteFrozen !== "") quoteInput.value = item.quoteFrozen;
         refreshOverviewRowDerived(tr, item);
         const order = getWorkspaceOrder();
         syncOverviewGoods(order);
@@ -16550,6 +16883,16 @@
       return false;
     }
 
+    function syncOrderTaxField(order) {
+      const el = document.getElementById("editOrderTaxMode");
+      if (!el || !order) return;
+      if (!order.orderTaxMode) order.orderTaxMode = "taxed";
+      el.value = order.orderTaxMode === "untaxed" ? "untaxed" : "taxed";
+      const page = document.getElementById("page-order-edit");
+      const preview = page && page.classList.contains("is-wizard-preview");
+      el.disabled = order.status !== "草稿" || orderFormMode === "view" || preview;
+    }
+
     function fillOrderEdit(order, mode, opts) {
       initExpectArriveTimeOptions();
       workspaceOrder = order;
@@ -16593,6 +16936,7 @@
       editPage.classList.toggle("is-gift-revise", giftRevise);
       editPage.classList.toggle("can-exchange", exchangeLock);
       setOrderFormReadonly(orderFormMode === "view" || giftRevise || exchangeLock);
+      syncOrderTaxField(order);
       if (giftRevise) setPoTab("goods");
       if (orderFormMode === "view" || exchangeLock) {
         const recvBody = document.getElementById("editRecvBody");
@@ -17011,6 +17355,15 @@
       }
     });
     document.getElementById("editTermsOfDelivery").addEventListener("change", () => {});
+    document.getElementById("editOrderTaxMode").addEventListener("change", () => {
+      const order = getWorkspaceOrder();
+      if (!order || order.status !== "草稿" || orderFormMode === "view") return;
+      const next = document.getElementById("editOrderTaxMode").value === "untaxed" ? "untaxed" : "taxed";
+      applyOrderTaxMode(order, next);
+      if (isOnlineTransferPo(order)) fillRecipientForm(order);
+      else loadPoGoodsWorkspace(order);
+      syncPoGoodsPriceColumns(order);
+    });
 
     function getCreatePoKind() {
       return document.querySelector('input[name="createPoKind"]:checked')?.value || "";
@@ -17020,7 +17373,8 @@
       const kind = getCreatePoKind();
       const channelType = document.getElementById("createChannelType").value;
       const channel = document.getElementById("createChannelName").value;
-      if (!kind || !channel) return false;
+      const tax = document.getElementById("createOrderTaxMode").value;
+      if (!kind || !channel || !tax) return false;
       if (kind === "一般通路" && !channelType) return false;
       return true;
     }
@@ -17052,6 +17406,8 @@
         nameRow.classList.add("hidden");
         select.innerHTML = `<option value="">請選擇</option>`;
       }
+      const taxRow = document.getElementById("createOrderTaxRow");
+      if (taxRow) taxRow.classList.toggle("hidden", !select.value);
       syncCreateConfirmEnabled();
     }
 
@@ -17081,7 +17437,12 @@
       fillChannelNameOptions("createChannelName", document.getElementById("createChannelType").value);
       syncCreateModal();
     });
-    document.getElementById("createChannelName").addEventListener("change", syncCreateConfirmEnabled);
+    document.getElementById("createChannelName").addEventListener("change", () => {
+      const taxRow = document.getElementById("createOrderTaxRow");
+      if (taxRow) taxRow.classList.toggle("hidden", !document.getElementById("createChannelName").value);
+      syncCreateConfirmEnabled();
+    });
+    document.getElementById("createOrderTaxMode").addEventListener("change", syncCreateConfirmEnabled);
     document.getElementById("createConfirm").addEventListener("click", () => {
       const kind = getCreatePoKind();
       if (!kind) {
@@ -17099,7 +17460,7 @@
         return;
       }
       closeCreateModal();
-      const params = { create: "1", kind, channel };
+      const params = { create: "1", kind, channel, tax: document.getElementById("createOrderTaxMode").value };
       if (kind === "一般通路") params.type = channelType;
       openPoWorkspace(params);
     });
@@ -22048,36 +22409,10 @@
     document.getElementById("channelSupplyEditModal")?.addEventListener("click", (e) => {
       if (e.target.id === "channelSupplyEditModal") closeChannelSupplyEditModal();
     });
-    document.getElementById("channelSupplyEditTaxModeGroup")?.addEventListener("change", (e) => {
-      const mode = e.target?.dataset?.channelSupplyTaxMode;
-      if (!mode) return;
-      const quoteEl = document.getElementById("channelSupplyEditQuote");
-      const linked = isOverseasSupplyForm() && !!channelSupplyEditQuoteLink();
-      const prevMode = mode === "untaxed" ? "taxed" : "untaxed";
-      const prevParts = calcChannelSupplyQuote(quoteEl?.value, prevMode);
-      setChannelSupplyEditTaxMode(mode);
-      if (!linked && quoteEl && prevParts.taxed != null) {
-        quoteEl.value = mode === "untaxed" ? prevParts.untaxed : prevParts.taxed;
-      }
-      if (linked) fillLinkedQuoteFromLabel();
-      refreshChannelSupplyEditQuoteCalc();
-    });
-    document.getElementById("channelSupplyEditQuote")?.addEventListener("input", refreshChannelSupplyEditQuoteCalc);
-    document.getElementById("channelSupplyEditLabelTaxModeGroup")?.addEventListener("change", (e) => {
-      const mode = e.target?.dataset?.taxMode;
-      if (!mode) return;
-      setChannelSupplySideTaxMode("label", mode);
-    });
-    document.getElementById("channelSupplyEditNoLabelTaxModeGroup")?.addEventListener("change", (e) => {
-      const mode = e.target?.dataset?.taxMode;
-      if (!mode) return;
-      setChannelSupplySideTaxMode("noLabel", mode);
-    });
-    document.getElementById("channelSupplyEditPriceLabel")?.addEventListener("input", () => {
-      if (isOverseasSupplyForm()) refreshChannelSupplySideQuote("label");
-    });
-    document.getElementById("channelSupplyEditPriceNoLabel")?.addEventListener("input", () => {
-      if (isOverseasSupplyForm()) refreshChannelSupplySideQuote("noLabel");
+    document.querySelectorAll("[data-quote-side][data-quote-basis]").forEach((el) => {
+      el.addEventListener("input", () => {
+        applyChannelSupplyPair(el.dataset.quoteSide, el.dataset.quoteBasis);
+      });
     });
 
     function channelBillLineTaxed(row, qty) {
