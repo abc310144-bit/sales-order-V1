@@ -1395,6 +1395,13 @@
       max-width: none;
       margin-top: 0;
     }
+    #page-order-edit.is-pin-dates .po-date-pin.is-stuck {
+      position: fixed;
+      z-index: 30;
+      background: #fff;
+      box-shadow: 0 8px 8px -8px rgba(0, 0, 0, 0.2);
+      padding-bottom: 8px;
+    }
     @media (max-width: 1100px) {
       #page-order-edit.is-wizard:not(.is-wizard-preview):not(.is-online-wizard)[data-wizard-step="1"] .po-basic-layout {
         grid-template-columns: 1fr;
@@ -4437,6 +4444,7 @@
               </div>
               </div>
             <div class="po-basic-top">
+            <div class="po-date-pin">
             <div class="form-row">
               <label id="editPoDocNoLabel">客戶訂單單號</label>
               <div class="form-ctrl">
@@ -4499,6 +4507,7 @@
                 <label>到貨地址</label>
                 <div class="form-ctrl"><textarea id="editAddress" rows="2"></textarea></div>
               </div>
+            </div>
             </div>
             </div>
               </div>
@@ -8136,7 +8145,10 @@
       const flat = usePoFlatLayout();
       if (page) page.classList.toggle("is-flat", flat);
       placePoMarkBlock();
-      if (!flat) return;
+      if (!flat) {
+        layoutPoDatePin(true);
+        return;
+      }
       const show = {};
       document.querySelectorAll(".po-tab").forEach((tab) => {
         show[tab.dataset.poTab] = !tab.classList.contains("hidden");
@@ -8149,7 +8161,91 @@
       const order = getWorkspaceOrder();
       if (show.fees) loadOrderFees(order);
       if (show.goods || show.fees) renderPoEstMargin(order);
+      layoutPoDatePin(true);
     }
+
+    function clearPoDatePin() {
+      const page = document.getElementById("page-order-edit");
+      const shell = document.querySelector(".po-basic-top");
+      const pin = document.querySelector(".po-date-pin");
+      if (page) page.classList.remove("is-pin-dates");
+      if (shell) shell.style.paddingTop = "";
+      if (!pin) return;
+      pin.classList.remove("is-stuck");
+      pin.style.top = "";
+      pin.style.left = "";
+      pin.style.width = "";
+    }
+
+    function poDatePinEnabled() {
+      const page = document.getElementById("page-order-edit");
+      const layout = document.getElementById("poBasicLayout");
+      const order = getWorkspaceOrder();
+      if (!page || !layout || !order) return false;
+      if (!page.classList.contains("is-flat") || layout.classList.contains("has-recipient")) return false;
+      if (orderFormMode !== "view" && !page.classList.contains("is-gift-revise")) return false;
+      if (isTransferAcceptFlow(order)) return false;
+      const pin = document.querySelector(".po-date-pin");
+      return !!(pin && pin.getClientRects().length);
+    }
+
+    function poDateScroller() {
+      const content = document.querySelector("main.content");
+      if (content && content.scrollHeight > content.clientHeight + 1) return content;
+      return document.scrollingElement || document.documentElement;
+    }
+
+    function poDateStickTop(scroller) {
+      const content = document.querySelector("main.content");
+      if (scroller === content) return content.getBoundingClientRect().top;
+      return 0;
+    }
+
+    function layoutPoDatePin(force) {
+      const page = document.getElementById("page-order-edit");
+      const shell = document.querySelector(".po-basic-top");
+      const pin = document.querySelector(".po-date-pin");
+      const scroller = poDateScroller();
+      if (!page || !shell || !pin || !scroller) return;
+      const enable = poDatePinEnabled();
+      page.classList.toggle("is-pin-dates", enable);
+      if (!enable) {
+        clearPoDatePin();
+        return;
+      }
+      if (force && pin.classList.contains("is-stuck")) {
+        pin.classList.remove("is-stuck");
+        pin.style.top = "";
+        pin.style.left = "";
+        pin.style.width = "";
+        shell.style.paddingTop = "";
+      }
+      const stickTop = poDateStickTop(scroller);
+      if (pin.classList.contains("is-stuck")) {
+        const shellTop = shell.getBoundingClientRect().top;
+        if (shellTop >= stickTop - 1) {
+          pin.classList.remove("is-stuck");
+          pin.style.top = "";
+          pin.style.left = "";
+          pin.style.width = "";
+          shell.style.paddingTop = "";
+          return;
+        }
+        pin.style.top = stickTop + "px";
+        return;
+      }
+      const natural = pin.getBoundingClientRect();
+      if (natural.height < 1 || natural.top >= stickTop - 1) return;
+      shell.style.paddingTop = natural.height + "px";
+      pin.classList.add("is-stuck");
+      pin.style.top = stickTop + "px";
+      pin.style.left = natural.left + "px";
+      pin.style.width = natural.width + "px";
+    }
+
+    document.querySelector("main.content").addEventListener("scroll", () => layoutPoDatePin(false), { passive: true });
+    window.addEventListener("scroll", () => layoutPoDatePin(false), { passive: true });
+    window.addEventListener("resize", () => layoutPoDatePin(true));
 
     function syncPoGoodsTab(order) {
       const tab = document.querySelector('.po-tab[data-po-tab="goods"]');
