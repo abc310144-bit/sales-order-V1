@@ -1325,7 +1325,13 @@
     }
     .po-wizard-step.is-done + .po-wizard-step .po-wizard-line,
     .po-wizard-step.is-done .po-wizard-line { background: var(--primary); }
-    #page-order-edit.is-wizard .po-tabs { display: none; }
+    #page-order-edit.is-wizard .po-tabs,
+    #page-order-edit.is-flat .po-tabs { display: none; }
+    #page-order-edit.is-flat .po-pane[data-po-pane="goods"]:not(.hidden),
+    #page-order-edit.is-flat .po-pane[data-po-pane="fees"]:not(.hidden),
+    #page-order-edit.is-flat .po-pane[data-po-pane="ships"]:not(.hidden) {
+      margin-top: 32px;
+    }
     #page-order-edit.is-wizard #editFooter { display: none; }
     #page-order-edit.is-wizard:not(.is-wizard-preview):not([data-wizard-step="1"]) #poMarkUploadBlock { display: none !important; }
     #page-order-edit.is-wizard[data-wizard-step="1"] #editRecipientPanel { display: none !important; }
@@ -8078,8 +8084,31 @@
 
     function syncPoFeesTab(order) {
       const tab = document.querySelector('.po-tab[data-po-tab="fees"]');
-      const show = !!order && orderFormMode === "view";
+      const show = !!order && (orderFormMode === "view" || isGiftReviseEdit() || isExchangeLockMode(order));
       if (tab) tab.classList.toggle("hidden", !show);
+    }
+
+    function usePoFlatLayout() {
+      return !poWizardOn && orderFormMode !== "create" && currentEditOrderNo !== "__new__";
+    }
+
+    function applyPoFlatPanes() {
+      const page = document.getElementById("page-order-edit");
+      const flat = usePoFlatLayout();
+      if (page) page.classList.toggle("is-flat", flat);
+      if (!flat) return;
+      const show = {};
+      document.querySelectorAll(".po-tab").forEach((tab) => {
+        show[tab.dataset.poTab] = !tab.classList.contains("hidden");
+      });
+      document.querySelectorAll(".po-pane").forEach((el) => {
+        el.classList.toggle("hidden", !show[el.dataset.poPane]);
+      });
+      const footer = document.getElementById("editFooter");
+      if (footer) footer.classList.remove("hidden");
+      const order = getWorkspaceOrder();
+      if (show.fees) loadOrderFees(order);
+      if (show.goods || show.fees) renderPoEstMargin(order);
     }
 
     function syncPoGoodsTab(order) {
@@ -8195,6 +8224,7 @@
       page.classList.toggle("is-wizard", use);
       page.classList.toggle("is-online-wizard", use && poWizardUsesOnline(order));
       page.classList.toggle("is-creating", use && poWizardSessionNew);
+      if (use) page.classList.remove("is-flat");
       if (!use) {
         page.classList.remove("is-wizard-preview");
         page.classList.remove("is-creating");
@@ -8284,6 +8314,10 @@
     function setPoTab(name) {
       if (poWizardOn && orderFormMode !== "view") {
         if (name === "basic") setPoWizardStep(1);
+        return;
+      }
+      if (usePoFlatLayout()) {
+        applyPoFlatPanes();
         return;
       }
       const shipsTab = document.querySelector('.po-tab[data-po-tab="ships"]');
@@ -14685,8 +14719,9 @@
       const slot = document.getElementById("poFeeMarginSlot");
       if (!el || !recvBar || !goodsBar) return;
       order = order || getWorkspaceOrder();
-      const viewOnFees = orderFormMode === "view";
-      const parkOnFees = slot && (isFourStepFeeStep(order) || isFourStepPreview(order) || viewOnFees);
+      const feesTab = document.querySelector('.po-tab[data-po-tab="fees"]');
+      const feesOpen = !!(feesTab && !feesTab.classList.contains("hidden") && !poWizardOn);
+      const parkOnFees = slot && (isFourStepFeeStep(order) || isFourStepPreview(order) || feesOpen);
       if (parkOnFees) {
         if (el.parentElement !== slot) slot.appendChild(el);
         return;
@@ -16961,6 +16996,7 @@
       syncPoFeesTab(order);
       syncPoGoodsTab(order);
       syncMarkUploadUi(order);
+      applyPoFlatPanes();
       showPage("order-edit");
       if (poExchangeDomHandoff) {
         const handoff = poExchangeDomHandoff;
