@@ -636,6 +636,7 @@
       flex-direction: column;
       gap: 24px;
     }
+    [data-po-pane="ships"] #poMarginOverview,
     [data-po-pane="ships"] #poFinalMarginOverview { margin-top: 28px; }
     .po-margin-overview.hidden { display: none; }
     .po-mark-block {
@@ -14867,8 +14868,18 @@
       const recvBar = document.getElementById("recvConfirmGoodsBar");
       const goodsBar = document.getElementById("editGoodsConfirmBar");
       const slot = document.getElementById("poFeeMarginSlot");
+      const finalEl = document.getElementById("poFinalMarginOverview");
       if (!el || !recvBar || !goodsBar) return;
       order = order || getWorkspaceOrder();
+      const page = document.getElementById("page-order-edit");
+      const shipsTab = document.querySelector('.po-tab[data-po-tab="ships"]');
+      const shipsOpen = !!(page && page.classList.contains("is-flat")
+        && shipsTab && !shipsTab.classList.contains("hidden")
+        && finalEl);
+      if (shipsOpen) {
+        if (el.nextElementSibling !== finalEl) finalEl.insertAdjacentElement("beforebegin", el);
+        return;
+      }
       const feesTab = document.querySelector('.po-tab[data-po-tab="fees"]');
       const feesOpen = !!(feesTab && !feesTab.classList.contains("hidden") && !poWizardOn);
       const parkOnFees = slot && (isFourStepFeeStep(order) || isFourStepPreview(order) || feesOpen);
