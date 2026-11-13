@@ -1395,9 +1395,15 @@
       max-width: none;
       margin-top: 0;
     }
-    #page-order-edit.is-pin-dates .po-date-pin.is-stuck {
+    #poViewPinSpacer {
+      flex-shrink: 0;
+      height: 0;
+      overflow: hidden;
+    }
+    #page-order-edit.is-pin-dates #poViewPin.is-stuck {
       position: fixed;
       z-index: 30;
+      box-sizing: border-box;
       background: #fff;
       box-shadow: 0 8px 8px -8px rgba(0, 0, 0, 0.2);
       padding-bottom: 8px;
@@ -4383,6 +4389,7 @@
         </div>
 
         <div class="page" id="page-order-edit">
+          <div id="poViewPin">
           <div class="edit-page-head">
             <div class="edit-page-head-text">
               <h2 class="form-title" id="editPageTitle">客戶訂單資料</h2>
@@ -4595,6 +4602,8 @@
             </div>
             </div>
           </div>
+          </div>
+          <div id="poViewPinSpacer"></div>
 
           <div class="po-pane hidden" data-po-pane="goods">
             <div id="editGeneralGoodsWrap">
@@ -8166,10 +8175,10 @@
 
     function clearPoDatePin() {
       const page = document.getElementById("page-order-edit");
-      const shell = document.querySelector(".po-basic-top");
-      const pin = document.querySelector(".po-date-pin");
+      const pin = document.getElementById("poViewPin");
+      const spacer = document.getElementById("poViewPinSpacer");
       if (page) page.classList.remove("is-pin-dates");
-      if (shell) shell.style.paddingTop = "";
+      if (spacer) spacer.style.height = "";
       if (!pin) return;
       pin.classList.remove("is-stuck");
       pin.style.top = "";
@@ -8182,10 +8191,10 @@
       const layout = document.getElementById("poBasicLayout");
       const order = getWorkspaceOrder();
       if (!page || !layout || !order) return false;
-      if (!page.classList.contains("is-flat") || layout.classList.contains("has-recipient")) return false;
+      if (!page.classList.contains("is-flat")) return false;
       if (orderFormMode !== "view" && !page.classList.contains("is-gift-revise")) return false;
-      if (isTransferAcceptFlow(order)) return false;
-      const pin = document.querySelector(".po-date-pin");
+      if (isOnlineTransferPo(order) || layout.classList.contains("has-recipient")) return false;
+      const pin = document.getElementById("poViewPin");
       return !!(pin && pin.getClientRects().length);
     }
 
@@ -8203,10 +8212,10 @@
 
     function layoutPoDatePin(force) {
       const page = document.getElementById("page-order-edit");
-      const shell = document.querySelector(".po-basic-top");
-      const pin = document.querySelector(".po-date-pin");
+      const pin = document.getElementById("poViewPin");
+      const spacer = document.getElementById("poViewPinSpacer");
       const scroller = poDateScroller();
-      if (!page || !shell || !pin || !scroller) return;
+      if (!page || !pin || !spacer || !scroller) return;
       const enable = poDatePinEnabled();
       page.classList.toggle("is-pin-dates", enable);
       if (!enable) {
@@ -8218,29 +8227,31 @@
         pin.style.top = "";
         pin.style.left = "";
         pin.style.width = "";
-        shell.style.paddingTop = "";
+        spacer.style.height = "";
       }
       const stickTop = poDateStickTop(scroller);
       if (pin.classList.contains("is-stuck")) {
-        const shellTop = shell.getBoundingClientRect().top;
-        if (shellTop >= stickTop - 1) {
+        const anchor = spacer.getBoundingClientRect();
+        if (anchor.top >= stickTop - 1) {
           pin.classList.remove("is-stuck");
           pin.style.top = "";
           pin.style.left = "";
           pin.style.width = "";
-          shell.style.paddingTop = "";
+          spacer.style.height = "";
           return;
         }
         pin.style.top = stickTop + "px";
+        pin.style.left = anchor.left + "px";
+        pin.style.width = anchor.width + "px";
         return;
       }
       const natural = pin.getBoundingClientRect();
       if (natural.height < 1 || natural.top >= stickTop - 1) return;
-      shell.style.paddingTop = natural.height + "px";
       pin.classList.add("is-stuck");
       pin.style.top = stickTop + "px";
       pin.style.left = natural.left + "px";
       pin.style.width = natural.width + "px";
+      spacer.style.height = pin.offsetHeight + "px";
     }
 
     document.querySelector("main.content").addEventListener("scroll", () => layoutPoDatePin(false), { passive: true });
