@@ -1396,18 +1396,25 @@
       max-width: none;
       margin-top: 0;
     }
-    #poViewPinSpacer {
+    #poViewPinSpacer,
+    #poDatePinHold {
       flex-shrink: 0;
       height: 0;
       overflow: hidden;
     }
-    #page-order-edit.is-pin-dates #poViewPin.is-stuck {
+    #poDatePinSheet:not(.is-stuck) { display: none; }
+    #page-order-edit.is-pin-dates #poDatePinSheet.is-stuck {
       position: fixed;
       z-index: 30;
       box-sizing: border-box;
       background: #fff;
       box-shadow: 0 8px 8px -8px rgba(0, 0, 0, 0.2);
       padding-bottom: 8px;
+    }
+    #page-order-edit.is-pin-dates #poDatePinSheet.is-stuck .po-basic-top {
+      max-width: none;
+      grid-column: auto;
+      grid-row: auto;
     }
     @media (max-width: 1100px) {
       #page-order-edit.is-wizard:not(.is-wizard-preview):not(.is-online-wizard)[data-wizard-step="1"] .po-basic-layout {
@@ -4390,7 +4397,9 @@
         </div>
 
         <div class="page" id="page-order-edit">
+          <div id="poDatePinSheet"></div>
           <div id="poViewPin">
+          <div id="poDatePinHold"></div>
           <div class="edit-page-head">
             <div class="edit-page-head-text">
               <h2 class="form-title" id="editPageTitle">客戶訂單資料</h2>
@@ -8174,17 +8183,33 @@
       layoutPoDatePin(true);
     }
 
+    function restorePoDatePinNodes() {
+      const hold = document.getElementById("poDatePinHold");
+      const head = document.querySelector("#page-order-edit .edit-page-head");
+      const dates = document.querySelector("#page-order-edit .po-basic-top");
+      const buyer = document.querySelector("#poBasicLayout .po-buyer-col");
+      const sheet = document.getElementById("poDatePinSheet");
+      const spacer = document.getElementById("poViewPinSpacer");
+      if (hold && head && head.previousElementSibling !== hold) hold.insertAdjacentElement("afterend", head);
+      if (buyer && dates && dates.previousElementSibling !== buyer) buyer.insertAdjacentElement("afterend", dates);
+      if (dates) {
+        dates.style.width = "";
+        dates.style.maxWidth = "";
+      }
+      if (sheet) {
+        sheet.classList.remove("is-stuck");
+        sheet.style.top = "";
+        sheet.style.left = "";
+        sheet.style.width = "";
+      }
+      if (hold) hold.style.height = "";
+      if (spacer) spacer.style.height = "";
+    }
+
     function clearPoDatePin() {
       const page = document.getElementById("page-order-edit");
-      const pin = document.getElementById("poViewPin");
-      const spacer = document.getElementById("poViewPinSpacer");
       if (page) page.classList.remove("is-pin-dates");
-      if (spacer) spacer.style.height = "";
-      if (!pin) return;
-      pin.classList.remove("is-stuck");
-      pin.style.top = "";
-      pin.style.left = "";
-      pin.style.width = "";
+      restorePoDatePinNodes();
     }
 
     function poDatePinEnabled() {
@@ -8214,45 +8239,47 @@
     function layoutPoDatePin(force) {
       const page = document.getElementById("page-order-edit");
       const pin = document.getElementById("poViewPin");
-      const spacer = document.getElementById("poViewPinSpacer");
+      const hold = document.getElementById("poDatePinHold");
+      const sheet = document.getElementById("poDatePinSheet");
       const scroller = poDateScroller();
-      if (!page || !pin || !spacer || !scroller) return;
+      if (!page || !pin || !hold || !sheet || !scroller) return;
       const enable = poDatePinEnabled();
       page.classList.toggle("is-pin-dates", enable);
       if (!enable) {
         clearPoDatePin();
         return;
       }
-      if (force && pin.classList.contains("is-stuck")) {
-        pin.classList.remove("is-stuck");
-        pin.style.top = "";
-        pin.style.left = "";
-        pin.style.width = "";
-        spacer.style.height = "";
-      }
+      if (force && sheet.classList.contains("is-stuck")) restorePoDatePinNodes();
+      page.classList.add("is-pin-dates");
       const stickTop = poDateStickTop(scroller);
-      if (pin.classList.contains("is-stuck")) {
-        const anchor = spacer.getBoundingClientRect();
+      const head = document.querySelector("#page-order-edit .edit-page-head");
+      const dates = document.querySelector("#page-order-edit .po-basic-top");
+      if (!head || !dates) return;
+      if (sheet.classList.contains("is-stuck")) {
+        const anchor = hold.getBoundingClientRect();
         if (anchor.top >= stickTop - 1) {
-          pin.classList.remove("is-stuck");
-          pin.style.top = "";
-          pin.style.left = "";
-          pin.style.width = "";
-          spacer.style.height = "";
+          restorePoDatePinNodes();
           return;
         }
-        pin.style.top = stickTop + "px";
-        pin.style.left = anchor.left + "px";
-        pin.style.width = anchor.width + "px";
+        const pinRect = pin.getBoundingClientRect();
+        sheet.style.top = stickTop + "px";
+        sheet.style.left = pinRect.left + "px";
+        sheet.style.width = pinRect.width + "px";
         return;
       }
-      const natural = pin.getBoundingClientRect();
-      if (natural.height < 1 || natural.top >= stickTop - 1) return;
-      pin.classList.add("is-stuck");
-      pin.style.top = stickTop + "px";
-      pin.style.left = natural.left + "px";
-      pin.style.width = natural.width + "px";
-      spacer.style.height = pin.offsetHeight + "px";
+      const headRect = head.getBoundingClientRect();
+      const dateRect = dates.getBoundingClientRect();
+      if (headRect.height < 1 || headRect.top >= stickTop - 1) return;
+      const pinRect = pin.getBoundingClientRect();
+      dates.style.width = dateRect.width + "px";
+      dates.style.maxWidth = dateRect.width + "px";
+      sheet.appendChild(head);
+      sheet.appendChild(dates);
+      sheet.classList.add("is-stuck");
+      sheet.style.top = stickTop + "px";
+      sheet.style.left = pinRect.left + "px";
+      sheet.style.width = pinRect.width + "px";
+      hold.style.height = sheet.offsetHeight + "px";
     }
 
     document.querySelector("main.content").addEventListener("scroll", () => layoutPoDatePin(false), { passive: true });
