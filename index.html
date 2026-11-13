@@ -761,6 +761,7 @@
     }
     .po-goods-pick-table .col-alloc,
     .po-goods-pick-table .col-pick-qty { width: 140px; min-width: 120px; }
+    #page-order-edit.is-readonly:not(.is-gift-revise):not(.can-exchange) .col-alloc { display: none; }
     .po-goods-pick-table .col-pick-qty input:disabled {
       background: #f5f5f5;
       color: #bfbfbf;
@@ -9813,7 +9814,9 @@
     }
 
     function recvColCount(showExchange) {
-      return showExchange ? 15 : 14;
+      let n = showExchange ? 15 : 14;
+      if (orderFormMode === "view") n -= 1;
+      return n;
     }
 
     function recvOtherHeadLabel() {
@@ -9828,7 +9831,7 @@
             <th>SKU</th>
             <th>商品名稱</th>
             <th>效期_批號</th>
-            <th class="num">當前可賣量</th>
+            <th class="num col-alloc">當前可賣量</th>
             <th class="num">預計出貨數量(下訂數量)</th>
             <th class="num">商品報價</th>
             <th class="num">稅額</th>
@@ -10307,7 +10310,7 @@
           </td>
           <td><input type="text" data-recv-ex="itemName" readonly value="${escapeHtml((ex && ex.name) || "")}" /></td>
           <td>${recvBatchSelectHtml((ex && ex.batch) || "", { exchange: true, disabled: !editable })}</td>
-          <td class="num"><input type="text" data-recv-ex="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
+          <td class="num col-alloc"><input type="text" data-recv-ex="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
           <td class="num"><div class="qty-field"><input type="number" data-recv-ex="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${over && orderFormMode !== "view" ? "is-oversell" : ""}" ${editable ? "" : "readonly"} /><div class="qty-oversell-hint${over && orderFormMode !== "view" ? "" : " hidden"}">數量大於當前可賣量</div></div></td>
           <td class="num"><input type="text" data-recv-ex="lineQuote" readonly value="" /></td>
           <td class="num"><input type="text" data-recv-ex="lineTax" readonly value="" /></td>
@@ -10335,7 +10338,7 @@
                     <th>SKU</th>
                     <th>商品名稱</th>
                     <th>效期_批號</th>
-                    <th class="num">當前可賣量</th>
+                    <th class="num col-alloc">當前可賣量</th>
                     <th class="num">預計出貨數量(下訂數量)</th>
                     <th class="num">商品報價</th>
                     <th class="num">稅額</th>
@@ -10472,7 +10475,7 @@
           </td>
           <td><input type="text" data-recv="itemName" readonly value="${escapeHtml(row.itemName || "")}" /></td>
           <td>${recvBatchSelectHtml(row.batch || "")}</td>
-          <td class="num"><input type="text" data-recv="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
+          <td class="num col-alloc"><input type="text" data-recv="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
           <td class="num"><div class="qty-field"><input type="number" data-recv="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${qtyOver && orderFormMode !== "view" ? "is-oversell" : ""}"${ro} /><div class="qty-oversell-hint${qtyOver && orderFormMode !== "view" ? "" : " hidden"}">數量大於當前可賣量</div></div></td>
           <td class="num"><input type="number" data-recv="lineQuote" min="0.01" step="0.01" value="${escapeHtml(row.quoteFrozen != null && row.quoteFrozen !== "" ? String(row.quoteFrozen) : "")}"${(!editable || isExchangeLockMode(getWorkspaceOrder())) ? " readonly" : ""} /></td>
           <td class="num"><input type="text" data-recv="lineTax" readonly value="" /></td>
