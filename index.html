@@ -9813,9 +9813,27 @@
       ));
     }
 
+    function recvShowsShippedCol() {
+      return orderFormMode === "view" && isOnlineTransferPo(getWorkspaceOrder());
+    }
+
+    function recvShippedCellHtml(qty) {
+      if (!recvShowsShippedCol()) return "";
+      const n = Number(qty);
+      const text = Number.isFinite(n) ? String(n) : "0";
+      return `<td class="num col-recv-shipped"><input type="text" readonly value="${escapeHtml(text)}" /></td>`;
+    }
+
+    function recvLineShippedQty(qty, remain) {
+      const ordered = Number(qty) || 0;
+      const left = Math.max(0, Number(remain) || 0);
+      return Math.max(0, ordered - left);
+    }
+
     function recvColCount(showExchange) {
       let n = showExchange ? 15 : 14;
       if (orderFormMode === "view") n -= 1;
+      if (recvShowsShippedCol()) n += 1;
       return n;
     }
 
@@ -9833,6 +9851,7 @@
             <th>效期_批號</th>
             <th class="num col-alloc">當前可賣量</th>
             <th class="num">預計出貨數量(下訂數量)</th>
+            ${recvShowsShippedCol() ? '<th class="num col-recv-shipped">實際出貨數</th>' : ""}
             <th class="num">商品報價</th>
             <th class="num">稅額</th>
             <th class="num">${recvOtherHeadLabel()}</th>
@@ -10312,6 +10331,7 @@
           <td>${recvBatchSelectHtml((ex && ex.batch) || "", { exchange: true, disabled: !editable })}</td>
           <td class="num col-alloc"><input type="text" data-recv-ex="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
           <td class="num"><div class="qty-field"><input type="number" data-recv-ex="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${over && orderFormMode !== "view" ? "is-oversell" : ""}" ${editable ? "" : "readonly"} /><div class="qty-oversell-hint${over && orderFormMode !== "view" ? "" : " hidden"}">數量大於當前可賣量</div></div></td>
+          ${recvShippedCellHtml(shipCheck && shipCheck.shipped)}
           <td class="num"><input type="text" data-recv-ex="lineQuote" readonly value="" /></td>
           <td class="num"><input type="text" data-recv-ex="lineTax" readonly value="" /></td>
           <td class="num"><input type="text" data-recv-ex="lineOther" readonly value="" /></td>
@@ -10340,6 +10360,7 @@
                     <th>效期_批號</th>
                     <th class="num col-alloc">當前可賣量</th>
                     <th class="num">預計出貨數量(下訂數量)</th>
+                    ${recvShowsShippedCol() ? '<th class="num col-recv-shipped">實際出貨數</th>' : ""}
                     <th class="num">商品報價</th>
                     <th class="num">稅額</th>
                     <th class="num">${recvOtherHeadLabel()}</th>
@@ -10477,6 +10498,7 @@
           <td>${recvBatchSelectHtml(row.batch || "")}</td>
           <td class="num col-alloc"><input type="text" data-recv="sellableQty" readonly value="${escapeHtml(sellVal)}" /></td>
           <td class="num"><div class="qty-field"><input type="number" data-recv="qty" min="1" step="1" value="${escapeHtml(qtyVal)}" class="${qtyOver && orderFormMode !== "view" ? "is-oversell" : ""}"${ro} /><div class="qty-oversell-hint${qtyOver && orderFormMode !== "view" ? "" : " hidden"}">數量大於當前可賣量</div></div></td>
+          ${recvShippedCellHtml(shipMeta && shipMeta.origin && shipMeta.origin.shipped)}
           <td class="num"><input type="number" data-recv="lineQuote" min="0.01" step="0.01" value="${escapeHtml(row.quoteFrozen != null && row.quoteFrozen !== "" ? String(row.quoteFrozen) : "")}"${(!editable || isExchangeLockMode(getWorkspaceOrder())) ? " readonly" : ""} /></td>
           <td class="num"><input type="text" data-recv="lineTax" readonly value="" /></td>
           <td class="num"><input type="text" data-recv="lineOther" readonly value="" /></td>
@@ -10543,19 +10565,24 @@
           remain: hasEx ? 0 : takeRecvShipRemain(pool, row.sku, row.qty),
           locked: !showShipCheck || hasEx,
         };
+        origin.shipped = hasEx ? 0 : recvLineShippedQty(row.qty, origin.remain);
         const exchanges = hasEx
-          ? (row.exchangeItems || []).map((ex) => ({
-            show: showShipCheck,
-            groupId: row.groupId,
-            sku: (ex && ex.sku) || "",
-            name: (ex && ex.name) || "",
-            unit: (ex && ex.unit) || "",
-            pcsPerCarton: (ex && ex.pcsPerCarton) || 0,
-            expiryAccept: (ex && ex.expiryAccept) || "",
-            batch: (ex && ex.batch) || "",
-            remain: takeRecvShipRemain(pool, ex && ex.sku, ex && ex.qty),
-            locked: !showShipCheck,
-          }))
+          ? (row.exchangeItems || []).map((ex) => {
+            const remain = takeRecvShipRemain(pool, ex && ex.sku, ex && ex.qty);
+            return {
+              show: showShipCheck,
+              groupId: row.groupId,
+              sku: (ex && ex.sku) || "",
+              name: (ex && ex.name) || "",
+              unit: (ex && ex.unit) || "",
+              pcsPerCarton: (ex && ex.pcsPerCarton) || 0,
+              expiryAccept: (ex && ex.expiryAccept) || "",
+              batch: (ex && ex.batch) || "",
+              remain,
+              shipped: recvLineShippedQty(ex && ex.qty, remain),
+              locked: !showShipCheck,
+            };
+          })
           : [];
         const html = recvItemRowHtml(row, platform, editable, canExchange, !isFirstInGroup, { origin, exchanges });
         if (!blockMap[row.groupId]) {
