@@ -5850,6 +5850,7 @@
     let shipCreateKind = "normal";
 
     function showPage(page) {
+      if (page !== "order-edit" && !confirmLeavePoRevision()) return;
       let menuPage = page;
       if (page === "order-edit") menuPage = "sales";
       else if (page === "ship-create") menuPage = shipCreateKind === "online" ? "online-shipping" : "shipping";
@@ -6403,7 +6404,55 @@
     }
 
     function giftReviseDirty() {
-      return giftReviseComparable(poLineItems) !== poGiftReviseBase;
+      return poLineItems.some((item) => item && item.giftDraft)
+        || giftReviseComparable(poLineItems) !== poGiftReviseBase;
+    }
+
+    // Revisions stay in the editor until an explicit successful save. The prototype
+    // uses localStorage as its persistence adapter; no backend API exists here.
+    function poRevisionDirty() {
+      if (orderFormMode !== "edit") return false;
+      const order = getWorkspaceOrder();
+      if (!order || order.status === "草稿") return false;
+      return isOverseasPo(order) ? giftReviseDirty() : (isOnlineTransferPo(order) && exchangeDirty());
+    }
+
+    function confirmLeavePoRevision() {
+      if (!document.getElementById("page-order-edit")?.classList.contains("active")) return true;
+      if (poRevisionDirty() && !confirm("尚有未儲存的變更，確定要離開嗎？")) return false;
+      if (orderFormMode === "edit" && workspaceOrder && workspaceOrder.status !== "草稿") {
+        workspaceOrder = null;
+        orderFormMode = "view";
+      }
+      return true;
+    }
+
+    function savePoRevision(candidate) {
+      const index = salesOrders.findIndex((item) => item.orderNo === candidate.orderNo);
+      if (index < 0) return false;
+      const original = salesOrders[index];
+      salesOrders[index] = candidate;
+      try {
+        if (persistDemoData()) return true;
+      } catch (err) { console.error(err); }
+      salesOrders[index] = original;
+      alert("儲存失敗，請重試");
+      return false;
+    }
+
+    function revisionOrderAllowed(order, gift) {
+      if (currentRole !== "主管" && currentRole !== "建檔人") return false;
+      const saved = salesOrders.find((item) => item.orderNo === order.orderNo);
+      if (validShipsOfPo(order.orderNo).length) {
+        alert("已建立出貨單，不可" + (gift ? "編輯贈品" : "換貨"));
+        return false;
+      }
+      if (!saved || saved.status !== order.status
+        || !(gift ? canOverseasGiftRevise(saved) : canExchangeOnPo(saved))) {
+        alert("訂單狀態已變更，請重新開啟訂單");
+        return false;
+      }
+      return true;
     }
 
     function overseasGiftEditable(order) {
@@ -8001,6 +8050,12 @@
       window.open(poWorkspaceUrl(params), "_blank");
     }
 
+    window.addEventListener("beforeunload", (event) => {
+      if (!document.getElementById("page-order-edit")?.classList.contains("active") || !poRevisionDirty()) return;
+      event.preventDefault();
+      event.returnValue = "";
+    });
+
     function getWorkspaceOrder() {
       if (workspaceOrder && (currentEditOrderNo === "__new__" || currentEditOrderNo === workspaceOrder.orderNo)) {
         return workspaceOrder;
@@ -8758,7 +8813,7 @@
         refreshAcceptancePages();
         if (currentEditOrderNo && currentEditOrderNo !== "__new__") {
           const order = salesOrders.find((item) => item.orderNo === currentEditOrderNo);
-          if (order && document.getElementById("page-order-edit").classList.contains("active")) {
+          if (order && document.getElementById("page-order-edit").classList.contains("active") && !poRevisionDirty()) {
             fillOrderEdit(order, orderFormMode);
           }
         }
@@ -10909,6 +10964,19 @@
           ? body.querySelector(`tr.recv-ex-block[data-recv-item="${CSS.escape(itemKey)}"]`)
           : null;
         if (!block) continue;
+        for (const row of block.querySelectorAll("tr[data-ex-row]")) {
+          for (const field of ["sku", "qty"]) {
+            const input = row.querySelector(`[data-recv-ex="${field}"]`);
+            const raw = String(input?.value || "").trim();
+            const valid = raw !== "" && (field === "sku" || (Number.isInteger(Number(raw)) && Number(raw) > 0));
+            if (input) input.setAttribute("aria-invalid", String(!valid));
+            if (!valid) {
+              alert(field === "sku" ? "請填寫 SKU" : "預計出貨數量須為大於 0 的正整數");
+              input?.focus();
+              return false;
+            }
+          }
+        }
         const blank = Array.from(block.querySelectorAll("tr[data-ex-row]")).some((row) => {
           const sku = String((row.querySelector('[data-recv-ex="sku"]') || {}).value || "").trim();
           const qty = String((row.querySelector('[data-recv-ex="qty"]') || {}).value || "").trim();
@@ -10933,23 +11001,25 @@
 
     function submitExchangeRevise() {
       const order = getWorkspaceOrder();
-      if (!order || !isExchangeLockMode(order) || !exchangeDirty()) return;
+      if (!order || orderFormMode !== "edit" || !exchangeDirty()) return;
+      if (!revisionOrderAllowed(order, false)) return;
       if (!validateVisibleExchanges()) return;
+      const candidate = JSON.parse(JSON.stringify(order));
       poExchangeCommit = true;
       try {
-        applyRecipientForm(order);
+        applyRecipientForm(candidate);
       } finally {
         poExchangeCommit = false;
       }
-      let msg = "已送出申請";
-      if (order.status === "未開立出貨單" && currentRole === "建檔人") {
-        order.status = "待審核";
+      let msg = currentRole === "主管" ? "儲存成功" : "已送出申請";
+      if (candidate.status === "未開立出貨單" && currentRole === "建檔人") {
+        candidate.status = "待審核";
         msg = "已送出申請。狀態改為待審核。主管審核通過後才能新增出貨單。";
       }
-      persistDemoData();
+      if (!savePoRevision(candidate)) return;
       renderSalesTable(getSalesFiltered());
       history.replaceState({}, "", poWorkspaceUrl({ po: order.orderNo, mode: "view" }));
-      fillOrderEdit(order, "view");
+      fillOrderEdit(candidate, "view");
       alert(msg);
     }
 
@@ -11011,7 +11081,7 @@
 
     function validateRecvExchangeItems(exchangeItems, ip, opts) {
       const silent = !!(opts && opts.silent);
-      const usable = normalizeExchangeItems(exchangeItems).filter((ex) => ex.sku && Number(ex.qty) > 0);
+      const usable = normalizeExchangeItems(exchangeItems);
       if (!usable.length) {
         if (!silent) {
           alert(ip + "已換貨，請至少填寫一筆換貨商品（SKU／數量）");
@@ -11022,6 +11092,10 @@
       for (let k = 0; k < usable.length; k++) {
         const ex = usable[k];
         const ep = `${ip}換貨第 ${k + 1} 列：`;
+        if (!ex.sku) {
+          if (!silent) alert(ep + "請填寫 SKU");
+          return null;
+        }
         const exBound = channelBoundSkuMap("線上-轉單")[String(ex.sku).toLowerCase()];
         if (!exBound) {
           if (!silent) {
@@ -16747,6 +16821,11 @@
         const raw = String(e.target.value || "").trim();
         const n = parsePositiveMoney(raw);
         if (n == null) {
+          if (isGiftReviseEdit()) {
+            item.quoteFrozen = "";
+            syncEditFooter(order, orderFormMode);
+            return;
+          }
           if (e.type === "change" && raw === "") {
             item.quoteEdited = false;
             stampLineQuote(order, item, { resetEdited: true });
@@ -16761,6 +16840,7 @@
         item.quoteInputMode = orderTaxModeOf(order);
         item.quote = String(n);
         item.orderQuote = String(n);
+        if (isGiftReviseEdit()) syncEditFooter(order, orderFormMode);
         refreshOverviewRowDerived(tr, item);
         if (e.type === "change") syncOverviewGoods(order);
         poEstMarginConfirmed = false;
@@ -16812,7 +16892,7 @@
             if (isGiftReviseEdit()) syncEditFooter(getWorkspaceOrder(), orderFormMode);
             return;
           }
-          const n = Math.floor(Number(raw));
+          const n = isGiftReviseEdit() ? Number(raw) : Math.floor(Number(raw));
           if (!Number.isFinite(n) || n < 0) return;
           item.qty = n;
           refreshOverviewRowDerived(tr, item);
@@ -16822,8 +16902,13 @@
           return;
         }
         /* change：僅允許正整數 */
-        const n = Math.floor(Number(raw));
+        const n = isGiftReviseEdit() ? Number(raw) : Math.floor(Number(raw));
         if (!Number.isInteger(n) || n <= 0) {
+          if (isGiftReviseEdit()) {
+            item.qty = Number(raw);
+            syncEditFooter(getWorkspaceOrder(), orderFormMode);
+            return;
+          }
           alert("預計出貨數量僅可填寫大於 0 的正整數");
           e.target.value = item.qty > 0 ? String(item.qty) : "";
           return;
@@ -17096,8 +17181,8 @@
       const draftBtn = document.getElementById("editSaveDraft");
       if (draftBtn && (view || giftRevise)) draftBtn.classList.add("hidden");
       const submitBtn = document.getElementById("editSubmit");
-      if (submitBtn) submitBtn.textContent = "送出申請";
       const exchangeEdit = !view && isExchangeLockMode(order);
+      if (submitBtn) submitBtn.textContent = currentRole === "主管" && (giftRevise || exchangeEdit) ? "儲存變更" : "送出申請";
       const draftSubmit = !view && draftLike && (currentRole === "建檔人" || (currentRole === "主管" && isOnlineTransferPo(order) && exchangeDirty()));
       setBtnEnabled("editSubmit", giftRevise ? giftReviseDirty() : (exchangeEdit ? exchangeDirty() : draftSubmit));
       setBtnEnabled("editExportPdf", !giftRevise && canExportPoPdf(order));
@@ -17155,6 +17240,10 @@
 
     function fillOrderEdit(order, mode, opts) {
       initExpectArriveTimeOptions();
+      if (mode !== "view" && order.status !== "草稿"
+        && (canOverseasGiftRevise(order) || canOnlineExchangeEdit(order))) {
+        order = JSON.parse(JSON.stringify(order));
+      }
       workspaceOrder = order;
       currentEditOrderNo = order.orderNo || "__new__";
       const forceView = mode === "view" || !canEditPo(order);
@@ -17226,12 +17315,17 @@
     }
 
     document.getElementById("operatorRole").addEventListener("change", (e) => {
+      const previousMode = orderFormMode;
+      if (!confirmLeavePoRevision()) {
+        e.target.value = currentRole;
+        return;
+      }
       currentRole = e.target.value;
       renderSalesTable(getSalesFiltered());
       onAcceptanceRoleChange();
       const order = getWorkspaceOrder();
       if (order && document.getElementById("page-order-edit").classList.contains("active")) {
-        fillOrderEdit(order, orderFormMode);
+        fillOrderEdit(order, previousMode);
       }
       if (document.getElementById("page-monthly-bill-detail")?.classList.contains("active") && monthlyBillViewId) {
         openMonthlyBillDetail(monthlyBillViewId);
@@ -17263,6 +17357,25 @@
 
     function validateGiftReviseLines() {
       const order = getWorkspaceOrder();
+      // Validate the values the user sees, before normalization can restore a
+      // previous quote or round a fractional quantity.
+      const giftRows = document.querySelectorAll("#editGoodsBody tr[data-gift='1']");
+      for (const row of giftRows) {
+        for (const [field, label] of [["sku", "贈品 SKU"], ["qty", "預計出貨數量"], ["lineQuote", "商品報價"]]) {
+          const input = row.querySelector(`[data-field="${field}"]`);
+          if (!input) continue;
+          const raw = String(input.value || "").trim();
+          const valid = raw !== "" && (field === "sku" || (Number.isFinite(Number(raw)) && Number(raw) > 0
+            && (field !== "qty" || Number.isInteger(Number(raw)))));
+          input.classList.toggle("is-invalid", !valid);
+          input.setAttribute("aria-invalid", String(!valid));
+          if (!valid) {
+            alert(raw ? `${label}格式錯誤` : `請填寫${label}`);
+            input.focus();
+            return false;
+          }
+        }
+      }
       const channelName = (order && order.channelName) || "";
       const bound = channelBoundSkuMap(channelName);
       const allB = typeof allShipBatches === "function" ? allShipBatches() : [];
@@ -17273,9 +17386,8 @@
         const qty = Number(item.qty) || 0;
         const batch = String(item.batch || "").trim();
         const remark = clipPoRemark(item.remark);
-        if (!sku && qty <= 0 && !batch && !remark) continue;
         if (!sku || !bound[sku.toLowerCase()]) {
-          alert(sku ? `SKU「${sku}」不在此通路供應商品內` : "請輸入贈品 SKU");
+          alert(sku ? `SKU「${sku}」不在此通路供應商品內` : "請填寫贈品 SKU");
           setPoTab("goods");
           return false;
         }
@@ -17284,7 +17396,12 @@
           setPoTab("goods");
           return false;
         }
-        if (!batch || !allB.includes(batch)) {
+        if (item.quoteFrozen === "" || item.quoteFrozen == null || !Number.isFinite(Number(item.quoteFrozen)) || Number(item.quoteFrozen) <= 0) {
+          alert("請填寫商品報價");
+          setPoTab("goods");
+          return false;
+        }
+        if (batch && !allB.includes(batch)) {
           alert(`SKU「${sku}」：請選擇效期_批號`);
           setPoTab("goods");
           return false;
@@ -17295,20 +17412,29 @@
 
     function submitGiftRevise() {
       const order = getWorkspaceOrder();
-      if (!order || !isGiftReviseEdit() || !giftReviseDirty()) return;
+      if (!order || orderFormMode !== "edit" || !giftReviseDirty()) return;
+      if (!revisionOrderAllowed(order, true)) return;
       if (!validateGiftReviseLines()) return;
-      const stayPending = order.status === "待審核";
-      order.items = collectEditGoods().map((row) => {
+      const candidate = JSON.parse(JSON.stringify(order));
+      candidate.items = collectEditGoods().map((row) => {
         const copy = { ...row };
         delete copy.giftDraft;
         return copy;
       });
-      if (!stayPending) order.status = "待審核";
-      persistDemoData();
+      if (currentRole === "建檔人") candidate.status = "待審核";
+      // A changed PO needs a fresh export and stamp, even when all gifts were removed.
+      if (giftFingerprint(candidate) !== giftFingerprint(order)) {
+        candidate.giftExportedAt = 0;
+        candidate.overseasExportedAt = 0;
+        candidate.giftExportedFingerprint = "";
+        delete candidate.stampFile;
+        if (currentRole === "主管" && candidate.status !== "待審核") candidate.status = "待回壓文件";
+      }
+      if (!savePoRevision(candidate)) return;
       renderSalesTable(getSalesFiltered());
       history.replaceState({}, "", poWorkspaceUrl({ po: order.orderNo, mode: "view" }));
-      fillOrderEdit(order, "view");
-      alert("已送出申請");
+      fillOrderEdit(candidate, "view");
+      alert(currentRole === "主管" ? "儲存成功" : "已送出申請");
     }
 
     document.getElementById("editSaveDraft").addEventListener("click", () => {
@@ -17324,12 +17450,12 @@
     });
     document.getElementById("editSubmit").addEventListener("click", () => {
       if (orderFormMode === "view") return;
-      if (isGiftReviseEdit()) {
+      const order = getWorkspaceOrder();
+      if (order && order.status !== "草稿" && isOverseasPo(order)) {
         submitGiftRevise();
         return;
       }
-      const order = getWorkspaceOrder();
-      if (order && isExchangeLockMode(order)) {
+      if (order && order.status !== "草稿" && isOnlineTransferPo(order)) {
         submitExchangeRevise();
         return;
       }
