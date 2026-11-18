@@ -4095,10 +4095,10 @@
                         </tr>
                         <tr class="ship-goods-thead-view">
                           <th class="col-id">編號</th>
+                          <th class="col-code">商品品號</th>
                           <th>SKU</th>
-                          <th>BARCODE</th>
+                          <th>商品品名</th>
                           <th>效期_批號</th>
-                          <th>品名</th>
                           <th class="num">預計出貨總數</th>
                           <th class="num">實際出貨量</th>
                           <th class="num">驗收數量</th>
@@ -15665,10 +15665,10 @@
       return `
         <tr data-id="${escapeHtml(row.id)}">
           <td class="col-id">${escapeHtml(row.id)}</td>
+          <td class="col-code">${escapeHtml(row.productCode)}</td>
           <td class="col-sku">${escapeHtml(row.sku)}</td>
-          <td>${escapeHtml(row.barcode || demoBarcodeOf(row))}</td>
-          <td>${escapeHtml(batch)}</td>
           <td class="col-name">${row.gift ? '<span class="gift-tag">贈品</span>' : ""}${escapeHtml(row.name)}</td>
+          <td>${escapeHtml(batch)}</td>
           <td class="num">${escapeHtml(row.qty)}</td>
           <td class="num">${escapeHtml(row.actualShippedQty != null ? row.actualShippedQty : 0)}</td>
           <td class="num">${escapeHtml(acceptText)}</td>
