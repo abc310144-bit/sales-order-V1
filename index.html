@@ -4101,7 +4101,7 @@
                           <th>效期_批號</th>
                           <th class="num">預計出貨總數</th>
                           <th class="num">實際出貨量</th>
-                          <th class="num">驗收數量</th>
+                          <th class="num" id="shipViewAcceptQtyHead">驗收數量</th>
                           <th>備註</th>
                         </tr>
                       </thead>
@@ -15658,7 +15658,7 @@
       return 0;
     }
 
-    function shipViewGoodsRowHtml(row) {
+    function shipViewGoodsRowHtml(row, showAcceptQty) {
       const batch = row.batch || closestFifoLot().batch;
       const acceptQty = row.acceptQty;
       const acceptText = acceptQty == null || acceptQty === "" ? "-" : String(acceptQty);
@@ -15671,7 +15671,7 @@
           <td>${escapeHtml(batch)}</td>
           <td class="num">${escapeHtml(row.qty)}</td>
           <td class="num">${escapeHtml(row.actualShippedQty != null ? row.actualShippedQty : 0)}</td>
-          <td class="num">${escapeHtml(acceptText)}</td>
+          ${showAcceptQty ? `<td class="num">${escapeHtml(acceptText)}</td>` : ""}
           <td>${escapeHtml(userFacingRemark(row.remark) || "")}</td>
         </tr>`;
     }
@@ -18524,13 +18524,15 @@
       const body = document.getElementById("poShipGoodsBody");
       if (!body) return;
       const isView = shipFormMode === "view";
+      const showAcceptQty = isView && shipCreateKind !== "online";
+      document.getElementById("shipViewAcceptQtyHead").classList.toggle("hidden", !showAcceptQty);
       if (!poShipGoods.length) {
-        body.innerHTML = goodsNoDataHtml(isView ? 9 : 8);
+        body.innerHTML = goodsNoDataHtml(showAcceptQty ? 9 : 8);
         updatePoShipQtyTotal();
         return;
       }
       body.innerHTML = isView
-        ? poShipGoods.map((row) => shipViewGoodsRowHtml(row)).join("")
+        ? poShipGoods.map((row) => shipViewGoodsRowHtml(row, showAcceptQty)).join("")
         : poShipGoods.map((row) => legacyGoodsRowHtml(row, "po-ship-expiry")).join("");
       updatePoShipQtyTotal();
     }
