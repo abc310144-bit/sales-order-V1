@@ -1654,7 +1654,7 @@
       white-space: nowrap;
     }
     .ship-stock-warn.hidden { display: none; }
-    #poShipCreatePanel .po-goods-toolbar { justify-content: space-between; }
+    #page-ship-create:not(.is-readonly) #poShipCreatePanel .po-goods-toolbar { justify-content: flex-end; }
     .modal-card.stock-dialog-card { width: min(760px, 100%); }
     .stock-shortage-table .num { text-align: right; }
     .stock-shortage-table .ops { white-space: nowrap; width: 1%; }
@@ -1724,9 +1724,6 @@
     .po-ship-fee-table { margin-top: 12px; }
     .modal-card.fee-dialog-card { width: min(560px, 100%); }
     #page-ship-create .form-title { margin: 0 0 16px; }
-    #page-ship-create.is-readonly #poShipAddItemBtn,
-    #page-ship-create.is-readonly #poShipImportItemBtn,
-    #page-ship-create.is-readonly .ship-items-actions,
     #page-ship-create.is-readonly #poShipCreateConfirm,
     #page-ship-create.is-readonly .po-ship-fee-table td.ops,
     #page-ship-create.is-readonly .ship-items-table thead th.ops,
@@ -1982,7 +1979,6 @@
       gap: 16px;
       margin-bottom: 12px;
     }
-    .ship-items-actions { display: flex; align-items: center; gap: 8px; }
     .ship-qty-box {
       min-width: 148px;
       padding: 8px 16px 10px;
@@ -2940,10 +2936,6 @@
       <main class="content">
         <div class="page" id="page-shipping">
         <div class="actions">
-          <button class="btn btn-primary" type="button" id="shipCreateBtn">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
-            建立出貨訂單
-          </button>
           <button class="btn" type="button" id="toggleFilter">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
               <path d="M2 3h12l-4.5 5.2V13l-3-1.5V8.2L2 3z"/>
@@ -4075,10 +4067,6 @@
                 </div>
                 <div class="po-ship-acc-body">
                   <div class="ship-items-toolbar po-goods-toolbar">
-                    <div class="ship-items-actions">
-                      <button type="button" class="btn" id="poShipAddItemBtn">新增商品</button>
-                      <button type="button" class="btn btn-primary" id="poShipImportItemBtn">匯入商品</button>
-                    </div>
                     <div class="ship-qty-box">
                       <div class="label">出貨總數量(pcs)</div>
                       <div class="value" id="poShipItemsQtyTotal">0</div>
@@ -17659,7 +17647,6 @@
       showPage(shipCreateKind === "online" ? "online-shipping" : "shipping");
     });
     document.getElementById("poShipCreateConfirm").addEventListener("click", confirmPoShipCreate);
-    document.getElementById("shipCreateBtn").addEventListener("click", openShipCreatePage);
     document.getElementById("poShipChannelType").addEventListener("change", onPoShipChannelTypeChange);
     document.getElementById("poShipChannelArea").addEventListener("change", onPoShipChannelAreaChange);
     document.getElementById("poShipChannelName").addEventListener("change", refreshPoShipChannelAutofill);
@@ -17886,12 +17873,6 @@
     document.getElementById("poPickImportBtn").addEventListener("click", () => {
       openImportPoItemsModal("po-pick");
     });
-    document.getElementById("poShipAddItemBtn").addEventListener("click", () => {
-      openAddPoItemModal("ship");
-    });
-    document.getElementById("poShipImportItemBtn").addEventListener("click", () => {
-      openImportPoItemsModal("ship");
-    });
     document.getElementById("poOversellWarnClose").addEventListener("click", closePoOversellWarnModal);
     document.getElementById("poOversellWarnCancel").addEventListener("click", closePoOversellWarnModal);
     document.getElementById("poOversellWarnConfirm").addEventListener("click", confirmPoOversellWarn);
@@ -18086,18 +18067,6 @@
       poShipShortage = [];
       renderPoShipGoodsTable();
       syncPoShipStockWarn();
-    }
-
-    function openShipCreatePage() {
-      closePoShipFeeModal();
-      closePoShipStockModal();
-      setShipCreateKind("normal");
-      clearPoShipCreateFields();
-      setShipPoLocked(false);
-      setShipFormReadonly(false);
-      history.replaceState({}, "", location.pathname);
-      showPage("ship-create");
-      document.getElementById("shipPoNo").focus();
     }
 
     function openOnlineShipCreatePage() {
@@ -19065,6 +19034,8 @@
       if (!shipAcceptDraft || shipAcceptDraft.readonly) return;
       const ship = rows.find((row) => row.orderId === shipAcceptDraft.orderId);
       if (!ship || ship.status !== "待驗收") return;
+      const previousAcceptance = ship.acceptance;
+      const previousNote = ship.acceptNote;
       const note = String(acceptNote || "").trim().slice(0, 20);
       ship.acceptance = {
         acceptedAt: nowStamp(),
@@ -19079,7 +19050,14 @@
       };
       ship.acceptNote = note;
       ship.status = "已驗收";
-      persistDemoData();
+      if (!persistDemoData()) {
+        ship.acceptance = previousAcceptance;
+        ship.acceptNote = previousNote;
+        ship.status = "待驗收";
+        alert("驗收失敗 請洽工程");
+        return;
+      }
+      document.getElementById("shipAcceptDiffModal").classList.add("hidden");
       renderShippingTable(getShippingFiltered ? getShippingFiltered() : undefined);
       alert("驗收完成");
       openShipAcceptPage(ship.orderId);
@@ -24709,7 +24687,6 @@
         alert("請填寫驗收說明");
         return;
       }
-      document.getElementById("shipAcceptDiffModal").classList.add("hidden");
       commitShipAcceptance(note);
     });
 
