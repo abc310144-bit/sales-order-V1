@@ -24350,6 +24350,15 @@
       if (!channelBillWizard.on || channelBillWizard.step !== 1) return;
       openAccImportModal("settle");
     });
+    document.getElementById("accImportPick").addEventListener("click", () => document.getElementById("accImportFile").click());
+    document.getElementById("accImportFile").addEventListener("change", (e) => {
+      accImportFile = e.target.files && e.target.files[0] || null;
+      document.getElementById("accImportFileName").textContent = accImportFile ? accImportFile.name : "";
+      document.getElementById("accImportFileName").classList.toggle("has-file", !!accImportFile);
+      document.getElementById("accImportConfirm").disabled = !accImportFile;
+    });
+    document.getElementById("accImportConfirm").addEventListener("click", confirmAccImport);
+    document.getElementById("accImportClose").addEventListener("click", closeAccImportModal);
     document.getElementById("channelBillSaveDraft").addEventListener("click", saveChannelBillDraft);
     document.getElementById("channelBillSavePage").addEventListener("click", saveChannelBillPage);
     document.getElementById("channelBillBackStep").addEventListener("click", backChannelBillStep);
