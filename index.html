@@ -23087,10 +23087,18 @@
 
     function channelBillRowMatchesFilter(row) {
       if (channelBillIsShipFlow()) {
+        const sku = ((document.getElementById("channelBillDraftSku") || {}).value || "").trim().toLowerCase();
+        const orderFrom = (document.getElementById("channelBillDraftOrderFrom") || {}).value || "";
+        const orderTo = (document.getElementById("channelBillDraftOrderTo") || {}).value || "";
         const shippedFrom = (document.getElementById("channelBillDraftShippedFrom") || {}).value || "";
         const shippedTo = (document.getElementById("channelBillDraftShippedTo") || {}).value || "";
         if (channelBillPickOrders.length && !channelBillPickOrders.includes(row.orderNo)) return false;
         if (channelBillPickShips.length && !channelBillPickShips.includes(row.shipNo)) return false;
+        if (sku && !String(row.sku || "").toLowerCase().includes(sku)) return false;
+        if (orderFrom || orderTo) {
+          const order = salesOrders.find((item) => item.orderNo === row.orderNo);
+          if (!order || !inDateRange(order.createdAt, orderFrom, orderTo)) return false;
+        }
         if ((shippedFrom || shippedTo) && !channelBillRowInShippedRange(row, shippedFrom, shippedTo)) return false;
         return true;
       }
@@ -23216,8 +23224,8 @@
       const editing = channelBillWizard.on && settleDetailMode === "edit";
       const grouped = channelBillIsShipFlow() && editing;
       const consign = editing && channelBillWizard.flow === "寄倉";
-      document.getElementById("channelBillSkuField")?.classList.toggle("hidden", grouped);
-      document.getElementById("channelBillOrderDateField")?.classList.toggle("hidden", !consign);
+      document.getElementById("channelBillSkuField")?.classList.toggle("hidden", !editing);
+      document.getElementById("channelBillOrderDateField")?.classList.toggle("hidden", !(grouped || consign));
       document.getElementById("channelBillShippedDateField")?.classList.toggle("hidden", !(grouped || consign));
       const note = document.getElementById("channelBillFilterNote");
       if (note) {
@@ -23225,7 +23233,7 @@
         if (consign) {
           note.textContent = "進頁就列出此通路全部可結商品。套用後，客戶訂單編號、出貨單編號、SKU、客戶訂單建立時間、實際出貨時間要同時符合；日期沒填則不限該日期。清除篩選後回到全部。已勾選的商品留在表格最上方。";
         } else if (grouped) {
-          note.textContent = "進頁就列出此通路全部可結出貨單，品項預設收合。套用後，客戶訂單編號、出貨單編號、實際出貨時間只填其中幾項時，沒填的不限制。清除篩選後回到全部。已勾選的品項留在表格最上方。";
+          note.textContent = "進頁就列出此通路全部可結出貨單，品項預設收合。套用後，客戶訂單編號、出貨單編號、SKU、客戶訂單建立時間、實際出貨時間要同時符合；沒填的不限制。清除篩選後回到全部。已勾選的品項留在表格最上方。";
         }
       }
       document.querySelectorAll(".bill-filter-text").forEach((el) => el.classList.toggle("hidden", grouped));

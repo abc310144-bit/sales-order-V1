@@ -3,6 +3,23 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8').replace(/\r\n/g,'\n');
 function source(name){const a=html.indexOf(`    function ${name}(`);assert(a>=0,name);return html.slice(a,html.indexOf('\n    }',a)+6);}
+for(const flow of ['買斷','轉單'])test(`${flow} filters combine fuzzy SKU and actual order creation dates with existing selections`,()=>{
+ const fields={};
+ const c=vm.createContext({channelBillIsShipFlow:()=>true,document:{getElementById:id=>({value:fields[id]||''})},
+  channelBillPickOrders:[],channelBillPickShips:[],salesOrders:[{orderNo:'SO1',createdAt:'2026-01-12 09:00:00'}],
+  channelBillRowInShippedRange:()=>true});
+ vm.runInContext(['inDateRange','channelBillRowMatchesFilter'].map(source).join('\n'),c);
+ const line={orderNo:'SO1',shipNo:'SHIP1',sku:'UM-1002',createdAt:'2026-11-19'};
+ fields.channelBillDraftSku='um-10';assert.equal(c.channelBillRowMatchesFilter(line),true);
+ fields.channelBillDraftSku='um-99';assert.equal(c.channelBillRowMatchesFilter(line),false);
+ fields.channelBillDraftSku='um-10';fields.channelBillDraftOrderFrom='2026-01-12';fields.channelBillDraftOrderTo='2026-01-12';
+ assert.equal(c.channelBillRowMatchesFilter(line),true);
+ fields.channelBillDraftOrderFrom='2026-11-01';fields.channelBillDraftOrderTo='2026-11-30';
+ assert.equal(c.channelBillRowMatchesFilter(line),false);
+ fields.channelBillDraftOrderFrom='';fields.channelBillDraftOrderTo='';c.channelBillPickShips=['OTHER'];
+ assert.equal(c.channelBillRowMatchesFilter(line),false);c.channelBillPickShips=[];
+ assert.equal(c.channelBillRowMatchesFilter(line),true);
+});
 const header={A:'客戶訂單編號',B:'出貨單編號',C:'通路商品編號',D:'SKU',E:'商品名稱',F:'結算數量'};
 function row(values={}){return {A:'SO1',B:'SHIP1',C:'CP1',D:'',E:'不同商品名稱也可以',F:'2',...values};}
 function setup(){
