@@ -19342,6 +19342,7 @@
 
     /** 驗收分流：買斷／寄倉進驗收；轉單免驗收可直接結算。 */
     function channelAcceptFlow(channelName) {
+      if (isOverseasChannel(channelName)) return "買斷";
       const profile = channelProfiles[channelName] || {};
       if (profile.acceptFlow === "買斷" || profile.acceptFlow === "寄倉" || profile.acceptFlow === "轉單") {
         return profile.acceptFlow;
@@ -19395,11 +19396,9 @@
     function isSettlementSourceOrder(order) {
       return !!order
         && order.status !== "已作廢"
-        && (isSystemInvoiceChannel(order.channelName)
-          ? validShipsOfPo(order.orderNo).some(isSystemInvoiceSettleShip)
-          : (isTransferAcceptFlow(order)
-            ? validShipsOfPo(order.orderNo).some(isTransferSettleShip)
-            : validShipsOfPo(order.orderNo).some((ship) => ship.status === "已驗收")));
+        && (isTransferAcceptFlow(order)
+          ? validShipsOfPo(order.orderNo).some(isTransferSettleShip)
+          : validShipsOfPo(order.orderNo).some((ship) => ship.status === "已驗收"));
     }
 
     function settlementSourceOrders() {
@@ -21536,7 +21535,7 @@
       if (!order || !isSettlementSourceOrder(order)) return [];
       if (isOverseasPo(order)) {
         const ship = shipByOrderId(shipNo);
-        if (!ship || ship.salesOrderNo !== order.orderNo || !(isSystemInvoiceChannel(order.channelName) ? isSystemInvoiceSettleShip(ship) : ship.status === "已驗收")) return [];
+        if (!ship || ship.salesOrderNo !== order.orderNo || ship.status !== "已驗收") return [];
         const settleableAt = String((ship.acceptance && ship.acceptance.acceptedAt) || ship.shipped || ship.created || "").trim();
         return shipSettleLines(order, ship).map((line) => {
           const remain = Math.max(0, (Number(line.acceptQty) || 0) - (Number(line.settledQty) || 0));
@@ -21613,7 +21612,7 @@
       }
       const overseas = isOverseasPo(order);
       const ship = overseas ? shipByOrderId(shipNo) : null;
-      if (overseas && (!ship || ship.salesOrderNo !== order.orderNo || !(isSystemInvoiceChannel(order.channelName) ? isSystemInvoiceSettleShip(ship) : ship.status === "已驗收"))) {
+      if (overseas && (!ship || ship.salesOrderNo !== order.orderNo || ship.status !== "已驗收")) {
         alert("找不到可結算的出貨單");
         return;
       }
@@ -22908,7 +22907,6 @@
     function channelBillSettleShips(order) {
       const flow = channelAcceptFlow(order.channelName);
       return validShipsOfPo(order.orderNo).filter((ship) => {
-        if (isSystemInvoiceChannel(order.channelName)) return isSystemInvoiceSettleShip(ship);
         if (flow === "轉單") return isTransferSettleShip(ship);
         return ship.status === "已驗收";
       }).slice().sort((a, b) => String(a.shipped || a.created || a.orderId || "").localeCompare(String(b.shipped || b.created || b.orderId || "")));

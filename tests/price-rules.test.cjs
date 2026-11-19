@@ -2,6 +2,18 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm');
 const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8').replace(/\r\n/g,'\n');
+test('settlement eligibility follows cooperation mode with no named-channel exceptions',()=>{
+ const c=vm.createContext({channelProfiles:{online:{acceptFlow:'轉單'},overseas:{acceptFlow:'轉單'},consign:{acceptFlow:'寄倉'}},
+  isOverseasChannel:n=>n==='overseas',validShipsOfPo:()=>c.ships,ships:[]});
+ vm.runInContext(['channelAcceptFlow','isTransferAcceptFlow','isTransferSettleShip','isSettlementSourceOrder','channelBillSettleShips'].map(source).join('\n'),c);
+ assert.equal(c.channelAcceptFlow('overseas'),'買斷');
+ for(const channelName of ['online','overseas','consign']){
+  const order={orderNo:'SO',channelName};c.ships=[{online:channelName==='online',shipped:'2026-11-19',status:'已出貨'}];
+  assert.equal(c.isSettlementSourceOrder(order),false);assert.equal(c.channelBillSettleShips(order).length,0);
+  c.ships[0].status=channelName==='online'?'已配達':'已驗收';
+  assert.equal(c.isSettlementSourceOrder(order),true);assert.equal(c.channelBillSettleShips(order).length,1);
+ }
+});
 function source(name){const a=html.indexOf(`    function ${name}(`);assert(a>=0,name);return html.slice(a,html.indexOf('\n    }',a)+6);}
 function setup(overseas=false){
  const order={orderNo:'SO1',channelName:overseas?'overseas':'general',kind:overseas?'overseas':'general',items:[]};
