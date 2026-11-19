@@ -93,12 +93,12 @@ test('declaration upload/delete invalidates preview and rerenders amounts',()=>{
  assert(html.includes('channelBillExportDecl = null;\n      onChannelBillDeclarationChanged();'));
  assert(html.includes('uploadedAt: nowStamp(),\n        };\n        onChannelBillDeclarationChanged();'));
 });
-test('declaration cannot be added or deleted after submission, including a rejected bill',()=>{
+test('declaration can change on drafts and rejected bills, but not pending or settled bills',()=>{
  const c=setup(true);assert.equal(c.channelBillExportDeclEditing(),true);
  c.channelBillWizard.editId='B';const bill={id:'B',status:'草稿'};c.settlementRecords=[bill];
  assert.equal(c.channelBillExportDeclEditing(),true);
- for(const status of ['待結算','已結算','財務駁回']){bill.status=status;assert.equal(c.channelBillExportDeclEditing(),false);}
- bill.status='草稿';bill.submittedAt='2026-11-19';assert.equal(c.channelBillExportDeclEditing(),false);
+ for(const status of ['待結算','已結算','已作廢']){bill.status=status;assert.equal(c.channelBillExportDeclEditing(),false);}
+ for(const status of ['草稿','財務駁回']){bill.status=status;bill.submittedAt='2026-11-19';assert.equal(c.channelBillExportDeclEditing(),true);}
 });
 test('saving a draft after declaration deletion clears the saved old file, without holding quantity',()=>{
  const c=setup(true);const bill={id:'B',status:'草稿',exportDeclFile:{data:'old'}};

@@ -5243,6 +5243,7 @@
             <a class="upload-link" id="accImportTemplate" href="#" target="_blank" rel="noopener noreferrer">下載範例檔案</a>
           </div>
           <div class="upload-file-name" id="accImportFileName"></div>
+          <p id="channelBillImportRules" class="acc-sub hidden">除 SKU 外皆必填；結算數量須為正整數。匯入成功會取代目前勾選；任一列錯誤，整份不匯入。</p>
           <input type="file" id="accImportFile" class="hidden" accept=".csv,.xlsx,.xls,.txt" />
         </div>
       </div>
@@ -19550,7 +19551,7 @@
             sku: d.sku,
             name: item.gift ? `贈品 ${d.name}` : d.name,
             gift: !!item.gift,
-            productCode: item.productCode || d.productCode || "",
+            productCode: settleChannelProductCode(order, item),
             pcs: d.pcs,
             qty: d.qty,
             carton: d.carton,
@@ -20032,8 +20033,8 @@
           found[field] = true;
         }
       });
-      const records = matrix.slice(1).map((row) => {
-        const rec = {};
+      const records = matrix.slice(1).map((row, index) => {
+        const rec = { _rowNo: index + 2 };
         fields.forEach((field) => { rec[field] = ""; });
         Object.keys(map).forEach((col) => {
           rec[map[col]] = String(row[col] == null ? "" : row[col]).trim();
@@ -20048,6 +20049,12 @@
       if (key.includes("驗收") || key === "數量" || /^(qty|quantity)$/i.test(key)) return "qty";
       if (key.includes("備註") || /^remark$/i.test(key)) return "remark";
       return "";
+    }
+
+    function settleChannelProductCode(order, item) {
+      const supply = channelSupplyRowOf(order.channelName, item.sku);
+      const meta = metaForSku(item.sku);
+      return String(item.channelProductNo || (supply && supply.channelProductNo) || item.productCode || meta.productCode || "").trim();
     }
 
     function settleImportField(key) {
@@ -20193,7 +20200,7 @@
           sku: (d && d.sku) || savedRow.sku || item.sku || "",
           name: item.gift ? `贈品 ${(d && d.name) || item.name || savedRow.name || ""}` : ((d && d.name) || savedRow.name || item.name || ""),
           gift: !!item.gift,
-          productCode: item.productCode || (d && d.productCode) || "",
+          productCode: settleChannelProductCode(order, item),
           priceNo: d ? d.priceNo : 0,
           priceLabel: hasItem && hasPriceWithLabel(item) ? parsePriceWithLabel(item.priceWithLabel) : null,
           price,
@@ -20480,6 +20487,7 @@
       document.getElementById("accImportConfirm").disabled = true;
       document.getElementById("accImportTitle").textContent = target === "settle" ? "匯入結算商品" : "匯入驗收商品";
       document.getElementById("accImportTemplate").href = target === "settle" ? ACC_SETTLE_TEMPLATE_URL : ACC_ACCEPT_TEMPLATE_URL;
+      document.getElementById("channelBillImportRules").classList.toggle("hidden", !(target === "settle" && channelBillWizard.on));
       document.getElementById("accImportModal").classList.remove("hidden");
     }
 
@@ -23034,6 +23042,7 @@
             key: line.key,
             sku: line.sku || priced.sku || "",
             name: line.name || priced.name || "",
+            productCode: line.productCode || priced.productCode || "",
             price: priced.price || line.price || 0,
             gift: !!(line.gift || priced.gift),
             acceptQty,
@@ -23564,7 +23573,7 @@
     function channelBillExportDeclEditing() {
       if (!channelBillWizard.on || settleDetailMode !== "edit" || !isOverseasChannel(channelBillWizard.channel)) return false;
       const bill = settlementRecords.find((b) => String(b.id) === String(channelBillWizard.editId));
-      return !bill || (bill.status === "草稿" && !bill.submittedAt);
+      return !bill || bill.status === "草稿" || bill.status === "財務駁回";
     }
 
     function channelBillPreviewExportFile() {
@@ -24044,9 +24053,11 @@
     }
 
     function applyChannelBillImport(matrix) {
-      const { records, found } = recordsFromHeaderMatrix(matrix, settleImportField, ["orderNo", "sku", "qty", "shipNo"]);
-      if (!found.orderNo || !found.sku || !found.qty) {
-        alert("檔案缺少必要欄位：客戶訂單編號、SKU、本次結算數量");
+      const { records, found } = recordsFromHeaderMatrix(matrix, settleImportField, ["orderNo", "shipNo", "productCode", "sku", "name", "qty"]);
+      const required = { orderNo: "客戶訂單編號", shipNo: "出貨單編號", productCode: "通路商品編號", name: "商品名稱", qty: "結算數量" };
+      const missing = Object.keys(required).filter((field) => !found[field]);
+      if (missing.length) {
+        alert(`檔案缺少必要欄位：${missing.map((field) => required[field]).join("、")}`);
         return false;
       }
       if (!records.length) {
@@ -24057,36 +24068,42 @@
       const seen = new Set();
       const picks = [];
       records.forEach((rec, i) => {
-        const rowNo = i + 2;
+        const rowNo = rec._rowNo || i + 2;
         const orderNo = String(rec.orderNo || "").trim();
         const sku = normalizeSku(rec.sku);
         const shipNo = String(rec.shipNo || "").trim();
-        if (!orderNo || !sku || rec.qty === "") {
-          errors.push(`第 ${rowNo} 列：客戶訂單編號、SKU、本次結算數量為必填`);
+        const productCode = normalizeSku(rec.productCode);
+        const blank = Object.keys(required).filter((field) => !String(rec[field] == null ? "" : rec[field]).trim());
+        if (blank.length) {
+          errors.push(`第 ${rowNo} 列：${blank.map((field) => required[field]).join("、")}為必填`);
           return;
         }
         if (!isPositiveIntQty(rec.qty)) {
-          errors.push(`第 ${rowNo} 列：${orderNo} / ${sku} 本次結算數量須為大於 0 的正整數`);
+          errors.push(`第 ${rowNo} 列：${orderNo} / ${productCode} 結算數量須為大於 0 的正整數`);
           return;
         }
-        const id = `${orderNo.toLowerCase()}|${sku.toLowerCase()}|${shipNo.toLowerCase()}`;
+        const id = JSON.stringify([orderNo, shipNo, productCode].map((value) => value.toLowerCase()));
         if (seen.has(id)) {
-          errors.push(`第 ${rowNo} 列：${orderNo} / ${sku} 重複`);
+          errors.push(`第 ${rowNo} 列：${orderNo} / ${shipNo} / ${productCode} 重複`);
           return;
         }
         seen.add(id);
         const matches = settleRows.filter((row) => {
           if (String(row.orderNo || "").toLowerCase() !== orderNo.toLowerCase()) return false;
-          if (normalizeSku(row.sku).toLowerCase() !== sku.toLowerCase()) return false;
-          if (shipNo && String(row.shipNo || "").toLowerCase() !== shipNo.toLowerCase()) return false;
+          if (normalizeSku(row.productCode).toLowerCase() !== productCode.toLowerCase()) return false;
+          if (String(row.shipNo || "").toLowerCase() !== shipNo.toLowerCase()) return false;
           return true;
         });
         if (matches.length !== 1) {
-          errors.push(`第 ${rowNo} 列：${orderNo} / ${sku} 不在此通路可結清單，或對到多筆，請加出貨單編號`);
+          errors.push(`第 ${rowNo} 列：${orderNo} / ${shipNo} / ${productCode} 找不到唯一的可結算品項`);
+          return;
+        }
+        if (sku && normalizeSku(matches[0].sku).toLowerCase() !== sku.toLowerCase()) {
+          errors.push(`第 ${rowNo} 列：SKU ${sku} 與對應品項 ${matches[0].sku} 不符`);
           return;
         }
         if (Number(rec.qty) > matches[0].remain) {
-          errors.push(`第 ${rowNo} 列：${orderNo} / ${sku} 本次結算數量 ${rec.qty} 超過剩餘可結數量 ${matches[0].remain}`);
+          errors.push(`第 ${rowNo} 列：${orderNo} / ${productCode} 結算數量 ${rec.qty} 超過剩餘可結數量 ${matches[0].remain}`);
           return;
         }
         picks.push({ row: matches[0], qty: Number(rec.qty) });
