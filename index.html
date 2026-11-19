@@ -3457,6 +3457,7 @@
               <table>
                 <thead>
                   <tr>
+                    <th>編號</th>
                     <th>結帳單號</th>
                     <th>通路</th>
                     <th>結算月份</th>
@@ -22759,6 +22760,11 @@
       record.invoiceCounted = record.status === "已結算";
     }
 
+    function channelBillListNumber(record) {
+      if (!record.listNumber) record.listNumber = String(Math.floor(10000 + Math.random() * 90000));
+      return record.listNumber;
+    }
+
     function renderChannelBillList() {
       const billNo = ((document.getElementById("channelSettleFilterBillNo") || {}).value || "").trim().toLowerCase();
       const channel = (document.getElementById("channelSettleFilterChannel") || {}).value || "";
@@ -22786,11 +22792,12 @@
       if (total) total.textContent = String(data.length);
       if (!body) return;
       if (!data.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="9">查無資料</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="10">查無資料</td></tr>`;
         return;
       }
       body.innerHTML = data.map((rec) => `
         <tr>
+          <td>${escapeHtml(channelBillListNumber(rec))}</td>
           <td>${escapeHtml(rec.id)}</td>
           <td>${escapeHtml(rec.channelName || "—")}</td>
           <td>${escapeHtml(formatBillSettlePeriod(rec))}</td>
