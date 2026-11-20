@@ -3597,7 +3597,6 @@
             <div class="po-wizard-foot-right">
               <button type="button" class="btn hidden" id="channelBillBackStep">返回</button>
               <button type="button" class="btn" id="channelBillSaveDraft">儲存為草稿</button>
-              <button type="button" class="btn btn-primary" id="channelBillSavePage">儲存此分頁</button>
               <button type="button" class="btn btn-primary hidden" id="channelBillSubmit">送出結算申請</button>
             </div>
           </div>
@@ -23348,7 +23347,6 @@
       nav.innerHTML = "";
       document.getElementById("channelBillBackStep")?.classList.toggle("hidden", !editing);
       document.getElementById("channelBillSaveDraft")?.classList.toggle("hidden", !editing);
-      document.getElementById("channelBillSavePage")?.classList.toggle("hidden", !editing);
       document.getElementById("channelBillSubmit")?.classList.toggle("hidden", !editing);
       document.getElementById("channelBillFoot")?.classList.toggle("hidden", !editing);
       document.getElementById("channelBillDraftFilter")?.classList.toggle("hidden", !editing);
@@ -24125,15 +24123,6 @@
       renderChannelBillDraft();
     }
 
-    function saveChannelBillPage() {
-      if (!channelBillPreviewReady) {
-        alert("請先按確定");
-        return;
-      }
-      if (!channelBillCheckedSelection()) return;
-      document.getElementById("channelBillPreview")?.scrollIntoView({ block: "nearest" });
-    }
-
     function backChannelBillStep() {
       clearChannelBillPreview();
     }
@@ -24474,7 +24463,6 @@
     document.getElementById("accImportConfirm").addEventListener("click", confirmAccImport);
     document.getElementById("accImportClose").addEventListener("click", closeAccImportModal);
     document.getElementById("channelBillSaveDraft").addEventListener("click", saveChannelBillDraft);
-    document.getElementById("channelBillSavePage").addEventListener("click", saveChannelBillPage);
     document.getElementById("channelBillBackStep").addEventListener("click", backChannelBillStep);
     document.getElementById("channelBillSubmit").addEventListener("click", submitChannelBill);
     document.getElementById("channelBillConfirmPreview").addEventListener("click", confirmChannelBillPreview);
