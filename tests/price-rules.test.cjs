@@ -20,6 +20,7 @@ function setup(overseas=false){
  const c=vm.createContext({console,Number,String,Math,Date,JSON,CHANNEL_SUPPLY_TAX_RATE:.05,SETTLE_TAX_RATE:.05,
   order,salesOrders:[order],supply:{taxed:105,untaxed:100,tax:5},channelSupplyByChannel:{general:[],overseas:[]},
   getWorkspaceOrder:()=>order,isOverseasPo:o=>o?.kind==='overseas',isOnlineTransferPo:()=>false,
+  channelSupplyChannelName:'',channelCurrency:n=>n==='overseas'?'USD':'TWD',
   isOverseasChannel:name=>name==='overseas',channelProductPriceOf:()=>c.supply,
   parsePositiveMoney:x=>x!==''&&x!=null&&Number(x)>0?Number(x):null,
   normalizeSku:x=>String(x||'').trim(),settleSourceItems:o=>o.items,itemKey:i=>i.sku,
@@ -28,7 +29,7 @@ function setup(overseas=false){
   channelBillGroupRemarks:{},normalizeSettleRemark:x=>x||'',settleBillTypeOfRows:()=> '買斷',
   recipientListOf:o=>o.recipients||[],buildChannelSupplyRows:()=>[],
  });
- const names=['roundChannelSupplyMoney','calcChannelSupplyQuote','hasLinePriceSnapshot','saveLinePriceParts',
+ const names=['roundDetailMoney','documentTaxTotals','orderTaxTotals','billTaxTotals','channelBillTotals','channelBillTotal','settleBillTaxedTotal','limitManualMoneyInput','moneyCurrency','currencyMoneyDigits','roundCurrencyMoney','activeFinanceCurrency','roundChannelSupplyMoney','calcChannelSupplyQuote','hasLinePriceSnapshot','saveLinePriceParts',
   'storedUnitPrice','supplyMoneyForLine','ensureChannelSupply','stampLineQuote','linePriceParts','lineMoneyOf','goodsQuoteOf',
   'accRoundMoney','accUnitPrice','channelBillPriceParts','channelBillUsesUntaxed','channelBillLineTaxed','channelBillGroupKey',
   'channelBillLinesFromRows','channelBillExportDeclEditing','inferOrderTaxMode','migrateDemoOrderTaxes'];
@@ -46,13 +47,13 @@ test('default price snapshot is retained after catalogue price changes, regardle
  assert.equal(c.goodsQuoteOf(i,c.order),105);assert.equal(c.lineMoneyOf(c.order,i).amount,210);
  c.stampLineQuote(c.order,i,{forceSupply:true});assert.equal(i.unitTaxed,210);
 });
-for(const overseas of [false,true])test(`dual input uses 5% and third decimal; ${overseas?'overseas net':'general gross'} order totals`,()=>{
+for(const overseas of [false,true])test(`detail conversions and line amounts use two decimals for ${overseas?'foreign currency':'TWD'}`,()=>{
  const c=setup(overseas),i={sku:'A',qty:3};
  c.saveLinePriceParts(i,c.calcChannelSupplyQuote(20.123,'untaxed'),true);
- assert.equal(i.unitUntaxed,20.123);assert.equal(i.unitTaxed,21.129);assert.equal(i.unitTax,1.006);
+ assert.equal(i.unitUntaxed,20.12);assert.equal(i.unitTaxed,21.13);assert.equal(i.unitTax,1.01);
  const money=c.lineMoneyOf(c.order,i);
- assert.equal(money.quote,21.129);assert.equal(money.other,20.123);
- assert.equal(money.amount,overseas?60.369:63.387);assert.equal(money.taxTotal,3.018);
+ assert.equal(money.quote,21.13);assert.equal(money.other,20.12);
+ assert.equal(money.amount,overseas?60.36:63.39);assert.equal(money.taxTotal,3.03);
  c.saveLinePriceParts(i,c.calcChannelSupplyQuote(105,'taxed'),true);
  assert.equal(i.unitUntaxed,100);assert.equal(i.unitTax,5);
 });
@@ -131,4 +132,54 @@ test('copied orders obtain current catalogue prices while original saved orders 
  vm.runInContext(source('refreshCopiedOrderPrices'),c);c.refreshCopiedOrderPrices(draft);
  assert.equal(original.unitTaxed,105);assert.equal(draft.items[0].unitTaxed,210);
  assert.equal(recipient.items[0].unitUntaxed,200);assert.equal(draft.items[0].quoteEdited,false);
+});
+
+test('whole-document totals reverse tax from gross, allowing a difference from summed detail net',()=>{
+ const c=setup(true),i={sku:'A',qty:100};c.saveLinePriceParts(i,c.calcChannelSupplyQuote(.1,'untaxed'),true);c.order.items=[i];
+ assert.equal(c.lineMoneyOf(c.order,i).amount,10);
+ const row={orderNo:'SO1',channelName:'overseas',sku:'A',key:'A',settleQty:100};
+ assert.equal(c.channelBillTotal([row]),11);c.channelBillExportDecl={data:'file'};
+ assert.equal(c.channelBillTotal([row]),10.48);assert.equal(c.channelBillLinesFromRows([row]).total,10.48);
+ const totals=c.orderTaxTotals(c.order);assert.equal(totals.taxed,11);assert.equal(totals.untaxed,10.48);assert.equal(totals.tax,.52);
+ const saved={channelName:'overseas',priceBasis:'untaxed',lines:c.channelBillLinesFromRows([row]).lines};
+ assert.equal(c.settleBillTaxedTotal(saved),10.48);
+ saved.priceBasis='taxed';assert.equal(c.settleBillTaxedTotal(saved),11);
+});
+test('TWD totals round once after summing two-decimal details; foreign totals retain cents',()=>{
+ const c=setup();
+ for(const [currency,gross,net,tax] of [['TWD',21,20,1],['USD',21.2,20.19,1.01],['EUR',21.2,20.19,1.01]]){
+  const total=c.documentTaxTotals([10.6,10.6],currency);
+  assert.equal(total.taxed,gross);assert.equal(total.untaxed,net);assert.equal(total.tax,tax);
+ }
+ c.channelCurrency=()=> 'TWD';c.channelBillWizard.channel='overseas';
+ const r={orderNo:'SO1',key:'A',sku:'A',settleQty:2};c.order.items=[{sku:'A',unitTaxed:10.6,unitUntaxed:10.1}];
+ assert.equal(c.channelBillTotal([r]),21);
+ assert.equal(c.roundDetailMoney(1.005),1.01);assert.equal(c.roundCurrencyMoney(10.5,'TWD'),11);
+});
+test('manual entry truncates extra decimal digits rather than rounding; system conversion rounds',()=>{
+ const c=setup(),el={value:'10.129'};c.limitManualMoneyInput(el);assert.equal(el.value,'10.12');
+ assert.equal(c.calcChannelSupplyQuote(10.12,'untaxed').taxed,10.63);
+ el.value='5';c.limitManualMoneyInput(el);assert.equal(el.value,'5');
+});
+test('gift detail is retained in orders but excluded from settlement gross and reverse tax',()=>{
+ const c=setup(true);c.order.items=[{sku:'A',unitTaxed:10.6,unitUntaxed:10.1}];
+ const row={orderNo:'SO1',key:'A',sku:'A',settleQty:2};c.channelBillExportDecl={data:'file'};
+ assert.equal(c.channelBillTotal([row,{...row,gift:true}]),20.19);
+});
+
+for(const overseas of [false,true])test(`actual ${overseas?'English overseas':'Chinese dealer'} PO renders all reverse-calculated totals`,()=>{
+ const c=setup(overseas);
+ Object.assign(c,{isDealerPo:()=>!overseas,partyRecord:()=>({}),channelTaxId:()=>'',
+  hydratePoItemCatalogFields:()=>{},pcsPerCartonOf:()=>10,orderCartonQty:(q,p)=>q/p,
+  remarksForPdfItem:()=>'',bestBeforeOfItem:()=>'',usesCollectionTerms:()=>false,
+  salesDateOnly:()=> '2026-11-20',nowStamp:()=>'',formatQtyTotal:String,
+  escapeHtml:x=>String(x??''),VENDOR_COMPANY:'測試公司',VENDOR_TAX_ID:'12345678',VENDOR_TEL:'',VENDOR_ADDRESS:''});
+ vm.runInContext(['pdfMoney','detailMoneyText','currencyMoneyText','unitMoneyText','pdfLinesFromOrder'].map(source).join('\n'),c);
+ const start=html.indexOf('    function buildPartyPoPrintHtml('),end=html.indexOf('    function pad2(',start);
+ vm.runInContext(html.slice(start,end),c);
+ c.order.items=[{sku:'A',qty:100,unitTaxed:.11,unitUntaxed:.1}];
+ const result=c.buildPartyPoPrintHtml(c.order);
+ assert(result.includes('data-po-tax-totals'));
+ if(overseas){assert(result.includes('Total Including Tax：11.00'));assert(result.includes('Total Excluding Tax：10.48'));assert(result.includes('Total Tax：0.52'));}
+ else {assert(result.includes('含稅合計金額：11'));assert(result.includes('未稅合計金額：10'));assert(result.includes('合計稅額：1'));}
 });
