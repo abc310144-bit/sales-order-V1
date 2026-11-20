@@ -3595,7 +3595,6 @@
           </section>
           <div id="channelBillFoot" class="po-wizard-foot">
             <div class="po-wizard-foot-right">
-              <button type="button" class="btn hidden" id="channelBillBackStep">返回</button>
               <button type="button" class="btn" id="channelBillSaveDraft">儲存為草稿</button>
               <button type="button" class="btn btn-primary hidden" id="channelBillSubmit">送出結算申請</button>
             </div>
@@ -23345,7 +23344,6 @@
       const editing = channelBillWizard.on && settleDetailMode === "edit";
       nav.classList.add("hidden");
       nav.innerHTML = "";
-      document.getElementById("channelBillBackStep")?.classList.toggle("hidden", !editing);
       document.getElementById("channelBillSaveDraft")?.classList.toggle("hidden", !editing);
       document.getElementById("channelBillSubmit")?.classList.toggle("hidden", !editing);
       document.getElementById("channelBillFoot")?.classList.toggle("hidden", !editing);
@@ -23830,11 +23828,11 @@
     }
 
     function syncChannelBillActionButtons() {
-      const ready = channelBillWizard.on && settleDetailMode === "edit" && channelBillPreviewReady;
+      const editing = channelBillWizard.on && settleDetailMode === "edit";
       const draft = document.getElementById("channelBillSaveDraft");
       const submit = document.getElementById("channelBillSubmit");
-      if (draft) draft.disabled = !ready;
-      if (submit) submit.disabled = !ready;
+      if (draft) draft.disabled = !editing;
+      if (submit) submit.disabled = !editing;
     }
 
     function renderChannelBillPreview() {
@@ -23876,6 +23874,30 @@
       syncChannelBillActionButtons();
     }
 
+    function persistChannelBillPreview(snapshot) {
+      // This static prototype uses local storage to simulate the backend preview save.
+      // It deliberately does not create a bill, submit it, or hold settlement quantities.
+      try {
+        localStorage.setItem(DEMO_STORE_KEY + ":bill-preview", JSON.stringify({
+          channel: channelBillWizard.channel,
+          editId: channelBillWizard.editId || "",
+          settleYear: channelBillWizard.settleYear,
+          settleMonth: channelBillWizard.settleMonth,
+          rows: snapshot,
+          groupRemarks: channelBillGroupRemarks,
+          exportDeclFile: channelBillExportDecl,
+          priceBasis: channelBillUsesUntaxed() ? "untaxed" : "taxed",
+          total: channelBillTotal(snapshot),
+          savedAt: nowStamp(),
+        }));
+        return true;
+      } catch (err) {
+        console.error(err);
+        alert("資料暫存失敗，請重新點擊確定按鈕");
+        return false;
+      }
+    }
+
     function confirmChannelBillPreview() {
       const selected = settleRows.filter((row) => row.checked && (Number(row.settleQty) || 0) > 0);
       if (!selected.length) {
@@ -23890,7 +23912,12 @@
         alert(`${bad.orderNo} / ${bad.sku} 的本次結算數量須為大於 0、且不超過可結上限的整數`);
         return;
       }
-      channelBillPreviewSnapshot = selected.map(cloneChannelBillPreviewRow);
+      const snapshot = selected.map(cloneChannelBillPreviewRow);
+      if (!persistChannelBillPreview(snapshot)) {
+        invalidateChannelBillPreview();
+        return;
+      }
+      channelBillPreviewSnapshot = snapshot;
       channelBillPreviewReady = true;
       renderChannelBillPreview();
       syncChannelBillActionButtons();
@@ -24123,13 +24150,9 @@
       renderChannelBillDraft();
     }
 
-    function backChannelBillStep() {
-      clearChannelBillPreview();
-    }
-
     function saveChannelBillDraft() {
       if (!channelBillPreviewReady) {
-        alert("請先按確定");
+        alert("請先點擊確定按鈕");
         return;
       }
       const selected = channelBillCheckedSelection();
@@ -24143,7 +24166,7 @@
 
     function submitChannelBill() {
       if (!channelBillPreviewReady) {
-        alert("請先按確定");
+        alert("請先點擊確定按鈕");
         return;
       }
       const selected = channelBillCheckedSelection();
@@ -24463,7 +24486,6 @@
     document.getElementById("accImportConfirm").addEventListener("click", confirmAccImport);
     document.getElementById("accImportClose").addEventListener("click", closeAccImportModal);
     document.getElementById("channelBillSaveDraft").addEventListener("click", saveChannelBillDraft);
-    document.getElementById("channelBillBackStep").addEventListener("click", backChannelBillStep);
     document.getElementById("channelBillSubmit").addEventListener("click", submitChannelBill);
     document.getElementById("channelBillConfirmPreview").addEventListener("click", confirmChannelBillPreview);
     document.getElementById("channelBillDraftApply").addEventListener("click", () => {
