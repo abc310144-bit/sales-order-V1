@@ -2807,6 +2807,19 @@
       line-height: 1.2;
       color: var(--primary);
     }
+    .bill-total-currency {
+      font-size: 16px;
+      white-space: nowrap;
+    }
+    .bill-rate-input {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .bill-rate-input input {
+      min-width: 0;
+    }
     .monthly-bill-section {
       margin-top: 20px;
       max-width: 640px;
@@ -4895,6 +4908,53 @@
     </div>
   </div>
 
+  <style>
+    @media (max-width: 600px) {
+      #channelBillExportDeclForm .form-row { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+      #channelBillExportDeclForm .form-row > label { width: auto; text-align: left; }
+      #channelBillExportDeclForm .form-ctrl { width: 100%; min-width: 0; }
+      #channelBillExportDeclForm .bill-rate-input input { min-width: 100px; flex: 1; }
+      #channelBillExportDeclForm input[type="file"] { max-width: 100%; }
+    }
+  </style>
+  <div class="modal-mask hidden" id="channelBillExportDeclModal">
+    <form class="modal-card type-pick-card" id="channelBillExportDeclForm" novalidate role="dialog" aria-modal="true" aria-labelledby="channelBillExportDeclTitle">
+      <div class="modal-head">
+        <h2 id="channelBillExportDeclTitle">匯入出口報單</h2>
+        <button type="button" class="modal-close" id="channelBillExportDeclClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label for="channelBillExportCurrency">簽約幣別</label>
+          <div class="form-ctrl">
+            <input type="text" id="channelBillExportCurrency" readonly />
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="channelBillExportRate" class="required">匯率</label>
+          <div class="form-ctrl bill-rate-input">
+            <span id="channelBillExportRateBase"></span>
+            <input type="number" id="channelBillExportRate" inputmode="decimal" step="any" placeholder="請輸入匯率" aria-describedby="channelBillExportRateBase channelBillExportRateQuote" />
+            <span id="channelBillExportRateQuote">TWD</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="exportDeclFileInput" class="required">出口報單</label>
+          <div class="form-ctrl">
+            <input type="file" id="exportDeclFileInput" accept=".pdf,image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf" />
+            <div class="acc-sub">PDF 或圖片，檔案小於 2 MB；一張單至多一份。</div>
+            <div class="acc-sub" id="channelBillExportDeclCurrent"></div>
+          </div>
+        </div>
+        <p id="channelBillExportDeclError" class="hidden" role="alert" style="color:#cf1322"></p>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="channelBillExportDeclCancel">取消</button>
+        <button type="submit" class="btn btn-primary" id="channelBillExportDeclConfirm">匯入</button>
+      </div>
+    </form>
+  </div>
+
   <div class="modal-mask hidden" id="channelBillCreateModal">
     <div class="modal-card type-pick-card" role="dialog" aria-labelledby="channelBillCreateTitle">
       <div class="modal-head">
@@ -5472,7 +5532,6 @@
 
   <input type="file" id="stampFileInput" class="hidden" accept=".pdf,image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf" />
   <input type="file" id="markFileInput" class="hidden" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" />
-  <input type="file" id="exportDeclFileInput" class="hidden" accept=".pdf,image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf" />
   <div id="voidNoteBubble" class="void-note-bubble hidden" role="tooltip"></div>
 
   <script>
@@ -7614,8 +7673,7 @@
     function sanitizeSettlementForStore(record) {
       const data = String(record.fileData || "");
       const copy = { ...record, fileData: data.length <= SETTLE_FILE_STORE_LIMIT ? data : "" };
-      const decl = copy.exportDeclFile && String(copy.exportDeclFile.data || "");
-      if (decl && decl.length > SETTLE_FILE_STORE_LIMIT) copy.exportDeclFile = null;
+      // Preserve accepted declaration files; never silently discard them on reload.
       return copy;
     }
 
@@ -8793,6 +8851,7 @@
     };
     Object.keys(channelProfiles).forEach((name) => {
       const profile = channelProfiles[name];
+      if (!profile.contractCurrency) profile.contractCurrency = profile.currency || "TWD";
       if (profile.region !== "境外" && !profile.paymentTerms) profile.paymentTerms = "月結 30 天";
     });
 
@@ -9089,9 +9148,48 @@
           ? roundDetailMoney(line.priceTaxed) : calcChannelSupplyQuote(Number(line.price) || 0, "untaxed").taxed))), context);
     }
 
+    function channelContractCurrency(channelName) {
+      const profile = channelProfiles[channelName] || {};
+      return String(profile.contractCurrency || profile.currency || "TWD").toUpperCase();
+    }
+
+    function channelBillContractCurrency() {
+      return channelBillWizard.currency || channelContractCurrency(channelBillWizard.channel);
+    }
+
+    function channelBillCurrentRate() {
+      if (channelBillContractCurrency() === "TWD") return 1;
+      const n = Number(channelBillExchangeRate);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    }
+
+    function channelBillSubmissionAmounts(selected, required) {
+      const currency = channelBillContractCurrency();
+      const overseas = isOverseasChannel(channelBillWizard.channel);
+      if (overseas && currency !== "TWD" && required && !exportDeclReady(channelBillExportDecl)) {
+        return { error: "請匯入出口報單並填寫匯率後再送出結算申請" };
+      }
+      const exchangeRate = channelBillCurrentRate();
+      if (overseas && required && exchangeRate == null) return { error: "請填寫大於 0 的有效匯率" };
+      const originalAmount = channelBillTotal(selected);
+      const raw = exchangeRate == null ? null : originalAmount * exchangeRate;
+      if (raw != null && !Number.isFinite(raw)) return { error: "換算金額超出可計算範圍，請檢查匯率" };
+      return { currency, originalAmount, exchangeRate,
+        amountTwd: raw == null ? null : roundDetailMoney(raw) };
+    }
+
+    function channelBillConversionHtml(rows) {
+      if (!isOverseasChannel(channelBillWizard.channel)) return "";
+      const data = channelBillSubmissionAmounts(rows, false);
+      if (data.error || data.amountTwd == null) return "";
+      return '<div class="acc-sub bill-fx-summary">送出換算：' + escapeHtml(data.currency) + ' '
+        + escapeHtml(currencyMoneyText(data.originalAmount, data.currency)) + ' × '
+        + escapeHtml(data.exchangeRate) + ' = TWD ' + escapeHtml(detailMoneyText(data.amountTwd)) + '</div>';
+    }
+
     function channelBillTotals(rows) {
       return documentTaxTotals((rows || []).filter((row) => !row.gift).map((row) =>
-        roundDetailMoney((Number(row.settleQty) || 0) * channelBillPriceParts(row).taxed)), channelBillWizard.channel);
+        roundDetailMoney((Number(row.settleQty) || 0) * channelBillPriceParts(row).taxed)), channelBillContractCurrency());
     }
 
     function channelBillTotal(rows) {
@@ -18883,6 +18981,9 @@
 
     let shipAcceptDraft = null; // { orderId, readonly, lines: [...] }
     let channelBillExportDecl = null;
+    let channelBillExchangeRate = null;
+    let channelBillDeclReading = false;
+    let channelBillDeclReadVersion = 0;
 
     function shipPoOf(ship) {
       if (!ship) return null;
@@ -22216,6 +22317,16 @@
         return ship;
       };
 
+      // TWD-priced overseas acceptance fixture for declaration-free settlement testing.
+      const chenxi = "晨曦公司";
+      const chenxiItems = [lineOf(chenxi, "UM-3305", 6), lineOf(chenxi, "UM-1001", 3)];
+      const chenxiOrder = placePo({ orderNo: "SO20261120062", poDocNo: "CX-SETTLE-20261120",
+        channelType: "境外通路", channelName: chenxi, createdAt: "2026-11-20 09:00:00", items: chenxiItems });
+      ensureOverseasPo(chenxiOrder);
+      if (!hasStampFile(chenxiOrder)) chenxiOrder.stampFile = demoStampPlaceholder(chenxiOrder);
+      putShip(10662, chenxiOrder, "境外通路", "已驗收", "2026-11-20 10:00:00", "2026-11-20 11:00:00", chenxiItems, true);
+      syncPoStatusFromShips(chenxiOrder);
+
       const poya = "實體-寶雅";
       const poyaVit = lineOf(poya, "UM-1001", 20);
       const poyaCol = lineOf(poya, "UM-3305", 16);
@@ -23360,20 +23471,20 @@
       if (!summary) return;
       if (isSettleDetailReadonly() && settleDetailMode === "view") {
         const amount = channelBillTotal(settleRows);
-        summary.innerHTML = `<div class="bill-total"><span class="bill-total-label">本次總結算金額</span><span class="bill-total-num">${escapeHtml(currencyMoneyText(amount, channelBillWizard.channel))}</span></div>`;
+        summary.innerHTML = `<div class="bill-total"><span class="bill-total-label">本次總結算金額（${escapeHtml(channelBillContractCurrency())}）</span><span class="bill-total-num">${escapeHtml(currencyMoneyText(amount, channelBillContractCurrency()))}</span></div>${channelBillConversionHtml(settleDetailMode === "view" ? settleRows : settleSelectedRows())}`;
         return;
       }
       if (settleDetailMode === "preview") {
         const selected = settleSelectedRows();
         const amount = channelBillTotal(selected);
-        summary.innerHTML = `<div class="bill-total"><span class="bill-total-label">本次總結算金額</span><span class="bill-total-num">${escapeHtml(currencyMoneyText(amount, channelBillWizard.channel))}</span></div>`;
+        summary.innerHTML = `<div class="bill-total"><span class="bill-total-label">本次總結算金額（${escapeHtml(channelBillContractCurrency())}）</span><span class="bill-total-num">${escapeHtml(currencyMoneyText(amount, channelBillContractCurrency()))}</span></div>${channelBillConversionHtml(settleDetailMode === "view" ? settleRows : settleSelectedRows())}`;
         return;
       }
       if (channelBillWizard.on) {
         const selected = settleSelectedRows();
         const amount = channelBillTotal(selected);
         summary.innerHTML = selected.length
-          ? `已勾選 <strong>${selected.length}</strong> 筆，本次結算金額合計（${channelBillTaxLabel()}） <strong>${escapeHtml(currencyMoneyText(amount, channelBillWizard.channel))}</strong>`
+          ? `已勾選 <strong>${selected.length}</strong> 筆，本次結算金額合計（${channelBillTaxLabel()}／${escapeHtml(channelBillContractCurrency())}） <strong>${escapeHtml(currencyMoneyText(amount, channelBillContractCurrency()))}</strong>`
           : "";
         return;
       }
@@ -23710,7 +23821,8 @@
       const previewFile = channelBillPreviewExportFile();
       const hasFile = editing ? exportDeclReady(channelBillExportDecl) : !!(viewFile || previewFile);
       const canChange = editing && channelBillCheckedShipCount() > 0;
-      btn.classList.toggle("hidden", !editing || hasFile);
+      btn.classList.toggle("hidden", !editing);
+      btn.textContent = hasFile ? "修改出口報單／匯率" : "匯入出口報單";
       btn.disabled = !canChange;
       btn.title = canChange ? "" : "請先勾選出貨單";
       viewBtn.classList.toggle("hidden", !hasFile);
@@ -23736,10 +23848,81 @@
 
     function openChannelBillExportDeclPicker() {
       if (!channelBillExportDeclEditing() || channelBillCheckedShipCount() < 1) return;
+      const currency = channelBillContractCurrency();
       const input = document.getElementById("exportDeclFileInput");
-      if (!input) return;
       input.value = "";
-      input.click();
+      document.getElementById("channelBillExportCurrency").value = currency;
+      document.getElementById("channelBillExportRateBase").textContent = "1 " + currency + " ＝";
+      const rate = document.getElementById("channelBillExportRate");
+      rate.value = currency === "TWD" ? "1" : (channelBillCurrentRate() || "");
+      rate.readOnly = currency === "TWD";
+      document.getElementById("channelBillExportDeclCurrent").textContent = exportDeclReady(channelBillExportDecl)
+        ? "目前檔案：" + channelBillExportDecl.name + "（重新選擇會取代原檔）" : "尚未選擇檔案";
+      showChannelBillDeclError("");
+      document.getElementById("channelBillExportDeclModal").classList.remove("hidden");
+      rate.focus();
+    }
+
+    function showChannelBillDeclError(message) {
+      const error = document.getElementById("channelBillExportDeclError");
+      error.textContent = message;
+      error.classList.toggle("hidden", !message);
+    }
+
+    function closeChannelBillExportDeclModal() {
+      channelBillDeclReadVersion += 1;
+      channelBillDeclReading = false;
+      document.getElementById("channelBillExportDeclConfirm").disabled = false;
+      document.getElementById("channelBillExportDeclModal").classList.add("hidden");
+      document.getElementById("exportDeclFileInput").value = "";
+    }
+
+    function validateChannelBillDeclInput(currency, rateText, files, existing) {
+      const raw = String(rateText == null ? "" : rateText).trim();
+      const rate = currency === "TWD" ? 1 : Number(raw);
+      if (!Number.isFinite(rate) || rate <= 0) return { error: "請填寫大於 0 的有效匯率" };
+      if (files.length > 1) return { error: "一張結帳單僅可匯入一份出口報單" };
+      const file = files[0];
+      if (!file && !exportDeclReady(existing)) return { error: "請選擇出口報單" };
+      if (file) {
+        const extension = /\.(pdf|png|jpe?g|webp|gif)$/i.test(file.name || "");
+        const mime = /^(application\/pdf|image\/(png|jpe?g|webp|gif))$/i.test(file.type || "");
+        if (!extension || (file.type && !mime)) return { error: "請上傳 PDF 或圖片" };
+        if (!file.size || file.size >= STAMP_MAX_BYTES) return { error: "檔案請小於 2MB" };
+      }
+      return { rate, file };
+    }
+
+    function confirmChannelBillExportDecl(event) {
+      event.preventDefault();
+      if (channelBillDeclReading || !channelBillExportDeclEditing() || channelBillCheckedShipCount() < 1) return;
+      const currency = channelBillContractCurrency();
+      const result = validateChannelBillDeclInput(currency,
+        document.getElementById("channelBillExportRate").value,
+        Array.from(document.getElementById("exportDeclFileInput").files || []), channelBillExportDecl);
+      showChannelBillDeclError(result.error || "");
+      if (result.error) return;
+      const version = ++channelBillDeclReadVersion;
+      const apply = (file) => {
+        if (version !== channelBillDeclReadVersion || !channelBillExportDeclEditing()) return;
+        channelBillExchangeRate = result.rate;
+        channelBillExportDecl = file;
+        closeChannelBillExportDeclModal();
+        onChannelBillDeclarationChanged();
+      };
+      if (!result.file) { apply(channelBillExportDecl); return; }
+      channelBillDeclReading = true;
+      document.getElementById("channelBillExportDeclConfirm").disabled = true;
+      const reader = new FileReader();
+      reader.onload = () => apply({ name: result.file.name, type: result.file.type || "application/octet-stream",
+        data: String(reader.result || ""), uploadedAt: nowStamp() });
+      reader.onerror = () => {
+        if (version !== channelBillDeclReadVersion) return;
+        channelBillDeclReading = false;
+        document.getElementById("channelBillExportDeclConfirm").disabled = false;
+        showChannelBillDeclError("檔案讀取失敗，請重新選擇檔案");
+      };
+      reader.readAsDataURL(result.file);
     }
 
     function viewChannelBillExportDecl() {
@@ -23757,6 +23940,7 @@
       if (!channelBillExportDeclEditing() || channelBillCheckedShipCount() < 1 || !exportDeclReady(channelBillExportDecl)) return;
       if (!confirm("確定刪除已上傳的出口報單？")) return;
       channelBillExportDecl = null;
+      channelBillExchangeRate = channelBillContractCurrency() === "TWD" ? 1 : null;
       onChannelBillDeclarationChanged();
     }
 
@@ -23850,7 +24034,7 @@
       if (summary) {
         const amount = channelBillTotal(data);
         summary.innerHTML = data.length
-          ? `<div class="bill-total"><span class="bill-total-label">本次總結算金額</span><span class="bill-total-num">${escapeHtml(currencyMoneyText(amount, channelBillWizard.channel))}</span></div>`
+          ? `<div class="bill-total"><span class="bill-total-label">本次總結算金額（${escapeHtml(channelBillContractCurrency())}）</span><span class="bill-total-num">${escapeHtml(currencyMoneyText(amount, channelBillContractCurrency()))}</span></div>${channelBillConversionHtml(data)}`
           : "";
       }
       if (!body) return;
@@ -23880,6 +24064,8 @@
       try {
         localStorage.setItem(DEMO_STORE_KEY + ":bill-preview", JSON.stringify({
           channel: channelBillWizard.channel,
+          currency: channelBillContractCurrency(),
+          exchangeRate: channelBillCurrentRate(),
           editId: channelBillWizard.editId || "",
           settleYear: channelBillWizard.settleYear,
           settleMonth: channelBillWizard.settleMonth,
@@ -23929,6 +24115,7 @@
         on: true,
         step: 1,
         channel: channelName,
+        currency: channelContractCurrency(channelName),
         flow,
         viewId: "",
         editId: "",
@@ -23936,6 +24123,7 @@
         settleMonth: Number(settleMonth) || 0,
       };
       channelBillExportDecl = null;
+      channelBillExchangeRate = channelBillContractCurrency() === "TWD" ? 1 : null;
       channelBillGroupRemarks = {};
       settleDetailMode = "edit";
       settleDetailOrderNo = "";
@@ -23959,7 +24147,8 @@
         alert("找不到結帳單");
         return;
       }
-      channelBillWizard = { on: false, step: 1, channel: bill.channelName || "", flow: bill.type || "", viewId: String(bill.id), editId: "" };
+      channelBillExchangeRate = bill.exchangeRate != null ? bill.exchangeRate : null;
+      channelBillWizard = { on: false, step: 1, channel: bill.channelName || "", currency: bill.currency || channelContractCurrency(bill.channelName), flow: bill.type || "", viewId: String(bill.id), editId: "" };
       settleDetailMode = "view";
       channelBillExpanded = new Set();
       const shipFlow = channelBillWizard.flow === "買斷" || channelBillWizard.flow === "轉單";
@@ -24050,6 +24239,8 @@
 
     function leaveChannelBillWizard() {
       channelBillExportDecl = null;
+      channelBillExchangeRate = null;
+      closeChannelBillExportDeclModal();
       channelBillWizard = { on: false, step: 1, channel: "", flow: "", viewId: "", editId: "" };
       settleRows = [];
       settleDetailMode = "edit";
@@ -24058,6 +24249,11 @@
     }
 
     function saveChannelBillRecord(selected, asDraft) {
+      const conversion = channelBillSubmissionAmounts(selected, !asDraft);
+      if (conversion.error) {
+        alert(conversion.error);
+        return null;
+      }
       const built = channelBillLinesFromRows(selected);
       const editId = channelBillWizard.editId;
       let record = editId ? settlementRecords.find((rec) => String(rec.id) === String(editId)) : null;
@@ -24091,6 +24287,10 @@
       record.settleMonth = Number(channelBillWizard.settleMonth) || Number(record.settleMonth) || 0;
       record.monthly = isMonthlySettleChannel(built.channelName);
       record.total = built.total;
+      record.currency = conversion.currency;
+      record.originalSettlementAmount = conversion.originalAmount;
+      record.exchangeRate = conversion.exchangeRate;
+      record.settlementAmountTwd = asDraft ? null : conversion.amountTwd;
       record.taxTotals = billTaxTotals(built.lines, built.channelName);
       record.priceBasis = channelBillUsesUntaxed() ? "untaxed" : "taxed";
       record.lines = built.lines;
@@ -24126,6 +24326,8 @@
       }
       startChannelBillWizard(bill.channelName, bill.settleYear, bill.settleMonth);
       channelBillWizard.editId = String(bill.id);
+      channelBillWizard.currency = bill.currency || channelContractCurrency(bill.channelName);
+      channelBillExchangeRate = channelBillContractCurrency() === "TWD" ? 1 : (bill.exchangeRate || null);
       channelBillGroupRemarks = {};
       (bill.lines || []).forEach((line) => {
         const row = settleRows.find((item) => item.orderNo === line.orderNo
@@ -24701,31 +24903,18 @@
     document.getElementById("channelBillExportDeclBtn").addEventListener("click", openChannelBillExportDeclPicker);
     document.getElementById("channelBillExportDeclViewBtn").addEventListener("click", viewChannelBillExportDecl);
     document.getElementById("channelBillExportDeclDeleteBtn").addEventListener("click", deleteChannelBillExportDecl);
-    document.getElementById("exportDeclFileInput").addEventListener("change", (e) => {
-      const file = e.target.files && e.target.files[0];
-      e.target.value = "";
-      if (!file || !channelBillExportDeclEditing() || channelBillCheckedShipCount() < 1) return;
-      const okType = /pdf$/i.test(file.type) || /^image\//i.test(file.type) || /\.(pdf|png|jpe?g|webp|gif)$/i.test(file.name);
-      if (!okType) {
-        alert("請上傳 PDF 或圖片");
-        return;
-      }
-      if (file.size > STAMP_MAX_BYTES) {
-        alert("檔案請小於 2MB");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        channelBillExportDecl = {
-          name: file.name,
-          type: file.type || "application/octet-stream",
-          data: String(reader.result || ""),
-          uploadedAt: nowStamp(),
-        };
-        onChannelBillDeclarationChanged();
-      };
-      reader.readAsDataURL(file);
+    document.getElementById("channelBillExportDeclForm").addEventListener("submit", confirmChannelBillExportDecl);
+    ["channelBillExportDeclClose", "channelBillExportDeclCancel"].forEach((id) => {
+      document.getElementById(id).addEventListener("click", closeChannelBillExportDeclModal);
     });
+    document.getElementById("channelBillExportDeclModal").addEventListener("click", (e) => {
+      if (e.target.id === "channelBillExportDeclModal") closeChannelBillExportDeclModal();
+    });
+    document.getElementById("channelBillExportDeclModal").addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); closeChannelBillExportDeclModal(); }
+    });
+    document.getElementById("exportDeclFileInput").addEventListener("change", () => showChannelBillDeclError(""));
+
     document.getElementById("shipAcceptCheckAll").addEventListener("change", (e) => {
       if (!shipAcceptDraft || shipAcceptDraft.readonly) return;
       const on = e.target.checked;

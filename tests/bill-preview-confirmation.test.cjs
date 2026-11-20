@@ -11,6 +11,7 @@ function setup(){
   channelBillPreviewReady:false,channelBillPreviewSnapshot:[],channelBillGroupRemarks:{},channelBillExportDecl:null,
   settleRows:[{id:'A',sku:'A',orderNo:'SO',checked:true,settleQty:3,remain:6,price:280}],
   document:{getElementById:id=>buttons[id]},nowStamp:()=> '2026-11-20',
+  channelBillContractCurrency:()=> 'TWD',channelBillCurrentRate:()=>1,
   channelBillUsesUntaxed:()=>false,channelBillTotal:rows=>rows.reduce((sum,r)=>sum+r.settleQty*r.price,0),
   renderChannelBillPreview:()=>{},
   channelBillCheckedSelection:()=>c.settleRows.filter(r=>r.checked),

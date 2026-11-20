@@ -21,6 +21,7 @@ function setup(overseas=false){
   order,salesOrders:[order],supply:{taxed:105,untaxed:100,tax:5},channelSupplyByChannel:{general:[],overseas:[]},
   getWorkspaceOrder:()=>order,isOverseasPo:o=>o?.kind==='overseas',isOnlineTransferPo:()=>false,
   channelSupplyChannelName:'',channelCurrency:n=>n==='overseas'?'USD':'TWD',
+  channelContractCurrency:n=>c.channelCurrency(n),channelBillExchangeRate:null,
   isOverseasChannel:name=>name==='overseas',channelProductPriceOf:()=>c.supply,
   parsePositiveMoney:x=>x!==''&&x!=null&&Number(x)>0?Number(x):null,
   normalizeSku:x=>String(x||'').trim(),settleSourceItems:o=>o.items,itemKey:i=>i.sku,
@@ -29,7 +30,7 @@ function setup(overseas=false){
   channelBillGroupRemarks:{},normalizeSettleRemark:x=>x||'',settleBillTypeOfRows:()=> '買斷',
   recipientListOf:o=>o.recipients||[],buildChannelSupplyRows:()=>[],
  });
- const names=['roundDetailMoney','documentTaxTotals','orderTaxTotals','billTaxTotals','channelBillTotals','channelBillTotal','settleBillTaxedTotal','limitManualMoneyInput','moneyCurrency','currencyMoneyDigits','roundCurrencyMoney','activeFinanceCurrency','roundChannelSupplyMoney','calcChannelSupplyQuote','hasLinePriceSnapshot','saveLinePriceParts',
+ const names=['channelBillContractCurrency','channelBillCurrentRate','channelBillSubmissionAmounts','roundDetailMoney','documentTaxTotals','orderTaxTotals','billTaxTotals','channelBillTotals','channelBillTotal','settleBillTaxedTotal','limitManualMoneyInput','moneyCurrency','currencyMoneyDigits','roundCurrencyMoney','activeFinanceCurrency','roundChannelSupplyMoney','calcChannelSupplyQuote','hasLinePriceSnapshot','saveLinePriceParts',
   'storedUnitPrice','supplyMoneyForLine','ensureChannelSupply','stampLineQuote','linePriceParts','lineMoneyOf','goodsQuoteOf',
   'accRoundMoney','accUnitPrice','channelBillPriceParts','channelBillUsesUntaxed','channelBillLineTaxed','channelBillGroupKey',
   'channelBillLinesFromRows','channelBillExportDeclEditing','inferOrderTaxMode','migrateDemoOrderTaxes'];
@@ -91,8 +92,11 @@ test('declaration upload/delete invalidates preview and rerenders amounts',()=>{
  c.invalidateChannelBillPreview=()=>invalid++;c.renderChannelBillDraft=()=>rendered++;c.syncChannelBillExportDeclUi=()=>synced++;
  vm.runInContext(source('onChannelBillDeclarationChanged'),c);c.onChannelBillDeclarationChanged();
  assert.equal(invalid,1);assert.equal(rendered,1);assert.equal(synced,1);
- assert(html.includes('channelBillExportDecl = null;\n      onChannelBillDeclarationChanged();'));
- assert(html.includes('uploadedAt: nowStamp(),\n        };\n        onChannelBillDeclarationChanged();'));
+ c.confirm=()=>true;c.channelBillCheckedShipCount=()=>1;c.channelBillExchangeRate=32;
+ c.channelBillExportDecl={data:'file'};
+ vm.runInContext(source('deleteChannelBillExportDecl'),c);c.deleteChannelBillExportDecl();
+ assert.equal(c.channelBillExportDecl,null);assert.equal(c.channelBillExchangeRate,null);
+ assert.equal(invalid,2);assert.equal(rendered,2);assert.equal(synced,2);
 });
 test('declaration can change on drafts and rejected bills, but not pending or settled bills',()=>{
  const c=setup(true);assert.equal(c.channelBillExportDeclEditing(),true);
