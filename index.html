@@ -3168,7 +3168,9 @@
                   <option value="庫存不足">庫存不足</option>
                   <option value="配送中">配送中</option>
                   <option value="配送異常">配送異常</option>
-                  <option value="已送達">已送達</option>
+                  <option value="已配達">已配達</option>
+                  <option value="待驗收">待驗收</option>
+                  <option value="已驗收">已驗收</option>
                 </select>
               </div>
               <div class="field">
@@ -3223,6 +3225,7 @@
                   <th>建立人員</th>
                   <th>建立時間</th>
                   <th>提交時間</th>
+                  <th>驗收說明</th>
                   <th>操作</th>
                 </tr>
               </thead>
@@ -5627,6 +5630,14 @@
       return `<span class="void-note-tip" data-tip="${escapeHtml(full)}">${escapeHtml(full.slice(0, 15))}...</span>`;
     }
 
+    function shipAcceptanceLink(ship) {
+      if (!ship || !ship.salesOrderNo || channelAcceptFlow(ship.channel) === "轉單") return "";
+      const enabled = ship.status === "待驗收";
+      return enabled
+        ? `<a class="link" href="?ship=${encodeURIComponent(ship.orderId)}&mode=accept" target="_blank" rel="noopener">驗收</a>`
+        : `<a class="is-disabled" aria-disabled="true">驗收</a>`;
+    }
+
     function shipCancelLink(ship) {
       const thrown = ship.status === "訂單處理中(已拋單)";
       const cancelled = ship.status === "訂單取消";
@@ -5798,7 +5809,7 @@
       if (total) total.textContent = String(data.length);
       if (!body) return;
       if (!data.length) {
-        body.innerHTML = `<tr><td colspan="16" style="text-align:center;color:#8c8c8c;padding:24px;">尚無資料</td></tr>`;
+        body.innerHTML = `<tr><td colspan="17" style="text-align:center;color:#8c8c8c;padding:24px;">尚無資料</td></tr>`;
         return;
       }
       body.innerHTML = data.map((r) => {
@@ -5816,12 +5827,13 @@
           <td>${escapeHtml(maskRecvName(rec))}</td>
           <td>${qty}</td>
           <td>${escapeHtml(toDateInput(r.shipOutDate) || "—")}</td>
-          <td>${r.status === "已出貨" || r.status === "已配達" ? qty : 0}</td>
+          <td>${["已出貨", "已配達", "待驗收", "已驗收"].includes(r.status) ? qty : 0}</td>
           <td>${escapeHtml(r.shipped || "")}</td>
           <td>${escapeHtml(r.applicant || "—")}</td>
           <td>${escapeHtml(r.created || "—")}</td>
           <td>${escapeHtml(r.submittedAt || "")}</td>
-          <td class="ops"><a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=view" target="_blank" rel="noopener" data-ship-view="1">檢視</a> ${shipCancelLink(r)}</td>
+          <td>${shipAcceptNoteCellHtml(r)}</td>
+          <td class="ops"><a class="link" href="?ship=${encodeURIComponent(r.orderId)}&mode=view" target="_blank" rel="noopener" data-ship-view="1">檢視</a> ${shipCancelLink(r)} ${shipAcceptanceLink(r)}</td>
         </tr>`;
       }).join("");
     }
@@ -5868,7 +5880,7 @@
       else if (page === "channel-settle-detail" || page === "settlement") menuPage = "channel-settle";
       else if (page === "monthly-bill-detail") menuPage = "monthly-bill";
       else if (page === "channel-supply") menuPage = "channel-products";
-      else if (page === "ship-accept") menuPage = "shipping";
+      else if (page === "ship-accept") menuPage = shipAcceptDraft && shipAcceptDraft.online ? "online-shipping" : "shipping";
       if (page === "settlement") page = "channel-settle";
       if (page === "acceptance" || page === "acceptance-view") {
         page = "shipping";
@@ -18668,7 +18680,7 @@
       const body = document.getElementById("poShipGoodsBody");
       if (!body) return;
       const isView = shipFormMode === "view";
-      const showAcceptQty = isView && shipCreateKind !== "online";
+      const showAcceptQty = isView;
       document.getElementById("shipViewAcceptQtyHead").classList.toggle("hidden", !showAcceptQty);
       if (!poShipGoods.length) {
         body.innerHTML = goodsNoDataHtml(showAcceptQty ? 9 : 8);
@@ -19015,13 +19027,49 @@
       ship.acceptNote = "";
     }
 
+    function seedOnlineAcceptanceDemo() {
+      const orderNo = "SO20261123081";
+      let order = salesOrders.find((item) => item.orderNo === orderNo);
+      if (!order) {
+        const source = salesOrders.find((item) => channelAcceptFlow(item.channelName) === "寄倉" && (item.items || []).some((line) => Number(line.qty) > 0));
+        if (!source) return;
+        order = JSON.parse(JSON.stringify(source));
+        order.orderNo = orderNo;
+        order.createdAt = "2026-11-23 09:00:00";
+        order.status = "已出貨";
+        order.acceptance = null;
+        order.items = order.items.filter((line) => Number(line.qty) > 0).slice(0, 2).map((line) => ({ ...line, qty: 20 }));
+        salesOrders.push(order);
+      }
+      [1, 2].forEach((index) => {
+        const id = 230810 + index;
+        if (rows.some((ship) => ship.orderId === `TRY${pad(id, 10)}`)) return;
+        const ship = extraOnlineShip({
+          id, salesOrderNo: orderNo, channelName: order.channelName, channelType: order.channelType,
+          status: index === 1 ? "待驗收" : "已驗收", created: "2026-11-23 09:10:00",
+          shipped: "2026-11-23 10:00:00", recvName: "測試收件人",
+          recvTel: "0900000000", recvAddress: "測試配送地址",
+          platformOrderNo: `ONLINE-ACCEPT-${index}`,
+          items: order.items.map((line) => ({ ...line, qty: 10 })),
+        });
+        ship.platform = order.channelName;
+        if (index === 2) {
+          ship.acceptance = {
+            acceptedAt: "2026-11-23 11:00:00", acceptedBy: "建檔人",
+            items: ship.items.map((line) => ({ key: itemKey(line), sku: line.sku, name: line.name, acceptQty: 8, settledQty: 0, remark: "" })),
+          };
+          ship.acceptNote = "已實收為主";
+        }
+        rows.push(ship);
+      });
+    }
+
     function normalizeNonOnlineShipStatuses() {
       rows.forEach((ship) => {
-        if (ship.online) return;
         const flow = channelAcceptFlow(ship.channel || "");
         if (ship.status === "已配達") {
           if (flow === "轉單") {
-            ship.status = "已出貨";
+            ship.status = ship.online ? "已配達" : "已出貨";
             if (!String(ship.shipped || "").trim()) ship.shipped = ship.created || nowStamp();
           } else {
             ship.status = ship.acceptance ? "已驗收" : "待驗收";
@@ -19029,7 +19077,7 @@
           }
         }
         if ((ship.status === "待驗收" || ship.status === "已驗收") && flow === "轉單") {
-          ship.status = "已出貨";
+          ship.status = ship.online ? "已配達" : "已出貨";
         }
         if (ship.status === "已驗收" && !ship.acceptance && Array.isArray(ship.items)) {
           ship.acceptance = {
@@ -19049,7 +19097,7 @@
 
     function openShipAcceptPage(orderId) {
       const ship = rows.find((row) => row.orderId === orderId);
-      if (!ship || ship.online) {
+      if (!ship) {
         alert("找不到可驗收的出貨單");
         showPage("shipping");
         return;
@@ -19073,7 +19121,7 @@
       });
       const lines = (ship.items || []).map((item) => {
         const key = itemKey(item);
-        const shipQty = Number(item.qty) || 0;
+        const shipQty = item.actualShippedQty != null ? Number(item.actualShippedQty) || 0 : demoActualShipQty(ship.status, item.qty);
         const s = saved[key] || {};
         const acceptQty = readonly
           ? (s.acceptQty != null ? Number(s.acceptQty) || 0 : shipQty)
@@ -19084,12 +19132,13 @@
           name: item.name || "",
           pcs: pcsPerCartonOf(item) || pcsPerCartonOf((po && (po.items || []).find((row) => itemKey(row) === key)) || {}) || "-",
           shipQty,
-          checked: readonly ? acceptQty > 0 : false,
-          acceptQty: readonly ? acceptQty : 0,
+          checked: readonly ? acceptQty > 0 : true,
+          acceptQty: readonly ? acceptQty : shipQty,
           remark: s.remark != null ? String(s.remark) : (item.remark || ""),
         };
       }).filter((line) => line.shipQty > 0 || readonly);
-      shipAcceptDraft = { orderId: ship.orderId, readonly, lines };
+      shipAcceptDraft = { orderId: ship.orderId, readonly, lines, online: !!ship.online };
+      document.getElementById("shipAcceptBack").textContent = ship.online ? "← 返回線上出貨單管理" : "← 返回出貨單管理";
       document.getElementById("shipAcceptPoNo").value = ship.salesOrderNo || "-";
       document.getElementById("shipAcceptShipNo").value = ship.orderId || "-";
       document.getElementById("shipAcceptChannelType").value = (po && po.channelType) || "-";
@@ -19175,6 +19224,7 @@
       }
       document.getElementById("shipAcceptDiffModal").classList.add("hidden");
       renderShippingTable(getShippingFiltered ? getShippingFiltered() : undefined);
+      renderOnlineShippingTable();
       alert("驗收完成");
       openShipAcceptPage(ship.orderId);
     }
@@ -19258,7 +19308,7 @@
         line.actualShippedQty = item.actualShippedQty != null
           ? Number(item.actualShippedQty) || 0
           : demoActualShipQty(ship.status, line.qty);
-        line.acceptQty = Object.prototype.hasOwnProperty.call(acceptByKey, key) ? acceptByKey[key] : null;
+        line.acceptQty = channelAcceptFlow(channel) !== "轉單" && Object.prototype.hasOwnProperty.call(acceptByKey, key) ? acceptByKey[key] : null;
         return line;
       });
       poShipShortage = [];
@@ -20370,12 +20420,15 @@
         if (key) saved[key] = row;
       });
       const base = {};
-      const source = (ship.acceptance && ship.acceptance.items && ship.acceptance.items.length)
+      const requiresAcceptance = !isTransferAcceptFlow(order);
+      const source = (requiresAcceptance && ship.acceptance && ship.acceptance.items && ship.acceptance.items.length)
         ? ship.acceptance.items
         : (ship.items || []);
       source.forEach((line) => {
         const key = line.key || itemKey(line);
-        const qty = line.acceptQty != null && line.acceptQty !== "" ? Number(line.acceptQty) : Number(line.qty);
+        const qty = requiresAcceptance
+          ? (line.acceptQty != null && line.acceptQty !== "" ? Number(line.acceptQty) : Number(line.qty))
+          : (line.actualShippedQty != null ? Number(line.actualShippedQty) : demoActualShipQty(ship.status, line.qty));
         if (!key || !(qty > 0)) return;
         base[key] = (base[key] || 0) + qty;
       });
@@ -23221,7 +23274,7 @@
     function consignAcceptedShips(order) {
       if (!order) return [];
       return validShipsOfPo(order.orderNo)
-        .filter((ship) => ship.status === "已驗收" && !ship.online)
+        .filter((ship) => ship.status === "已驗收")
         .slice()
         .sort((a, b) => String(a.shipped || a.created || a.orderId || "").localeCompare(String(b.shipped || b.created || b.orderId || "")));
     }
@@ -24896,8 +24949,9 @@
 
     document.getElementById("shipAcceptBack").addEventListener("click", (e) => {
       e.preventDefault();
+      const destination = shipAcceptDraft && shipAcceptDraft.online ? "online-shipping" : "shipping";
       shipAcceptDraft = null;
-      showPage("shipping");
+      showPage(destination);
       history.replaceState({}, "", location.pathname);
     });
     document.getElementById("shipAcceptSubmitBtn").addEventListener("click", startShipAcceptSubmit);
@@ -25105,6 +25159,8 @@
     settlementRecords = settlementRecords.map(normalizeSettlementRecord);
     migrateExportDeclOntoBills();
     alignDemoSettlementShips();
+    seedOnlineAcceptanceDemo();
+    normalizeNonOnlineShipStatuses();
     ensureSystemShipInvoices();
     persistDemoData();
     renderSalesTable(getSalesFiltered());
