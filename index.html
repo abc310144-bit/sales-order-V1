@@ -3495,7 +3495,7 @@
               <div class="po-kind-meta" id="channelSettleDetailMeta"></div>
             </div>
             <div class="acc-head-actions" id="channelSettleDetailActions">
-              <button type="button" class="btn hidden" id="channelBillExportDeclBtn">匯入出口報單</button>
+              <button type="button" class="btn btn-primary hidden" id="channelBillExportDeclBtn">上傳出口報單</button>
               <button type="button" class="btn hidden" id="channelBillExportDeclViewBtn">檢視出口報單</button>
               <button type="button" class="btn hidden" id="channelBillExportDeclDeleteBtn">刪除出口報單</button>
               <button type="button" class="btn btn-primary" id="channelSettleImportBtn">匯入結算品項</button>
@@ -23822,7 +23822,8 @@
       const hasFile = editing ? exportDeclReady(channelBillExportDecl) : !!(viewFile || previewFile);
       const canChange = editing && channelBillCheckedShipCount() > 0;
       btn.classList.toggle("hidden", !editing);
-      btn.textContent = hasFile ? "修改出口報單／匯率" : "匯入出口報單";
+      btn.classList.toggle("btn-primary", !hasFile);
+      btn.textContent = hasFile ? "修改出口報單／匯率" : "上傳出口報單";
       btn.disabled = !canChange;
       btn.title = canChange ? "" : "請先勾選出貨單";
       viewBtn.classList.toggle("hidden", !hasFile);
