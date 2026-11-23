@@ -24377,7 +24377,7 @@
       const record = saveChannelBillRecord(selected, false);
       if (!record) return;
       persistDemoData();
-      alert(`已送出結算申請（${record.id}），狀態為待結算。請至財務「財務結算」核對`);
+      alert(`結帳單（${record.id}），已成功送出`);
       leaveChannelBillWizard();
     }
 
