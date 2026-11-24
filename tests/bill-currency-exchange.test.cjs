@@ -37,13 +37,13 @@ test('foreign submission requires one declaration and a finite positive rate bef
  c.channelBillExchangeRate=32.123456;
  const result=c.channelBillSubmissionAmounts([],true);
  assert.equal(result.currency,'USD');assert.equal(result.originalAmount,721.9);
- assert.equal(result.amountTwd,23189.92);assert.equal(result.exchangeRate,32.123456);
+ assert.equal(result.amountTwd,23190);assert.equal(result.exchangeRate,32.123456);
  c.channelBillExchangeRate=1e308;assert(c.channelBillSubmissionAmounts([],true).error);
 });
 test('TWD overseas rate is forced to one and submission without a declaration is allowed',()=>{
  const {c}=setup('TWD');c.channelBillExchangeRate=33;
  assert.equal(c.channelBillCurrentRate(),1);
- const result=c.channelBillSubmissionAmounts([],true);assert.equal(result.amountTwd,721.9);assert.equal(result.exchangeRate,1);assert(!result.error);
+ const result=c.channelBillSubmissionAmounts([],true);assert.equal(result.amountTwd,722);assert.equal(result.exchangeRate,1);assert(!result.error);
  c.openChannelBillExportDeclPicker();assert.equal(c.document.getElementById('channelBillExportRate').readOnly,true);
  assert.equal(c.document.getElementById('channelBillExportRateBase').textContent,'1 TWD ＝');
 });

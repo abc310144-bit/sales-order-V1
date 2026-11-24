@@ -21,7 +21,7 @@ function setup(overseas=false){
   order,salesOrders:[order],supply:{taxed:105,untaxed:100,tax:5},channelSupplyByChannel:{general:[],overseas:[]},
   getWorkspaceOrder:()=>order,isOverseasPo:o=>o?.kind==='overseas',isOnlineTransferPo:()=>false,
   channelSupplyChannelName:'',channelCurrency:n=>n==='overseas'?'USD':'TWD',
-  channelContractCurrency:n=>c.channelCurrency(n),channelBillExchangeRate:null,
+  channelContractCurrency:n=>c.channelCurrency(n),channelBillExchangeRate:null,channelInvoiceMethod:()=> 'system',
   isOverseasChannel:name=>name==='overseas',channelProductPriceOf:()=>c.supply,
   parsePositiveMoney:x=>x!==''&&x!=null&&Number(x)>0?Number(x):null,
   normalizeSku:x=>String(x||'').trim(),settleSourceItems:o=>o.items,itemKey:i=>i.sku,
@@ -30,7 +30,7 @@ function setup(overseas=false){
   channelBillGroupRemarks:{},normalizeSettleRemark:x=>x||'',settleBillTypeOfRows:()=> '買斷',
   recipientListOf:o=>o.recipients||[],buildChannelSupplyRows:()=>[],
  });
- const names=['channelBillContractCurrency','channelBillCurrentRate','channelBillSubmissionAmounts','roundDetailMoney','documentTaxTotals','orderTaxTotals','billTaxTotals','channelBillTotals','channelBillTotal','settleBillTaxedTotal','limitManualMoneyInput','moneyCurrency','currencyMoneyDigits','roundCurrencyMoney','activeFinanceCurrency','roundChannelSupplyMoney','calcChannelSupplyQuote','hasLinePriceSnapshot','saveLinePriceParts',
+ const names=['billRequiresFinanceInvoice','financeSettlementTwd','channelBillContractCurrency','channelBillCurrentRate','channelBillSubmissionAmounts','roundDetailMoney','documentTaxTotals','orderTaxTotals','billTaxTotals','channelBillTotals','channelBillTotal','settleBillTaxedTotal','limitManualMoneyInput','moneyCurrency','currencyMoneyDigits','roundCurrencyMoney','activeFinanceCurrency','roundChannelSupplyMoney','calcChannelSupplyQuote','hasLinePriceSnapshot','saveLinePriceParts',
   'storedUnitPrice','supplyMoneyForLine','ensureChannelSupply','stampLineQuote','linePriceParts','lineMoneyOf','goodsQuoteOf',
   'accRoundMoney','accUnitPrice','channelBillPriceParts','channelBillUsesUntaxed','channelBillLineTaxed','channelBillGroupKey',
   'channelBillLinesFromRows','channelBillExportDeclEditing','inferOrderTaxMode','migrateDemoOrderTaxes'];
@@ -109,7 +109,7 @@ test('saving a draft after declaration deletion clears the saved old file, witho
  const c=setup(true);const bill={id:'B',status:'草稿',exportDeclFile:{data:'old'}};
  c.channelBillWizard.editId='B';c.settlementRecords=[bill];c.channelBillCanEdit=()=>true;c.releaseBillQty=()=>{};
  c.channelBillLinesFromRows=()=>({type:'轉單',channelName:'overseas',total:105,lines:[],shipNo:'SHIP'});
- c.isMonthlySettleChannel=()=>false;c.currentRole='主管';
+ c.isMonthlySettleChannel=()=>false;c.currentRole='主管';c.channelBillTotal=()=>105;
  vm.runInContext(source('saveChannelBillRecord'),c);c.saveChannelBillRecord([],true);
  assert.equal(bill.exportDeclFile,null);assert.equal(bill.status,'草稿');assert.equal(bill.qtyHeld,false);assert.equal(bill.priceBasis,'taxed');
 });

@@ -3628,8 +3628,8 @@
             <strong>DEMO 提示｜財務結算</strong><br />
             只列出已送出結算的結帳單：待結算、已結算、財務駁回。草稿與已作廢不進這裡，結帳單建立作廢也不會把狀態寫進財務結算。<br />
             <strong>月結</strong>且待結算：可「回壓／開立發票」（完成後已結算）或「駁回」。已結算可「刪除發票」，狀態回到待結算、數量不加回，之後可再開發票。<br />
-            <strong>系統待開發票只有兩條通路：線上-轉單、跨境- Cool Cool Trading。</strong>出貨單有實際出貨時間時系統已開立發票，一張出貨單一張發票。檢視不顯示整張結帳單的發票基本資料，發票在結算品項。財務只按「確認結算」，不用回壓發票。其他通路維持原樣。<br />
-            駁回須填原因（最多 20 字），狀態改財務駁回，數量加回。跨境 <strong>20260818082</strong> 可看出口報單。線上 <strong>20260810029</strong> 可看每張出貨單的發票。
+            開票方式依通路設定判斷。每張結帳單僅對應一張發票；系統開票資料顯示於發票基本資料，不再依出貨單重複帶入。非月結「確認結算」按鈕停用。<br />
+            駁回須填原因（最多 20 字），狀態改財務駁回，數量加回。跨境 <strong>20260818082</strong> 可看出口報單。線上 <strong>20260810029</strong> 可檢視該結帳單自己的發票資料。
           </div>
           <section class="filter" id="monthlyBillFilterPanel">
             <div class="filter-grid">
@@ -3691,7 +3691,8 @@
                   <th>結算月份</th>
                   <th>發票號碼</th>
                   <th>發票日期</th>
-                  <th class="num">訂單總金額(含稅)</th>
+                  <th class="num">總結算金額(含稅)</th>
+                  <th class="num">總結算金額(未稅)</th>
                   <th>建立人</th>
                   <th>建立時間</th>
                   <th>狀態</th>
@@ -3720,7 +3721,7 @@
           <div class="monthly-bill-section" id="monthlyBillBasicSection">
             <h3 class="ship-settings-col-title">基本資料</h3>
             <div class="form-row">
-              <label>訂單總金額(含稅)</label>
+              <label>總結算金額（TWD）</label>
               <div class="form-ctrl"><input type="text" id="monthlyBillBasicTotal" readonly /></div>
             </div>
             <div class="form-row">
@@ -5522,7 +5523,7 @@
           </div>
           <div class="form-row">
             <label class="required">發票金額</label>
-            <div class="form-ctrl"><input type="number" id="settleInvoiceAmount" min="0" step="0.01" /></div>
+            <div class="form-ctrl"><input type="number" id="settleInvoiceAmount" min="1" step="1" /></div>
           </div>
         </div>
       </div>
@@ -7684,7 +7685,7 @@
 
     function sanitizeSettlementForStore(record) {
       const data = String(record.fileData || "");
-      const copy = { ...record, fileData: data.length <= SETTLE_FILE_STORE_LIMIT ? data : "" };
+      const copy = { ...record, fileData: data };
       // Preserve accepted declaration files; never silently discard them on reload.
       return copy;
     }
@@ -8864,6 +8865,7 @@
     Object.keys(channelProfiles).forEach((name) => {
       const profile = channelProfiles[name];
       if (!profile.contractCurrency) profile.contractCurrency = profile.currency || "TWD";
+      if (!profile.invoiceMethod) profile.invoiceMethod = profile.monthlySettle ? "finance" : "system";
       if (profile.region !== "境外" && !profile.paymentTerms) profile.paymentTerms = "月結 30 天";
     });
 
@@ -9184,10 +9186,12 @@
       const exchangeRate = channelBillCurrentRate();
       if (overseas && required && exchangeRate == null) return { error: "請填寫大於 0 的有效匯率" };
       const originalAmount = channelBillTotal(selected);
+      if (!Number.isFinite(originalAmount) || originalAmount <= 0) return { error: "本次總結算金額須大於 0" };
       const raw = exchangeRate == null ? null : originalAmount * exchangeRate;
       if (raw != null && !Number.isFinite(raw)) return { error: "換算金額超出可計算範圍，請檢查匯率" };
+      if (raw != null && roundCurrencyMoney(raw, "TWD") <= 0) return { error: "換算後台幣總結算金額須大於 0" };
       return { currency, originalAmount, exchangeRate,
-        amountTwd: raw == null ? null : roundDetailMoney(raw) };
+        amountTwd: raw == null ? null : roundCurrencyMoney(raw, "TWD") };
     }
 
     function channelBillConversionHtml(rows) {
@@ -9196,7 +9200,7 @@
       if (data.error || data.amountTwd == null) return "";
       return '<div class="acc-sub bill-fx-summary">送出換算：' + escapeHtml(data.currency) + ' '
         + escapeHtml(currencyMoneyText(data.originalAmount, data.currency)) + ' × '
-        + escapeHtml(data.exchangeRate) + ' = TWD ' + escapeHtml(detailMoneyText(data.amountTwd)) + '</div>';
+        + escapeHtml(data.exchangeRate) + ' = TWD ' + escapeHtml(currencyMoneyText(data.amountTwd, "TWD")) + '</div>';
     }
 
     function channelBillTotals(rows) {
@@ -20858,6 +20862,69 @@
       return id;
     }
 
+    function channelInvoiceMethod(channelName) {
+      const profile = channelProfiles[channelName] || {};
+      // Formal environments supply invoiceMethod; the fallback only supports existing demo profiles.
+      return profile.invoiceMethod || (profile.monthlySettle ? "finance" : "system");
+    }
+
+    function billRequiresFinanceInvoice(bill) {
+      return (bill.invoiceMethod || channelInvoiceMethod(bill.channelName)) === "finance";
+    }
+
+    function financeSettlementTwd(bill) {
+      const saved = bill && bill.settlementAmountTwd;
+      if (saved != null && saved !== "" && Number.isFinite(Number(saved))) return roundCurrencyMoney(saved, "TWD");
+      const currency = bill.currency || channelContractCurrency(bill.channelName);
+      const original = bill.originalSettlementAmount != null ? Number(bill.originalSettlementAmount)
+        : (bill.total != null ? Number(bill.total) : settleBillTaxedTotal(bill));
+      const rate = currency === "TWD" ? 1 : Number(bill.exchangeRate);
+      return Number.isFinite(original) && Number.isFinite(rate) && rate > 0
+        ? roundCurrencyMoney(original * rate, "TWD") : null;
+    }
+
+    function financeLineTaxFields(bill, line) {
+      const source = settleLineTaxFields(line, bill);
+      const currency = bill.currency || channelContractCurrency(bill.channelName);
+      const rate = currency === "TWD" ? 1 : Number(bill.exchangeRate);
+      if (!Number.isFinite(rate) || rate <= 0) return { untaxed: null, taxed: null, tax: null, amount: null };
+      return { untaxed: roundDetailMoney(source.untaxed * rate), taxed: roundDetailMoney(source.taxed * rate),
+        tax: roundDetailMoney(source.tax * rate), amount: line.gift ? 0 : roundDetailMoney(source.amount * rate) };
+    }
+
+    function financeBillBasis(bill) {
+      return bill.priceBasis === "untaxed" || (!bill.priceBasis && isOverseasChannel(bill.channelName) && exportDeclReady(bill.exportDeclFile))
+        ? "untaxed" : "taxed";
+    }
+
+    function financeAmountText(amount) {
+      return amount == null ? "-" : currencyMoneyText(amount, "TWD");
+    }
+
+    function validateSettlementInvoiceFile(file) {
+      if (!file) return "請上傳發票檔案";
+      const supported = file.type === "application/pdf" || String(file.type || "").startsWith("image/")
+        || /[.](pdf|png|jpe?g|webp|gif)$/i.test(file.name || "");
+      if (!supported) return "發票檔案僅接受 PDF 或圖片";
+      return !file.size || file.size >= STAMP_MAX_BYTES ? "發票檔案請小於 2MB" : "";
+    }
+
+    function hydrateFinanceDemoAmounts() {
+      const ids = new Set(["20261104031","20260901046","20260829012","20260829011","20260828008",
+        "20260826032","20260822003","20260822001","20260822002","20260821002","20260821001",
+        "20260820001","20260818082","20260810029"]);
+      settlementRecords.filter((bill) => ids.has(String(bill.id))).forEach((bill) => {
+        if (bill.settlementAmountTwd != null) return;
+        const order = salesOrders.find((item) => (bill.lines || []).some((line) => line.orderNo === item.orderNo));
+        bill.currency = bill.currency || channelContractCurrency(bill.channelName);
+        bill.originalSettlementAmount = settleBillTaxedTotal(bill);
+        bill.exchangeRate = bill.currency === "TWD" ? 1 : Number(order && order.overseas && order.overseas.exchangeRate);
+        bill.settlementAmountTwd = financeSettlementTwd(bill);
+        bill.invoiceMethod = channelInvoiceMethod(bill.channelName);
+        if (!billRequiresFinanceInvoice(bill) && bill.invoiceNo) bill.invoiceAmount = bill.settlementAmountTwd;
+      });
+    }
+
     function isMonthlySettleChannel(channelName) {
       return !!(channelProfiles[channelName] || {}).monthlySettle;
     }
@@ -20973,15 +21040,15 @@
         alert("僅待結算結帳單可開立發票");
         return;
       }
-      if (!bill.monthly) {
+      if (!billRequiresFinanceInvoice(bill)) {
         alert("非月結結算包僅供核對金額，不需開立發票");
         return;
       }
       invoiceTargetBillId = String(bill.id);
       const orderCount = new Set((bill.lines || []).map((line) => line.orderNo)).size;
-      const taxedTotal = settleBillTaxedTotal(bill);
+      const taxedTotal = financeSettlementTwd(bill);
       document.getElementById("settleInvoiceSum").innerHTML =
-        `結算包 <strong>${escapeHtml(bill.id)}</strong>：<strong>${orderCount}</strong> 張訂單、<strong>${(bill.lines || []).length}</strong> 筆商品，金額合計 <strong>${escapeHtml(currencyMoneyText(taxedTotal, bill))}</strong>`;
+        `結算包 <strong>${escapeHtml(bill.id)}</strong>：<strong>${orderCount}</strong> 張訂單、<strong>${(bill.lines || []).length}</strong> 筆商品，金額合計 <strong>${escapeHtml(financeAmountText(taxedTotal))}</strong>`;
       settleInvoiceFile = null;
       document.getElementById("settleInvoiceFile").value = "";
       const nameEl = document.getElementById("settleInvoiceFileName");
@@ -21145,14 +21212,16 @@
         closeSettleInvoiceModal();
         return;
       }
+      if (!billRequiresFinanceInvoice(bill) || bill.status !== "待結算") return alert("僅待結算且由財務開票的結帳單可開立");
+      const financeTotal = financeSettlementTwd(bill);
+      if (financeTotal == null || financeTotal <= 0) return alert("結帳單尚無有效台幣結算金額");
       const method = settleInvoiceMethodOf();
       if (!method) return alert("請選擇發票方式：回壓發票 或 ezpay 開發票");
       if (method === "ezpay") {
         /* DEMO：正式環境自動開立 ezpay；此處寫入示範發票號並標記已開發票 */
         bill.invoiceNo = nextSettlementNo().slice(-10);
         bill.invoiceDate = nowStamp().slice(0, 10);
-        bill.invoiceAmount = settleBillTaxedTotal(bill);
-        bill.total = bill.invoiceAmount;
+        bill.invoiceAmount = financeSettlementTwd(bill);
         bill.fileName = "";
         bill.fileType = "";
         bill.fileData = "";
@@ -21167,13 +21236,14 @@
       const invoiceNo = document.getElementById("settleInvoiceNo").value.trim();
       const invoiceDate = document.getElementById("settleInvoiceDate").value;
       const amountRaw = document.getElementById("settleInvoiceAmount").value.trim();
-      const invoiceAmount = Number(amountRaw);
-      if (!settleInvoiceFile) return alert("請上傳發票檔案");
+      const invoiceAmount = roundCurrencyMoney(Number(amountRaw), "TWD");
+      const fileError = validateSettlementInvoiceFile(settleInvoiceFile);
+      if (fileError) return alert(fileError);
       if (!invoiceNo) return alert("請填寫發票號碼");
       if (!invoiceDate) return alert("請選擇發票日期");
       if (!amountRaw || !Number.isFinite(invoiceAmount) || invoiceAmount <= 0) return alert("請輸入大於 0 的發票金額");
-      const total = settleBillTaxedTotal(bill);
-      if (roundCurrencyMoney(invoiceAmount, bill) !== total
+      const total = financeSettlementTwd(bill);
+      if (roundCurrencyMoney(invoiceAmount, "TWD") !== total
         && !confirm(`發票金額 ${accMoney(invoiceAmount)} 與系統結算金額 ${accMoney(total)} 不一致，確定送出？`)) {
         return;
       }
@@ -21186,7 +21256,7 @@
       }
       bill.invoiceNo = invoiceNo;
       bill.invoiceDate = invoiceDate;
-      bill.invoiceAmount = roundCurrencyMoney(invoiceAmount, bill);
+      bill.invoiceAmount = roundCurrencyMoney(invoiceAmount, "TWD");
       bill.fileName = settleInvoiceFile.name;
       bill.fileType = settleInvoiceFile.type || "";
       bill.fileData = fileData;
@@ -21250,9 +21320,7 @@
           if (channelType && rec.channelType !== channelType) return false;
           if (channel && rec.channelName !== channel) return false;
           if (invoiceDate) {
-            const dates = isSystemInvoiceChannel(rec.channelName)
-              ? billShipInvoices(rec).map((inv) => inv.date)
-              : [String(rec.invoiceDate || "")];
+            const dates = [String(rec.invoiceDate || "")];
             if (!dates.includes(invoiceDate)) return false;
           }
           if (creator && rec.operator !== creator) return false;
@@ -21268,15 +21336,14 @@
       if (total) total.textContent = String(data.length);
       if (!body) return;
       if (!data.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="11">查無資料</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="12">查無資料</td></tr>`;
         return;
       }
       body.innerHTML = data.map((rec) => {
-        const invoice = isSystemInvoiceChannel(rec.channelName)
-          ? billShipInvoices(rec)
-          : null;
-        const invoiceNo = invoice ? (invoice.map((inv) => inv.no).join("、") || "-") : (rec.invoiceNo || "-");
-        const invoiceDate = invoice ? ([...new Set(invoice.map((inv) => inv.date).filter(Boolean))].join("、") || "-") : (rec.invoiceDate || "-");
+        const invoiceNo = rec.invoiceNo || "-";
+        const invoiceDate = rec.invoiceDate || "-";
+        const amount = financeSettlementTwd(rec);
+        const basis = financeBillBasis(rec);
         return `
         <tr>
           <td>${escapeHtml(rec.id)}</td>
@@ -21285,7 +21352,8 @@
           <td>${escapeHtml(formatBillSettlePeriod(rec))}</td>
           <td>${escapeHtml(invoiceNo)}</td>
           <td>${escapeHtml(invoiceDate)}</td>
-          <td class="num">${escapeHtml(currencyMoneyText(settleBillTaxedTotal(rec), rec))}</td>
+          <td class="num">${escapeHtml(financeAmountText(basis === "taxed" ? amount : null))}</td>
+          <td class="num">${escapeHtml(financeAmountText(basis === "untaxed" ? amount : null))}</td>
           <td>${escapeHtml(rec.operator || "—")}</td>
           <td>${escapeHtml(rec.createdAt || "—")}</td>
           <td>${statusTag(rec.status || "待開發票")}</td>
@@ -21304,9 +21372,9 @@
       monthlyBillViewId = String(bill.id);
       const status = bill.status || "待開發票";
       document.getElementById("monthlyBillDetailMeta").textContent =
-        `id：${bill.id}｜類型：${bill.type || "—"}｜通路：${bill.channelName || "—"}｜狀態：${status}｜${isSystemInvoiceChannel(bill.channelName) ? "開票：系統待開發票" : "月結：是"}`;
-      const billTaxedTotal = settleBillTaxedTotal(bill);
-      document.getElementById("monthlyBillBasicTotal").value = accMoney(billTaxedTotal);
+        `id：${bill.id}｜類型：${bill.type || "—"}｜通路：${bill.channelName || "—"}｜狀態：${status}｜${billRequiresFinanceInvoice(bill) ? "開票：財務開立" : "開票：系統開立"}`;
+      const billTaxedTotal = financeSettlementTwd(bill);
+      document.getElementById("monthlyBillBasicTotal").value = financeAmountText(billTaxedTotal);
       document.getElementById("monthlyBillBasicPeriod").value = formatBillSettlePeriod(bill);
       document.getElementById("monthlyBillBasicOperator").value = bill.operator || "—";
       document.getElementById("monthlyBillBasicCreatedAt").value = bill.createdAt || "—";
@@ -21324,9 +21392,9 @@
       const isFinance = isFinanceRole();
       const pending = status === "待結算";
       const canReject = isFinance && pending;
-      const canInvoice = isFinance && bill.monthly && pending;
-      const canConfirm = isFinance && !bill.monthly && pending;
-      const canDeleteInvoice = isFinance && bill.monthly && status === "已結算";
+      const canInvoice = isFinance && billRequiresFinanceInvoice(bill) && pending;
+      const canConfirm = isFinance && !billRequiresFinanceInvoice(bill) && pending;
+      const canDeleteInvoice = isFinance && billRequiresFinanceInvoice(bill) && status === "已結算";
       const actions = document.getElementById("monthlyBillDetailActions");
       if (actions) actions.classList.toggle("hidden", !isFinance);
       const rejectBtn = document.getElementById("monthlyBillRejectBtn");
@@ -21334,34 +21402,38 @@
       const deleteInvBtn = document.getElementById("monthlyBillDeleteInvoiceBtn");
       if (deleteInvBtn) deleteInvBtn.classList.toggle("hidden", !canDeleteInvoice);
       const confirmBtn = document.getElementById("monthlyBillConfirmBtn");
-      if (confirmBtn) confirmBtn.classList.toggle("hidden", !canConfirm);
+      if (confirmBtn) {
+        confirmBtn.classList.toggle("hidden", !canConfirm);
+        confirmBtn.disabled = true;
+        confirmBtn.title = "非月結通路確認結算暫不開放";
+      }
       const invoiceBtn = document.getElementById("monthlyBillInvoiceBtn");
       if (invoiceBtn) {
-        invoiceBtn.classList.toggle("hidden", !bill.monthly || canDeleteInvoice);
+        invoiceBtn.classList.toggle("hidden", !billRequiresFinanceInvoice(bill) || canDeleteInvoice);
         invoiceBtn.disabled = !canInvoice;
         invoiceBtn.title = status === "已作廢"
           ? "已作廢不可開立發票"
           : (status === "財務駁回"
           ? "已駁回不可開立發票"
-          : (status === "已結算" ? "已結算" : (canInvoice ? "回壓／開立發票" : "僅待結算的月結結帳單可開立")));
+          : (status === "已結算" ? "已結算" : (canInvoice ? "回壓／開立發票" : "僅待結算且由財務開票的結帳單可開立")));
       }
       const body = document.getElementById("monthlyBillDetailBody");
       if (body) renderMonthlyBillDetailLines(bill);
       const invSection = document.getElementById("monthlyBillInvoiceSection");
-      const systemInvoice = isSystemInvoiceChannel(bill.channelName);
+      const systemInvoice = false;
       const issued = !systemInvoice && !!(bill.invoiceNo || bill.invoiceDate || bill.fileData || (bill.invoiceAmount != null && bill.invoiceAmount !== ""));
       invSection.classList.toggle("hidden", !issued);
       if (issued) {
         document.getElementById("monthlyBillInvNo").value = bill.invoiceNo || "-";
         document.getElementById("monthlyBillInvDate").value = bill.invoiceDate || "-";
         document.getElementById("monthlyBillInvAmount").value =
-          bill.invoiceAmount != null && bill.invoiceAmount !== "" ? currencyMoneyText(bill.invoiceAmount, bill) : "-";
+          bill.invoiceAmount != null && bill.invoiceAmount !== "" ? financeAmountText(bill.invoiceAmount) : "-";
         const diffEl = document.getElementById("monthlyBillInvDiff");
         if (diffEl) {
-          const taxedTotal = settleBillTaxedTotal(bill);
+          const taxedTotal = financeSettlementTwd(bill);
           const hasAmount = bill.invoiceAmount != null && bill.invoiceAmount !== "";
-          const mismatch = hasAmount && roundCurrencyMoney(bill.invoiceAmount, bill) !== roundCurrencyMoney(taxedTotal, bill);
-          diffEl.textContent = !hasAmount ? "" : (mismatch ? `與結算金額 ${currencyMoneyText(taxedTotal, bill)} 不一致` : "與結算金額一致");
+          const mismatch = hasAmount && roundCurrencyMoney(bill.invoiceAmount, "TWD") !== roundCurrencyMoney(taxedTotal, "TWD");
+          diffEl.textContent = !hasAmount ? "" : (mismatch ? `與結算金額 ${financeAmountText(taxedTotal)} 不一致` : "與結算金額一致");
           diffEl.classList.toggle("is-mismatch", mismatch);
         }
         const fileEl = document.getElementById("monthlyBillInvFileName");
@@ -21419,21 +21491,21 @@
       const total = document.getElementById("monthlyBillDetailTotal");
       if (!body) return;
       const lines = (bill && bill.lines) || [];
-      const systemInvoice = isSystemInvoiceChannel(bill && bill.channelName);
+      const systemInvoice = false;
       const head = document.querySelector("#page-monthly-bill-detail thead tr");
       if (head) {
-        head.innerHTML = `<th>客戶訂單編號</th><th>通路</th><th>SKU</th><th>商品名稱</th>${systemInvoice ? `<th>發票號碼</th><th>發票日期</th><th class="num">發票金額</th>` : ""}<th class="num">結算數量</th><th class="num">未稅單價</th><th class="num">含稅單價</th><th class="num">稅額</th><th class="num">結算金額</th><th>備註</th>`;
+        head.innerHTML = `<th>客戶訂單編號</th><th>通路</th><th>SKU</th><th>商品名稱</th>${systemInvoice ? `<th>發票號碼</th><th>發票日期</th><th class="num">發票金額</th>` : ""}<th class="num">結算數量</th><th class="num">未稅單價（TWD）</th><th class="num">含稅單價（TWD）</th><th class="num">稅額（TWD）</th><th class="num">結算金額（TWD）</th><th>備註</th>`;
       }
       const colspan = systemInvoice ? 13 : 10;
       if (total) total.textContent = String(lines.length);
       const amountEl = document.getElementById("monthlyBillDetailAmount");
-      if (amountEl) amountEl.textContent = currencyMoneyText(settleBillTaxedTotal(bill), bill);
+      if (amountEl) amountEl.textContent = financeAmountText(financeSettlementTwd(bill));
       if (!lines.length) {
         body.innerHTML = `<tr class="empty-row"><td colspan="${colspan}">無明細</td></tr>`;
         return;
       }
       body.innerHTML = lines.map((line) => {
-        const tax = settleLineTaxFields(line, bill);
+        const tax = financeLineTaxFields(bill, line);
         const remark = normalizeSettleRemark(line.remark);
         const inv = systemInvoice ? lineShipInvoice(line) : null;
         const invoiceCells = systemInvoice ? `
@@ -21449,8 +21521,8 @@
             <td class="num">${escapeHtml(line.qty)}</td>
             <td class="num">${escapeHtml(unitMoneyText(tax.untaxed))}</td>
             <td class="num">${escapeHtml(unitMoneyText(tax.taxed))}</td>
-            <td class="num">${escapeHtml(accMoney(tax.tax))}</td>
-            <td class="num">${escapeHtml(accMoney(tax.amount))}</td>
+            <td class="num">${escapeHtml(tax.tax == null ? "-" : accMoney(tax.tax))}</td>
+            <td class="num">${escapeHtml(tax.amount == null ? "-" : accMoney(tax.amount))}</td>
             <td>${remark ? escapeHtml(remark) : "-"}</td>
           </tr>`;
       }).join("");
@@ -21491,8 +21563,8 @@
       }
       const bill = settlementRecords.find((rec) => String(rec.id) === String(monthlyBillViewId));
       if (!bill) return;
-      if (!bill.monthly || bill.status !== "已結算") {
-        alert("僅月結且已結算的結帳單可刪除發票");
+      if (!billRequiresFinanceInvoice(bill) || bill.status !== "已結算") {
+        alert("僅財務開票且已結算的結帳單可刪除發票");
         return;
       }
       if (!confirm("確定刪除此結帳單的發票？狀態回到待結算，可再開發票。已扣數量不加回。")) return;
@@ -23012,7 +23084,7 @@
       if (!record) return;
       record.invoiceNo = `EV${String(record.id).slice(-8)}`;
       record.invoiceDate = String(record.createdAt || nowStamp()).slice(0, 10);
-      record.invoiceAmount = roundCurrencyMoney(amount, record);
+      record.invoiceAmount = roundCurrencyMoney(amount, "TWD");
       record.autoInvoice = true;
       record.fileName = "";
       record.fileType = "";
@@ -24152,6 +24224,12 @@
         alert(`${bad.orderNo} / ${bad.sku} 的本次結算數量須為大於 0、且不超過可結上限的整數`);
         return;
       }
+      const amount = channelBillTotal(selected);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        invalidateChannelBillPreview();
+        alert("本次總結算金額須大於 0");
+        return;
+      }
       const snapshot = selected.map(cloneChannelBillPreviewRow);
       if (!persistChannelBillPreview(snapshot)) {
         invalidateChannelBillPreview();
@@ -24340,6 +24418,7 @@
       record.settleYear = Number(channelBillWizard.settleYear) || Number(record.settleYear) || 0;
       record.settleMonth = Number(channelBillWizard.settleMonth) || Number(record.settleMonth) || 0;
       record.monthly = isMonthlySettleChannel(built.channelName);
+      record.invoiceMethod = channelInvoiceMethod(built.channelName);
       record.total = built.total;
       record.currency = conversion.currency;
       record.originalSettlementAmount = conversion.originalAmount;
@@ -24367,7 +24446,7 @@
       record.submittedAt = record.submittedAt || nowStamp();
       record.qtyHeld = false;
       holdBillQty(record);
-      if (!record.monthly) fillAutoInvoice(record, settleBillTaxedTotal(record));
+      if (!billRequiresFinanceInvoice(record)) fillAutoInvoice(record, financeSettlementTwd(record));
       else record.invoiceCounted = false;
       return record;
     }
@@ -24647,21 +24726,8 @@
     }
 
     function confirmNonMonthlySettle() {
-      if (!isFinanceRole()) {
-        alert("僅財務可確認結算");
-        return;
-      }
-      const bill = settlementRecords.find((rec) => String(rec.id) === String(monthlyBillViewId));
-      if (!bill || bill.monthly || bill.status !== "待結算") {
-        alert("僅待結算、且不需開立發票的結帳單可確認");
-        return;
-      }
-      bill.status = "已結算";
-      bill.invoiceCounted = true;
-      persistDemoData();
-      alert("已確認結算");
-      openMonthlyBillDetail(bill.id);
-      renderMonthlyBillTable(getMonthlyBillFiltered());
+      if (!isFinanceRole()) return alert("僅財務可確認結算");
+      alert("非月結通路確認結算暫不開放");
     }
 
     document.getElementById("channelSettleAccordionBtn").addEventListener("click", () => {
@@ -24875,10 +24941,10 @@
     document.getElementById("settleInvoiceFile").addEventListener("change", (e) => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
-      const okType = file.type === "application/pdf" || file.type.startsWith("image/") || /\.(pdf|png|jpe?g|webp|gif)$/i.test(file.name);
+      const fileError = validateSettlementInvoiceFile(file);
       const nameEl = document.getElementById("settleInvoiceFileName");
-      if (!okType) {
-        alert("發票檔案僅接受 PDF 或圖片");
+      if (fileError) {
+        alert(fileError);
         e.target.value = "";
         settleInvoiceFile = null;
         nameEl.textContent = "尚未選擇檔案（PDF／圖片）";
@@ -25162,6 +25228,7 @@
     seedOnlineAcceptanceDemo();
     normalizeNonOnlineShipStatuses();
     ensureSystemShipInvoices();
+    hydrateFinanceDemoAmounts();
     persistDemoData();
     renderSalesTable(getSalesFiltered());
     renderShippingTable();
