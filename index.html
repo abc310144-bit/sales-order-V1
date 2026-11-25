@@ -3414,8 +3414,8 @@
           <div class="demo-hint" id="channelSettleOrderHint">
             <strong>DEMO 提示｜結帳單建立</strong><br />
             本頁列出已建立的結帳單。狀態有草稿、已作廢、待結算、已結算、財務駁回。按右上「建立結帳單」選通路（類型依通路自動帶出）。建立頁同一頁顯示篩選、可勾選品項和結帳單預覽，沒有步驟列。進頁就列出該通路全部可結資料；買斷、轉單預設收合，點列首箭頭才展開品項。套用縮小範圍，清除回到全部。已勾選品項留在最上方。要勾了才能改本次結算數量。按「確定」才把上方試算到預覽；之後才能「儲存為草稿」或「送出結算申請」。改勾選或數量後要再按確定。儲存為草稿不扣可結數量、不進財務結算。送出結算申請才扣可結數量，狀態為待結算。待結算、已結算不可作廢。草稿、財務駁回可編輯、可作廢；作廢時若這張單還扣著數量，會把數量加回。境外可匯入一份出口報單。假資料 <strong>20260818082</strong> 已附出口報單。<br />
-            月結：財務回壓或 ezpay 後為已結算，待結算可駁回。其餘不月結通路：送出時帶假發票，財務「確認結算」後為已結算。<br />
-            <strong>系統待開發票示範只有兩條通路：線上-轉單、跨境- Cool Cool Trading。</strong>建立結帳單選通路時名稱後面有標示。這兩條只要出貨單有實際出貨時間就能選到，沒有出貨單或沒有實際出貨時間的不會出現。財務只按確認結算，不用回壓發票。可對照 Cool Cool：<strong>VN00010542</strong> 待驗收但有實際出貨時間，可選；<strong>VN00010543</strong> 揀貨中、沒有實際出貨時間，選不到。<br />
+            月結通路每張出貨單出貨時由系統開立一張發票。結帳單可以包含多張出貨單，送出後在財務結算依明細查看各出貨單的發票。<br />
+            <strong>線上-轉單、跨境- Cool Cool Trading</strong>的示範出貨單須有實際出貨時間。可對照 Cool Cool：<strong>VN00010542</strong> 有實際出貨時間，<strong>VN00010543</strong> 尚無實際出貨時間。<br />
             可測單號：草稿 <strong>20260829011</strong>、已作廢 <strong>20260829012</strong>（新光，都沒扣可結數量）；財務駁回 <strong>20260822001</strong>（寶雅）；買斷月結待結算 <strong>20260822002</strong>、已結算 <strong>20260822003</strong>；跨境金額不符 <strong>20260818082</strong>（Cool Cool）；轉單月結已結算 <strong>20260821001</strong>（絢綻）、待結算 <strong>20260821002</strong>；轉單非月結待結算 <strong>20260810029</strong>（線上-轉單）、已結算 <strong>20260826032</strong>；寄倉已結算 <strong>20260820001</strong>、待結算 <strong>20260828008</strong>（PW）。<br />
             <strong>建立結帳單測試單（2026-11-04）</strong>：買斷選「實體-寶雅」，看得到 <strong>SO20261104011</strong>／VN00010611（已驗收）與 <strong>SO20261104012</strong>／VN00010613（已驗收）；同一張單的 VN00010612 是揀貨中、沒有驗收，不會出現。草稿 <strong>20261104031</strong> 掛在 SO20261104012，結算月份 2026年11月，還沒扣可結數量。寄倉選「百貨-新光三越」的 <strong>SO20261104013</strong>／VN00010614（已驗收）；VN00010615 待驗收，不計入可結。經銷選「經銷商-學生營養股份有限公司」的 <strong>SO20261104014</strong>／VN00010616（已出貨、有實際出貨時間）；VN00010617 揀貨中、沒有實際出貨時間，不會出現。線上-轉單選 <strong>SO20261104015</strong>／TRY0000010621（已出貨、有實際出貨時間）；TRY0000010622 待拋單、沒有實際出貨時間，不會出現。<br />
             跨境- Cool Cool Trading 另有客戶訂單可從建立結帳單測：<strong>SO20260830041</strong>（部分出貨；VN00010541 已驗收可結、VN00010542 待驗收、VN00010543 揀貨中）、<strong>SO20260831042</strong>（已開立出貨單；VN00010544、VN00010545 都已驗收且未結，含一列贈品）、<strong>SO20260901043</strong>（部分出貨；VN00010546 已有待結算結帳單 <strong>20260901046</strong> 仍有剩餘、VN00010547 已驗收未結）。這三張單與出貨單在客戶訂單管理、出貨訂單管理都看得到。
@@ -3627,10 +3627,10 @@
           <div class="demo-hint">
             <strong>DEMO 提示｜財務結算</strong><br />
             只列出已送出結算的結帳單：待結算、已結算、財務駁回。草稿與已作廢不進這裡，結帳單建立作廢也不會把狀態寫進財務結算。<br />
-            <strong>月結</strong>且待結算：可「回壓／開立發票」（完成後已結算）或「駁回」。已結算可「刪除發票」，狀態回到待結算、數量不加回，之後可再開發票。<br />
-            開票方式依通路設定判斷。每張結帳單僅對應一張發票；系統開票資料顯示於發票基本資料，不再依出貨單重複帶入。非月結「確認結算」按鈕停用。<br />
+            <strong>月結</strong>通路於出貨時逐張出貨單開票。列表的發票號碼與日期顯示「-」，請從「檢視」的結算品項查看對應出貨單及發票。<br />
+            通路設定為財務開票時，財務可依結帳單狀態處理回壓／開立發票或刪除發票。非月結「確認結算」按鈕停用。<br />
             駁回須填原因（最多 20 字），狀態改財務駁回，數量加回。跨境 <strong>20260818082</strong> 可看出口報單。線上 <strong>20260810029</strong> 可檢視該結帳單自己的發票資料。<br />
-            月結測試（切到財務）：待結算、尚無發票 <strong>20261125001</strong>（寶雅，買斷）、<strong>20261125002</strong>（絢綻，轉單），可回壓、沒有確認結算；已結算、已有發票檔 <strong>20261125003</strong>（新光三越，寄倉），可刪除發票。
+            月結示範 <strong>20261125004</strong>（寶雅）包含兩張出貨單，可於「檢視」核對各列的出貨單單號、發票號碼及發票日期。
           </div>
           <section class="filter" id="monthlyBillFilterPanel">
             <div class="filter-grid">
@@ -3797,6 +3797,7 @@
                 <thead>
                   <tr>
                     <th>客戶訂單編號</th>
+                    <th>出貨單單號</th>
                     <th>通路</th>
                     <th>SKU</th>
                     <th>商品名稱</th>
@@ -20869,12 +20870,16 @@
 
     function channelInvoiceMethod(channelName) {
       const profile = channelProfiles[channelName] || {};
-      // Formal environments supply invoiceMethod; the fallback only supports existing demo profiles.
-      return profile.invoiceMethod || (profile.monthlySettle ? "finance" : "system");
+      return profile.monthlySettle ? "system" : (profile.invoiceMethod || "system");
+    }
+
+    function billUsesShipInvoices(bill) {
+      return bill.monthly ?? isMonthlySettleChannel(bill.channelName);
     }
 
     function billRequiresFinanceInvoice(bill) {
-      return (bill.invoiceMethod || channelInvoiceMethod(bill.channelName)) === "finance";
+      return !billUsesShipInvoices(bill)
+        && (bill.invoiceMethod || channelInvoiceMethod(bill.channelName)) === "finance";
     }
 
     function financeSettlementTwd(bill) {
@@ -20926,7 +20931,9 @@
         bill.exchangeRate = bill.currency === "TWD" ? 1 : Number(order && order.overseas && order.overseas.exchangeRate);
         bill.settlementAmountTwd = financeSettlementTwd(bill);
         bill.invoiceMethod = channelInvoiceMethod(bill.channelName);
-        if (!billRequiresFinanceInvoice(bill) && bill.invoiceNo) bill.invoiceAmount = bill.settlementAmountTwd;
+        if (!billUsesShipInvoices(bill) && !billRequiresFinanceInvoice(bill) && bill.invoiceNo) {
+          bill.invoiceAmount = bill.settlementAmountTwd;
+        }
       });
     }
 
@@ -21046,7 +21053,7 @@
         return;
       }
       if (!billRequiresFinanceInvoice(bill)) {
-        alert("非月結結算包僅供核對金額，不需開立發票");
+        alert("此結帳單無須由財務開立發票");
         return;
       }
       invoiceTargetBillId = String(bill.id);
@@ -21327,8 +21334,10 @@
           if (channelType && rec.channelType !== channelType) return false;
           if (channel && rec.channelName !== channel) return false;
           if (invoiceDate) {
-            const dates = [String(rec.invoiceDate || "")];
-            if (!dates.includes(invoiceDate)) return false;
+            const matchesDate = billUsesShipInvoices(rec)
+              ? (rec.lines || []).some((line) => lineShipInvoice(line)?.date === invoiceDate)
+              : rec.invoiceDate === invoiceDate;
+            if (!matchesDate) return false;
           }
           if (creator && rec.operator !== creator) return false;
           if ((from || to) && !inDateRange(rec.createdAt, from, to)) return false;
@@ -21347,8 +21356,9 @@
         return;
       }
       body.innerHTML = data.map((rec) => {
-        const invoiceNo = rec.invoiceNo || "-";
-        const invoiceDate = rec.invoiceDate || "-";
+        const usesShipInvoices = billUsesShipInvoices(rec);
+        const invoiceNo = usesShipInvoices ? "-" : (rec.invoiceNo || "-");
+        const invoiceDate = usesShipInvoices ? "-" : (rec.invoiceDate || "-");
         const amount = financeSettlementTwd(rec);
         const basis = financeBillBasis(rec);
         return `
@@ -21377,9 +21387,12 @@
         return;
       }
       monthlyBillViewId = String(bill.id);
-      const status = bill.status || "待開發票";
+      const status = bill.status || "待結算";
+      const usesShipInvoices = billUsesShipInvoices(bill);
+      const requiresFinanceInvoice = billRequiresFinanceInvoice(bill);
+      const invoiceMode = usesShipInvoices ? "出貨時系統開立" : (requiresFinanceInvoice ? "財務開立" : "系統開立");
       document.getElementById("monthlyBillDetailMeta").textContent =
-        `id：${bill.id}｜類型：${bill.type || "—"}｜通路：${bill.channelName || "—"}｜狀態：${status}｜${billRequiresFinanceInvoice(bill) ? "開票：財務開立" : "開票：系統開立"}`;
+        `結帳單號：${bill.id}｜類型：${bill.type || "—"}｜通路：${bill.channelName || "—"}｜狀態：${status}｜開票：${invoiceMode}`;
       const billTaxedTotal = financeSettlementTwd(bill);
       document.getElementById("monthlyBillBasicTotal").value = financeAmountText(billTaxedTotal);
       document.getElementById("monthlyBillBasicPeriod").value = formatBillSettlePeriod(bill);
@@ -21399,9 +21412,9 @@
       const isFinance = isFinanceRole();
       const pending = status === "待結算";
       const canReject = isFinance && pending;
-      const canInvoice = isFinance && billRequiresFinanceInvoice(bill) && pending;
-      const canConfirm = isFinance && !billRequiresFinanceInvoice(bill) && pending;
-      const canDeleteInvoice = isFinance && billRequiresFinanceInvoice(bill) && status === "已結算";
+      const canInvoice = isFinance && requiresFinanceInvoice && pending;
+      const showConfirm = isFinance && !usesShipInvoices && !requiresFinanceInvoice && pending;
+      const canDeleteInvoice = isFinance && requiresFinanceInvoice && status === "已結算";
       const actions = document.getElementById("monthlyBillDetailActions");
       if (actions) actions.classList.toggle("hidden", !isFinance);
       const rejectBtn = document.getElementById("monthlyBillRejectBtn");
@@ -21410,13 +21423,13 @@
       if (deleteInvBtn) deleteInvBtn.classList.toggle("hidden", !canDeleteInvoice);
       const confirmBtn = document.getElementById("monthlyBillConfirmBtn");
       if (confirmBtn) {
-        confirmBtn.classList.toggle("hidden", !canConfirm);
+        confirmBtn.classList.toggle("hidden", !showConfirm);
         confirmBtn.disabled = true;
         confirmBtn.title = "非月結通路確認結算暫不開放";
       }
       const invoiceBtn = document.getElementById("monthlyBillInvoiceBtn");
       if (invoiceBtn) {
-        invoiceBtn.classList.toggle("hidden", !billRequiresFinanceInvoice(bill) || canDeleteInvoice);
+        invoiceBtn.classList.toggle("hidden", !requiresFinanceInvoice || canDeleteInvoice);
         invoiceBtn.disabled = !canInvoice;
         invoiceBtn.title = status === "已作廢"
           ? "已作廢不可開立發票"
@@ -21427,8 +21440,7 @@
       const body = document.getElementById("monthlyBillDetailBody");
       if (body) renderMonthlyBillDetailLines(bill);
       const invSection = document.getElementById("monthlyBillInvoiceSection");
-      const systemInvoice = false;
-      const issued = !systemInvoice && !!(bill.invoiceNo || bill.invoiceDate || bill.fileData || (bill.invoiceAmount != null && bill.invoiceAmount !== ""));
+      const issued = !usesShipInvoices && !!(bill.invoiceNo || bill.invoiceDate || bill.fileData || (bill.invoiceAmount != null && bill.invoiceAmount !== ""));
       invSection.classList.toggle("hidden", !issued);
       if (issued) {
         document.getElementById("monthlyBillInvNo").value = bill.invoiceNo || "-";
@@ -21456,7 +21468,8 @@
     function ensureSystemShipInvoices() {
       rows.forEach((ship) => {
         const channel = ship.channel || (salesOrders.find((item) => item.orderNo === ship.salesOrderNo) || {}).channelName || "";
-        if (!isSystemInvoiceChannel(channel) || !isSystemInvoiceSettleShip(ship) || ship.systemInvoiceNo) return;
+        const usesSystemInvoice = isMonthlySettleChannel(channel) || isSystemInvoiceChannel(channel);
+        if (!usesSystemInvoice || !isSystemInvoiceSettleShip(ship) || ship.systemInvoiceNo) return;
         const order = salesOrders.find((item) => item.orderNo === ship.salesOrderNo);
         const overseas = !!(order && isOverseasPo(order));
         const amount = roundCurrencyMoney((ship.items || []).reduce((sum, item) => {
@@ -21476,21 +21489,9 @@
     }
 
     function lineShipInvoice(line) {
-      const ship = line && line.shipNo ? shipByOrderId(line.shipNo) : null;
-      if (!ship || !ship.systemInvoiceNo) return null;
-      return { no: ship.systemInvoiceNo, date: ship.systemInvoiceDate || "", amount: ship.systemInvoiceAmount };
-    }
-
-    function billShipInvoices(bill) {
-      const seen = new Set();
-      const list = [];
-      (bill.lines || []).forEach((line) => {
-        const inv = lineShipInvoice(line);
-        if (!inv || seen.has(inv.no)) return;
-        seen.add(inv.no);
-        list.push(inv);
-      });
-      return list;
+      const ship = line?.shipNo ? shipByOrderId(line.shipNo) : null;
+      if (!ship || (ship.salesOrderNo && ship.salesOrderNo !== line.orderNo)) return null;
+      return { no: ship.systemInvoiceNo || "", date: ship.systemInvoiceDate || "" };
     }
 
     function renderMonthlyBillDetailLines(bill) {
@@ -21498,12 +21499,12 @@
       const total = document.getElementById("monthlyBillDetailTotal");
       if (!body) return;
       const lines = (bill && bill.lines) || [];
-      const systemInvoice = false;
+      const usesShipInvoices = billUsesShipInvoices(bill);
       const head = document.querySelector("#page-monthly-bill-detail thead tr");
       if (head) {
-        head.innerHTML = `<th>客戶訂單編號</th><th>通路</th><th>SKU</th><th>商品名稱</th>${systemInvoice ? `<th>發票號碼</th><th>發票日期</th><th class="num">發票金額</th>` : ""}<th class="num">結算數量</th><th class="num">未稅單價（TWD）</th><th class="num">含稅單價（TWD）</th><th class="num">稅額（TWD）</th><th class="num">結算金額（TWD）</th><th>備註</th>`;
+        head.innerHTML = `<th>客戶訂單編號</th><th>出貨單單號</th><th>通路</th><th>SKU</th><th>商品名稱</th>${usesShipInvoices ? "<th>發票號碼</th><th>發票日期</th>" : ""}<th class="num">結算數量</th><th class="num">未稅單價（TWD）</th><th class="num">含稅單價（TWD）</th><th class="num">稅額（TWD）</th><th class="num">結算金額（TWD）</th><th>備註</th>`;
       }
-      const colspan = systemInvoice ? 13 : 10;
+      const colspan = usesShipInvoices ? 13 : 11;
       if (total) total.textContent = String(lines.length);
       const amountEl = document.getElementById("monthlyBillDetailAmount");
       if (amountEl) amountEl.textContent = financeAmountText(financeSettlementTwd(bill));
@@ -21514,14 +21515,14 @@
       body.innerHTML = lines.map((line) => {
         const tax = financeLineTaxFields(bill, line);
         const remark = normalizeSettleRemark(line.remark);
-        const inv = systemInvoice ? lineShipInvoice(line) : null;
-        const invoiceCells = systemInvoice ? `
-            <td>${escapeHtml(inv ? inv.no : "—")}</td>
-            <td>${escapeHtml(inv && inv.date ? inv.date : "—")}</td>
-            <td class="num">${inv && inv.amount != null ? escapeHtml(currencyMoneyText(inv.amount, bill)) : "—"}</td>` : "";
+        const inv = usesShipInvoices ? lineShipInvoice(line) : null;
+        const invoiceCells = usesShipInvoices ? `
+            <td>${escapeHtml(inv?.no || "-")}</td>
+            <td>${escapeHtml(inv?.date || "-")}</td>` : "";
         return `
           <tr>
             <td>${escapeHtml(line.orderNo || "—")}</td>
+            <td>${escapeHtml(line.shipNo || "-")}</td>
             <td>${escapeHtml(line.channelName || bill.channelName || "—")}</td>
             <td>${escapeHtml(line.sku || "—")}</td>
             <td>${escapeHtml(line.name || "—")}</td>${invoiceCells}
@@ -23088,7 +23089,7 @@
     }
 
     function fillAutoInvoice(record, amount) {
-      if (!record) return;
+      if (!record || billUsesShipInvoices(record)) return;
       record.invoiceNo = `EV${String(record.id).slice(-8)}`;
       record.invoiceDate = String(record.createdAt || nowStamp()).slice(0, 10);
       record.invoiceAmount = roundCurrencyMoney(amount, "TWD");
@@ -24274,7 +24275,7 @@
       const monthly = isMonthlySettleChannel(channelName);
       document.getElementById("channelSettleDetailTitle").textContent = "建立結帳單";
       document.getElementById("channelSettleDetailMeta").textContent =
-        `通路：${channelName}｜結算類型：${flow}｜結算月份：${formatSettlePeriod(settleYear, settleMonth)}｜${isSystemInvoiceChannel(channelName) ? "系統待開發票，出貨時已開立發票，財務確認結算即可" : (monthly ? "月結，送出後為待結算，由財務開立發票" : "不需財務開票，送出後為待結算並帶入發票資料，由財務確認結算")}`;
+        `通路：${channelName}｜結算類型：${flow}｜結算月份：${formatSettlePeriod(settleYear, settleMonth)}｜${monthly ? "月結，出貨時逐張出貨單開票，送出後為待結算" : "送出後為待結算，開票依通路設定"}`;
       renderChannelBillWizardNav();
       renderChannelBillDraft();
       showPage("channel-settle-detail");
@@ -24360,11 +24361,11 @@
 
     function channelBillLinesFromRows(selected) {
       const shipNos = [...new Set(selected.map((row) => row.shipNo).filter(Boolean))];
-      const shipNo = shipNos[0] || "";
+      const shipNo = shipNos.length === 1 ? shipNos[0] : "";
       const lines = selected.map((row) => {
         const parts = channelBillPriceParts(row);
         const qty = Number(row.settleQty) || 0;
-        return { orderNo: row.orderNo, shipNo: row.shipNo || shipNo, channelName: row.channelName,
+        return { orderNo: row.orderNo, shipNo: row.shipNo || "", channelName: row.channelName,
           key: row.key, sku: row.sku, name: row.name, qty, gift: !!row.gift,
           price: parts.untaxed, priceTaxed: parts.taxed, tax: parts.tax,
           amount: channelBillLineTaxed(row, qty), remark: normalizeSettleRemark(row.remark),
@@ -24651,7 +24652,6 @@
       if (!lines.length) return;
       const total = billTaxTotals(lines, order).taxed;
       const monthly = isMonthlySettleChannel(order.channelName);
-      const issued = spec.status === "已結算" && monthly;
       const record = normalizeSettlementRecord({
         id: spec.id,
         createdAt: spec.createdAt,
@@ -24662,14 +24662,9 @@
         shipNo: spec.shipNo || "",
         status: spec.status,
         monthly,
-        invoiceNo: issued ? String(spec.id).slice(-10) : "",
-        invoiceDate: issued ? String(spec.createdAt).slice(0, 10) : "",
-        invoiceAmount: issued ? total : null,
-        fileName: issued ? `${String(spec.id).slice(-10)}.png` : "",
-        fileType: issued ? "image/png" : "",
-        fileData: issued
-          ? "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
-          : "",
+        invoiceNo: "",
+        invoiceDate: "",
+        invoiceAmount: null,
         total,
         lines,
         qtyHeld: holdsQty,
@@ -24733,85 +24728,63 @@
       ensureMonthlyFinanceTestBills();
     }
 
-    /** 財務結算月結測試單。已存在的單號不覆寫，不靠剩餘可結數量。 */
+    /** 建立財務結算月結示範單，每列使用其實際對應的示範出貨單。 */
     function ensureMonthlyFinanceTestBills() {
-      const tinyPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
       const specs = [
-        {
-          id: "20261125001",
-          orderNo: "SO20260809028",
-          shipNo: "VN00010495",
-          status: "待結算",
-          createdAt: "2026-11-25 09:10:00",
-        },
-        {
-          id: "20261125002",
-          orderNo: "SO20260813024",
-          shipNo: "VN00010487",
-          status: "待結算",
-          createdAt: "2026-11-25 09:20:00",
-        },
-        {
-          id: "20261125003",
-          orderNo: "SO20260815022",
-          shipNo: "VN00010484",
-          status: "已結算",
-          createdAt: "2026-11-25 09:30:00",
-          invoiceNo: "EV25112503",
-        },
+        { id: "20261125001", shipNos: ["VN00010495"], status: "待結算", time: "09:10:00" },
+        { id: "20261125002", shipNos: ["VN00010487"], status: "待結算", time: "09:20:00" },
+        { id: "20261125003", shipNos: ["VN00010484"], status: "已結算", time: "09:30:00" },
+        { id: "20261125004", shipNos: ["VN00010611", "VN00010613"], status: "待結算", time: "09:40:00" },
       ];
       specs.forEach((spec) => {
-        if (settlementRecords.some((rec) => String(rec.id) === spec.id)) return;
-        const order = salesOrders.find((item) => item.orderNo === spec.orderNo);
+        if (settlementRecords.some((bill) => String(bill.id) === spec.id)) return;
+        const sources = spec.shipNos.map((shipNo) => {
+          const ship = shipByOrderId(shipNo);
+          const order = ship && salesOrders.find((item) => item.orderNo === ship.salesOrderNo);
+          const item = order && shipSettleLines(order, ship)
+            .find((line) => !line.gift && line.acceptQty > line.settledQty);
+          return { ship, order, item };
+        });
+        const order = sources[0].order;
         if (!order || !isMonthlySettleChannel(order.channelName)) return;
-        const item = (order.items || []).find((row) => (Number(row.qty) || 0) > 0);
-        if (!item) return;
-        const qty = 2;
-        const untaxed = accRoundMoney(accUnitPrice(item));
-        const taxed = accRoundMoney(untaxed * (1 + SETTLE_TAX_RATE));
-        const line = {
-          orderNo: order.orderNo,
-          shipNo: spec.shipNo,
-          channelName: order.channelName,
-          key: itemKey(item),
-          sku: item.sku || "",
-          name: item.name || "",
-          qty,
-          gift: false,
-          price: untaxed,
-          priceTaxed: taxed,
-          tax: accRoundMoney(taxed - untaxed),
-          amount: accRoundMoney(taxed * qty),
-          remark: "",
-        };
-        const ship = shipByOrderId(spec.shipNo);
-        if (ship) {
+        if (sources.some((source) => !source.item || source.order.channelName !== order.channelName)) return;
+        const lines = sources.map(({ ship, order, item }) => {
+          const untaxed = accRoundMoney(item.price);
+          const taxed = accRoundMoney(untaxed * (1 + SETTLE_TAX_RATE));
+          const line = {
+            orderNo: order.orderNo,
+            shipNo: ship.orderId,
+            channelName: order.channelName,
+            key: item.key,
+            sku: item.sku,
+            name: item.name,
+            qty: 1,
+            gift: false,
+            price: untaxed,
+            priceTaxed: taxed,
+            tax: accRoundMoney(taxed - untaxed),
+            amount: taxed,
+            remark: "",
+          };
           const target = ensureShipSettleLedgerItem(ship, line);
-          target.settledQty = (Number(target.settledQty) || 0) + qty;
-        }
-        const issued = spec.status === "已結算";
+          target.settledQty = (Number(target.settledQty) || 0) + line.qty;
+          return line;
+        });
         settlementRecords.push(normalizeSettlementRecord({
           id: spec.id,
-          createdAt: spec.createdAt,
+          createdAt: `2026-11-25 ${spec.time}`,
           operator: "建檔人",
           type: channelAcceptFlow(order.channelName),
           channelName: order.channelName,
           channelType: order.channelType || "",
-          shipNo: spec.shipNo,
+          shipNo: spec.shipNos.length === 1 ? spec.shipNos[0] : "",
           status: spec.status,
           monthly: true,
-          invoiceMethod: "finance",
+          invoiceMethod: "system",
           settleYear: 2026,
           settleMonth: 11,
-          invoiceNo: issued ? spec.invoiceNo : "",
-          invoiceDate: issued ? "2026-11-25" : "",
-          invoiceAmount: issued ? line.amount : null,
-          fileName: issued ? `${spec.invoiceNo}.png` : "",
-          fileType: issued ? "image/png" : "",
-          fileData: issued ? tinyPng : "",
-          autoInvoice: false,
-          total: line.amount,
-          lines: [line],
+          total: billTaxTotals(lines, order).taxed,
+          lines,
           qtyHeld: true,
         }));
       });
@@ -25217,7 +25190,8 @@
             kept.push(line);
             return;
           }
-          const hit = shipsFor(line.orderNo).find((ship) => lineOnShip(ship, line));
+          const matches = shipsFor(line.orderNo).filter((ship) => lineOnShip(ship, line));
+          const hit = billUsesShipInvoices(bill) && matches.length !== 1 ? null : matches[0];
           if (hit) {
             line.shipNo = hit.orderId;
             kept.push(line);
