@@ -2837,6 +2837,7 @@
     #monthlyBillInvDiff.is-mismatch { color: #cf1322; font-weight: 600; }
     .monthly-bill-detail-lines { margin-top: 24px; }
     .monthly-bill-lines-meta { justify-content: space-between; }
+    .monthly-bill-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; }
     .monthly-bill-lines-meta strong {
       margin-left: 8px;
       color: var(--text);
@@ -3789,7 +3790,10 @@
           <div class="monthly-bill-detail-lines">
             <h3 class="ship-settings-col-title">結算品項</h3>
             <div class="table-meta monthly-bill-lines-meta">
-              <span>總結算金額<strong id="monthlyBillDetailAmount">0</strong></span>
+              <div class="monthly-bill-summary">
+                <span>總結算金額<strong id="monthlyBillDetailAmount">0</strong></span>
+                <span>總數量<strong id="monthlyBillDetailQty">0</strong></span>
+              </div>
               <span>總共 <span id="monthlyBillDetailTotal">0</span> 筆</span>
             </div>
             <div class="table-wrap">
@@ -3802,10 +3806,9 @@
                     <th>SKU</th>
                     <th>商品名稱</th>
                     <th class="num">結算數量</th>
-                    <th class="num">未稅單價</th>
-                    <th class="num">含稅單價</th>
-                    <th class="num">稅額</th>
-                    <th class="num">結算金額</th>
+                    <th class="num">總未稅額（TWD）</th>
+                    <th class="num">總稅額（TWD）</th>
+                    <th class="num">總含稅額（TWD）</th>
                     <th>備註</th>
                   </tr>
                 </thead>
@@ -20893,13 +20896,18 @@
         ? roundCurrencyMoney(original * rate, "TWD") : null;
     }
 
-    function financeLineTaxFields(bill, line) {
-      const source = settleLineTaxFields(line, bill);
+    function financeLineAmounts(bill, line) {
       const currency = bill.currency || channelContractCurrency(bill.channelName);
       const rate = currency === "TWD" ? 1 : Number(bill.exchangeRate);
-      if (!Number.isFinite(rate) || rate <= 0) return { untaxed: null, taxed: null, tax: null, amount: null };
-      return { untaxed: roundDetailMoney(source.untaxed * rate), taxed: roundDetailMoney(source.taxed * rate),
-        tax: roundDetailMoney(source.tax * rate), amount: line.gift ? 0 : roundDetailMoney(source.amount * rate) };
+      if (!Number.isFinite(rate) || rate <= 0) return { untaxed: null, taxed: null, tax: null };
+      if (line.gift) return { untaxed: 0, taxed: 0, tax: 0 };
+      const source = settleLineTaxFields(line, bill);
+      const qty = Number(line.qty) || 0;
+      const unitUntaxedTwd = roundDetailMoney(source.untaxed * rate);
+      const unitTaxedTwd = roundDetailMoney(source.taxed * rate);
+      const untaxed = roundDetailMoney(unitUntaxedTwd * qty);
+      const taxed = roundDetailMoney(unitTaxedTwd * qty);
+      return { untaxed, taxed, tax: roundDetailMoney(taxed - untaxed) };
     }
 
     function financeBillBasis(bill) {
@@ -21502,10 +21510,12 @@
       const usesShipInvoices = billUsesShipInvoices(bill);
       const head = document.querySelector("#page-monthly-bill-detail thead tr");
       if (head) {
-        head.innerHTML = `<th>客戶訂單編號</th><th>出貨單單號</th><th>通路</th><th>SKU</th><th>商品名稱</th>${usesShipInvoices ? "<th>發票號碼</th><th>發票日期</th>" : ""}<th class="num">結算數量</th><th class="num">未稅單價（TWD）</th><th class="num">含稅單價（TWD）</th><th class="num">稅額（TWD）</th><th class="num">結算金額（TWD）</th><th>備註</th>`;
+        head.innerHTML = `<th>客戶訂單編號</th><th>出貨單單號</th><th>通路</th><th>SKU</th><th>商品名稱</th>${usesShipInvoices ? "<th>發票號碼</th><th>發票日期</th>" : ""}<th class="num">結算數量</th><th class="num">總未稅額（TWD）</th><th class="num">總稅額（TWD）</th><th class="num">總含稅額（TWD）</th><th>備註</th>`;
       }
-      const colspan = usesShipInvoices ? 13 : 11;
+      const colspan = usesShipInvoices ? 12 : 10;
       if (total) total.textContent = String(lines.length);
+      const qtyEl = document.getElementById("monthlyBillDetailQty");
+      if (qtyEl) qtyEl.textContent = lines.reduce((sum, line) => sum + (Number(line.qty) || 0), 0).toLocaleString("zh-TW");
       const amountEl = document.getElementById("monthlyBillDetailAmount");
       if (amountEl) amountEl.textContent = financeAmountText(financeSettlementTwd(bill));
       if (!lines.length) {
@@ -21513,7 +21523,7 @@
         return;
       }
       body.innerHTML = lines.map((line) => {
-        const tax = financeLineTaxFields(bill, line);
+        const amounts = financeLineAmounts(bill, line);
         const remark = normalizeSettleRemark(line.remark);
         const inv = usesShipInvoices ? lineShipInvoice(line) : null;
         const invoiceCells = usesShipInvoices ? `
@@ -21527,10 +21537,9 @@
             <td>${escapeHtml(line.sku || "—")}</td>
             <td>${escapeHtml(line.name || "—")}</td>${invoiceCells}
             <td class="num">${escapeHtml(line.qty)}</td>
-            <td class="num">${escapeHtml(unitMoneyText(tax.untaxed))}</td>
-            <td class="num">${escapeHtml(unitMoneyText(tax.taxed))}</td>
-            <td class="num">${escapeHtml(tax.tax == null ? "-" : accMoney(tax.tax))}</td>
-            <td class="num">${escapeHtml(tax.amount == null ? "-" : accMoney(tax.amount))}</td>
+            <td class="num">${escapeHtml(unitMoneyText(amounts.untaxed))}</td>
+            <td class="num">${escapeHtml(unitMoneyText(amounts.tax))}</td>
+            <td class="num">${escapeHtml(unitMoneyText(amounts.taxed))}</td>
             <td>${remark ? escapeHtml(remark) : "-"}</td>
           </tr>`;
       }).join("");
