@@ -3629,7 +3629,8 @@
             只列出已送出結算的結帳單：待結算、已結算、財務駁回。草稿與已作廢不進這裡，結帳單建立作廢也不會把狀態寫進財務結算。<br />
             <strong>月結</strong>且待結算：可「回壓／開立發票」（完成後已結算）或「駁回」。已結算可「刪除發票」，狀態回到待結算、數量不加回，之後可再開發票。<br />
             開票方式依通路設定判斷。每張結帳單僅對應一張發票；系統開票資料顯示於發票基本資料，不再依出貨單重複帶入。非月結「確認結算」按鈕停用。<br />
-            駁回須填原因（最多 20 字），狀態改財務駁回，數量加回。跨境 <strong>20260818082</strong> 可看出口報單。線上 <strong>20260810029</strong> 可檢視該結帳單自己的發票資料。
+            駁回須填原因（最多 20 字），狀態改財務駁回，數量加回。跨境 <strong>20260818082</strong> 可看出口報單。線上 <strong>20260810029</strong> 可檢視該結帳單自己的發票資料。<br />
+            月結測試（切到財務）：待結算、尚無發票 <strong>20261125001</strong>（寶雅，買斷）、<strong>20261125002</strong>（絢綻，轉單），可回壓、沒有確認結算；已結算、已有發票檔 <strong>20261125003</strong>（新光三越，寄倉），可刪除發票。
           </div>
           <section class="filter" id="monthlyBillFilterPanel">
             <div class="filter-grid">
@@ -24723,6 +24724,91 @@
       pushFixedSettleBill({ id: "20260828008", orderNo: "SO20260826008", ratio: 0.3, status: "待結算", createdAt: "2026-08-28 15:00:00" });
       pushFixedSettleBill({ id: "20260829011", orderNo: "SO20260827034", ratio: 0.2, status: "草稿", createdAt: "2026-08-29 10:00:00" });
       pushFixedSettleBill({ id: "20260829012", orderNo: "SO20260827034", ratio: 0.1, status: "已作廢", createdAt: "2026-08-29 16:00:00" });
+      ensureMonthlyFinanceTestBills();
+    }
+
+    /** 財務結算月結測試單。已存在的單號不覆寫，不靠剩餘可結數量。 */
+    function ensureMonthlyFinanceTestBills() {
+      const tinyPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+      const specs = [
+        {
+          id: "20261125001",
+          orderNo: "SO20260809028",
+          shipNo: "VN00010495",
+          status: "待結算",
+          createdAt: "2026-11-25 09:10:00",
+        },
+        {
+          id: "20261125002",
+          orderNo: "SO20260813024",
+          shipNo: "VN00010487",
+          status: "待結算",
+          createdAt: "2026-11-25 09:20:00",
+        },
+        {
+          id: "20261125003",
+          orderNo: "SO20260815022",
+          shipNo: "VN00010484",
+          status: "已結算",
+          createdAt: "2026-11-25 09:30:00",
+          invoiceNo: "EV25112503",
+        },
+      ];
+      specs.forEach((spec) => {
+        if (settlementRecords.some((rec) => String(rec.id) === spec.id)) return;
+        const order = salesOrders.find((item) => item.orderNo === spec.orderNo);
+        if (!order || !isMonthlySettleChannel(order.channelName)) return;
+        const item = (order.items || []).find((row) => (Number(row.qty) || 0) > 0);
+        if (!item) return;
+        const qty = 2;
+        const untaxed = accRoundMoney(accUnitPrice(item));
+        const taxed = accRoundMoney(untaxed * (1 + SETTLE_TAX_RATE));
+        const line = {
+          orderNo: order.orderNo,
+          shipNo: spec.shipNo,
+          channelName: order.channelName,
+          key: itemKey(item),
+          sku: item.sku || "",
+          name: item.name || "",
+          qty,
+          gift: false,
+          price: untaxed,
+          priceTaxed: taxed,
+          tax: accRoundMoney(taxed - untaxed),
+          amount: accRoundMoney(taxed * qty),
+          remark: "",
+        };
+        const ship = shipByOrderId(spec.shipNo);
+        if (ship) {
+          const target = ensureShipSettleLedgerItem(ship, line);
+          target.settledQty = (Number(target.settledQty) || 0) + qty;
+        }
+        const issued = spec.status === "已結算";
+        settlementRecords.push(normalizeSettlementRecord({
+          id: spec.id,
+          createdAt: spec.createdAt,
+          operator: "建檔人",
+          type: channelAcceptFlow(order.channelName),
+          channelName: order.channelName,
+          channelType: order.channelType || "",
+          shipNo: spec.shipNo,
+          status: spec.status,
+          monthly: true,
+          invoiceMethod: "finance",
+          settleYear: 2026,
+          settleMonth: 11,
+          invoiceNo: issued ? spec.invoiceNo : "",
+          invoiceDate: issued ? "2026-11-25" : "",
+          invoiceAmount: issued ? line.amount : null,
+          fileName: issued ? `${spec.invoiceNo}.png` : "",
+          fileType: issued ? "image/png" : "",
+          fileData: issued ? tinyPng : "",
+          autoInvoice: false,
+          total: line.amount,
+          lines: [line],
+          qtyHeld: true,
+        }));
+      });
     }
 
     function confirmNonMonthlySettle() {
