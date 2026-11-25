@@ -21524,7 +21524,9 @@
       }
       body.innerHTML = lines.map((line) => {
         const amounts = financeLineAmounts(bill, line);
-        const remark = normalizeSettleRemark(line.remark);
+        const productRemark = normalizeSettleRemark(line.remark);
+        const shipmentRemark = normalizeSettleRemark(line.groupRemark);
+        const remark = [...new Set([productRemark, shipmentRemark].filter(Boolean))].join("／");
         const inv = usesShipInvoices ? lineShipInvoice(line) : null;
         const invoiceCells = usesShipInvoices ? `
             <td>${escapeHtml(inv?.no || "-")}</td>
