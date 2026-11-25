@@ -3697,8 +3697,7 @@
                   <th>結算月份</th>
                   <th>發票號碼</th>
                   <th>發票日期</th>
-                  <th class="num">總結算金額(含稅)</th>
-                  <th class="num">總結算金額(未稅)</th>
+                  <th class="num">總結算金額</th>
                   <th>建立人</th>
                   <th>建立時間</th>
                   <th>狀態</th>
@@ -20910,11 +20909,6 @@
       return { untaxed, taxed, tax: roundDetailMoney(taxed - untaxed) };
     }
 
-    function financeBillBasis(bill) {
-      return bill.priceBasis === "untaxed" || (!bill.priceBasis && isOverseasChannel(bill.channelName) && exportDeclReady(bill.exportDeclFile))
-        ? "untaxed" : "taxed";
-    }
-
     function financeAmountText(amount) {
       return amount == null ? "-" : currencyMoneyText(amount, "TWD");
     }
@@ -21360,7 +21354,7 @@
       if (total) total.textContent = String(data.length);
       if (!body) return;
       if (!data.length) {
-        body.innerHTML = `<tr class="empty-row"><td colspan="12">查無資料</td></tr>`;
+        body.innerHTML = `<tr class="empty-row"><td colspan="11">查無資料</td></tr>`;
         return;
       }
       body.innerHTML = data.map((rec) => {
@@ -21368,7 +21362,6 @@
         const invoiceNo = usesShipInvoices ? "-" : (rec.invoiceNo || "-");
         const invoiceDate = usesShipInvoices ? "-" : (rec.invoiceDate || "-");
         const amount = financeSettlementTwd(rec);
-        const basis = financeBillBasis(rec);
         return `
         <tr>
           <td>${escapeHtml(rec.id)}</td>
@@ -21377,8 +21370,7 @@
           <td>${escapeHtml(formatBillSettlePeriod(rec))}</td>
           <td>${escapeHtml(invoiceNo)}</td>
           <td>${escapeHtml(invoiceDate)}</td>
-          <td class="num">${escapeHtml(financeAmountText(basis === "taxed" ? amount : null))}</td>
-          <td class="num">${escapeHtml(financeAmountText(basis === "untaxed" ? amount : null))}</td>
+          <td class="num">${escapeHtml(financeAmountText(amount))}</td>
           <td>${escapeHtml(rec.operator || "—")}</td>
           <td>${escapeHtml(rec.createdAt || "—")}</td>
           <td>${statusTag(rec.status || "待開發票")}</td>
