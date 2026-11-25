@@ -3684,8 +3684,14 @@
               <button class="btn btn-primary" type="button" id="monthlyBillFilterApply">套用</button>
             </div>
           </section>
-          <div class="table-meta">
-            總共 <span id="monthlyBillTotal">0</span> 筆
+          <div class="table-meta sales-table-meta-right">
+            總共 <span id="monthlyBillTotal">0</span> 筆，每頁顯示
+            <select id="monthlyBillPageSize" aria-label="每頁顯示筆數">
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+            筆
           </div>
           <div class="table-wrap">
             <table>
@@ -3707,6 +3713,11 @@
               <tbody id="monthlyBillBody"></tbody>
             </table>
           </div>
+          <nav class="pager hidden" id="monthlyBillPager" aria-label="財務結算分頁">
+            <button type="button" id="monthlyBillPrevPage" aria-label="上一頁" disabled>‹</button>
+            <span id="monthlyBillPageStatus" aria-live="polite"></span>
+            <button type="button" id="monthlyBillNextPage" aria-label="下一頁" disabled>›</button>
+          </nav>
         </div>
 
         <div class="page" id="page-monthly-bill-detail">
@@ -19578,6 +19589,8 @@
     let settleDetailOrderNo = "";
     let settleDetailShipNo = "";
     let monthlyBillViewId = "";
+    let monthlyBillPage = 1;
+    let monthlyBillResults = [];
     let invoiceTargetBillId = "";
     let settleDetailMode = "settle"; // settle | view
 
@@ -21348,16 +21361,28 @@
     }
 
     function renderMonthlyBillTable(list) {
-      const data = list || getMonthlyBillFiltered();
+      monthlyBillResults = list || getMonthlyBillFiltered();
+      renderMonthlyBillPage();
+    }
+
+    function renderMonthlyBillPage() {
       const body = document.getElementById("monthlyBillBody");
-      const total = document.getElementById("monthlyBillTotal");
-      if (total) total.textContent = String(data.length);
       if (!body) return;
-      if (!data.length) {
+      const pageSize = Number(document.getElementById("monthlyBillPageSize").value);
+      const resultCount = monthlyBillResults.length;
+      const pageCount = Math.max(1, Math.ceil(resultCount / pageSize));
+      monthlyBillPage = Math.min(Math.max(1, monthlyBillPage), pageCount);
+      document.getElementById("monthlyBillTotal").textContent = String(resultCount);
+      document.getElementById("monthlyBillPager").classList.toggle("hidden", resultCount === 0);
+      document.getElementById("monthlyBillPageStatus").textContent = `${monthlyBillPage} / ${pageCount}`;
+      document.getElementById("monthlyBillPrevPage").disabled = monthlyBillPage === 1;
+      document.getElementById("monthlyBillNextPage").disabled = monthlyBillPage === pageCount;
+      if (!resultCount) {
         body.innerHTML = `<tr class="empty-row"><td colspan="11">查無資料</td></tr>`;
         return;
       }
-      body.innerHTML = data.map((rec) => {
+      const start = (monthlyBillPage - 1) * pageSize;
+      body.innerHTML = monthlyBillResults.slice(start, start + pageSize).map((rec) => {
         const usesShipInvoices = billUsesShipInvoices(rec);
         const invoiceNo = usesShipInvoices ? "-" : (rec.invoiceNo || "-");
         const invoiceDate = usesShipInvoices ? "-" : (rec.invoiceDate || "-");
@@ -25031,6 +25056,7 @@
       btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
     });
     document.getElementById("monthlyBillFilterApply").addEventListener("click", () => {
+      monthlyBillPage = 1;
       renderMonthlyBillTable(getMonthlyBillFiltered());
     });
     document.getElementById("monthlyBillFilterClear").addEventListener("click", () => {
@@ -25042,7 +25068,20 @@
       document.getElementById("monthlyBillFilterFrom").value = "";
       document.getElementById("monthlyBillFilterTo").value = "";
       document.getElementById("monthlyBillFilterStatus").value = "";
+      monthlyBillPage = 1;
       renderMonthlyBillTable(getMonthlyBillFiltered());
+    });
+    document.getElementById("monthlyBillPageSize").addEventListener("change", () => {
+      monthlyBillPage = 1;
+      renderMonthlyBillPage();
+    });
+    document.getElementById("monthlyBillPrevPage").addEventListener("click", () => {
+      monthlyBillPage -= 1;
+      renderMonthlyBillPage();
+    });
+    document.getElementById("monthlyBillNextPage").addEventListener("click", () => {
+      monthlyBillPage += 1;
+      renderMonthlyBillPage();
     });
     document.getElementById("monthlyBillBody").addEventListener("click", (e) => {
       const id = e.target.dataset.monthlyBillView;
