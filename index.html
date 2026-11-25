@@ -3635,6 +3635,10 @@
           <section class="filter" id="monthlyBillFilterPanel">
             <div class="filter-grid">
               <div class="field">
+                <label for="monthlyBillFilterId">結帳單號</label>
+                <input id="monthlyBillFilterId" type="text" placeholder="支援模糊查詢" />
+              </div>
+              <div class="field">
                 <label>通路類型</label>
                 <select id="monthlyBillFilterChannelType">
                   <option value="">請選擇</option>
@@ -21304,6 +21308,7 @@
 
     function getMonthlyBillFiltered() {
       fillMonthlyBillFilterOptions();
+      const billId = document.getElementById("monthlyBillFilterId").value.trim();
       const channelType = (document.getElementById("monthlyBillFilterChannelType") || {}).value || "";
       const channel = (document.getElementById("monthlyBillFilterChannel") || {}).value || "";
       const invoiceDate = (document.getElementById("monthlyBillFilterInvoiceDate") || {}).value || "";
@@ -21317,6 +21322,7 @@
         .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
         .filter((rec) => {
           if (rec.status === "草稿" || rec.status === "已作廢") return false;
+          if (billId && !String(rec.id).includes(billId)) return false;
           if (statusFilter && rec.status !== statusFilter) return false;
           if (channelType && rec.channelType !== channelType) return false;
           if (channel && rec.channelName !== channel) return false;
@@ -25052,6 +25058,7 @@
       renderMonthlyBillTable(getMonthlyBillFiltered());
     });
     document.getElementById("monthlyBillFilterClear").addEventListener("click", () => {
+      document.getElementById("monthlyBillFilterId").value = "";
       document.getElementById("monthlyBillFilterChannelType").value = "";
       document.getElementById("monthlyBillFilterChannel").value = "";
       document.getElementById("monthlyBillFilterInvoiceDate").value = "";
