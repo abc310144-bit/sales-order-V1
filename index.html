@@ -1723,7 +1723,8 @@
     .fee-suffix-field .suffix { color: var(--text); }
     .po-ship-fee-table { margin-top: 12px; }
     .modal-card.fee-dialog-card { width: min(560px, 100%); }
-    #page-ship-create .form-title { margin: 0 0 16px; }
+    .ship-page-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .ship-page-heading .form-title { margin: 0; }
     #page-ship-create.is-readonly #poShipCreateConfirm,
     #page-ship-create.is-readonly .po-ship-fee-table td.ops,
     #page-ship-create.is-readonly .ship-items-table thead th.ops,
@@ -3829,7 +3830,10 @@
         </div>
 
         <div class="page" id="page-ship-create">
-          <h2 class="form-title" id="shipPageTitle">建立出貨訂單</h2>
+          <div class="ship-page-heading">
+            <h2 class="form-title" id="shipPageTitle">建立出貨訂單</h2>
+            <button type="button" class="btn hidden" id="shipViewExport">匯出</button>
+          </div>
           <div class="po-ship-create" id="poShipCreatePanel">
               <div class="po-ship-acc" data-acc="settings">
                 <button type="button" class="po-ship-acc-head">
@@ -4148,6 +4152,7 @@
               <div class="po-ship-create-foot">
                 <button type="button" class="btn" id="poShipCreateCancel">取消</button>
                 <button type="button" class="btn btn-primary" id="poShipCreateConfirm">送出出貨單</button>
+                <button type="button" class="btn btn-primary hidden" id="shipViewSubmit">送出出貨</button>
               </div>
           </div>
         </div>
@@ -5134,6 +5139,25 @@
     </div>
   </div>
 
+  <div class="modal-mask hidden" id="shipExportModal">
+    <form class="modal-card void-card" aria-labelledby="shipExportTitle" role="dialog" aria-modal="true" id="shipExportForm">
+      <div class="modal-head">
+        <h2 id="shipExportTitle">設定報關 INVOICE 建檔人</h2>
+        <button type="button" class="modal-close" id="shipExportClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label for="shipExportAttn">建檔人</label>
+          <div class="form-ctrl"><input type="text" id="shipExportAttn" required /></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="shipExportCancel">取消</button>
+        <button type="submit" class="btn btn-primary">確認</button>
+      </div>
+    </form>
+  </div>
+
   <div class="modal-mask hidden" id="poShipFeeModal">
     <div class="modal-card fee-dialog-card" role="dialog" aria-labelledby="poShipFeeTitle">
       <div class="modal-head">
@@ -5357,6 +5381,10 @@
           <div class="form-ctrl">
             <input type="text" id="channelSupplyEditName" readonly disabled />
           </div>
+        </div>
+        <div class="form-row hidden" id="channelSupplyCustomsNameRow">
+          <label class="required" for="channelSupplyCustomsName">報關品名</label>
+          <div class="form-ctrl"><input type="text" id="channelSupplyCustomsName" /></div>
         </div>
         <div class="form-row">
           <label class="required" for="channelSupplyEditSellPrice">商品售價(TWD)</label>
@@ -9268,6 +9296,10 @@
       return Number.isFinite(n) && n > 0 ? n : 0;
     }
 
+    function usesChannelCustomsName(channelName) {
+      return String(channelName || "").includes("15807662 Canada Inc");
+    }
+
     function channelSupplyRowOf(channelName, sku) {
       const key = normalizeSku(sku).toLowerCase();
       if (!key) return null;
@@ -9641,6 +9673,7 @@
     function setChannelSupplySideTaxMode() {}
 
     function syncOverseasSupplyForm() {
+      document.getElementById("channelSupplyCustomsNameRow").classList.toggle("hidden", !usesChannelCustomsName(channelSupplyChannelName));
       const overseas = isOverseasSupplyForm();
       const show = (id, on) => document.getElementById(id)?.classList.toggle("hidden", !on);
       show("channelSupplyEditOverseasQuote", overseas);
@@ -9755,6 +9788,7 @@
     }
 
     function fillChannelSupplyFormDefaults() {
+      document.getElementById("channelSupplyCustomsName").value = "";
       document.getElementById("channelSupplyEditSku").value = "";
       document.getElementById("channelSupplyEditName").value = "";
       document.getElementById("channelSupplyEditSellPrice").value = "";
@@ -9798,6 +9832,7 @@
       document.getElementById("channelSupplyEditTitle").textContent = "編輯商品";
       document.getElementById("channelSupplyEditSku").value = row.sku || "";
       document.getElementById("channelSupplyEditName").value = row.name || "";
+      document.getElementById("channelSupplyCustomsName").value = row.customsName || "";
       document.getElementById("channelSupplyEditSellPrice").value =
         row.sellPrice == null || row.sellPrice === "" ? "" : row.sellPrice;
       document.getElementById("channelSupplyEditFrontRate").value = row.frontRate ?? "0.000";
@@ -9925,6 +9960,15 @@
           acceptDays: daysRaw === "" ? 0 : Math.max(0, Math.floor(Number(daysRaw) || 0)),
           channelProductNo: channelSkuRaw,
         };
+      }
+      if (usesChannelCustomsName(channelSupplyChannelName)) {
+        const input = document.getElementById("channelSupplyCustomsName");
+        if (!input.value.trim()) {
+          alert("請填寫報關品名");
+          input.focus();
+          return;
+        }
+        payload.customsName = input.value.trim();
       }
       if (channelSupplyFormMode === "create") {
         const meta = findChannelSupplySkuMeta(skuRaw) || {};
@@ -12865,47 +12909,9 @@
       return dottedDate(new Date(date.getFullYear(), date.getMonth() + 1, 0));
     }
 
-    function collectOverseasInvoiceNos() {
-      const used = new Set();
-      salesOrders.forEach((item) => {
-        if (!item) return;
-        if (item.overseasInvoiceNo) used.add(String(item.overseasInvoiceNo));
-        (item.overseasInvoiceNos || []).forEach((no) => {
-          if (no) used.add(String(no));
-        });
-      });
-      return used;
-    }
-
-    function nextOverseasInvoiceIdentity(today) {
-      const now = today || new Date();
-      const prefix = "JY" + String(now.getFullYear()).slice(-2) + pad2(now.getMonth() + 1) + pad2(now.getDate());
-      const used = collectOverseasInvoiceNos();
-      let seq = 1;
-      let no = prefix + String(seq).padStart(2, "0");
-      while (used.has(no)) {
-        seq += 1;
-        no = prefix + String(seq).padStart(2, "0");
-      }
-      return {
-        no,
-        date: dottedDate(now),
-        quotation: quotationToDate(now),
-      };
-    }
-
-    function ensureOverseasInvoiceIdentity(order) {
-      const id = nextOverseasInvoiceIdentity(new Date());
-      if (!Array.isArray(order.overseasInvoiceNos)) order.overseasInvoiceNos = [];
-      if (order.overseasInvoiceNo && !order.overseasInvoiceNos.includes(order.overseasInvoiceNo)) {
-        order.overseasInvoiceNos.push(order.overseasInvoiceNo);
-      }
-      order.overseasInvoiceNos.push(id.no);
-      order.overseasInvoiceNo = id.no;
-      order.overseasInvoiceDate = id.date;
-      order.overseasQuotationDate = id.quotation;
-      persistDemoData();
-      return id;
+    function overseasInvoiceIdentity(no) {
+      const today = new Date();
+      return { no, date: dottedDate(today), quotation: quotationToDate(today) };
     }
 
     function exportEnglishName(name) {
@@ -12971,36 +12977,47 @@
       ));
     }
 
-    /** 報關 Invoice、Packing List：還沒出的數量，且不超過目前庫存。同一 SKU 先補較早到期的那一列。 */
-    function overseasShippableExportLines(order) {
-      const items = (order.items || []).filter((item) => item && (Number(item.qty) || 0) > 0);
-      const shippedMap = shippedQtyByKey(order && order.orderNo);
-      const groups = new Map();
-      items.forEach((item, index) => {
-        const sku = normalizeSku(item.sku).toLowerCase();
-        if (!groups.has(sku)) groups.set(sku, []);
-        groups.get(sku).push({ item, index });
-      });
-      const picked = [];
-      groups.forEach((list) => {
-        list.sort((a, b) => {
-          const da = parseBatchDate(a.item.batch);
-          const db = parseBatchDate(b.item.batch);
-          const ta = da ? da.getTime() : Number.MAX_SAFE_INTEGER;
-          const tb = db ? db.getTime() : Number.MAX_SAFE_INTEGER;
-          if (ta !== tb) return ta - tb;
-          return a.index - b.index;
-        });
-        let stock = virtualStockOf(order.channelName, list[0].item.sku);
-        list.forEach(({ item, index }) => {
-          const remaining = remainingQtyOfItem(order, item, shippedMap);
-          const qty = Math.max(0, Math.min(remaining, Math.max(0, stock)));
-          stock = Math.max(0, stock - qty);
-          if (qty > 0) picked.push({ item, index, qty });
-        });
-      });
-      picked.sort((a, b) => a.index - b.index);
-      return picked.map((row, index) => overseasExportLineOf(order, row.item, row.qty, index + 1));
+    function shipmentHasActuals(ship) {
+      return !!ship.shipped || ["已出貨", "配送中", "配送異常", "已配達", "待驗收", "已驗收"].includes(ship.status)
+        || (ship.items || []).some((item) => item.actualShippedQty != null && item.actualShippedQty !== "");
+    }
+
+    function shipmentActualQuantity(ship, item) {
+      if (item.actualShippedQty != null && item.actualShippedQty !== "") {
+        return Number(item.actualShippedQty) || 0;
+      }
+      if (ship.status === "配送異常") return demoActualShipQty(ship.status, item.qty);
+      return ship.shipped || ship.status === "配送中" ? Number(item.qty) || 0 : demoActualShipQty(ship.status, item.qty);
+    }
+
+    function shipmentSourceItem(order, item) {
+      const matching = (order.items || []).filter((row) => itemKey(row) === itemKey(item));
+      return matching.find((row) => item.lineUid && row.lineUid === item.lineUid)
+        || matching.find((row) => row.batch === item.batch)
+        || matching[0];
+    }
+
+    function overseasShipmentExportLines(order, ship) {
+      const actual = shipmentHasActuals(ship);
+      const lines = [];
+      for (const item of ship.items || []) {
+        const qty = actual ? shipmentActualQuantity(ship, item) : Number(item.qty) || 0;
+        if (qty <= 0) continue;
+        const source = shipmentSourceItem(order, item);
+        const detail = { ...source, ...item };
+        if (source && !hasLinePriceSnapshot(item)) {
+          const price = linePriceParts(order, source);
+          detail.unitTaxed = price.taxed;
+          detail.unitUntaxed = price.untaxed;
+        }
+        const line = overseasExportLineOf(order, detail, qty, lines.length + 1);
+        if (usesChannelCustomsName(order.channelName)) {
+          const supply = channelSupplyRowOf(order.channelName, item.sku);
+          line.nameEn = (supply && supply.customsName) || line.nameEn;
+        }
+        lines.push(line);
+      }
+      return lines;
     }
 
     function overseasExportParties(order) {
@@ -13020,9 +13037,10 @@
       };
     }
 
-    function overseasInvoiceModel(order, kind) {
+    function overseasInvoiceModel(order, kind, shipment) {
       const parties = overseasExportParties(order);
-      const lines = kind === "customs" ? overseasShippableExportLines(order) : overseasExportLines(order);
+      if (shipment) parties.sellerAttn = shipment.attn;
+      const lines = shipment ? shipment.lines : overseasExportLines(order);
       const priced = lines.map((row) => {
         const giftFree = kind !== "customs" && row.gift;
         return {
@@ -13032,12 +13050,14 @@
           noText: row.gift ? "FOC" : String(row.no),
         };
       });
-      const total = documentTaxTotals(priced.map((row) => kind !== "customs" && row.gift ? 0 : row.grossAmount), order).untaxed;
+      const total = kind === "customs"
+        ? roundDetailMoney(priced.reduce((sum, row) => sum + row.showAmount, 0))
+        : documentTaxTotals(priced.map((row) => row.gift ? 0 : row.grossAmount), order).untaxed;
       return { parties, priced, total };
     }
 
-    function buildOverseasInvoicePrintHtml(order, kind, id) {
-      const model = overseasInvoiceModel(order, kind);
+    function buildOverseasInvoicePrintHtml(order, kind, id, shipment) {
+      const model = overseasInvoiceModel(order, kind, shipment);
       const parties = model.parties;
       const priced = model.priced;
       const total = model.total;
@@ -13205,16 +13225,8 @@
       return `INT(${PALLET_LENGTH_CM}/${size.length})*INT(${PALLET_HEIGHT_CM}/${size.height})*INT(${PALLET_WIDTH_CM}/${size.width})`;
     }
 
-    function palletCountOf(carton, perPallet) {
-      const cartons = Number(carton);
-      const each = Number(perPallet);
-      if (!(cartons > 0) || !(each > 0)) return "";
-      return Math.ceil(cartons / each);
-    }
-
-    function buildPackingSheetXml(order) {
+    function buildPackingSheetXml(order, lines) {
       const parties = overseasExportParties(order);
-      const lines = overseasShippableExportLines(order);
       const first = 16;
       const last = lines.length ? first + lines.length - 1 : 15;
       const totalRow = lines.length ? last + 1 : 16;
@@ -13264,14 +13276,11 @@
         put("B", row, S.center, line.sku);
         put("C", row, S.text, line.gift ? "*FOC " + line.nameEn : line.nameEn);
         put("F", row, S.center, line.qty);
-        if (line.carton !== "") put("G", row, S.center, line.carton);
+        if (line.pcs !== "") put("G", row, S.center, line.qty / line.pcs, "F" + row + "/K" + row);
         const size = boxSizeOf(line.sku);
         const perPallet = cartonPerPalletOf(size);
-        const pallets = palletCountOf(line.carton, perPallet);
-        if (perPallet !== "" && pallets !== "") {
-          put("H", row, S.center, perPallet, cartonPerPalletFormula(size));
-          put("I", row, S.center, pallets, "CEILING(G" + row + "/H" + row + ",1)");
-        }
+        if (perPallet !== "") put("H", row, S.center, perPallet, cartonPerPalletFormula(size));
+        if (line.pcs !== "") put("I", row, S.center, Math.ceil(line.qty / line.pcs), "ROUNDUP(G" + row + ",0)");
         put("J", row, S.center, line.bestBefore);
         if (line.pcs !== "") put("K", row, S.center, line.pcs);
         if (line.netKg !== "") put("L", row, S.center, line.netKg);
@@ -13281,8 +13290,8 @@
       put("A", totalRow, S.total, "Total");
       const sumCols = [
         ["F", packingSum(lines, "qty")],
-        ["G", packingSum(lines, "carton")],
-        ["I", lines.reduce((sum, line) => sum + (Number(palletCountOf(line.carton, cartonPerPalletOf(boxSizeOf(line.sku)))) || 0), 0)],
+        ["G", lines.reduce((sum, line) => sum + (line.pcs ? line.qty / line.pcs : 0), 0)],
+        ["I", lines.reduce((sum, line) => sum + (line.pcs ? Math.ceil(line.qty / line.pcs) : 0), 0)],
         ["L", packingSum(lines, "netKg")],
         ["M", packingSum(lines, "grossKg")],
       ];
@@ -13447,8 +13456,8 @@
 </worksheet>`;
     }
 
-    function buildInvoiceSheetXml(order, kind, id) {
-      const model = overseasInvoiceModel(order, kind);
+    function buildInvoiceSheetXml(order, kind, id, shipment) {
+      const model = overseasInvoiceModel(order, kind, shipment);
       const parties = model.parties;
       const priced = model.priced;
       const S = { title: 1, box: 2, head: 3, center: 4, text: 5, info: 7 };
@@ -13570,10 +13579,6 @@
       return zipStored(files);
     }
 
-    function packingListWorkbookBlob(order) {
-      return xlsxWorkbookBlob("Packing List", buildPackingSheetXml(order));
-    }
-
     function downloadBlob(blob, filename) {
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -13584,17 +13589,9 @@
       setTimeout(() => URL.revokeObjectURL(link.href), 30000);
     }
 
-    async function downloadPackingList(order) {
-      downloadBlob(packingListWorkbookBlob(order), "Packing List " + (order.orderNo || "order") + ".xlsx");
-    }
-
-    function downloadOverseasInvoiceExcels(order, id) {
-      [
-        ["vendor", "廠商 Invoice"],
-        ["customs", "報關 Invoice"],
-      ].forEach(([kind, title]) => {
-        downloadBlob(xlsxWorkbookBlob(title, buildInvoiceSheetXml(order, kind, id)), title + " " + (order.orderNo || "order") + ".xlsx");
-      });
+    function invoiceWorkbookBlob(order, kind, id, shipment) {
+      const title = kind === "customs" ? "報關 Invoice" : "廠商 Invoice";
+      return xlsxWorkbookBlob(title, buildInvoiceSheetXml(order, kind, id, shipment));
     }
 
     function writePrintWindow(win, html) {
@@ -13606,13 +13603,13 @@
 
     function markPoExported(order) {
       rememberGiftExport(order);
-      if (isOverseasPo(order)) order.overseasExportedAt = Date.now();
+      if (isOverseasPo(order) && !order.overseasExportedAt && !hasStampFile(order)) order.overseasExportedAt = Date.now();
       let statusChanged = false;
       if (needsStampPo(order) && !hasStampFile(order) && order.status === "未開立出貨單") {
         order.status = "待回壓文件";
         statusChanged = true;
       }
-      if (isOverseasPo(order) && overseasNeedsFirstShipDocs(order) && order.status === "未開立出貨單") {
+      if (isOverseasPo(order) && !overseasFirstShipStampReady(order) && order.status === "未開立出貨單") {
         order.status = "待回壓文件";
         statusChanged = true;
       }
@@ -13630,20 +13627,16 @@
         if (document.getElementById("page-order-edit").classList.contains("active")) {
           order.items = collectEditGoods();
         }
-        const wins = [window.open("", "_blank"), window.open("", "_blank"), window.open("", "_blank")];
+        const wins = [window.open("", "_blank"), window.open("", "_blank")];
         if (wins.some((win) => !win)) {
           wins.forEach((win) => { if (win) win.close(); });
           alert("瀏覽器已封鎖彈出視窗，請允許後再匯出");
           return;
         }
-        const id = ensureOverseasInvoiceIdentity(order);
+        const id = overseasInvoiceIdentity(order.orderNo);
         writePrintWindow(wins[0], buildPartyPoPrintHtml(order));
         writePrintWindow(wins[1], buildOverseasInvoicePrintHtml(order, "vendor", id));
-        writePrintWindow(wins[2], buildOverseasInvoicePrintHtml(order, "customs", id));
-        downloadOverseasInvoiceExcels(order, id);
-        downloadPackingList(order).catch((err) => {
-          alert(err && err.message ? err.message : "Packing List 匯出失敗");
-        });
+        downloadBlob(invoiceWorkbookBlob(order, "vendor", id), "廠商 Invoice " + id.no + ".xlsx");
         markPoExported(order);
         return;
       }
@@ -14701,6 +14694,7 @@
     }
 
     let shipFormMode = "create";
+    let viewedShipment = null;
 
     function addShipCatalogItem() {
       if (shipFormMode === "view") return;
@@ -18153,6 +18147,10 @@
 
     function setShipFormReadonly(readonly) {
       shipFormMode = readonly ? "view" : "create";
+      if (!readonly) {
+        viewedShipment = null;
+        syncShipmentExportActions();
+      }
       const page = document.getElementById("page-ship-create");
       page.classList.toggle("is-readonly", readonly);
       page.querySelectorAll("input, select, textarea").forEach((el) => {
@@ -18931,7 +18929,19 @@
         ...channelSnap,
         rebatePercent: channelRebatePercent(order.channelName),
         fees: [],
-        items: poShipGoods.map((item) => poItemToShipLine(item)),
+        items: poShipGoods.map((item) => {
+          const line = poItemToShipLine(item);
+          if (!isOverseasPo(order)) return line;
+          const price = linePriceParts(order, item);
+          return {
+            ...line,
+            lineUid: item.lineUid,
+            unitTaxed: price.taxed,
+            unitUntaxed: price.untaxed,
+            netWeightG: item.netWeightG,
+            grossWeightG: item.grossWeightG,
+          };
+        }),
         online: false,
         platform: "",
         platformOrderNo: "",
@@ -18948,7 +18958,8 @@
       renderOnlineShippingTable();
       renderSalesTable(getSalesFiltered());
       history.replaceState({}, "", location.pathname);
-      showPage("shipping");
+      if (isOverseasPo(order)) fillShipView(rows.find((ship) => ship.orderId === ids.orderId));
+      else showPage("shipping");
       alert("已建立出貨單 " + ids.orderId);
     }
 
@@ -19280,6 +19291,122 @@
       commitShipAcceptance("");
     }
 
+    function shipmentExportOrder(ship) {
+      const order = shipPoOf(ship);
+      return ship && !ship.online && isOverseasPo(order) ? order : null;
+    }
+
+    function canExportShipmentDocuments(ship) {
+      if (ship.status === "訂單取消") return false;
+      if (!shipmentHasActuals(ship)) return true;
+      return (ship.items || []).some((item) => shipmentActualQuantity(ship, item) !== (Number(item.qty) || 0));
+    }
+
+    function shipmentDocumentsFingerprint(order, ship, lines) {
+      return JSON.stringify({
+        no: ship.orderId,
+        parties: overseasExportParties(order),
+        lines: lines.map((line) => ({ ...line, boxSize: boxSizeOf(line.sku) })),
+      });
+    }
+
+    function canSubmitOverseasShipment(ship) {
+      return ship.status === "待拋單" && !ship.submittedAt && !shipmentHasActuals(ship);
+    }
+
+    function shipmentDocumentsReady(order, ship) {
+      const lines = overseasShipmentExportLines(order, ship);
+      return lines.length > 0 && ship.exportedDocuments === shipmentDocumentsFingerprint(order, ship, lines);
+    }
+
+    function syncShipmentExportActions() {
+      const ship = viewedShipment;
+      const order = shipmentExportOrder(ship);
+      const exportButton = document.getElementById("shipViewExport");
+      const submitButton = document.getElementById("shipViewSubmit");
+      const canExport = !!order && canExportShipmentDocuments(ship);
+      exportButton.classList.toggle("hidden", !order);
+      exportButton.disabled = !canExport;
+      exportButton.title = order && !canExport && shipmentHasActuals(ship) ? "實出與預計出貨數量相同" : "";
+      const canSubmit = !!order && canSubmitOverseasShipment(ship);
+      submitButton.classList.toggle("hidden", !canSubmit);
+      submitButton.disabled = !canSubmit || !shipmentDocumentsReady(order, ship);
+      submitButton.title = canSubmit && submitButton.disabled ? "請先匯出最新的報關 INVOICE 和 PACKING LIST" : "";
+    }
+
+    function closeShipmentExport() {
+      document.getElementById("shipExportModal").classList.add("hidden");
+      document.getElementById("shipViewExport").focus();
+    }
+
+    document.getElementById("shipViewExport").addEventListener("click", () => {
+      const ship = viewedShipment;
+      if (!shipmentExportOrder(ship) || !canExportShipmentDocuments(ship)) return;
+      const input = document.getElementById("shipExportAttn");
+      input.value = ship.applicant || "";
+      document.getElementById("shipExportModal").classList.remove("hidden");
+      input.focus();
+    });
+    document.getElementById("shipExportClose").addEventListener("click", closeShipmentExport);
+    document.getElementById("shipExportCancel").addEventListener("click", closeShipmentExport);
+    document.getElementById("shipExportModal").addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeShipmentExport();
+    });
+    document.getElementById("shipExportForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const ship = viewedShipment;
+      const order = shipmentExportOrder(ship);
+      if (!order || !canExportShipmentDocuments(ship)) return;
+      const attn = document.getElementById("shipExportAttn").value.trim();
+      if (!attn) {
+        alert("請輸入建檔人");
+        document.getElementById("shipExportAttn").focus();
+        return;
+      }
+      const lines = overseasShipmentExportLines(order, ship);
+      if (!lines.length && !shipmentHasActuals(ship)) {
+        alert("請至少保留一項出貨商品");
+        return;
+      }
+      const id = overseasInvoiceIdentity(ship.orderId);
+      const shipment = { lines, attn };
+      try {
+        const invoice = invoiceWorkbookBlob(order, "customs", id, shipment);
+        const packingList = xlsxWorkbookBlob("Packing List", buildPackingSheetXml(order, lines));
+        const preview = window.open("", "_blank");
+        if (preview) writePrintWindow(preview, buildOverseasInvoicePrintHtml(order, "customs", id, shipment));
+        downloadBlob(invoice, "報關 Invoice " + id.no + ".xlsx");
+        downloadBlob(packingList, "Packing List " + id.no + ".xlsx");
+        const previous = ship.exportedDocuments;
+        ship.exportedDocuments = shipmentDocumentsFingerprint(order, ship, lines);
+        if (!persistDemoData()) {
+          ship.exportedDocuments = previous;
+          alert("無法儲存匯出紀錄");
+          return;
+        }
+        closeShipmentExport();
+        syncShipmentExportActions();
+      } catch (error) {
+        console.error(error);
+        alert("境外文件匯出失敗");
+      }
+    });
+    document.getElementById("shipViewSubmit").addEventListener("click", () => {
+      const ship = viewedShipment;
+      const order = shipmentExportOrder(ship);
+      if (!order || !canSubmitOverseasShipment(ship) || !shipmentDocumentsReady(order, ship)) return;
+      const previous = ship.submittedAt;
+      ship.submittedAt = nowStamp();
+      if (!persistDemoData()) {
+        ship.submittedAt = previous;
+        alert("送出出貨失敗");
+        return;
+      }
+      syncShipmentExportActions();
+      renderShippingTable(getShippingFiltered());
+      alert("已送出出貨");
+    });
+
     function fillShipView(ship) {
       const po = salesOrders.find((item) => item.orderNo === ship.salesOrderNo) || null;
       setShipCreateKind(ship.online ? "online" : "normal");
@@ -19328,14 +19455,14 @@
           useFifo: item.useFifo !== false,
         });
         line.barcode = item.barcode || demoBarcodeOf(line);
-        line.actualShippedQty = item.actualShippedQty != null
-          ? Number(item.actualShippedQty) || 0
-          : demoActualShipQty(ship.status, line.qty);
+        line.actualShippedQty = shipmentActualQuantity(ship, item);
         line.acceptQty = channelAcceptFlow(channel) !== "轉單" && Object.prototype.hasOwnProperty.call(acceptByKey, key) ? acceptByKey[key] : null;
         return line;
       });
       poShipShortage = [];
       setShipFormReadonly(true);
+      viewedShipment = ship;
+      syncShipmentExportActions();
       syncPoShipStockWarn();
       document.querySelectorAll("#poShipCreatePanel .po-ship-acc").forEach((el) => el.classList.remove("collapsed"));
       showPage("ship-create");
