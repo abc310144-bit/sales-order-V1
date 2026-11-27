@@ -1725,6 +1725,14 @@
     .modal-card.fee-dialog-card { width: min(560px, 100%); }
     .ship-page-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
     .ship-page-heading .form-title { margin: 0; }
+    .ship-merge-dialog { width: min(780px, calc(100vw - 32px)); }
+    .ship-merge-options, .ship-merge-filter, .ship-merge-pager { display: flex; align-items: center; gap: 12px; margin: 12px 0; }
+    .ship-merge-filter input { flex: 1; min-width: 0; }
+    .ship-merge-pager { justify-content: flex-end; }
+    .ship-merge-selected { margin: 12px 0 0; overflow-wrap: anywhere; }
+    .ship-source-row > td { background: #edf5ff; }
+    .ship-source-summary { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .ship-source-summary .btn { min-height: 28px; padding: 3px 10px; }
     #page-ship-create.is-readonly #poShipCreateConfirm,
     #page-ship-create.is-readonly .po-ship-fee-table td.ops,
     #page-ship-create.is-readonly .ship-items-table thead th.ops,
@@ -2531,6 +2539,7 @@
     }
     #page-ship-create:not(.is-online) .online-ship-only { display: none !important; }
     #page-ship-create.is-online .po-ship-acc.online-ship-only { display: block; }
+    #page-ship-create.is-online.is-nontransfer [data-acc="recipient"] { display: none; }
     #page-ship-create.is-online .form-row.online-ship-only { display: grid; }
     #page-ship-create.is-online .online-ship-hide { display: none !important; }
     #page-ship-create.is-online .online-ship-only input[readonly],
@@ -5139,6 +5148,46 @@
     </div>
   </div>
 
+  <div class="modal-mask hidden" id="shipMergeModal">
+    <form class="modal-card ship-merge-dialog" id="shipMergeForm" role="dialog" aria-modal="true" aria-labelledby="shipMergeTitle">
+      <div class="modal-head">
+        <h2 id="shipMergeTitle">是否併單出貨</h2>
+        <button type="button" class="modal-close" id="shipMergeClose" aria-label="關閉">×</button>
+      </div>
+      <div class="modal-body">
+        <div>發起訂單 <strong id="shipMergeOrigin"></strong></div>
+        <div class="ship-merge-options">
+          <label class="radio-line"><input type="radio" name="shipMergeChoice" value="no" checked /> 否</label>
+          <label class="radio-line"><input type="radio" name="shipMergeChoice" value="yes" id="shipMergeYes" /> 是</label>
+          <span id="shipMergeEmpty" class="hidden">沒有其他可併單訂單</span>
+        </div>
+        <div class="hidden" id="shipMergeCandidates">
+          <div class="ship-merge-filter">
+            <input type="search" id="shipMergeKeyword" aria-label="客戶訂單編號" placeholder="客戶訂單編號（模糊搜尋）" />
+            <button type="button" class="btn" id="shipMergeFilter">篩選</button>
+            <button type="button" class="btn" id="shipMergeClear">清除</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">勾選</th><th scope="col">客戶訂單編號</th><th scope="col">客戶訂單單號</th><th scope="col">狀態</th></tr></thead>
+              <tbody id="shipMergeBody"></tbody>
+            </table>
+          </div>
+          <div class="ship-merge-pager">
+            <span id="shipMergePageText"></span>
+            <button type="button" class="btn" id="shipMergePrev">上一頁</button>
+            <button type="button" class="btn" id="shipMergeNext">下一頁</button>
+          </div>
+          <div class="ship-merge-selected">已選擇 <span id="shipMergeSelected">—</span></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="shipMergeCancel">取消</button>
+        <button type="submit" class="btn btn-primary" id="shipMergeConfirm">確定</button>
+      </div>
+    </form>
+  </div>
+
   <div class="modal-mask hidden" id="shipExportModal">
     <form class="modal-card void-card" aria-labelledby="shipExportTitle" role="dialog" aria-modal="true" id="shipExportForm">
       <div class="modal-head">
@@ -5645,7 +5694,7 @@
       return rows.filter((r) => {
         if (r.online) return false;
         if (orderId && !String(r.orderId || "").toLowerCase().includes(orderId)) return false;
-        if (po && !String(r.salesOrderNo || "").toLowerCase().includes(po)) return false;
+        if (po && !(r.sourceOrderNos || [r.salesOrderNo]).some((no) => String(no || "").toLowerCase().includes(po))) return false;
         if (channel && r.channel !== channel) return false;
         if (sku && !shipHasSku(r, sku)) return false;
         if (applicant && r.applicant !== applicant) return false;
@@ -5689,23 +5738,37 @@
     function shipCancelLink(ship) {
       const thrown = ship.status === "訂單處理中(已拋單)";
       const cancelled = ship.status === "訂單取消";
-      const off = thrown || cancelled;
-      const title = thrown ? "已拋單/待處理不可取消出貨單" : (cancelled ? "已取消出貨單" : "");
+      const shipped = !cancelled && shipmentHasActuals(ship);
+      const off = thrown || cancelled || shipped;
+      const title = shipped ? "已有實出結果，不可取消出貨單"
+        : (thrown ? "已拋單/待處理不可取消出貨單" : (cancelled ? "已取消出貨單" : ""));
       return `<a href="#" data-ship-cancel="${escapeHtml(ship.orderId)}" class="${off ? "is-disabled" : ""}"${title ? ` title="${escapeHtml(title)}"` : ""}${off ? " aria-disabled=\"true\"" : ""}>取消出貨單</a>`;
     }
 
     function cancelShipOrder(orderId) {
       const ship = rows.find((row) => row.orderId === orderId);
       if (!ship || ship.status === "訂單取消") return;
+      if (shipmentHasActuals(ship)) {
+        alert("已有實出結果，不可取消出貨單");
+        return;
+      }
       if (ship.status === "訂單處理中(已拋單)") {
         alert("已拋單/待處理不可取消出貨單");
         return;
       }
       if (!confirm(`確定取消出貨單 ${ship.orderId}？`)) return;
+      const previousStatus = ship.status;
       ship.status = "訂單取消";
-      const order = salesOrders.find((item) => item.orderNo === ship.salesOrderNo);
-      if (order) syncPoStatusFromShips(order);
-      persistDemoData();
+      const sourceNos = ship.sourceOrderNos || [ship.salesOrderNo];
+      const sources = salesOrders.filter((item) => sourceNos.includes(item.orderNo));
+      const previous = sources.map((order) => order.status);
+      sources.forEach(syncPoStatusFromShips);
+      if (!persistDemoData()) {
+        ship.status = previousStatus;
+        sources.forEach((order, index) => { order.status = previous[index]; });
+        alert("無法取消出貨單，請再試一次");
+        return;
+      }
       renderShippingTable();
       if (typeof renderOnlineShippingTable === "function") renderOnlineShippingTable();
       if (typeof renderSalesTable === "function" && document.getElementById("page-sales")?.classList.contains("active")) {
@@ -5729,7 +5792,7 @@
         <tr data-order-id="${r.orderId}">
           <td>${r.id}</td>
           <td>${r.orderId}</td>
-          <td>${r.salesOrderNo ? `<a class="link" data-go="po-view" data-no="${r.salesOrderNo}">${r.salesOrderNo}</a>` : ""}</td>
+          <td>${shipmentPoLinks(r)}</td>
           <td>${r.channel}</td>
           <td>${statusTag(r.status)}</td>
           <td>${r.applicant}</td>
@@ -5821,7 +5884,7 @@
         if (oid && !String(r.orderId || "").toLowerCase().includes(oid)) return false;
         if (!onlinePlatformMatchesFilter(r.platform || r.channel || "", platform)) return false;
         if (sku && !onlineShipHasExactSku(r, sku)) return false;
-        if (so && !String(r.salesOrderNo || "").toLowerCase().includes(so)) return false;
+        if (so && !(r.sourceOrderNos || [r.salesOrderNo]).some((no) => String(no || "").toLowerCase().includes(so))) return false;
         if (status && String(r.status || "") !== status) return false;
         const shipOut = toDateInput(r.shipOutDate);
         if (shipOutFrom && (!shipOut || shipOut < shipOutFrom)) return false;
@@ -5866,7 +5929,7 @@
         return `
         <tr>
           <td>${escapeHtml(r.orderId)}</td>
-          <td>${r.salesOrderNo ? `<a class="link" data-go="po-view" data-no="${escapeHtml(r.salesOrderNo)}">${escapeHtml(r.salesOrderNo)}</a>` : ""}</td>
+          <td>${shipmentPoLinks(r)}</td>
           <td>${escapeHtml(r.inWarehouse || r.warehouse || "—")}</td>
           <td>${escapeHtml(r.platform || "—")}</td>
           <td>${escapeHtml(onlineDeliveryNo(r))}</td>
@@ -5875,7 +5938,9 @@
           <td>${escapeHtml(maskRecvName(rec))}</td>
           <td>${qty}</td>
           <td>${escapeHtml(toDateInput(r.shipOutDate) || "—")}</td>
-          <td>${["已出貨", "已配達", "待驗收", "已驗收"].includes(r.status) ? qty : 0}</td>
+          <td>${r.sourceOrderNos?.length > 1 && shipmentHasActuals(r)
+            ? (r.items || []).reduce((sum, item) => sum + shipmentActualQuantity(r, item), 0)
+            : (["已出貨", "已配達", "待驗收", "已驗收"].includes(r.status) ? qty : 0)}</td>
           <td>${escapeHtml(r.shipped || "")}</td>
           <td>${escapeHtml(r.applicant || "—")}</td>
           <td>${escapeHtml(r.created || "—")}</td>
@@ -5918,9 +5983,17 @@
     });
 
     let shipCreateKind = "normal";
+    const SHIPMENT_LEASE_PREFIX = "urmart-shipment-draft:";
+    const SHIPMENT_LEASE_MS = 15 * 60 * 1000;
+    const SHIPMENT_PICKER_PAGE_SIZE = 8;
+    let shipmentPicker = null;
+    let shipmentDraft = null;
+    const collapsedShipmentOrders = new Set();
 
     function showPage(page) {
       if (page !== "order-edit" && !confirmLeavePoRevision()) return;
+      if (page !== "sales" && page !== "order-edit" && shipmentPicker) closeShipmentPicker();
+      if (page !== "ship-create" && shipmentDraft) abandonShipmentDraft();
       let menuPage = page;
       if (page === "order-edit") menuPage = "sales";
       else if (page === "ship-create") menuPage = shipCreateKind === "online" ? "online-shipping" : "shipping";
@@ -6339,7 +6412,16 @@
     }
 
     function shipsOfPo(orderNo) {
-      return rows.filter((row) => row.salesOrderNo === orderNo);
+      return rows.filter((row) => row.salesOrderNo === orderNo || row.sourceOrderNos?.includes(orderNo));
+    }
+
+    function shipmentItemsForOrder(ship, orderNo, items = ship.items || []) {
+      return ship.sourceOrderNos?.length > 1 ? items.filter((item) => item.sourceOrderNo === orderNo) : items;
+    }
+
+    function shipmentPoLinks(ship) {
+      const sources = ship.sourceOrderNos || (ship.salesOrderNo ? [ship.salesOrderNo] : []);
+      return sources.map((no) => `<a class="link" data-go="po-view" data-no="${escapeHtml(no)}">${escapeHtml(no)}</a>`).join("<br />");
     }
 
     function validShipsOfPo(orderNo) {
@@ -6559,17 +6641,21 @@
       return `<span class="void-note-tip" data-tip="${escapeHtml(full)}">${escapeHtml(full.slice(0, 15))}...</span>`;
     }
 
-    /** 出貨量對帳：PO 列有效期_批號 → 只計同批；無批號 → 同 SKU 各批加總（結算仍用 itemKey） */
-    function shippedQtyByKey(orderNo) {
+    /** 各訂單可再開單量扣同一筆實出或尚未實出的有效出貨占用。 */
+    function shippedQtyByKey(orderNo, actualOnly = false) {
       const map = {};
       validShipsOfPo(orderNo).forEach((ship) => {
-        (ship.items || []).forEach((item) => {
+        const hasActual = shipmentHasActuals(ship);
+        if (actualOnly && !hasActual) return;
+        const allocations = hasActual ? shipmentActualAllocations(ship) : null;
+        shipmentItemsForOrder(ship, orderNo).forEach((item) => {
           const base = itemKey(item);
           if (!base) return;
-          const qty = Number(item.qty) || 0;
-          const batch = String((item && item.batch) || "").trim();
+          const qty = hasActual ? shipmentActualQuantity(ship, item, allocations) : Number(item.qty) || 0;
+          const batch = String(item.sourceBatch ?? item.batch ?? "").trim();
+          if (item.lineUid) map["uid:" + item.lineUid] = (map["uid:" + item.lineUid] || 0) + qty;
           if (batch || item.lineUid) {
-            const lineKey = itemLineKey(item);
+            const lineKey = itemLineKey({ ...item, batch });
             map[lineKey] = (map[lineKey] || 0) + qty;
           }
           map[base] = (map[base] || 0) + qty;
@@ -6580,7 +6666,7 @@
 
     function shippedQtyOfPoLine(order, item, shippedMap) {
       const map = shippedMap || shippedQtyByKey(order && order.orderNo);
-      if (item && item.lineUid) return map[itemLineKey(item)] || 0;
+      if (item && item.lineUid) return map["uid:" + item.lineUid] ?? map[itemLineKey(item)] ?? 0;
       const batch = String((item && item.batch) || "").trim();
       if (batch) return map[itemLineKey(item)] || 0;
       return map[itemKey(item)] || 0;
@@ -6613,6 +6699,12 @@
       if (isSupervisorClosed(order)) return "已開立出貨單";
       const valid = validShipsOfPo(order.orderNo);
       if (!valid.length) return "未開立出貨單";
+      if (!isOnlineTransferPo(order) && valid.every((ship) =>
+        shipmentHasActuals(ship) && shipmentItemsForOrder(ship, order.orderNo).length > 0
+      )) {
+        const actual = shippedQtyByKey(order.orderNo, true);
+        if (!Object.values(actual).some((qty) => qty > 0)) return "未開立出貨單";
+      }
       if (poQtyFullyShipped(order)) return "已開立出貨單";
       return "部分出貨";
     }
@@ -6649,6 +6741,10 @@
         actions.push(`<a data-action="edit" data-no="${item.orderNo}" class="${editOn ? "" : "is-disabled"}"${editOn ? "" : " aria-disabled=\"true\""}>編輯</a>`);
       }
       actions.push(`<a data-action="view" data-no="${item.orderNo}">檢視</a>`);
+      if (canShipFromPo(item)) {
+        const enabled = canStartCustomerShipment(item);
+        actions.push(`<a data-action="ship" data-no="${escapeHtml(item.orderNo)}"${enabled ? "" : ' class="is-disabled" aria-disabled="true"'}>新增出貨單</a>`);
+      }
       actions.push(`<a data-action="void" data-no="${item.orderNo}" class="${voidOn ? "" : "is-disabled"}"${voidOn ? "" : " aria-disabled=\"true\""}>作廢</a>`);
       return actions.join("");
     }
@@ -7650,6 +7746,10 @@
       if (!action) return;
       const order = salesOrders.find((item) => item.orderNo === e.target.dataset.no);
       if (!order) return;
+      if (action === "ship") {
+        beginCustomerShipment(order);
+        return;
+      }
       if (action === "void") {
         openVoidModal(order);
         return;
@@ -8882,6 +8982,8 @@
           channelSupplyByChannel = data.channelSupplyByChannel;
           normalizeOverseasSupplyQuotes();
         }
+        refreshAllPoStatusesFromShips();
+        renderShipmentPicker();
         renderSalesTable(getSalesFiltered());
         renderShippingTable();
         refreshAcceptancePages();
@@ -12461,7 +12563,8 @@
       const parts = [];
       const poRemark = userFacingRemark(item && item.remark);
       validShipsOfPo((order && order.orderNo) || "").forEach((ship) => {
-        (ship.items || []).forEach((line) => {
+        const goods = ship.sourceOrderNos?.length > 1 ? shipmentItemsForOrder(ship, order?.orderNo) : (ship.items || []);
+        goods.forEach((line) => {
           if (itemKey(line) !== itemKey(item) && String(line.sku || "") !== String((item && item.sku) || "")) return;
           const note = userFacingRemark(line.remark);
           if (!note || note === poRemark || parts.includes(note)) return;
@@ -12982,12 +13085,42 @@
         || (ship.items || []).some((item) => item.actualShippedQty != null && item.actualShippedQty !== "");
     }
 
-    function shipmentActualQuantity(ship, item) {
+    function shipmentActualQuantity(ship, item, allocated) {
+      if (allocated?.has(item)) return allocated.get(item);
       if (item.actualShippedQty != null && item.actualShippedQty !== "") {
         return Number(item.actualShippedQty) || 0;
       }
       if (ship.status === "配送異常") return demoActualShipQty(ship.status, item.qty);
       return ship.shipped || ship.status === "配送中" ? Number(item.qty) || 0 : demoActualShipQty(ship.status, item.qty);
+    }
+
+    function shipmentActualAllocations(ship) {
+      if (!(ship.sourceOrderNos?.length > 1) || !shipmentHasActuals(ship)) return null;
+      const orderDates = new Map(salesOrders.map((order) => [order.orderNo, order.createdAt || ""]));
+      const groups = new Map();
+      for (const item of ship.items || []) {
+        const key = JSON.stringify([normalizeSku(item.sku).toLowerCase(), String(item.batch || "").trim()]);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(item);
+      }
+      const allocated = new Map();
+      for (const items of groups.values()) {
+        const planned = items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+        const actual = items.reduce((sum, item) => sum + Math.max(0, shipmentActualQuantity(ship, item)), 0);
+        let shortage = planned - actual;
+        if (shortage <= 0) continue;
+        const newestFirst = [...items].sort((a, b) =>
+          String(orderDates.get(b.sourceOrderNo) || "").localeCompare(String(orderDates.get(a.sourceOrderNo) || ""))
+          || String(b.sourceOrderNo).localeCompare(String(a.sourceOrderNo))
+        );
+        for (const item of newestFirst) {
+          const qty = Number(item.qty) || 0;
+          const deduct = Math.min(qty, shortage);
+          allocated.set(item, qty - deduct);
+          shortage -= deduct;
+        }
+      }
+      return allocated;
     }
 
     function shipmentSourceItem(order, item) {
@@ -12999,18 +13132,20 @@
 
     function overseasShipmentExportLines(order, ship) {
       const actual = shipmentHasActuals(ship);
+      const allocated = actual ? shipmentActualAllocations(ship) : null;
       const lines = [];
       for (const item of ship.items || []) {
-        const qty = actual ? shipmentActualQuantity(ship, item) : Number(item.qty) || 0;
+        const qty = actual ? shipmentActualQuantity(ship, item, allocated) : Number(item.qty) || 0;
         if (qty <= 0) continue;
-        const source = shipmentSourceItem(order, item);
+        const sourceOrder = (item.sourceOrderNo && salesOrders.find((row) => row.orderNo === item.sourceOrderNo)) || order;
+        const source = shipmentSourceItem(sourceOrder, item);
         const detail = { ...source, ...item };
         if (source && !hasLinePriceSnapshot(item)) {
-          const price = linePriceParts(order, source);
+          const price = linePriceParts(sourceOrder, source);
           detail.unitTaxed = price.taxed;
           detail.unitUntaxed = price.untaxed;
         }
-        const line = overseasExportLineOf(order, detail, qty, lines.length + 1);
+        const line = overseasExportLineOf(sourceOrder, detail, qty, lines.length + 1);
         if (usesChannelCustomsName(order.channelName)) {
           const supply = channelSupplyRowOf(order.channelName, item.sku);
           line.nameEn = (supply && supply.customsName) || line.nameEn;
@@ -14256,13 +14391,14 @@
     function fillSeedDeliveredToOrdered(order) {
       if (!order || order.status !== "已開立出貨單" || isSupervisorClosed(order)) return;
       if (isOnlineTransferPo(order)) return;
-      const delivered = validShipsOfPo(order.orderNo).filter((ship) => ["已配達", "待驗收", "已驗收"].includes(ship.status) && Array.isArray(ship.items));
+      const delivered = validShipsOfPo(order.orderNo).filter((ship) => !ship.sourceOrderNos?.length
+        && ["已配達", "待驗收", "已驗收"].includes(ship.status) && Array.isArray(ship.items));
       if (!delivered.length) return;
       const last = delivered[delivered.length - 1];
       const othersMap = {};
       validShipsOfPo(order.orderNo).forEach((ship) => {
         if (ship === last) return;
-        (ship.items || []).forEach((item) => {
+        shipmentItemsForOrder(ship, order.orderNo).forEach((item) => {
           const key = itemKey(item);
           if (!key) return;
           othersMap[key] = (othersMap[key] || 0) + (Number(item.qty) || 0);
@@ -15719,7 +15855,7 @@
           ? `<input type="number" min="0.01" step="0.01" data-field="lineUntaxed" value="${escapeHtml(d.other > 0 ? d.other : "")}" />`
           : `<span data-sync="otherAmt">${goodsPriceCellText(d.other)}</span>`}</td>`;
       const orderNo = (opts && opts.orderNo) || currentEditOrderNo;
-      const shippedMap = showShipped && orderNo && orderNo !== "__new__" ? shippedQtyByKey(orderNo) : {};
+      const shippedMap = showShipped && orderNo && orderNo !== "__new__" ? shippedQtyByKey(orderNo, true) : {};
       const shippedQty = shippedQtyOfPoLine({ orderNo }, item, shippedMap);
       const sellable = !normalizeSku(item && item.sku)
         ? "-"
@@ -15815,7 +15951,7 @@
               <input type="checkbox" data-field="useFifo"${useFifo ? " checked" : ""} /> 先進先出
             </label>`;
       return `
-        <tr data-id="${escapeHtml(row.id)}"${locked ? ' data-batch-locked="1"' : ""}>
+        <tr data-id="${escapeHtml(row.id)}"${row.sourceOrderNo ? ` data-source-order="${escapeHtml(row.sourceOrderNo)}"` : ""}${locked ? ' data-batch-locked="1"' : ""}>
           <td class="col-id">${escapeHtml(row.id)}</td>
           <td class="col-code">${escapeHtml(row.productCode)}</td>
           <td class="col-sku">${escapeHtml(row.sku)}</td>
@@ -17243,7 +17379,7 @@
 
     function renderRelatedShips(order) {
       const body = document.getElementById("relatedShipBody");
-      const list = !order ? [] : rows.filter((r) => r.salesOrderNo === order.orderNo)
+      const list = !order ? [] : shipsOfPo(order.orderNo)
         .slice()
         .sort((a, b) => String(b.created).localeCompare(String(a.created)) || Number(b.id) - Number(a.id));
       if (!list.length) {
@@ -17466,6 +17602,7 @@
       }
       syncPoGoodsToolbar();
       syncEditFooter(order, orderFormMode);
+      if (orderFormMode === "view") syncCustomerShipmentEntry(order);
       syncPoFeesTab(order);
       syncPoGoodsTab(order);
       syncMarkUploadUi(order);
@@ -17775,12 +17912,7 @@
     document.getElementById("editCopyPo").addEventListener("click", openCopyPoModal);
     document.getElementById("editAddShip").addEventListener("click", () => {
       const order = getWorkspaceOrder();
-      if (!order || orderFormMode !== "view" || !canCreateShipFromPo(order)) return;
-      if (isOnlineTransferPo(order)) {
-        createAllOnlineShipsFromPo(order, { focusCreated: true, useChecked: true });
-        return;
-      }
-      openShipCreateFromPo(order);
+      if (order && orderFormMode === "view") beginCustomerShipment(order);
     });
     document.getElementById("copyPoClose").addEventListener("click", closeCopyPoModal);
     document.getElementById("copyPoCancel").addEventListener("click", closeCopyPoModal);
@@ -17789,7 +17921,20 @@
       if (e.target.id === "copyPoModal") closeCopyPoModal();
     });
     document.getElementById("poShipCreatePanel").addEventListener("click", (e) => {
+      const sourceToggle = e.target.closest("[data-ship-source-toggle]");
+      if (sourceToggle) {
+        const no = sourceToggle.dataset.shipSourceToggle;
+        if (collapsedShipmentOrders.has(no)) collapsedShipmentOrders.delete(no);
+        else collapsedShipmentOrders.add(no);
+        renderPoShipGoodsTable();
+        return;
+      }
       if (shipFormMode === "view") return;
+      const sourceDelete = e.target.closest("[data-ship-source-delete]");
+      if (sourceDelete) {
+        removeShipmentSource(sourceDelete.dataset.shipSourceDelete);
+        return;
+      }
       if (e.target.closest("#poShipStockWarn")) {
         e.preventDefault();
         openPoShipStockModal();
@@ -17812,6 +17957,10 @@
         const tr = delItem.closest("tr");
         if (!tr) return;
         poShipGoods = poShipGoods.filter((row) => row.id !== tr.dataset.id);
+        if (tr.dataset.sourceOrder && !poShipGoods.some((row) => row.sourceOrderNo === tr.dataset.sourceOrder)) {
+          removeShipmentSource(tr.dataset.sourceOrder);
+          return;
+        }
         renderPoShipGoodsTable();
         renderPoShipStockModal();
       }
@@ -17824,7 +17973,7 @@
       history.replaceState({}, "", location.pathname);
       showPage(shipCreateKind === "online" ? "online-shipping" : "shipping");
     });
-    document.getElementById("poShipCreateConfirm").addEventListener("click", confirmPoShipCreate);
+    document.getElementById("poShipCreateConfirm").addEventListener("click", () => withShipmentLeaseUpdate(confirmPoShipCreate));
     document.getElementById("poShipChannelType").addEventListener("change", onPoShipChannelTypeChange);
     document.getElementById("poShipChannelArea").addEventListener("change", onPoShipChannelAreaChange);
     document.getElementById("poShipChannelName").addEventListener("change", refreshPoShipChannelAutofill);
@@ -18185,6 +18334,7 @@
       shipCreateKind = kind === "online" ? "online" : "normal";
       const page = document.getElementById("page-ship-create");
       if (page) page.classList.toggle("is-online", shipCreateKind === "online");
+      page?.classList.remove("is-nontransfer");
       const title = document.getElementById("shipPageTitle");
       if (title && shipFormMode !== "view") {
         title.textContent = shipCreateKind === "online" ? "新增出貨單" : "建立出貨訂單";
@@ -18246,7 +18396,259 @@
       document.getElementById("shipPoNo").focus();
     }
 
-    function openShipCreateFromPo(order) {
+    function isOnlineShipmentPo(order) {
+      return isOnlineTransferPo(order)
+        || (!!order && order.channelType === "台灣線上通路" && channelAcceptFlow(order.channelName) !== "轉單");
+    }
+
+    function canMergeCustomerShipment(order) {
+      return !isOnlineTransferPo(order)
+        && (order.channelType !== "台灣線上通路" || channelAcceptFlow(order.channelName) !== "轉單");
+    }
+
+    function shipmentLease(orderNo) {
+      try {
+        const lease = JSON.parse(localStorage.getItem(SHIPMENT_LEASE_PREFIX + orderNo) || "null");
+        return lease && lease.expiresAt > Date.now() ? lease : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function canStartCustomerShipment(order, owner) {
+      if (!canCreateShipFromPo(order)) return false;
+      const lease = shipmentLease(order.orderNo);
+      if (lease && lease.owner !== owner) return false;
+      if (isOnlineTransferPo(order)) return true;
+      const occupied = shippedQtyByKey(order.orderNo);
+      return (order.items || []).some((item) => remainingQtyOfItem(order, item, occupied) > 0);
+    }
+
+    function syncCustomerShipmentEntry(order) {
+      const button = document.getElementById("editAddShip");
+      button.disabled = !canStartCustomerShipment(order);
+      button.title = order && shipmentLease(order.orderNo) ? "此客戶訂單正在建立出貨單" : "";
+    }
+
+    function reserveShipmentOrder(orderNo, owner) {
+      const current = shipmentLease(orderNo);
+      if (current && current.owner !== owner) return false;
+      try {
+        localStorage.setItem(SHIPMENT_LEASE_PREFIX + orderNo, JSON.stringify({
+          owner, expiresAt: Date.now() + SHIPMENT_LEASE_MS,
+        }));
+        return shipmentLease(orderNo)?.owner === owner;
+      } catch {
+        return false;
+      }
+    }
+
+    function releaseShipmentOrders(orderNos, owner) {
+      for (const orderNo of orderNos) {
+        const key = SHIPMENT_LEASE_PREFIX + orderNo;
+        try {
+          if (JSON.parse(localStorage.getItem(key) || "null")?.owner === owner) localStorage.removeItem(key);
+        } catch { /* lease expires if the browser cannot remove it */ }
+      }
+    }
+
+    function withShipmentLeaseUpdate(action) {
+      return navigator.locks
+        ? navigator.locks.request(SHIPMENT_LEASE_PREFIX, action)
+        : Promise.resolve().then(action);
+    }
+
+    function shipmentPickerCandidates(picker) {
+      const primary = salesOrders.find((order) => order.orderNo === picker.origin);
+      if (!primary?.channelName) return [];
+      return salesOrders.filter((order) =>
+        order.orderNo !== primary.orderNo && order.channelName === primary.channelName
+        && canMergeCustomerShipment(order) && canStartCustomerShipment(order, picker.owner)
+      ).sort((a, b) => b.orderNo.localeCompare(a.orderNo));
+    }
+
+    function renderShipmentPicker() {
+      const picker = shipmentPicker;
+      if (!picker) return;
+      const candidates = shipmentPickerCandidates(picker);
+      const seen = new Set(candidates.map((order) => order.orderNo));
+      const missing = [...picker.selected].filter((no) => !seen.has(no));
+      releaseShipmentOrders(missing, picker.owner);
+      missing.forEach((no) => picker.selected.delete(no));
+      document.getElementById("shipMergeYes").disabled = !candidates.length;
+      document.getElementById("shipMergeEmpty").classList.toggle("hidden", !!candidates.length);
+      if (!candidates.length) {
+        picker.merge = false;
+        document.querySelector('input[name="shipMergeChoice"][value="no"]').checked = true;
+      }
+      document.getElementById("shipMergeCandidates").classList.toggle("hidden", !picker.merge);
+      const matches = candidates.filter((order) => order.orderNo.toLowerCase().includes(picker.keyword));
+      const pageCount = Math.max(1, Math.ceil(matches.length / SHIPMENT_PICKER_PAGE_SIZE));
+      picker.page = Math.min(Math.max(0, picker.page), pageCount - 1);
+      const start = picker.page * SHIPMENT_PICKER_PAGE_SIZE;
+      document.getElementById("shipMergeBody").innerHTML = matches.slice(start, start + SHIPMENT_PICKER_PAGE_SIZE)
+        .map((order) => `<tr>
+          <td><input type="checkbox" data-ship-merge-order="${escapeHtml(order.orderNo)}" aria-label="勾選 ${escapeHtml(order.orderNo)}"${picker.selected.has(order.orderNo) ? " checked" : ""} /></td>
+          <td>${escapeHtml(order.orderNo)}</td><td>${escapeHtml(order.poDocNo || "—")}</td><td>${statusTag(order.status)}</td>
+        </tr>`).join("") || '<tr class="empty-row"><td colspan="4">查無資料</td></tr>';
+      document.getElementById("shipMergePageText").textContent = `共 ${matches.length} 筆，第 ${picker.page + 1}／${pageCount} 頁`;
+      document.getElementById("shipMergePrev").disabled = picker.page === 0;
+      document.getElementById("shipMergeNext").disabled = picker.page >= pageCount - 1;
+      document.getElementById("shipMergeSelected").textContent = [...picker.selected].join("、") || "—";
+      document.getElementById("shipMergeConfirm").disabled = picker.merge && !picker.selected.size;
+    }
+
+    function closeShipmentPicker(keepOrders = false) {
+      if (!shipmentPicker) return;
+      if (!keepOrders) {
+        releaseShipmentOrders([shipmentPicker.origin, ...shipmentPicker.selected], shipmentPicker.owner);
+      }
+      shipmentPicker = null;
+      document.getElementById("shipMergeModal").classList.add("hidden");
+    }
+
+    function abandonShipmentDraft() {
+      if (!shipmentDraft) return;
+      releaseShipmentOrders(shipmentDraft.orderNos, shipmentDraft.owner);
+      shipmentDraft = null;
+      collapsedShipmentOrders.clear();
+    }
+
+    function beginCustomerShipment(order) {
+      if (!canStartCustomerShipment(order)) return;
+      if (isOnlineTransferPo(order)) {
+        createAllOnlineShipsFromPo(order, { focusCreated: true, useChecked: true });
+        return;
+      }
+      if (!canMergeCustomerShipment(order)) {
+        openShipCreateFromPo(order);
+        return;
+      }
+      return withShipmentLeaseUpdate(() => {
+        if (shipmentPicker) return;
+        const latest = salesOrders.find((item) => item.orderNo === order.orderNo);
+        const owner = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : String(Date.now()) + Math.random();
+        if (!canStartCustomerShipment(latest) || !reserveShipmentOrder(order.orderNo, owner)) {
+          alert("此客戶訂單目前無法新增出貨單");
+          return;
+        }
+        shipmentPicker = { origin: order.orderNo, owner, selected: new Set(), merge: false, keyword: "", page: 0 };
+        document.querySelector('input[name="shipMergeChoice"][value="no"]').checked = true;
+        document.getElementById("shipMergeOrigin").textContent = order.orderNo;
+        document.getElementById("shipMergeKeyword").value = "";
+        document.getElementById("shipMergeModal").classList.remove("hidden");
+        renderShipmentPicker();
+        document.querySelector('input[name="shipMergeChoice"][value="no"]').focus();
+      });
+    }
+
+    function confirmShipmentPicker() {
+      return withShipmentLeaseUpdate(() => {
+        const picker = shipmentPicker;
+        if (!picker || (picker.merge && !picker.selected.size)) return;
+        const orderNos = [picker.origin, ...(picker.merge ? picker.selected : [])];
+        let sources = orderNos.map((no) => salesOrders.find((order) => order.orderNo === no));
+        const eligible = (order) => order && order.channelName === sources[0]?.channelName
+          && canStartCustomerShipment(order, picker.owner) && shipmentLease(order.orderNo)?.owner === picker.owner;
+        if (!sources.every(eligible)) {
+          alert("選取的客戶訂單已無法新增出貨單，請重新選擇");
+          closeShipmentPicker();
+          return;
+        }
+        shipmentDraft = { owner: picker.owner, orderNos };
+        const enter = () => {
+          sources = orderNos.map((no) => salesOrders.find((order) => order.orderNo === no));
+          if (!shipmentDraft || !sources.every(eligible)) {
+            abandonShipmentDraft();
+            alert("選取的客戶訂單已無法新增出貨單，請重新選擇");
+            return;
+          }
+          openShipCreateFromPo(sources[0], { sources, skipWarning: true });
+        };
+        closeShipmentPicker(true);
+        const warnings = shipmentDraftWarnings(sources);
+        if (warnings.length) openPoOversellWarnModal(warnings, enter, abandonShipmentDraft);
+        else enter();
+      });
+    }
+
+    document.getElementById("shipMergeForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      confirmShipmentPicker();
+    });
+    document.getElementById("shipMergeForm").addEventListener("change", (event) => {
+      const picker = shipmentPicker;
+      if (!picker) return;
+      if (event.target.name === "shipMergeChoice") {
+        picker.merge = event.target.value === "yes";
+        if (!picker.merge) {
+          releaseShipmentOrders(picker.selected, picker.owner);
+          picker.selected.clear();
+        }
+        renderShipmentPicker();
+        return;
+      }
+      const no = event.target.dataset.shipMergeOrder;
+      if (!no) return;
+      const checked = event.target.checked;
+      withShipmentLeaseUpdate(() => {
+        if (picker !== shipmentPicker || !picker.merge) return;
+        if (checked) {
+          if (!shipmentPickerCandidates(picker).some((order) => order.orderNo === no) || !reserveShipmentOrder(no, picker.owner)) {
+            alert("此客戶訂單目前無法勾選");
+          } else picker.selected.add(no);
+        } else {
+          releaseShipmentOrders([no], picker.owner);
+          picker.selected.delete(no);
+        }
+        renderShipmentPicker();
+      });
+    });
+    document.getElementById("shipMergeFilter").addEventListener("click", () => {
+      if (!shipmentPicker) return;
+      shipmentPicker.keyword = document.getElementById("shipMergeKeyword").value.trim().toLowerCase();
+      shipmentPicker.page = 0;
+      renderShipmentPicker();
+    });
+    document.getElementById("shipMergeKeyword").addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      document.getElementById("shipMergeFilter").click();
+    });
+    document.getElementById("shipMergeClear").addEventListener("click", () => {
+      document.getElementById("shipMergeKeyword").value = "";
+      document.getElementById("shipMergeFilter").click();
+    });
+    for (const [id, delta] of [["shipMergePrev", -1], ["shipMergeNext", 1]]) {
+      document.getElementById(id).addEventListener("click", () => {
+        if (!shipmentPicker) return;
+        shipmentPicker.page += delta;
+        renderShipmentPicker();
+      });
+    }
+    for (const id of ["shipMergeClose", "shipMergeCancel"]) {
+      document.getElementById(id).addEventListener("click", () => closeShipmentPicker());
+    }
+    document.getElementById("shipMergeModal").addEventListener("click", (event) => {
+      if (event.target.id === "shipMergeModal") closeShipmentPicker();
+    });
+    document.getElementById("shipMergeModal").addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeShipmentPicker();
+    });
+    window.addEventListener("pagehide", () => {
+      closeShipmentPicker();
+      abandonShipmentDraft();
+    });
+    window.addEventListener("storage", (event) => {
+      if (!event.key?.startsWith(SHIPMENT_LEASE_PREFIX)) return;
+      renderShipmentPicker();
+      if (document.getElementById("page-sales").classList.contains("active")) renderSalesTable(getSalesFiltered());
+      if (orderFormMode === "view" && document.getElementById("page-order-edit").classList.contains("active")) {
+        syncCustomerShipmentEntry(getWorkspaceOrder());
+      }
+    });
+
+    function openShipCreateFromPo(order, options = {}) {
       if (!order || !canCreateShipFromPo(order)) return;
       if (isOnlineTransferPo(order)) {
         createAllOnlineShipsFromPo(order, { focusCreated: true, useChecked: true });
@@ -18254,13 +18656,13 @@
       }
       closePoShipFeeModal();
       closePoShipStockModal();
-      setShipCreateKind("normal");
+      setShipCreateKind(isOnlineShipmentPo(order) ? "online" : "normal");
       clearPoShipCreateFields();
       setShipPoLocked(true);
       setShipFormReadonly(false);
       history.replaceState({}, "", location.pathname);
       showPage("ship-create");
-      const oversell = orderQtyOversellList(order);
+      const oversell = options.skipWarning ? [] : orderQtyOversellList(order);
       if (oversell.length) {
         openPoOversellWarnModal(oversell, () => {
           fillCreateFromSelectedPo(order);
@@ -18268,7 +18670,7 @@
         });
         return;
       }
-      fillCreateFromSelectedPo(order);
+      fillCreateFromSelectedPo(order, options.sources);
       setShipPoLocked(true);
     }
 
@@ -18426,10 +18828,10 @@
       return { ships };
     }
 
-    function poShipFillPlan(order, sourceItems) {
+    function poShipFillPlan(order, sourceItems, availableStock) {
       const channel = order && order.channelName;
       const source = (sourceItems || (order && order.items) || [])
-        .map((row) => toPoLineItem(row))
+        .map((row, sourceLineIndex) => ({ ...toPoLineItem(row), sourceLineIndex, sourceBatch: row.batch || "" }))
         .filter((item) => item.sku && (Number(item.qty) || 0) > 0);
       const shippedMap = order && order.orderNo ? shippedQtyByKey(order.orderNo) : {};
       const goods = [];
@@ -18437,8 +18839,10 @@
       source.forEach((item) => {
         const remaining = remainingQtyOfItem(order, item, shippedMap);
         if (remaining <= 0) return;
-        const stock = virtualStockOf(channel, item.sku);
+        const sku = normalizeSku(item.sku).toLowerCase();
+        const stock = availableStock?.get(sku) ?? virtualStockOf(channel, item.sku);
         const shipQty = stock < remaining ? Math.max(0, stock) : remaining;
+        if (availableStock) availableStock.set(sku, Math.max(0, stock - shipQty));
         let row;
         if (isOverseasPo(order) && item.batch) {
           const meta = resolveBatchMeta(item.batch);
@@ -18460,6 +18864,8 @@
           row = applyFifoExpiry(toPoLineItem({ ...item, qty: shipQty, stock, useFifo: true }));
           row.useFifo = true;
         }
+        row.sourceLineIndex = item.sourceLineIndex;
+        row.sourceBatch = item.sourceBatch;
         goods.push(row);
         if (stock < remaining) {
           shortage.push({
@@ -18617,14 +19023,15 @@
     }
 
     /** 選定客戶訂單後帶入出貨／通路基本資料。 */
-    function resetPoShipCreateForm(order) {
+    function resetPoShipCreateForm(order, sources = [order]) {
       initExpectArriveTimeOptions();
       fillPoShipChannelFromOrder(order);
       syncPoShipIncotermFromOrder(order);
-      document.getElementById("poShipExpectDate").value = toDateInput((order && order.expectDate) || nowStamp()) || "";
-      document.getElementById("poShipArriveDate").value = toDateInput(order && order.arriveDate) || "";
-      fillHourMinute("poShipArriveHour", "poShipArriveMinute", (order && order.arriveTime) || "");
-      document.getElementById("poShipOutDate").value = toDateInput(order && order.shipByTime) || "";
+      const earliest = (key, normalize) => sources.map((source) => normalize(source[key])).filter(Boolean).sort()[0] || "";
+      document.getElementById("poShipExpectDate").value = earliest("expectDate", toDateInput) || toDateInput(nowStamp());
+      document.getElementById("poShipArriveDate").value = earliest("arriveDate", toDateInput);
+      fillHourMinute("poShipArriveHour", "poShipArriveMinute", earliest("arriveTime", toTimeInput));
+      document.getElementById("poShipOutDate").value = earliest("shipByTime", toDateInput);
       const profile = channelProfiles[(order && order.channelName) || ""] || {};
       const warehouse = (order && order.inWarehouse) || profile.inWarehouse || "";
       fillPoShipWarehouseSelect(warehouse);
@@ -18634,10 +19041,20 @@
           el.checked = el.value === order.pickup;
         });
       }
-      const source = ((order && order.items) || []).map((row) => toPoLineItem(row));
-      const plan = poShipFillPlan(order, source);
-      poShipGoods = plan.goods;
-      poShipShortage = plan.shortage;
+      collapsedShipmentOrders.clear();
+      const sharedStock = sources.length > 1 ? new Map() : undefined;
+      const plans = sources.map((source) => {
+        const plan = poShipFillPlan(source, source.items || [], sharedStock);
+        if (sharedStock) {
+          for (const item of plan.goods) {
+            item.sourceOrderNo = source.orderNo;
+            item.id = String(nextShipItemId++);
+          }
+        }
+        return plan;
+      });
+      poShipGoods = plans.flatMap((plan) => plan.goods);
+      poShipShortage = plans.flatMap((plan) => plan.shortage);
       renderPoShipGoodsTable();
       syncPoShipStockWarn();
       document.querySelectorAll("#poShipCreatePanel .po-ship-acc").forEach((el) => el.classList.remove("collapsed"));
@@ -18662,10 +19079,29 @@
       return list;
     }
 
-    let pendingPoOversellContinue = null;
+    function shipmentDraftWarnings(sources) {
+      if (sources.length === 1) return orderQtyOversellList(sources[0]);
+      const demand = new Map();
+      for (const order of sources) {
+        const occupied = shippedQtyByKey(order.orderNo);
+        for (const item of order.items || []) {
+          const sku = normalizeSku(item.sku).toLowerCase();
+          const line = demand.get(sku) || {
+            sku: item.sku, name: item.name || "", qty: 0, sellable: virtualAllocOf(order.channelName, item.sku),
+          };
+          line.qty += remainingQtyOfItem(order, item, occupied);
+          demand.set(sku, line);
+        }
+      }
+      return [...demand.values()].filter((line) => line.qty > line.sellable);
+    }
 
-    function openPoOversellWarnModal(rows, onConfirm) {
+    let pendingPoOversellContinue = null;
+    let pendingPoOversellCancel = null;
+
+    function openPoOversellWarnModal(rows, onConfirm, onCancel) {
       pendingPoOversellContinue = typeof onConfirm === "function" ? onConfirm : null;
+      pendingPoOversellCancel = typeof onCancel === "function" ? onCancel : null;
       const list = document.getElementById("poOversellWarnList");
       list.innerHTML = (rows || []).map((row) => (
         `<li>SKU : ${escapeHtml(row.sku)} 商品名稱 : ${escapeHtml(row.name)}當前可賣量 &lt; 下定量，請確認是否分批出貨</li>`
@@ -18673,28 +19109,52 @@
       document.getElementById("poOversellWarnModal").classList.remove("hidden");
     }
 
-    function closePoOversellWarnModal() {
+    function closePoOversellWarnModal(accepted = false) {
+      const cancel = pendingPoOversellCancel;
       document.getElementById("poOversellWarnModal").classList.add("hidden");
       pendingPoOversellContinue = null;
+      pendingPoOversellCancel = null;
+      if (accepted !== true && cancel) cancel();
     }
 
     function confirmPoOversellWarn() {
       const next = pendingPoOversellContinue;
-      closePoOversellWarnModal();
+      closePoOversellWarnModal(true);
       if (next) next();
     }
 
-    function fillCreateFromSelectedPo(order) {
+    function fillCreateFromSelectedPo(order, sources) {
       if (!order) return;
       document.getElementById("shipPoNo").value = order.orderNo;
-      resetPoShipCreateForm(order);
-      if (shipCreateKind === "online") fillOnlineShipFieldsFromOrder(order);
+      resetPoShipCreateForm(order, sources);
+      if (shipCreateKind === "online") {
+        document.getElementById("page-ship-create").classList.toggle("is-nontransfer", !isOnlineTransferPo(order));
+        if (isOnlineTransferPo(order)) fillOnlineShipFieldsFromOrder(order);
+      }
     }
 
     function updatePoShipQtyTotal() {
       const total = poShipGoods.reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
       const el = document.getElementById("poShipItemsQtyTotal");
       if (el) el.textContent = String(total);
+      document.querySelectorAll("[data-ship-source-total]").forEach((cell) => {
+        const no = cell.dataset.shipSourceTotal;
+        cell.textContent = poShipGoods.filter((row) => row.sourceOrderNo === no)
+          .reduce((sum, row) => sum + (Number(row.qty) || 0), 0);
+      });
+    }
+
+    function removeShipmentSource(no) {
+      if (!shipmentDraft || !shipmentDraft.orderNos.includes(no)) return;
+      shipmentDraft.orderNos = shipmentDraft.orderNos.filter((orderNo) => orderNo !== no);
+      releaseShipmentOrders([no], shipmentDraft.owner);
+      collapsedShipmentOrders.delete(no);
+      poShipGoods = poShipGoods.filter((item) => item.sourceOrderNo !== no);
+      poShipShortage = poShipShortage.filter((row) => row.source.sourceOrderNo !== no);
+      document.getElementById("shipPoNo").value = shipmentDraft.orderNos[0] || "";
+      renderPoShipGoodsTable();
+      syncPoShipStockWarn();
+      renderPoShipStockModal();
     }
 
     function renderPoShipGoodsTable() {
@@ -18708,9 +19168,22 @@
         updatePoShipQtyTotal();
         return;
       }
-      body.innerHTML = isView
-        ? poShipGoods.map((row) => shipViewGoodsRowHtml(row, showAcceptQty)).join("")
-        : poShipGoods.map((row) => legacyGoodsRowHtml(row, "po-ship-expiry")).join("");
+      const sourceNos = [...new Set(poShipGoods.map((row) => row.sourceOrderNo).filter(Boolean))];
+      const itemHtml = isView
+        ? (row) => shipViewGoodsRowHtml(row, showAcceptQty)
+        : (row) => legacyGoodsRowHtml(row, "po-ship-expiry");
+      body.innerHTML = sourceNos.length > 1 ? sourceNos.map((no) => {
+        const order = salesOrders.find((item) => item.orderNo === no);
+        const expanded = !collapsedShipmentOrders.has(no);
+        const goods = poShipGoods.filter((row) => row.sourceOrderNo === no);
+        return `<tr class="ship-source-row"><td colspan="${showAcceptQty ? 9 : 8}"><div class="ship-source-summary">
+          <button type="button" class="btn" data-ship-source-toggle="${escapeHtml(no)}" aria-expanded="${expanded}">${expanded ? "收合" : "展開"}商品</button>
+          <span>客戶訂單編號 <strong>${escapeHtml(no)}</strong></span>
+          <span>客戶訂單單號 ${escapeHtml(order?.poDocNo || "—")}</span>
+          <span>預計出貨總數 <strong data-ship-source-total="${escapeHtml(no)}"></strong></span>
+          ${isView ? "" : `<button type="button" class="btn" data-ship-source-delete="${escapeHtml(no)}">移除此訂單</button>`}
+        </div></td></tr>${expanded ? goods.map(itemHtml).join("") : ""}`;
+      }).join("") : poShipGoods.map(itemHtml).join("");
       updatePoShipQtyTotal();
     }
 
@@ -18845,7 +19318,7 @@
     function confirmPoShipCreate() {
       if (shipFormMode === "view") return;
       const order = getSelectedShipPo();
-      if (!order || !canCreateShipFromPo(order) || !canListShipPo(order)) {
+      if (!order || !canListShipPo(order)) {
         const reason = shipCreateBlockReason(order);
         if (reason) alert(reason);
         else if (shipCreateKind === "online") alert("請選擇線上-轉單且可出貨的客戶訂單");
@@ -18854,7 +19327,7 @@
         return;
       }
       const isOnline = shipCreateKind === "online";
-      if (isOnline) {
+      if (isOnlineTransferPo(order)) {
         const shipMethod = document.getElementById("poShipMethod").value;
         const expectDate = document.getElementById("poShipExpectDate").value || toDateInput(nowStamp());
         createAllOnlineShipsFromPo(order, { shipMethod: shipMethod || undefined, expectDate });
@@ -18874,7 +19347,7 @@
       }
       let inWarehouse = "";
       let pickup = "";
-      const channelSnap = readPoShipChannelSnapshot();
+      const channelSnap = isOnline ? channelSnapshotFromName(order.channelName, order.channelType) : readPoShipChannelSnapshot();
       if (!channelSnap.shipChannelType) {
         alert("請選擇合作通路類型");
         document.getElementById("poShipChannelType").focus();
@@ -18891,27 +19364,56 @@
         return;
       }
       inWarehouse = document.getElementById("poShipInWarehouse").value;
-      if (!inWarehouse) {
+      if (!isOnline && !inWarehouse) {
         alert("請選擇通路進貨倉點");
         document.getElementById("poShipInWarehouse").focus();
         return;
       }
       const pickupEl = document.querySelector('input[name="poShipPickup"]:checked');
-      if (!pickupEl) {
+      if (!isOnline && !pickupEl) {
         alert("請選擇通路進貨倉點的取貨方式");
         return;
       }
-      pickup = pickupEl.value;
-      const incoterm = shipTermsFromOrder(order);
-      if (!poShipGoods.length) {
+      pickup = pickupEl?.value || "";
+      const goods = poShipGoods.filter((item) => Number(item.qty) > 0);
+      if (!goods.length) {
         alert("請至少保留一項出貨商品");
         return;
       }
-      const ids = nextShippingIds(false);
-      rows.unshift({
+      const sourceNos = [...new Set(goods.map((item) => item.sourceOrderNo || order.orderNo))];
+      const sources = new Map(salesOrders.filter((item) => sourceNos.includes(item.orderNo)).map((item) => [item.orderNo, item]));
+      const owner = shipmentDraft?.owner;
+      if (sourceNos.some((no) => {
+        const source = sources.get(no);
+        return source?.channelName !== order.channelName || !canStartCustomerShipment(source, owner)
+          || (shipmentDraft && shipmentLease(no)?.owner !== owner);
+      })) {
+        alert("來源訂單已無法新增出貨單，請重新選擇");
+        return;
+      }
+      if (goods.some((item) => !Number.isInteger(Number(item.qty)))) {
+        alert("出貨數量須為整數");
+        return;
+      }
+      if (goods.some((item) => item.sourceOrderNo)) {
+        const occupied = new Map(sourceNos.map((no) => [no, shippedQtyByKey(no)]));
+        for (const item of goods) {
+          const source = sources.get(item.sourceOrderNo);
+          const line = source?.items?.[item.sourceLineIndex];
+          if (!line || itemKey(line) !== itemKey(item) || Number(item.qty) > remainingQtyOfItem(source, line, occupied.get(source.orderNo))) {
+            alert("出貨數量超過來源訂單可再開單數量，請確認出貨數量");
+            return;
+          }
+        }
+      }
+      const primary = sources.get(sourceNos[0]);
+      const merged = sourceNos.length > 1;
+      const ids = nextShippingIds(isOnline);
+      const shipment = {
         id: ids.id,
         orderId: ids.orderId,
-        salesOrderNo: order.orderNo,
+        salesOrderNo: primary.orderNo,
+        ...(merged ? { sourceOrderNos: sourceNos } : {}),
         audit: "待審核",
         channel: channelSnap.shipChannelName || order.channelName || order.channelType || "—",
         status: "待拋單",
@@ -18919,7 +19421,7 @@
         created: nowStamp(),
         warehouse: inWarehouse,
         shipped: "",
-        incoterm,
+        incoterm: shipTermsFromOrder(primary),
         expectDate,
         arriveDate: document.getElementById("poShipArriveDate").value,
         arriveTime: readHourMinute("poShipArriveHour", "poShipArriveMinute"),
@@ -18929,37 +19431,48 @@
         ...channelSnap,
         rebatePercent: channelRebatePercent(order.channelName),
         fees: [],
-        items: poShipGoods.map((item) => {
+        items: goods.map((item) => {
+          const source = sources.get(item.sourceOrderNo || primary.orderNo);
           const line = poItemToShipLine(item);
-          if (!isOverseasPo(order)) return line;
-          const price = linePriceParts(order, item);
-          return {
-            ...line,
-            lineUid: item.lineUid,
-            unitTaxed: price.taxed,
-            unitUntaxed: price.untaxed,
-            netWeightG: item.netWeightG,
-            grossWeightG: item.grossWeightG,
-          };
+          if (item.lineUid) line.lineUid = item.lineUid;
+          line.sourceBatch = item.sourceBatch;
+          if (merged) line.sourceOrderNo = source.orderNo;
+          if (isOverseasPo(source)) {
+            const price = linePriceParts(source, item);
+            line.unitTaxed = price.taxed;
+            line.unitUntaxed = price.untaxed;
+            line.netWeightG = item.netWeightG;
+            line.grossWeightG = item.grossWeightG;
+          }
+          return line;
         }),
-        online: false,
-        platform: "",
-        platformOrderNo: "",
-        shipMethod: "",
-        recvName: "",
-        recvTel: "",
-        recvAddress: "",
-        recvRemark: "",
+        online: isOnline,
+        platform: isOnline ? primary.channelName : "",
+        platformOrderNo: isOnline ? document.getElementById("poShipPlatformOrderNo").value : "",
+        shipMethod: isOnline ? document.getElementById("poShipMethod").value : "",
+        recvName: isOnline ? document.getElementById("poShipRecvName").value : "",
+        recvTel: isOnline ? document.getElementById("poShipRecvTel").value : "",
+        recvAddress: isOnline ? document.getElementById("poShipRecvAddress").value : "",
+        recvRemark: isOnline ? document.getElementById("poShipRecvRemark").value : "",
         submittedAt: "",
-      });
-      syncPoStatusFromShips(order);
-      persistDemoData();
+      };
+      if (isOnline) shipment.deliveryNo = `DL${String(ids.id).padStart(10, "0")}`;
+      const previous = new Map([...sources.values()].map((source) => [source, source.status]));
+      rows.unshift(shipment);
+      sources.forEach(syncPoStatusFromShips);
+      if (!persistDemoData()) {
+        rows.shift();
+        previous.forEach((status, source) => { source.status = status; });
+        alert("無法儲存出貨單，請再試一次");
+        return;
+      }
+      abandonShipmentDraft();
       renderShippingTable();
       renderOnlineShippingTable();
       renderSalesTable(getSalesFiltered());
       history.replaceState({}, "", location.pathname);
-      if (isOverseasPo(order)) fillShipView(rows.find((ship) => ship.orderId === ids.orderId));
-      else showPage("shipping");
+      if (isOverseasPo(primary) || merged) fillShipView(shipment);
+      else showPage(isOnline ? "online-shipping" : "shipping");
       alert("已建立出貨單 " + ids.orderId);
     }
 
@@ -18992,7 +19505,7 @@
         const el = document.getElementById(id);
         if (el) el.textContent = shipViewDash(value);
       };
-      setText("shipViewPoNo", ship.salesOrderNo || "");
+      setText("shipViewPoNo", ship.sourceOrderNos?.join("、") || ship.salesOrderNo || "");
       setText("shipViewOrderId", ship.orderId || "");
       setText("shipViewDeliveryNo", typeof onlineDeliveryNo === "function" ? onlineDeliveryNo(ship) : (ship.deliveryNo || ""));
       setText("shipViewExpectDate", expectDate);
@@ -19034,6 +19547,10 @@
     function shipPoOf(ship) {
       if (!ship) return null;
       return salesOrders.find((item) => item.orderNo === ship.salesOrderNo) || null;
+    }
+
+    function shipmentAcceptanceKey(ship, item) {
+      return ship.sourceOrderNos?.length > 1 ? JSON.stringify([item.sourceOrderNo, item.id]) : itemKey(item);
     }
 
     function exportDeclReady(file) {
@@ -19114,14 +19631,17 @@
           ship.status = ship.online ? "已配達" : "已出貨";
         }
         if (ship.status === "已驗收" && !ship.acceptance && Array.isArray(ship.items)) {
+          const merged = ship.sourceOrderNos?.length > 1;
+          const allocated = merged ? shipmentActualAllocations(ship) : null;
           ship.acceptance = {
             acceptedAt: ship.shipped || ship.created || nowStamp(),
             acceptedBy: ship.applicant || "建檔人",
             items: ship.items.map((line) => ({
-              key: itemKey(line),
+              key: merged ? shipmentAcceptanceKey(ship, line) : itemKey(line),
+              ...(merged ? { sourceOrderNo: line.sourceOrderNo, poItemKey: itemKey(line) } : {}),
               sku: line.sku || "",
               name: line.name || "",
-              acceptQty: Number(line.qty) || 0,
+              acceptQty: merged ? shipmentActualQuantity(ship, line, allocated) : Number(line.qty) || 0,
               remark: line.remark || "",
             })),
           };
@@ -19153,18 +19673,23 @@
       ((ship.acceptance && ship.acceptance.items) || []).forEach((row) => {
         saved[row.key || itemKey(row)] = row;
       });
+      const allocated = ship.sourceOrderNos?.length > 1 ? shipmentActualAllocations(ship) : null;
       const lines = (ship.items || []).map((item) => {
-        const key = itemKey(item);
-        const shipQty = item.actualShippedQty != null ? Number(item.actualShippedQty) || 0 : demoActualShipQty(ship.status, item.qty);
+        const poItemKey = itemKey(item);
+        const key = ship.sourceOrderNos?.length > 1 ? shipmentAcceptanceKey(ship, item) : poItemKey;
+        const shipQty = allocated ? shipmentActualQuantity(ship, item, allocated)
+          : (item.actualShippedQty != null ? Number(item.actualShippedQty) || 0 : demoActualShipQty(ship.status, item.qty));
+        const source = item.sourceOrderNo ? salesOrders.find((order) => order.orderNo === item.sourceOrderNo) : po;
         const s = saved[key] || {};
         const acceptQty = readonly
           ? (s.acceptQty != null ? Number(s.acceptQty) || 0 : shipQty)
           : 0;
         return {
           key,
+          ...(item.sourceOrderNo ? { sourceOrderNo: item.sourceOrderNo, poItemKey } : {}),
           sku: item.sku || "",
           name: item.name || "",
-          pcs: pcsPerCartonOf(item) || pcsPerCartonOf((po && (po.items || []).find((row) => itemKey(row) === key)) || {}) || "-",
+          pcs: pcsPerCartonOf(item) || pcsPerCartonOf((source && (source.items || []).find((row) => itemKey(row) === poItemKey)) || {}) || "-",
           shipQty,
           checked: readonly ? acceptQty > 0 : true,
           acceptQty: readonly ? acceptQty : shipQty,
@@ -19173,7 +19698,7 @@
       }).filter((line) => line.shipQty > 0 || readonly);
       shipAcceptDraft = { orderId: ship.orderId, readonly, lines, online: !!ship.online };
       document.getElementById("shipAcceptBack").textContent = ship.online ? "← 返回線上出貨單管理" : "← 返回出貨單管理";
-      document.getElementById("shipAcceptPoNo").value = ship.salesOrderNo || "-";
+      document.getElementById("shipAcceptPoNo").value = ship.sourceOrderNos?.join("、") || ship.salesOrderNo || "-";
       document.getElementById("shipAcceptShipNo").value = ship.orderId || "-";
       document.getElementById("shipAcceptChannelType").value = (po && po.channelType) || "-";
       document.getElementById("shipAcceptChannelName").value = ship.channel || (po && po.channelName) || "-";
@@ -19208,7 +19733,7 @@
         <tr data-accept-key="${escapeHtml(line.key)}">
           <td class="col-check"><input type="checkbox" data-ship-accept-check="1"${line.checked ? " checked" : ""}${readonly ? " disabled" : ""} /></td>
           <td>${escapeHtml(line.sku)}</td>
-          <td>${escapeHtml(line.name)}</td>
+          <td>${escapeHtml(line.name)}${line.sourceOrderNo ? `<div class="field-hint">${escapeHtml(line.sourceOrderNo)}</div>` : ""}</td>
           <td>${escapeHtml(line.pcs)}</td>
           <td class="num">${escapeHtml(line.shipQty)}</td>
           <td><input type="number" min="0" max="${escapeHtml(line.shipQty)}" step="1" data-ship-accept-qty="1" value="${escapeHtml(line.checked || readonly ? line.acceptQty : "")}"${readonly || !line.checked ? " disabled" : ""} /></td>
@@ -19241,6 +19766,7 @@
         acceptedBy: currentRole,
         items: shipAcceptDraft.lines.map((line) => ({
           key: line.key,
+          ...(line.sourceOrderNo ? { sourceOrderNo: line.sourceOrderNo, poItemKey: line.poItemKey } : {}),
           sku: line.sku,
           name: line.name,
           acceptQty: line.checked ? (Number(line.acceptQty) || 0) : 0,
@@ -19299,7 +19825,8 @@
     function canExportShipmentDocuments(ship) {
       if (ship.status === "訂單取消") return false;
       if (!shipmentHasActuals(ship)) return true;
-      return (ship.items || []).some((item) => shipmentActualQuantity(ship, item) !== (Number(item.qty) || 0));
+      const allocated = shipmentActualAllocations(ship);
+      return (ship.items || []).some((item) => shipmentActualQuantity(ship, item, allocated) !== (Number(item.qty) || 0));
     }
 
     function shipmentDocumentsFingerprint(order, ship, lines) {
@@ -19409,7 +19936,9 @@
 
     function fillShipView(ship) {
       const po = salesOrders.find((item) => item.orderNo === ship.salesOrderNo) || null;
+      collapsedShipmentOrders.clear();
       setShipCreateKind(ship.online ? "online" : "normal");
+      if (ship.online) document.getElementById("page-ship-create").classList.toggle("is-nontransfer", !isOnlineTransferPo(po));
       clearPoShipCreateFields();
       document.getElementById("shipPoNo").value = ship.salesOrderNo || "";
       document.getElementById("poShipExpectDate").value = toDateInput(ship.expectDate) || "";
@@ -19444,9 +19973,11 @@
         const key = row.key || itemKey(row);
         if (key) acceptByKey[key] = Number(row.acceptQty);
       });
+      const allocated = shipmentActualAllocations(ship);
       poShipGoods = (ship.items || []).map((item) => {
-        const key = itemKey(item);
-        const poItem = poItemByKey[key] || null;
+        const key = shipmentAcceptanceKey(ship, item);
+        const source = item.sourceOrderNo && salesOrders.find((order) => order.orderNo === item.sourceOrderNo);
+        const poItem = (source ? shipmentSourceItem(source, item) : poItemByKey[itemKey(item)]) || null;
         const line = poItemToShipLine({
           ...item,
           pcsPerCarton: item.pcsPerCarton || (poItem && poItem.pcsPerCarton) || pcsPerCartonOf(item) || pcsPerCartonOf(poItem),
@@ -19455,7 +19986,8 @@
           useFifo: item.useFifo !== false,
         });
         line.barcode = item.barcode || demoBarcodeOf(line);
-        line.actualShippedQty = shipmentActualQuantity(ship, item);
+        line.sourceOrderNo = item.sourceOrderNo;
+        line.actualShippedQty = shipmentActualQuantity(ship, item, allocated);
         line.acceptQty = channelAcceptFlow(channel) !== "轉單" && Object.prototype.hasOwnProperty.call(acceptByKey, key) ? acceptByKey[key] : null;
         return line;
       });
@@ -19484,14 +20016,16 @@
     }
 
     function canListShipPo(order) {
-      if (!canCreateShipFromPo(order)) return false;
-      if (shipCreateKind === "online") return isOnlineTransferPo(order);
-      return !isOnlineTransferPo(order);
+      if (!canStartCustomerShipment(order, shipmentDraft?.owner)) return false;
+      return isOnlineShipmentPo(order) === (shipCreateKind === "online");
     }
 
     function shipCreateBlockReason(po) {
       if (!po) return "請選擇客戶訂單編號";
-      if (canCreateShipFromPo(po)) return "";
+      const lease = shipmentLease(po.orderNo);
+      if (lease && lease.owner !== shipmentDraft?.owner) return "此客戶訂單正在其他視窗建立出貨單";
+      if (canStartCustomerShipment(po, shipmentDraft?.owner)) return "";
+      if (canCreateShipFromPo(po)) return "此客戶訂單沒有可再開單數量";
       if (isOverseasPo(po) && overseasNeedsFirstShipDocs(po) && !overseasFirstShipExportReady(po) && !["草稿", "待審核", "已作廢"].includes(po.status)) {
         const giftChanged = giftFingerprint(po) && po.giftExportedAt && !overseasGiftExportReady(po);
         return giftChanged ? "贈品有異動，請先匯出才能新增出貨單" : "請先匯出才能新增出貨單";
@@ -19844,9 +20378,12 @@
     function accShipInfoByKey(orderNo) {
       const map = {};
       validShipsOfPo(orderNo).forEach((ship) => {
-        (ship.items || []).forEach((line) => {
+        const merged = ship.sourceOrderNos?.length > 1;
+        const allocated = merged ? shipmentActualAllocations(ship) : null;
+        const goods = merged ? shipmentItemsForOrder(ship, orderNo) : (ship.items || []);
+        goods.forEach((line) => {
           const key = itemKey(line);
-          const qty = Number(line.qty) || 0;
+          const qty = allocated ? shipmentActualQuantity(ship, line, allocated) : Number(line.qty) || 0;
           if (!key || qty <= 0) return;
           const rec = map[key] || (map[key] = { qty: 0, dates: [] });
           rec.qty += qty;
@@ -19863,25 +20400,30 @@
       const map = {};
       const transfer = isTransferAcceptFlow(order);
       validShipsOfPo(order.orderNo).forEach((ship) => {
+        const merged = ship.sourceOrderNos?.length > 1;
+        const goods = merged ? shipmentItemsForOrder(ship, order.orderNo) : (ship.items || []);
         if (transfer) {
           if (!isTransferSettleShip(ship)) return;
-          (ship.items || []).forEach((line) => {
+          const allocated = merged ? shipmentActualAllocations(ship) : null;
+          goods.forEach((line) => {
             const key = itemKey(line);
             if (!key) return;
-            map[key] = (map[key] || 0) + (Number(line.qty) || 0);
+            const qty = allocated ? shipmentActualQuantity(ship, line, allocated) : Number(line.qty) || 0;
+            map[key] = (map[key] || 0) + qty;
           });
           return;
         }
         if (ship.status !== "已驗收") return;
         const accepted = (ship.acceptance && ship.acceptance.items) || [];
         if (accepted.length) {
-          accepted.forEach((line) => {
-            const key = line.key || itemKey(line);
+          const orderAccepted = merged ? shipmentItemsForOrder(ship, order.orderNo, accepted) : accepted;
+          orderAccepted.forEach((line) => {
+            const key = line.poItemKey || line.key || itemKey(line);
             if (!key) return;
             map[key] = (map[key] || 0) + (Number(line.acceptQty) || 0);
           });
         } else {
-          (ship.items || []).forEach((line) => {
+          goods.forEach((line) => {
             const key = itemKey(line);
             if (!key) return;
             map[key] = (map[key] || 0) + (Number(line.qty) || 0);
@@ -20548,10 +21090,14 @@
       }
       if (!Array.isArray(ship.acceptance.items)) ship.acceptance.items = [];
       const key = line.key || itemKey(line);
-      let target = ship.acceptance.items.find((item) => (item.key || itemKey(item)) === key);
+      const merged = ship.sourceOrderNos?.length > 1;
+      let target = ship.acceptance.items.find((item) =>
+        (!merged || item.sourceOrderNo === line.orderNo) && (item.poItemKey || item.key || itemKey(item)) === key
+      );
       if (!target) {
         target = {
           key,
+          ...(merged ? { sourceOrderNo: line.orderNo, poItemKey: key } : {}),
           sku: line.sku || "",
           name: line.name || "",
           acceptQty: Number(line.acceptQty) || 0,
@@ -20567,20 +21113,29 @@
     /** 單張出貨單的可結品項：驗收數與已結數都記在這張出貨單上。 */
     function shipSettleLines(order, ship) {
       const saved = {};
-      ((ship.acceptance && ship.acceptance.items) || []).forEach((row) => {
-        const key = row.key || itemKey(row);
-        if (key) saved[key] = row;
+      const merged = ship.sourceOrderNos?.length > 1;
+      const accepted = (ship.acceptance && ship.acceptance.items) || [];
+      const acceptedForOrder = merged ? shipmentItemsForOrder(ship, order.orderNo, accepted) : accepted;
+      acceptedForOrder.forEach((row) => {
+        const key = row.poItemKey || row.key || itemKey(row);
+        if (!key) return;
+        if (merged && saved[key]) {
+          saved[key].settledQty += Number(row.settledQty) || 0;
+        } else {
+          saved[key] = merged ? { ...row, settledQty: Number(row.settledQty) || 0 } : row;
+        }
       });
       const base = {};
       const requiresAcceptance = !isTransferAcceptFlow(order);
-      const source = (requiresAcceptance && ship.acceptance && ship.acceptance.items && ship.acceptance.items.length)
-        ? ship.acceptance.items
-        : (ship.items || []);
+      const source = requiresAcceptance && accepted.length ? acceptedForOrder
+        : (merged ? shipmentItemsForOrder(ship, order.orderNo) : (ship.items || []));
+      const allocated = merged && !requiresAcceptance ? shipmentActualAllocations(ship) : null;
       source.forEach((line) => {
-        const key = line.key || itemKey(line);
+        const key = line.poItemKey || line.key || itemKey(line);
         const qty = requiresAcceptance
           ? (line.acceptQty != null && line.acceptQty !== "" ? Number(line.acceptQty) : Number(line.qty))
-          : (line.actualShippedQty != null ? Number(line.actualShippedQty) : demoActualShipQty(ship.status, line.qty));
+          : (allocated ? shipmentActualQuantity(ship, line, allocated)
+            : (line.actualShippedQty != null ? Number(line.actualShippedQty) : demoActualShipQty(ship.status, line.qty)));
         if (!key || !(qty > 0)) return;
         base[key] = (base[key] || 0) + qty;
       });
@@ -21623,13 +22178,14 @@
         const usesSystemInvoice = isMonthlySettleChannel(channel) || isSystemInvoiceChannel(channel);
         if (!usesSystemInvoice || !isSystemInvoiceSettleShip(ship) || ship.systemInvoiceNo) return;
         const order = salesOrders.find((item) => item.orderNo === ship.salesOrderNo);
-        const overseas = !!(order && isOverseasPo(order));
+        const allocated = ship.sourceOrderNos?.length > 1 ? shipmentActualAllocations(ship) : null;
         const amount = roundCurrencyMoney((ship.items || []).reduce((sum, item) => {
           if (item.gift) return sum;
-          const qty = Number(item.qty) || 0;
+          const qty = allocated ? shipmentActualQuantity(ship, item, allocated) : Number(item.qty) || 0;
           if (qty <= 0) return sum;
-          const src = order && (order.items || []).find((row) => itemKey(row) === (item.key || itemKey(item)));
-          const untaxed = accRoundMoney(src ? accUnitPrice(src, order) : (Number(item.price) || 0));
+          const sourceOrder = item.sourceOrderNo ? salesOrders.find((source) => source.orderNo === item.sourceOrderNo) : order;
+          const src = sourceOrder && (sourceOrder.items || []).find((row) => itemKey(row) === (item.key || itemKey(item)));
+          const untaxed = accRoundMoney(src ? accUnitPrice(src, sourceOrder) : (Number(item.price) || 0));
           const taxed = roundDetailMoney(untaxed * (1 + SETTLE_TAX_RATE));
           return sum + accRoundMoney(taxed * qty);
         }, 0), channel);
@@ -21642,7 +22198,7 @@
 
     function lineShipInvoice(line) {
       const ship = line?.shipNo ? shipByOrderId(line.shipNo) : null;
-      if (!ship || (ship.salesOrderNo && ship.salesOrderNo !== line.orderNo)) return null;
+      if (!ship || (ship.salesOrderNo && !(ship.sourceOrderNos || [ship.salesOrderNo]).includes(line.orderNo))) return null;
       return { no: ship.systemInvoiceNo || "", date: ship.systemInvoiceDate || "" };
     }
 
@@ -23560,11 +24116,14 @@
       return rows;
     }
 
-    function consignShipHasKey(ship, key) {
+    function consignShipHasKey(ship, key, orderNo) {
       if (!ship || !key) return false;
       const accepted = (ship.acceptance && ship.acceptance.items) || [];
-      if (accepted.some((line) => (line.key || itemKey(line)) === key)) return true;
-      return (ship.items || []).some((line) => itemKey(line) === key);
+      const merged = ship.sourceOrderNos?.length > 1;
+      const acceptedForOrder = merged ? shipmentItemsForOrder(ship, orderNo, accepted) : accepted;
+      if (acceptedForOrder.some((line) => (line.poItemKey || line.key || itemKey(line)) === key)) return true;
+      const goods = merged ? shipmentItemsForOrder(ship, orderNo) : (ship.items || []);
+      return goods.some((line) => itemKey(line) === key);
     }
 
     /** 出貨單編號與實際出貨時間要落在同一張已驗收、且含該 SKU 的出貨單。 */
@@ -23573,7 +24132,7 @@
       if (!shipNo) return false;
       const ship = shipByOrderId(shipNo);
       if (!ship || ship.status !== "已驗收") return false;
-      if (row.key && !consignShipHasKey(ship, row.key)) return false;
+      if (row.key && !consignShipHasKey(ship, row.key, row.orderNo)) return false;
       const q = String(shipQuery || "").trim().toLowerCase();
       if (q && !shipNo.toLowerCase().includes(q)) return false;
       if ((from || to) && !inDateRange(ship.shipped, from, to)) return false;
@@ -25336,8 +25895,8 @@
         const sku = String(line.sku || "").trim().toLowerCase();
         const key = line.key || "";
         const items = [].concat(ship.items || [], (ship.acceptance && ship.acceptance.items) || []);
-        return items.some((item) => {
-          if (key && (item.key || itemKey(item)) === key) return true;
+        return shipmentItemsForOrder(ship, line.orderNo, items).some((item) => {
+          if (key && (item.poItemKey || item.key || itemKey(item)) === key) return true;
           return sku && String(item.sku || "").trim().toLowerCase() === sku;
         });
       };
